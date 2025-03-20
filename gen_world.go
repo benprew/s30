@@ -207,6 +207,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	playerOp.GeoM.Translate(float64(centerX-10), float64(centerY-10))
 	// Draw player sprite here
 	// screen.DrawImage(g.playerSprite, playerOp)
+
+	// Draw diagnostic information
+	diagnostics := fmt.Sprintf("Camera: (%d, %d)\nPlayer: (%d, %d)", 
+		g.camera.x, g.camera.y,
+		g.playerX, g.playerY)
+	ebitenutil.DebugPrint(screen, diagnostics)
 }
 
 // Helper function to convert grid coordinates to screen coordinates
