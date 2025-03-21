@@ -29,6 +29,7 @@ type Game struct {
 	playerDir    int
 	playerFrame  int
 	lastUpdate   time.Time
+	isMoving     bool
 }
 
 // NewGame returns a new isometric demo Game.
@@ -110,23 +111,27 @@ func (g *Game) Update() error {
 		g.camY += pan
 	}
 
-	// Update player direction based on movement
-	if up && right {
-		g.playerDir = 5 // upRight
-	} else if up && left {
-		g.playerDir = 3 // upLeft
-	} else if down && right {
-		g.playerDir = 7 // downRight
-	} else if down && left {
-		g.playerDir = 1 // downLeft
-	} else if up {
-		g.playerDir = 4 // up
-	} else if down {
-		g.playerDir = 0 // down
-	} else if left {
-		g.playerDir = 2 // left
-	} else if right {
-		g.playerDir = 6 // right
+	// Update player direction and movement state based on input
+	g.isMoving = up || down || left || right
+
+	if g.isMoving {
+		if up && right {
+			g.playerDir = 5 // upRight
+		} else if up && left {
+			g.playerDir = 3 // upLeft
+		} else if down && right {
+			g.playerDir = 7 // downRight
+		} else if down && left {
+			g.playerDir = 1 // downLeft
+		} else if up {
+			g.playerDir = 4 // up
+		} else if down {
+			g.playerDir = 0 // down
+		} else if left {
+			g.playerDir = 2 // left
+		} else if right {
+			g.playerDir = 6 // right
+		}
 	}
 
 	// Pan camera via mouse.
@@ -191,17 +196,14 @@ func (g *Game) cartesianToIso(x, y float64) (float64, float64) {
 	return ix, iy
 }
 
-/*
-This function might be useful for those who want to modify this example.
-
 // isoToCartesian transforms isometric coordinates into cartesian coordinates.
 func (g *Game) isoToCartesian(x, y float64) (float64, float64) {
-	tileSize := g.currentLevel.tileSize
-	cx := (x/float64(tileSize/2) + y/float64(tileSize/4)) / 2
-	cy := (y/float64(tileSize/4) - (x / float64(tileSize/2))) / 2
+	tileW := g.currentLevel.tileWidth
+	tileH := g.currentLevel.tileHeight
+	cx := (x/float64(tileW/2) + y/float64(tileH/4)) / 2
+	cy := (y/float64(tileH/4) - (x / float64(tileW/2))) / 2
 	return cx, cy
 }
-*/
 
 // renderLevel draws the current Level on the screen.
 func (g *Game) renderLevel(screen *ebiten.Image) {
@@ -270,9 +272,11 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 	}
 
 	// Draw player
-	if time.Since(g.lastUpdate) > time.Millisecond*100 {
+	if g.isMoving && time.Since(g.lastUpdate) > time.Millisecond*100 {
 		g.playerFrame = (g.playerFrame + 1) % 5
 		g.lastUpdate = time.Now()
+	} else if !g.isMoving {
+		g.playerFrame = 0  // Reset to standing frame when not moving
 	}
 
 	playerOp := &ebiten.DrawImageOptions{}

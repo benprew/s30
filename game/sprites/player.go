@@ -62,7 +62,7 @@ func LoadSpriteSheet(tileWidth, tileHeight int) (*PlayerSprite, error) {
 	s := &PlayerSprite{}
 	for y := range(8) {
 		for x := range(5) {
-			s.Animations[y][x] = spriteAt(y,x)
+			s.Animations[y][x] = spriteAt(x,y)
 		}
 	}
 
