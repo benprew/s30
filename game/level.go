@@ -14,12 +14,16 @@ const (
 	Seed = 12345 // Fixed seed for consistency
 
 	// Terrain thresholds
-	Water  = 0.3
-	Marsh  = 0.4
-	Plains = 0.6
-	Desert = 0.7
-	Forest = 0.8
-	Ice    = 0.9
+	Water     = 0.35 // Deeper water
+	Shallows  = 0.40 // Shallow water
+	Sand      = 0.43 // Beach/Sandy areas
+	Marsh     = 0.45 // Swampy areas
+	Plains    = 0.60 // Grasslands
+	Desert    = 0.70 // Desert regions
+	Forest    = 0.75 // Dense forest
+	Hills     = 0.85 // Rolling hills
+	Mountains = 0.95 // Mountain peaks
+	Snow      = 1.0  // Snow-capped peaks
 )
 
 // Level represents a Game level.
@@ -48,8 +52,8 @@ func (l *Level) Size() (width, height int) {
 func NewLevel() (*Level, error) {
 	// Create a 108x108 Level.
 	l := &Level{
-		w:          100,
-		h:          100,
+		w:          300,
+		h:          300,
 		tileWidth:  206,
 		tileHeight: 102,
 	}
@@ -73,19 +77,86 @@ func NewLevel() (*Level, error) {
 }
 
 func generateTerrain(w, h int) [][]float64 {
-	p := perlin.NewPerlin(2, 2, 3, Seed) // Perlin noise generator
-	terrain := make([][]float64, h)
+	// Multiple Perlin noise generators with different frequencies
+	baseNoise := perlin.NewPerlin(2, 2, 3, Seed)
+	riverNoise := perlin.NewPerlin(2, 2, 4, Seed+1)
+	forestNoise := perlin.NewPerlin(3, 2, 3, Seed+2)
+	desertNoise := perlin.NewPerlin(2, 2, 3, Seed+3)
 
+	terrain := make([][]float64, h)
+	rivers := make([][]float64, h)
+	forests := make([][]float64, h)
+
+	// Generate base terrain
 	for y := 0; y < h; y++ {
 		terrain[y] = make([]float64, w)
+		rivers[y] = make([]float64, w)
+		forests[y] = make([]float64, w)
+
 		for x := 0; x < w; x++ {
-			nx := float64(x) / float64(w) // Normalize coordinates
+			nx := float64(x) / float64(w)
 			ny := float64(y) / float64(h)
-			noiseValue := p.Noise2D(nx*10, ny*10) // Adjust scale for variation
-			terrain[y][x] = (noiseValue + 1) / 2  // Normalize to 0-1 range
+
+			// Base terrain (mountains, plains)
+			baseValue := (baseNoise.Noise2D(nx*8, ny*8) + 1) / 2
+
+			// River channels
+			riverValue := (riverNoise.Noise2D(nx*4, ny*4) + 1) / 2
+
+			// Forest distribution
+			forestValue := (forestNoise.Noise2D(nx*12, ny*12) + 1) / 2
+
+			// Combine layers
+			terrain[y][x] = baseValue
+			rivers[y][x] = riverValue
+			forests[y][x] = forestValue
+
+			// Create rivers where river noise is within certain range
+			if riverValue > 0.48 && riverValue < 0.52 {
+				terrain[y][x] *= 0.3 // Make it water
+
+				// Add sandy shores near water
+				if riverValue > 0.49 && riverValue < 0.51 {
+					terrain[y][x] = 0.42 // Beach/Sand threshold
+				}
+			}
+
+			// Add desert regions
+			desertValue := (desertNoise.Noise2D(nx*6, ny*6) + 1) / 2
+			if desertValue > 0.7 && baseValue > 0.3 && baseValue < 0.8 {
+				terrain[y][x] = 0.65 // Desert threshold
+			}
+
+			// Add forest clusters
+			if forestValue > 0.6 && baseValue > 0.4 && baseValue < 0.8 && desertValue < 0.6 {
+				terrain[y][x] = 0.75 // Forest threshold
+			}
 		}
 	}
-	return terrain
+
+	// Smooth transitions
+	smoothTerrain := make([][]float64, h)
+	for y := 0; y < h; y++ {
+		smoothTerrain[y] = make([]float64, w)
+		for x := 0; x < w; x++ {
+			sum := 0.0
+			count := 0.0
+
+			// Average with neighbors
+			for dy := -1; dy <= 1; dy++ {
+				for dx := -1; dx <= 1; dx++ {
+					newY, newX := y+dy, x+dx
+					if newY >= 0 && newY < h && newX >= 0 && newX < w {
+						sum += terrain[newY][newX]
+						count++
+					}
+				}
+			}
+			smoothTerrain[y][x] = sum / count
+		}
+	}
+
+	return smoothTerrain
 }
 
 func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage [][]*ebiten.Image) {
@@ -102,28 +173,28 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage []
 				t.AddSprite(ss.Ice)
 			case val < Water:
 				t.AddSprite(ss.Water)
+			case val < Sand:
+				t.AddSprite(ss.Desert) // Use desert sprite for sandy shores
+				t.AddSprite(foliage[rand.Intn(11)][1])
 			case val < Marsh:
 				t.AddSprite(ss.Marsh)
-				if rand.Float64() < 0.3 {
-					t.foliage = foliage[rand.Intn(11)][0]
-				}
+				t.AddSprite(foliage[rand.Intn(11)][0])
 			case val < Plains:
 				t.AddSprite(ss.Plains)
-				if rand.Float64() < 0.2 {
-					t.foliage = foliage[rand.Intn(11)][4]
-				}
+				t.AddSprite(foliage[rand.Intn(11)][4])
 			case val < Desert:
 				t.AddSprite(ss.Desert)
-				if rand.Float64() < 0.15 {
-					t.foliage = foliage[rand.Intn(11)][1]
+				if rand.Float64() < 0.3 {
+					t.AddSprite(foliage[rand.Intn(11)][1])
 				}
 			case val < Forest:
 				t.AddSprite(ss.Forest)
-				if rand.Float64() < 0.8 {
-					t.foliage = foliage[rand.Intn(11)][2]
-				}
+				t.AddSprite(foliage[rand.Intn(11)][2])
 			default:
 				t.AddSprite(ss.Plains)
+				if rand.Float64() < 0.7 {
+					t.AddSprite(foliage[rand.Intn(11)][4])
+				}
 			}
 			l.tiles[y][x] = t
 		}

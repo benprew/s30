@@ -51,8 +51,14 @@ func NewGame() (*Game, error) {
 		return nil, fmt.Errorf("failed to load world frame: %s", err)
 	}
 
+	// Calculate initial camera position at center of map
+	initialX := float64(0)                       // Divide by 4 due to isometric projection
+	initialY := -float64(l.h * l.tileHeight / 2) // Negative because Y increases downward
+
 	g := &Game{
 		currentLevel: l,
+		camX:         initialX,
+		camY:         initialY,
 		camScale:     1.25,
 		camScaleTo:   1.25,
 		mousePanX:    math.MinInt32,
@@ -85,10 +91,10 @@ func (g *Game) Update() error {
 	g.camScaleTo += scrollY * (g.camScaleTo / 7)
 
 	// Clamp target zoom level.
-	if g.camScaleTo < 0.01 {
-		g.camScaleTo = 0.01
-	} else if g.camScaleTo > 100 {
-		g.camScaleTo = 100
+	if g.camScaleTo < 0.75 {
+		g.camScaleTo = 0.75
+	} else if g.camScaleTo > 1.5 {
+		g.camScaleTo = 1.5
 	}
 
 	// Smooth zoom transition.
@@ -156,8 +162,8 @@ func (g *Game) Update() error {
 	}
 
 	// Clamp camera position.
-	worldWidth := float64(g.currentLevel.w * g.currentLevel.tileWidth / 2)
-	worldHeight := float64(g.currentLevel.h * g.currentLevel.tileHeight / 2)
+	worldWidth := float64(g.currentLevel.w * g.currentLevel.tileWidth / 2) // because tiles are 2x wide as tall
+	worldHeight := float64(g.currentLevel.h * g.currentLevel.tileHeight)
 	if g.camX < -worldWidth {
 		g.camX = -worldWidth
 	} else if g.camX > worldWidth {
