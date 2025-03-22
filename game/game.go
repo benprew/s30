@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/benprew/s30/art"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -40,7 +41,7 @@ func NewGame() (*Game, error) {
 		return nil, fmt.Errorf("failed to create new level: %s", err)
 	}
 
-	playerSprite, err := sprites.LoadSpriteSheet(248, 174)
+	playerSprite, err := sprites.LoadPlayer(5, 8, art.Ego_F_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load player sprite: %s", err)
 	}
@@ -198,8 +199,9 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 // cartesianToIso transforms cartesian coordinates into isometric coordinates.
 func (g *Game) cartesianToIso(x, y float64) (float64, float64) {
+	// Adjust for isometric projection
 	ix := (x - y) * float64(g.currentLevel.tileWidth/2)
-	iy := (x + y) * float64(g.currentLevel.tileHeight/4)
+	iy := (x + y) * float64(g.currentLevel.tileHeight/2)
 	return ix, iy
 }
 
@@ -241,8 +243,9 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 		scale = 1
 	}
 
-	for y := 0; y < g.currentLevel.h; y++ {
-		for x := 0; x < g.currentLevel.w; x++ {
+	// Draw from back to front for proper overlapping
+	for y := g.currentLevel.h - 1; y >= 0; y-- {
+		for x := g.currentLevel.w - 1; x >= 0; x-- {
 			xi, yi := g.cartesianToIso(float64(x), float64(y))
 
 			// Skip drawing tiles that are out of the screen (with padding for smooth edges)

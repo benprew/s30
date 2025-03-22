@@ -2,6 +2,7 @@ package game
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/color"
 
@@ -26,6 +27,9 @@ func LoadSpriteSheet(tileWidth, tileHeight int) (*SpriteSheet, error) {
 	}
 
 	bounds := img.Bounds()
+	width := bounds.Max.X - bounds.Min.X
+	height := bounds.Max.Y - bounds.Min.Y
+	fmt.Printf("Loaded sprite sheet dimensions: %dx%d\n", width, height)
 	rgba := image.NewRGBA(bounds)
 
 	// Convert indexed color to RGBA and set transparency

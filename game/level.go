@@ -2,8 +2,12 @@ package game
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/aquilax/go-perlin"
+	"github.com/benprew/s30/art"
+	"github.com/benprew/s30/game/sprites"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -44,8 +48,8 @@ func (l *Level) Size() (width, height int) {
 func NewLevel() (*Level, error) {
 	// Create a 108x108 Level.
 	l := &Level{
-		w:          400,
-		h:          400,
+		w:          100,
+		h:          100,
 		tileWidth:  206,
 		tileHeight: 102,
 	}
@@ -56,8 +60,15 @@ func NewLevel() (*Level, error) {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
 
+	// widths are the 5 terrain types:
+	// marsh, desert, forest, mountain, plains
+	foliage, err := sprites.LoadSpriteSheet(5, 11, art.Land_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
+	}
+
 	noise := generateTerrain(l.w, l.h)
-	l.mapTerrainTypes(noise, ss)
+	l.mapTerrainTypes(noise, ss, foliage)
 	return l, nil
 }
 
@@ -77,7 +88,7 @@ func generateTerrain(w, h int) [][]float64 {
 	return terrain
 }
 
-func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet) {
+func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage [][]*ebiten.Image) {
 	// Fill each tile with one or more sprites randomly.
 	l.tiles = make([][]*Tile, l.h)
 	for y := 0; y < l.h; y++ {
@@ -93,12 +104,24 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet) {
 				t.AddSprite(ss.Water)
 			case val < Marsh:
 				t.AddSprite(ss.Marsh)
+				if rand.Float64() < 0.3 {
+					t.foliage = foliage[rand.Intn(11)][0]
+				}
 			case val < Plains:
 				t.AddSprite(ss.Plains)
+				if rand.Float64() < 0.2 {
+					t.foliage = foliage[rand.Intn(11)][4]
+				}
 			case val < Desert:
 				t.AddSprite(ss.Desert)
+				if rand.Float64() < 0.15 {
+					t.foliage = foliage[rand.Intn(11)][1]
+				}
 			case val < Forest:
 				t.AddSprite(ss.Forest)
+				if rand.Float64() < 0.8 {
+					t.foliage = foliage[rand.Intn(11)][2]
+				}
 			default:
 				t.AddSprite(ss.Plains)
 			}

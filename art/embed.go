@@ -11,12 +11,10 @@ var (
 	Landtile_png []byte
 
 	// grass and shrubs
-
 	//go:embed Land.spr.png
 	Land_png []byte
 
 	// trees
-
 	//go:embed Land2.spr.png
 	Land2_png []byte
 

@@ -8,6 +8,7 @@ import (
 // sprites may be added to a Tile.
 type Tile struct {
 	sprites []*ebiten.Image
+	foliage *ebiten.Image
 }
 
 // AddSprite adds a sprite to the Tile.
@@ -19,5 +20,8 @@ func (t *Tile) AddSprite(s *ebiten.Image) {
 func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 	for _, s := range t.sprites {
 		screen.DrawImage(s, options)
+	}
+	if t.foliage != nil {
+		screen.DrawImage(t.foliage, options)
 	}
 }
