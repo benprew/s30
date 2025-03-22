@@ -44,8 +44,8 @@ func (l *Level) Size() (width, height int) {
 func NewLevel() (*Level, error) {
 	// Create a 108x108 Level.
 	l := &Level{
-		w:          250,
-		h:          250,	 
+		w:          400,
+		h:          400,
 		tileWidth:  206,
 		tileHeight: 102,
 	}
@@ -58,7 +58,7 @@ func NewLevel() (*Level, error) {
 
 	noise := generateTerrain(l.w, l.h)
 	l.mapTerrainTypes(noise, ss)
-	return l, nil			 
+	return l, nil
 }
 
 func generateTerrain(w, h int) [][]float64 {
@@ -86,7 +86,7 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet) {
 			t := &Tile{}
 			isBorderSpace := x == 0 || y == 0 || x == l.w-1 || y == l.h-1
 			val := terrain[y][x]
-			switch {		 
+			switch {
 			case isBorderSpace:
 				t.AddSprite(ss.Ice)
 			case val < Water:
