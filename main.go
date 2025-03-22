@@ -9,8 +9,8 @@ import (
 
 func main() {
 	ebiten.SetWindowTitle("Isometric (Ebitengine Demo)")
-	ebiten.SetWindowSize(1280, 1024)
-	ebiten.SetWindowResizable(true)
+	ebiten.SetWindowSize(1024, 768)
+	ebiten.SetWindowResizable(false)
 
 	g, err := game.NewGame()
 	if err != nil {

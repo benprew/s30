@@ -1,12 +1,12 @@
 package sprites
 
 import (
+	"bytes"
 	"image"
 	"image/color"
 	_ "image/png"
-	"log"
-	"os"
 
+	"github.com/benprew/s30/art"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -27,13 +27,7 @@ type PlayerSprite struct {
 
 // LoadSpriteSheet loads the embedded SpriteSheet.
 func LoadSpriteSheet(tileWidth, tileHeight int) (*PlayerSprite, error) {
-	file, err := os.Open("art/Ego_M.spr.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	img, _, err := image.Decode(file)
+	img, _, err := image.Decode(bytes.NewReader(art.Ego_F_png))
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +54,9 @@ func LoadSpriteSheet(tileWidth, tileHeight int) (*PlayerSprite, error) {
 	}
 
 	s := &PlayerSprite{}
-	for y := range(8) {
-		for x := range(5) {
-			s.Animations[y][x] = spriteAt(x,y)
+	for y := range 8 {
+		for x := range 5 {
+			s.Animations[y][x] = spriteAt(x, y)
 		}
 	}
 

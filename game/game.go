@@ -22,7 +22,8 @@ type Game struct {
 
 	mousePanX, mousePanY int
 
-	offscreen *ebiten.Image
+	offscreen  *ebiten.Image
+	worldFrame *ebiten.Image
 
 	// Player state
 	playerSprite *sprites.PlayerSprite
@@ -44,13 +45,19 @@ func NewGame() (*Game, error) {
 		return nil, fmt.Errorf("failed to load player sprite: %s", err)
 	}
 
+	worldFrame, err := LoadWorldFrame()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load world frame: %s", err)
+	}
+
 	g := &Game{
 		currentLevel: l,
-		camScale:     1,
-		camScaleTo:   1,
+		camScale:     1.25,
+		camScaleTo:   1.25,
 		mousePanX:    math.MinInt32,
 		mousePanY:    math.MinInt32,
 		playerSprite: playerSprite,
+		worldFrame:   worldFrame,
 		playerDir:    0,
 		playerFrame:  0,
 		lastUpdate:   time.Now(),
@@ -276,12 +283,16 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 		g.playerFrame = (g.playerFrame + 1) % 5
 		g.lastUpdate = time.Now()
 	} else if !g.isMoving {
-		g.playerFrame = 0  // Reset to standing frame when not moving
+		g.playerFrame = 0 // Reset to standing frame when not moving
 	}
 
 	playerOp := &ebiten.DrawImageOptions{}
 	playerOp.GeoM.Translate(-float64(124), -float64(87)) // Center the sprite
-	playerOp.GeoM.Scale(g.camScale, g.camScale)  // Apply camera zoom
+	playerOp.GeoM.Scale(g.camScale, g.camScale)          // Apply camera zoom
 	playerOp.GeoM.Translate(float64(g.w)/2, float64(g.h)/2)
 	screen.DrawImage(g.playerSprite.Animations[g.playerDir][g.playerFrame], playerOp)
+
+	// Draw the world frame over everything
+	frameOp := &ebiten.DrawImageOptions{}
+	screen.DrawImage(g.worldFrame, frameOp)
 }

@@ -1,33 +1,26 @@
 package game
 
 import (
+	"bytes"
 	"image"
 	"image/color"
-	_ "image/png"
-	"log"
-	"os"
 
+	"github.com/benprew/s30/art"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type SpriteSheet struct {
 	Plains *ebiten.Image
-	Water *ebiten.Image
+	Water  *ebiten.Image
 	Desert *ebiten.Image
 	Forest *ebiten.Image
-	Marsh *ebiten.Image
-	Ice *ebiten.Image
+	Marsh  *ebiten.Image
+	Ice    *ebiten.Image
 }
 
 // LoadSpriteSheet loads the embedded SpriteSheet.
 func LoadSpriteSheet(tileWidth, tileHeight int) (*SpriteSheet, error) {
-	file, err := os.Open("art/Landtile.spr.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	img, _, err := image.Decode(file)
+	img, _, err := image.Decode(bytes.NewReader(art.Landtile_png))
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +48,7 @@ func LoadSpriteSheet(tileWidth, tileHeight int) (*SpriteSheet, error) {
 
 	// Populate SpriteSheet.
 	s := &SpriteSheet{}
-	s.Plains = spriteAt(0,0)
+	s.Plains = spriteAt(0, 0)
 	s.Water = spriteAt(1, 0)
 	s.Desert = spriteAt(2, 0)
 	s.Forest = spriteAt(3, 0)
