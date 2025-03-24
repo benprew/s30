@@ -13,7 +13,7 @@ import (
 type SpriteSheet struct {
 	Plains *ebiten.Image
 	Water  *ebiten.Image
-	Desert *ebiten.Image
+	Sand   *ebiten.Image
 	Forest *ebiten.Image
 	Marsh  *ebiten.Image
 	Ice    *ebiten.Image
@@ -54,7 +54,7 @@ func LoadSpriteSheet(tileWidth, tileHeight int) (*SpriteSheet, error) {
 	s := &SpriteSheet{}
 	s.Plains = spriteAt(0, 0)
 	s.Water = spriteAt(1, 0)
-	s.Desert = spriteAt(2, 0)
+	s.Sand = spriteAt(2, 0)
 	s.Forest = spriteAt(3, 0)
 	s.Marsh = spriteAt(4, 0)
 	s.Ice = spriteAt(5, 0)

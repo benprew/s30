@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/benprew/s30/art"
 	"github.com/benprew/s30/game/sprites"
@@ -26,12 +25,7 @@ type Game struct {
 	offscreen  *ebiten.Image
 	worldFrame *ebiten.Image
 
-	// Player state
 	playerSprite *sprites.PlayerSprite
-	playerDir    int
-	playerFrame  int
-	lastUpdate   time.Time
-	isMoving     bool
 }
 
 // NewGame returns a new isometric demo Game.
@@ -41,7 +35,7 @@ func NewGame() (*Game, error) {
 		return nil, fmt.Errorf("failed to create new level: %s", err)
 	}
 
-	playerSprite, err := sprites.LoadPlayer(5, 8, art.Ego_F_png)
+	playerSprite, err := sprites.LoadPlayer(5, 8, art.Ego_F_png, art.Sego_F_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load player sprite: %s", err)
 	}
@@ -65,9 +59,6 @@ func NewGame() (*Game, error) {
 		mousePanY:    math.MinInt32,
 		playerSprite: playerSprite,
 		worldFrame:   worldFrame,
-		playerDir:    0,
-		playerFrame:  0,
-		lastUpdate:   time.Now(),
 	}
 	return g, nil
 }
@@ -93,8 +84,8 @@ func (g *Game) Update() error {
 	// Clamp target zoom level.
 	if g.camScaleTo < 0.75 {
 		g.camScaleTo = 0.75
-	} else if g.camScaleTo > 1.5 {
-		g.camScaleTo = 1.5
+	} else if g.camScaleTo > 1.0 {
+		g.camScaleTo = 1.0
 	}
 
 	// Smooth zoom transition.
@@ -106,7 +97,7 @@ func (g *Game) Update() error {
 	}
 
 	// Pan camera and update player direction via keyboard
-	pan := 7.0 / g.camScale
+	pan := 5.25 / g.camScale
 	left := ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
 	right := ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD)
 	down := ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS)
@@ -126,25 +117,25 @@ func (g *Game) Update() error {
 	}
 
 	// Update player direction and movement state based on input
-	g.isMoving = up || down || left || right
+	g.playerSprite.IsMoving = up || down || left || right
 
-	if g.isMoving {
+	if g.playerSprite.IsMoving {
 		if up && right {
-			g.playerDir = 5 // upRight
+			g.playerSprite.Direction = 5 // upRight
 		} else if up && left {
-			g.playerDir = 3 // upLeft
+			g.playerSprite.Direction = 3 // upLeft
 		} else if down && right {
-			g.playerDir = 7 // downRight
+			g.playerSprite.Direction = 7 // downRight
 		} else if down && left {
-			g.playerDir = 1 // downLeft
+			g.playerSprite.Direction = 1 // downLeft
 		} else if up {
-			g.playerDir = 4 // up
+			g.playerSprite.Direction = 4 // up
 		} else if down {
-			g.playerDir = 0 // down
+			g.playerSprite.Direction = 0 // down
 		} else if left {
-			g.playerDir = 2 // left
+			g.playerSprite.Direction = 2 // left
 		} else if right {
-			g.playerDir = 6 // right
+			g.playerSprite.Direction = 6 // right
 		}
 	}
 
@@ -287,19 +278,8 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 		screen.DrawImage(target, op)
 	}
 
-	// Draw player
-	if g.isMoving && time.Since(g.lastUpdate) > time.Millisecond*100 {
-		g.playerFrame = (g.playerFrame + 1) % 5
-		g.lastUpdate = time.Now()
-	} else if !g.isMoving {
-		g.playerFrame = 0 // Reset to standing frame when not moving
-	}
-
-	playerOp := &ebiten.DrawImageOptions{}
-	playerOp.GeoM.Translate(-float64(124), -float64(87)) // Center the sprite
-	playerOp.GeoM.Scale(g.camScale, g.camScale)          // Apply camera zoom
-	playerOp.GeoM.Translate(float64(g.w)/2, float64(g.h)/2)
-	screen.DrawImage(g.playerSprite.Animations[g.playerDir][g.playerFrame], playerOp)
+	// Draw player and world frame
+	g.playerSprite.Draw(screen, g.w, g.h, g.camScale)
 
 	// Draw the world frame over everything
 	frameOp := &ebiten.DrawImageOptions{}

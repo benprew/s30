@@ -19,7 +19,6 @@ const (
 	Sand      = 0.43 // Beach/Sandy areas
 	Marsh     = 0.45 // Swampy areas
 	Plains    = 0.60 // Grasslands
-	Desert    = 0.70 // Desert regions
 	Forest    = 0.75 // Dense forest
 	Hills     = 0.85 // Rolling hills
 	Mountains = 0.95 // Mountain peaks
@@ -70,9 +69,14 @@ func NewLevel() (*Level, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
+	// shadows for lands
+	Sfoliage, err := sprites.LoadSpriteSheet(5, 11, art.Sland_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
+	}
 
 	noise := generateTerrain(l.w, l.h)
-	l.mapTerrainTypes(noise, ss, foliage)
+	l.mapTerrainTypes(noise, ss, foliage, Sfoliage)
 	return l, nil
 }
 
@@ -159,7 +163,7 @@ func generateTerrain(w, h int) [][]float64 {
 	return smoothTerrain
 }
 
-func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage [][]*ebiten.Image) {
+func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage [][]*ebiten.Image, Sfoliage [][]*ebiten.Image) {
 	// Fill each tile with one or more sprites randomly.
 	l.tiles = make([][]*Tile, l.h)
 	for y := 0; y < l.h; y++ {
@@ -168,32 +172,37 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage []
 			t := &Tile{}
 			isBorderSpace := x == 0 || y == 0 || x == l.w-1 || y == l.h-1
 			val := terrain[y][x]
+			folIdx := rand.Intn(11)
 			switch {
 			case isBorderSpace:
 				t.AddSprite(ss.Ice)
 			case val < Water:
 				t.AddSprite(ss.Water)
 			case val < Sand:
-				t.AddSprite(ss.Desert) // Use desert sprite for sandy shores
-				t.AddSprite(foliage[rand.Intn(11)][1])
+				t.AddSprite(ss.Sand) // Use desert sprite for sandy shores
+				t.AddSprite(Sfoliage[folIdx][1])
+				t.AddSprite(foliage[folIdx][1])
 			case val < Marsh:
 				t.AddSprite(ss.Marsh)
-				t.AddSprite(foliage[rand.Intn(11)][0])
+				t.AddSprite(Sfoliage[folIdx][0])
+				t.AddSprite(foliage[folIdx][0])
 			case val < Plains:
 				t.AddSprite(ss.Plains)
-				t.AddSprite(foliage[rand.Intn(11)][4])
-			case val < Desert:
-				t.AddSprite(ss.Desert)
-				if rand.Float64() < 0.3 {
-					t.AddSprite(foliage[rand.Intn(11)][1])
-				}
+				t.AddSprite(Sfoliage[folIdx][4])
+				t.AddSprite(foliage[folIdx][4])
 			case val < Forest:
 				t.AddSprite(ss.Forest)
-				t.AddSprite(foliage[rand.Intn(11)][2])
+				t.AddSprite(Sfoliage[folIdx][2])
+				t.AddSprite(foliage[folIdx][2])
+			case val < Mountains:
+				t.AddSprite(ss.Plains)
+				t.AddSprite(Sfoliage[folIdx][3])
+				t.AddSprite(foliage[folIdx][3])
 			default:
 				t.AddSprite(ss.Plains)
 				if rand.Float64() < 0.7 {
-					t.AddSprite(foliage[rand.Intn(11)][4])
+					t.AddSprite(Sfoliage[folIdx][4])
+					t.AddSprite(foliage[folIdx][4])
 				}
 			}
 			l.tiles[y][x] = t
