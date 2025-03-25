@@ -1,7 +1,7 @@
 package art
 
 import (
-	_ "embed"
+	"embed"
 )
 
 var (
@@ -28,14 +28,7 @@ var (
 	//go:embed Advinter1024.pic.png
 	WorldFrame_png []byte
 
-	// player characters
-	//go:embed sprites/world/characters/Ego_M.spr.png
-	Ego_M_png []byte
-	//go:embed sprites/world/characters/Sego_M.spr.png
-	Sego_M_png []byte
-
-	//go:embed sprites/world/characters/Ego_F.spr.png
-	Ego_F_png []byte
-	//go:embed sprites/world/characters/Sego_F.spr.png
-	Sego_F_png []byte
+	// Character sprites
+	//go:embed sprites/world/characters/*.spr.png
+	CharacterFS embed.FS
 )

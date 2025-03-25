@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/benprew/s30/art"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -25,7 +24,8 @@ type Game struct {
 	offscreen  *ebiten.Image
 	worldFrame *ebiten.Image
 
-	playerSprite *sprites.PlayerSprite
+	playerSprite *sprites.Character
+	enemies      []*sprites.Character
 }
 
 // NewGame returns a new isometric demo Game.
@@ -35,7 +35,7 @@ func NewGame() (*Game, error) {
 		return nil, fmt.Errorf("failed to create new level: %s", err)
 	}
 
-	playerSprite, err := sprites.LoadPlayer(5, 8, art.Ego_F_png, art.Sego_F_png)
+	playerSprite, err := sprites.LoadCharacter(sprites.EgoFemale)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load player sprite: %s", err)
 	}
