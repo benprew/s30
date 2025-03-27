@@ -51,8 +51,8 @@ func (l *Level) Size() (width, height int) {
 func NewLevel() (*Level, error) {
 	// Create a 108x108 Level.
 	l := &Level{
-		w:          300,
-		h:          300,
+		w:          4,
+		h:          4,
 		tileWidth:  206,
 		tileHeight: 102,
 	}
@@ -65,6 +65,9 @@ func NewLevel() (*Level, error) {
 
 	// widths are the 5 terrain types:
 	// marsh, desert, forest, mountain, plains
+	// TODO: foliage needs to be placed in the center of the tile, otherwise it creeps into the tile below it
+	// foliage is 206x134
+	// land tile is 206x102
 	foliage, err := sprites.LoadSpriteSheet(5, 11, art.Land_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)

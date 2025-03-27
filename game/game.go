@@ -15,7 +15,6 @@ type Game struct {
 	w, h         int
 	currentLevel *Level
 
-	camX, camY float64
 	camScale   float64
 	camScaleTo float64
 
@@ -45,14 +44,15 @@ func NewGame() (*Game, error) {
 		return nil, fmt.Errorf("failed to load world frame: %s", err)
 	}
 
-	// Calculate initial camera position at center of map
-	initialX := float64(0)                       // Divide by 4 due to isometric projection
-	initialY := -float64(l.h * l.tileHeight / 2) // Negative because Y increases downward
+	// Set initial player position at center of map
+	playerSprite.X = float64(0)                       // Divide by 4 due to isometric projection
+	playerSprite.Y = -float64(l.h * l.tileHeight / 2) // Negative because Y increases downward
+
+	// Initialize the player's position
+	fmt.Printf("Starting player at position: %.1f, %.1f\n", playerSprite.X, playerSprite.Y)
 
 	g := &Game{
 		currentLevel: l,
-		camX:         initialX,
-		camY:         initialY,
 		camScale:     1.25,
 		camScaleTo:   1.25,
 		mousePanX:    math.MinInt32,
@@ -84,8 +84,8 @@ func (g *Game) Update() error {
 	// Clamp target zoom level.
 	if g.camScaleTo < 0.75 {
 		g.camScaleTo = 0.75
-	} else if g.camScaleTo > 1.0 {
-		g.camScaleTo = 1.0
+	} else if g.camScaleTo > 1.25 {
+		g.camScaleTo = 1.25
 	}
 
 	// Smooth zoom transition.
@@ -96,74 +96,31 @@ func (g *Game) Update() error {
 		g.camScale -= (g.camScale - g.camScaleTo) / div
 	}
 
-	// Pan camera and update player direction via keyboard
-	pan := 5.25 / g.camScale
+	// Move player and update direction via keyboard
 	left := ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
 	right := ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD)
 	down := ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS)
 	up := ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW)
 
-	if left {
-		g.camX -= pan
-	}
-	if right {
-		g.camX += pan
-	}
-	if down {
-		g.camY -= pan
-	}
-	if up {
-		g.camY += pan
+	g.playerSprite.Update(up, down, left, right)
+
+	for _, e := range g.enemies {
+		// update enemy location and direction, moving randomly
+		e.Update(up, down, left, right)
 	}
 
-	// Update player direction and movement state based on input
-	g.playerSprite.IsMoving = up || down || left || right
-
-	if g.playerSprite.IsMoving {
-		if up && right {
-			g.playerSprite.Direction = 5 // upRight
-		} else if up && left {
-			g.playerSprite.Direction = 3 // upLeft
-		} else if down && right {
-			g.playerSprite.Direction = 7 // downRight
-		} else if down && left {
-			g.playerSprite.Direction = 1 // downLeft
-		} else if up {
-			g.playerSprite.Direction = 4 // up
-		} else if down {
-			g.playerSprite.Direction = 0 // down
-		} else if left {
-			g.playerSprite.Direction = 2 // left
-		} else if right {
-			g.playerSprite.Direction = 6 // right
-		}
-	}
-
-	// Pan camera via mouse.
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
-		if g.mousePanX == math.MinInt32 && g.mousePanY == math.MinInt32 {
-			g.mousePanX, g.mousePanY = ebiten.CursorPosition()
-		} else {
-			x, y := ebiten.CursorPosition()
-			dx, dy := float64(g.mousePanX-x)*(pan/100), float64(g.mousePanY-y)*(pan/100)
-			g.camX, g.camY = g.camX-dx, g.camY+dy
-		}
-	} else if g.mousePanX != math.MinInt32 || g.mousePanY != math.MinInt32 {
-		g.mousePanX, g.mousePanY = math.MinInt32, math.MinInt32
-	}
-
-	// Clamp camera position.
+	// Clamp player position to world boundaries
 	worldWidth := float64(g.currentLevel.w * g.currentLevel.tileWidth / 2) // because tiles are 2x wide as tall
 	worldHeight := float64(g.currentLevel.h * g.currentLevel.tileHeight)
-	if g.camX < -worldWidth {
-		g.camX = -worldWidth
-	} else if g.camX > worldWidth {
-		g.camX = worldWidth
+	if g.playerSprite.X < -worldWidth {
+		g.playerSprite.X = -worldWidth
+	} else if g.playerSprite.X > worldWidth {
+		g.playerSprite.X = worldWidth
 	}
-	if g.camY < -worldHeight {
-		g.camY = -worldHeight
-	} else if g.camY > 0 {
-		g.camY = 0
+	if g.playerSprite.Y < -worldHeight {
+		g.playerSprite.Y = -worldHeight
+	} else if g.playerSprite.Y > 0 {
+		g.playerSprite.Y = 0
 	}
 
 	// Randomize level.
@@ -185,7 +142,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.renderLevel(screen)
 
 	// Print game info.
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("KEYS WASD EC R\nFPS  %0.0f\nTPS  %0.0f\nSCA  %0.2f\nPOS  %0.0f,%0.0f", ebiten.ActualFPS(), ebiten.ActualTPS(), g.camScale, g.camX, g.camY))
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("KEYS WASD EC R\nFPS  %0.0f\nTPS  %0.0f\nSCA  %0.2f\nPOS  %0.2f,%0.2f", ebiten.ActualFPS(), ebiten.ActualTPS(), g.camScale, g.playerSprite.X, g.playerSprite.Y))
 }
 
 // Layout is called when the Game's layout changes.
@@ -213,6 +170,12 @@ func (g *Game) isoToCartesian(x, y float64) (float64, float64) {
 
 // renderLevel draws the current Level on the screen.
 func (g *Game) renderLevel(screen *ebiten.Image) {
+	// Calculate camera position based on player position
+	playerIsoX, playerIsoY := g.cartesianToIso(g.playerSprite.X, g.playerSprite.Y)
+
+	playerIsoX = g.playerSprite.X
+	playerIsoY = g.playerSprite.Y
+
 	op := &ebiten.DrawImageOptions{}
 	xPadding := float64(g.currentLevel.tileHeight) * g.camScale
 	yPadding := float64(g.currentLevel.tileHeight) * g.camScale
@@ -241,12 +204,12 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 	}
 
 	// Draw from back to front for proper overlapping
-	for y := g.currentLevel.h - 1; y >= 0; y-- {
-		for x := g.currentLevel.w - 1; x >= 0; x-- {
+	for y := range g.currentLevel.h {
+		for x := range g.currentLevel.w {
 			xi, yi := g.cartesianToIso(float64(x), float64(y))
 
 			// Skip drawing tiles that are out of the screen (with padding for smooth edges)
-			drawX, drawY := ((xi-g.camX)*g.camScale)+cx, ((yi+g.camY)*g.camScale)+cy
+			drawX, drawY := ((xi-playerIsoX)*g.camScale)+cx, ((yi+playerIsoY)*g.camScale)+cy
 			if drawX+xPadding < -xPadding || drawY+yPadding < -yPadding || drawX-xPadding > float64(g.w) || drawY-yPadding > float64(g.h) {
 				continue
 			}
@@ -259,8 +222,8 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 			op.GeoM.Reset()
 			// Move to current isometric position.
 			op.GeoM.Translate(xi, yi)
-			// Translate camera position.
-			op.GeoM.Translate(-g.camX, g.camY)
+			// Translate camera position based on player.
+			op.GeoM.Translate(-playerIsoX, playerIsoY)
 			// Zoom.
 			op.GeoM.Scale(scale, scale)
 			// Center.
@@ -280,6 +243,10 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 
 	// Draw player and world frame
 	g.playerSprite.Draw(screen, g.w, g.h, g.camScale)
+
+	// for _, e := range g.enemies {
+	// 	e.Draw(screen, g.w, g.h, g.camScale)
+	// }
 
 	// Draw the world frame over everything
 	frameOp := &ebiten.DrawImageOptions{}

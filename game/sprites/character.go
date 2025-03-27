@@ -33,6 +33,9 @@ type Character struct {
 	Frame      int
 	LastUpdate time.Time
 	IsMoving   bool
+	X          float64
+	Y          float64
+	MoveSpeed  float64
 }
 
 // NewCharacter creates a new character sprite with animations and shadows
@@ -44,6 +47,7 @@ func NewCharacter(animations, shadows [][]*ebiten.Image) *Character {
 		Frame:      0,
 		LastUpdate: time.Now(),
 		IsMoving:   false,
+		MoveSpeed:  3.75,
 	}
 }
 
@@ -85,8 +89,56 @@ func getEmbeddedFile(filename string) []byte {
 	return data
 }
 
-// Draw renders the character and its shadow at the specified position
-func (c *Character) Draw(screen *ebiten.Image, x, y int, scale float64) {
+// Update characters location
+func (c *Character) Update(up, down, left, right bool) {
+	// Update player position based on input
+	if left {
+		c.X -= c.MoveSpeed
+	}
+	if right {
+		c.X += c.MoveSpeed
+	}
+	if down {
+		c.Y -= c.MoveSpeed
+	}
+	if up {
+		c.Y += c.MoveSpeed
+	}
+
+	// Update player movement state based on input
+	c.IsMoving = up || down || left || right
+
+	if c.IsMoving {
+		if up && right {
+			c.Direction = 5 // upRight
+		} else if up && left {
+			c.Direction = 3 // upLeft
+		} else if down && right {
+			c.Direction = 7 // downRight
+		} else if down && left {
+			c.Direction = 1 // downLeft
+		} else if up {
+			c.Direction = 4 // up
+		} else if down {
+			c.Direction = 0 // down
+		} else if left {
+			c.Direction = 2 // left
+		} else if right {
+			c.Direction = 6 // right
+		}
+	}
+
+	// This method can be expanded later for AI movement
+}
+
+// SetPosition sets the character's position on the map
+func (c *Character) SetPosition(x, y float64) {
+	c.X = x
+	c.Y = y
+}
+
+// Draw renders the character and its shadow at the center of the screen
+func (c *Character) Draw(screen *ebiten.Image, screenWidth, screenHeight int, scale float64) {
 	// Update animation frame if moving
 	if c.IsMoving && time.Since(c.LastUpdate) > time.Millisecond*100 {
 		c.Frame = (c.Frame + 1) % CharacterColumns
@@ -98,7 +150,7 @@ func (c *Character) Draw(screen *ebiten.Image, x, y int, scale float64) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
 	options.GeoM.Translate(-float64(124)*scale, -float64(87)*scale) // Center the sprite
-	options.GeoM.Translate(float64(x)/2, float64(y)/2)
+	options.GeoM.Translate(float64(screenWidth)/2, float64(screenHeight)/2)
 
 	// Draw shadow first
 	screen.DrawImage(c.Shadows[c.Direction][c.Frame], options)
