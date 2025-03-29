@@ -60,12 +60,16 @@ const (
 func shadowName(name CharacterName) string {
 	// Special cases first
 	switch name {
-	case Troll:
+	case Troll, MultiTroll:
 		return "Strl"
 	case EgoFemale:
 		return "Sego_F"
 	case EgoMale:
 		return "Sego_M"
+	case DragonBRU, DragonGWR, DragonRBG, DragonUWB, DragonWUG:
+		return "S_Dg"
+	case BlackDjinn, BlueDjinn:
+		return "Sdjn"
 	}
 
 	// Get the prefix and base name
@@ -82,6 +86,7 @@ func shadowName(name CharacterName) string {
 	switch prefix {
 	case "W_":
 		shadowPrefix = "Sw_"
+		base = str[2:]
 	case "Bk":
 		shadowPrefix = "Sb_"
 	case "Bu":
