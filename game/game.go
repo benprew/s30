@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"math"
+	"math/rand"
 
 	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -59,8 +60,63 @@ func NewGame() (*Game, error) {
 		mousePanY:    math.MinInt32,
 		playerSprite: playerSprite,
 		worldFrame:   worldFrame,
+		enemies:      make([]*sprites.Character, 0),
 	}
+
+	// Spawn initial enemies
+	if err := g.spawnEnemies(3); err != nil {
+		return nil, fmt.Errorf("failed to spawn enemies: %s", err)
+	}
+
 	return g, nil
+}
+
+// spawnEnemies creates a specified number of enemies at random positions
+func (g *Game) spawnEnemies(count int) error {
+	// Enemy character types to choose from
+	enemyTypes := []sprites.CharacterName{
+		sprites.WhiteArchmage, sprites.BlackKnight, sprites.BlueDjinn,
+		sprites.DragonBRU, sprites.MultiTroll, sprites.Troll,
+	}
+
+	worldWidth := float64(g.currentLevel.w * g.currentLevel.tileWidth / 2)
+	worldHeight := float64(g.currentLevel.h * g.currentLevel.tileHeight)
+
+	for i := 0; i < count; i++ {
+		// Choose a random enemy type
+		enemyType := enemyTypes[rand.Intn(len(enemyTypes))]
+
+		// Load the enemy sprite
+		enemy, err := sprites.LoadCharacter(enemyType)
+		if err != nil {
+			return fmt.Errorf("failed to load enemy sprite %s: %w", enemyType, err)
+		}
+
+		// Set random position (avoiding player's immediate area)
+		minDistance := 500.0 // Minimum distance from player
+		var x, y float64
+		for {
+			// Random position within world bounds
+			x = (rand.Float64()*2 - 1) * worldWidth * 0.8
+			y = (rand.Float64() - 1) * worldHeight * 0.8 // Only in the negative Y space
+
+			// Check distance from player
+			dx := x - g.playerSprite.X
+			dy := y - g.playerSprite.Y
+			distance := math.Sqrt(dx*dx + dy*dy)
+
+			if distance < minDistance {
+				break
+			}
+		}
+
+		enemy.SetPosition(x, y)
+		enemy.MoveSpeed = .75 // Random speed between 2.0 and 4.0
+
+		g.enemies = append(g.enemies, enemy)
+	}
+
+	return nil
 }
 
 // Update reads current user input and updates the Game state.
@@ -84,8 +140,8 @@ func (g *Game) Update() error {
 	// Clamp target zoom level.
 	if g.camScaleTo < 0.75 {
 		g.camScaleTo = 0.75
-	} else if g.camScaleTo > 1.25 {
-		g.camScaleTo = 1.25
+	} else if g.camScaleTo > 2.25 {
+		g.camScaleTo = 2.25
 	}
 
 	// Smooth zoom transition.
@@ -96,17 +152,29 @@ func (g *Game) Update() error {
 		g.camScale -= (g.camScale - g.camScaleTo) / div
 	}
 
-	// Move player and update direction via keyboard
-	left := ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
-	right := ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD)
-	down := ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS)
-	up := ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW)
+	// Move player and update direction via keyboard using bit flags
+	var dirBits int = 0
 
-	g.playerSprite.Update(up, down, left, right)
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+		dirBits |= sprites.DirLeft
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+		dirBits |= sprites.DirRight
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
+		dirBits |= sprites.DirDown
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+		dirBits |= sprites.DirUp
+	}
 
+	g.playerSprite.Update(dirBits)
+
+	// Update enemies with AI movement
 	for _, e := range g.enemies {
-		// update enemy location and direction, moving randomly
-		e.Update(up, down, left, right)
+		// Update enemy AI to move toward player when in range
+		dirbits := e.UpdateAI(g.playerSprite.X, g.playerSprite.Y)
+		e.Update(dirbits)
 	}
 
 	// Clamp player position to world boundaries
@@ -131,6 +199,19 @@ func (g *Game) Update() error {
 		}
 
 		g.currentLevel = l
+		g.enemies = make([]*sprites.Character, 0)
+
+		// Respawn enemies on new level
+		if err := g.spawnEnemies(10); err != nil {
+			return fmt.Errorf("failed to spawn enemies: %s", err)
+		}
+	}
+
+	// Add more enemies with the 'N' key
+	if inpututil.IsKeyJustPressed(ebiten.KeyN) {
+		if err := g.spawnEnemies(5); err != nil {
+			return fmt.Errorf("failed to spawn additional enemies: %s", err)
+		}
 	}
 
 	return nil
@@ -142,7 +223,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.renderLevel(screen)
 
 	// Print game info.
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("KEYS WASD EC R\nFPS  %0.0f\nTPS  %0.0f\nSCA  %0.2f\nPOS  %0.2f,%0.2f", ebiten.ActualFPS(), ebiten.ActualTPS(), g.camScale, g.playerSprite.X, g.playerSprite.Y))
+	ebitenutil.DebugPrint(
+		screen,
+		fmt.Sprintf(
+			"KEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nSCA  %0.2f\nPOS  %0.2f,%0.2f\nEPOS  %0.2f,%0.2f",
+			ebiten.ActualFPS(), ebiten.ActualTPS(), g.camScale, g.playerSprite.X, g.playerSprite.Y, g.enemies[0].X, g.enemies[0].Y,
+		),
+	)
 }
 
 // Layout is called when the Game's layout changes.
@@ -241,14 +328,39 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 		screen.DrawImage(target, op)
 	}
 
-	// Draw player and world frame
-	g.playerSprite.Draw(screen, g.w, g.h, g.camScale)
+	// Draw player
+	options := &ebiten.DrawImageOptions{}
+	options.GeoM.Scale(scale, scale)
+	options.GeoM.Translate(-float64(124)*scale, -float64(87)*scale) // Center the sprite
+	options.GeoM.Translate(float64(g.w)/2, float64(g.h)/2)
+	g.playerSprite.Draw(screen, g.w, g.h, g.camScale, options)
 
-	// for _, e := range g.enemies {
-	// 	e.Draw(screen, g.w, g.h, g.camScale)
-	// }
+	// Draw enemies
+	for _, e := range g.enemies {
+		// Calculate enemy position relative to player
+		relX := e.X - g.playerSprite.X
+		relY := e.Y - g.playerSprite.Y
 
-	// Draw the world frame over everything
+		// Calculate screen position
+		screenX := cx + relX*scale
+		screenY := cy + relY*scale
+
+		// Check if enemy is visible on screen (with some padding)
+		padding := 200.0 * scale
+		if screenX > -padding && screenX < float64(g.w)+padding &&
+			screenY > -padding && screenY < float64(g.h)+padding {
+			// Create draw options for this enemy
+			enemyOp := &ebiten.DrawImageOptions{}
+			enemyOp.GeoM.Scale(scale, scale)
+			enemyOp.GeoM.Translate(-float64(124)*scale, -float64(87)*scale) // Center the sprite
+			enemyOp.GeoM.Translate(screenX, screenY)
+
+			// Draw the enemy
+			e.Draw(screen, g.w, g.h, g.camScale, enemyOp)
+		}
+	}
+
+	// Draw the worldFrame over everything
 	frameOp := &ebiten.DrawImageOptions{}
 	screen.DrawImage(g.worldFrame, frameOp)
 }

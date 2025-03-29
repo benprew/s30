@@ -3,6 +3,7 @@ package sprites
 import (
 	"fmt"
 	_ "image/png"
+	"math"
 	"time"
 
 	"github.com/benprew/s30/art"
@@ -13,6 +14,12 @@ const (
 	// Sprite sheet dimensions
 	CharacterRows    = 8
 	CharacterColumns = 5
+
+	// Direction bit flags
+	DirUp    = 0x8 // 1000
+	DirDown  = 0x4 // 0100
+	DirLeft  = 0x2 // 0010
+	DirRight = 0x1 // 0001
 
 	// Animation directions
 	DirectionDown      = 0
@@ -51,14 +58,40 @@ func NewCharacter(animations, shadows [][]*ebiten.Image) *Character {
 	}
 }
 
+// DirectionToSpriteIndex converts bit-based direction to sprite index
+func DirectionToSpriteIndex(dirBits int) int {
+	switch dirBits {
+	case DirUp:
+		return DirectionUp
+	case DirDown:
+		return DirectionDown
+	case DirLeft:
+		return DirectionLeft
+	case DirRight:
+		return DirectionRight
+	case DirUp | DirLeft:
+		return DirectionUpLeft
+	case DirUp | DirRight:
+		return DirectionUpRight
+	case DirDown | DirLeft:
+		return DirectionDownLeft
+	case DirDown | DirRight:
+		return DirectionDownRight
+	default:
+		return DirectionDown // Default direction
+	}
+}
+
 // LoadCharacter loads a character and its shadow sprites by character name
 func LoadCharacter(name CharacterName) (*Character, error) {
 	// Get the shadow name for this character
-	shadowName := shadowName(name)
+	charFileName := string(name) + ".spr.png"
+	shadowFileName := shadowName(name) + ".spr.png"
+	fmt.Printf("char %s shad %s\n", charFileName, shadowFileName)
 
 	// Get the embedded sprite files
-	charFile := getEmbeddedFile(string(name) + ".spr.png")
-	shadowFile := getEmbeddedFile(shadowName + ".spr.png")
+	charFile := getEmbeddedFile(charFileName)
+	shadowFile := getEmbeddedFile(shadowFileName)
 
 	if charFile == nil || shadowFile == nil {
 		return nil, fmt.Errorf("failed to find sprite files for character %s", name)
@@ -90,45 +123,57 @@ func getEmbeddedFile(filename string) []byte {
 }
 
 // Update characters location
-func (c *Character) Update(up, down, left, right bool) {
-	// Update player position based on input
-	if left {
+func (c *Character) Update(dirBits int) {
+	if dirBits == 0 {
+		c.IsMoving = false
+		return
+	} else {
+		c.IsMoving = true
+	}
+	// Update sprite direction based on movement direction
+	c.Direction = DirectionToSpriteIndex(dirBits)
+
+	// Apply movement based on direction bits
+	if dirBits&DirLeft != 0 {
 		c.X -= c.MoveSpeed
 	}
-	if right {
+	if dirBits&DirRight != 0 {
 		c.X += c.MoveSpeed
 	}
-	if down {
+	if dirBits&DirDown != 0 {
 		c.Y -= c.MoveSpeed
 	}
-	if up {
+	if dirBits&DirUp != 0 {
 		c.Y += c.MoveSpeed
 	}
+}
 
-	// Update player movement state based on input
-	c.IsMoving = up || down || left || right
+// UpdateAI updates an enemy character's movement based on AI behavior
+func (c *Character) UpdateAI(playerX, playerY float64) int {
+	// Calculate distance to player
+	dx := playerX - c.X
+	dy := playerY - c.Y
+	distanceToPlayer := math.Sqrt(dx*dx + dy*dy)
 
-	if c.IsMoving {
-		if up && right {
-			c.Direction = 5 // upRight
-		} else if up && left {
-			c.Direction = 3 // upLeft
-		} else if down && right {
-			c.Direction = 7 // downRight
-		} else if down && left {
-			c.Direction = 1 // downLeft
-		} else if up {
-			c.Direction = 4 // up
-		} else if down {
-			c.Direction = 0 // down
-		} else if left {
-			c.Direction = 2 // left
-		} else if right {
-			c.Direction = 6 // right
-		}
+	dx /= distanceToPlayer
+	dy /= distanceToPlayer
+
+	// Convert to directional movement
+	dirbits := 0
+	if dx > 0.3 {
+		dirbits |= DirRight
+	}
+	if dx < -0.3 {
+		dirbits |= DirLeft
+	}
+	if dy < 0.3 {
+		dirbits |= DirDown
+	}
+	if dy > -0.3 {
+		dirbits |= DirUp
 	}
 
-	// This method can be expanded later for AI movement
+	return dirbits
 }
 
 // SetPosition sets the character's position on the map
@@ -138,7 +183,7 @@ func (c *Character) SetPosition(x, y float64) {
 }
 
 // Draw renders the character and its shadow at the center of the screen
-func (c *Character) Draw(screen *ebiten.Image, screenWidth, screenHeight int, scale float64) {
+func (c *Character) Draw(screen *ebiten.Image, screenWidth, screenHeight int, scale float64, options *ebiten.DrawImageOptions) {
 	// Update animation frame if moving
 	if c.IsMoving && time.Since(c.LastUpdate) > time.Millisecond*100 {
 		c.Frame = (c.Frame + 1) % CharacterColumns
@@ -146,11 +191,6 @@ func (c *Character) Draw(screen *ebiten.Image, screenWidth, screenHeight int, sc
 	} else if !c.IsMoving {
 		c.Frame = 0
 	}
-
-	options := &ebiten.DrawImageOptions{}
-	options.GeoM.Scale(scale, scale)
-	options.GeoM.Translate(-float64(124)*scale, -float64(87)*scale) // Center the sprite
-	options.GeoM.Translate(float64(screenWidth)/2, float64(screenHeight)/2)
 
 	// Draw shadow first
 	screen.DrawImage(c.Shadows[c.Direction][c.Frame], options)
