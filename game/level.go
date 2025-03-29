@@ -49,10 +49,9 @@ func (l *Level) Size() (width, height int) {
 
 // NewLevel returns a new randomly generated Level.
 func NewLevel() (*Level, error) {
-	// Create a 108x108 Level.
 	l := &Level{
-		w:          4,
-		h:          4,
+		w:          200,
+		h:          200,
 		tileWidth:  206,
 		tileHeight: 102,
 	}
@@ -65,7 +64,6 @@ func NewLevel() (*Level, error) {
 
 	// widths are the 5 terrain types:
 	// marsh, desert, forest, mountain, plains
-	// TODO: foliage needs to be placed in the center of the tile, otherwise it creeps into the tile below it
 	// foliage is 206x134
 	// land tile is 206x102
 	foliage, err := sprites.LoadSpriteSheet(5, 11, art.Land_png)
@@ -78,8 +76,22 @@ func NewLevel() (*Level, error) {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
 
+	foliage2, err := sprites.LoadSpriteSheet(5, 11, art.Land2_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
+	}
+	Sfoliage2, err := sprites.LoadSpriteSheet(5, 11, art.Sland2_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
+	}
+
+	Cstline2, err := sprites.LoadSpriteSheet(4, 14, art.Cstline2_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
+	}
+
 	noise := generateTerrain(l.w, l.h)
-	l.mapTerrainTypes(noise, ss, foliage, Sfoliage)
+	l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2)
 	return l, nil
 }
 
@@ -166,12 +178,12 @@ func generateTerrain(w, h int) [][]float64 {
 	return smoothTerrain
 }
 
-func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage [][]*ebiten.Image, Sfoliage [][]*ebiten.Image) {
+func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2 [][]*ebiten.Image) {
 	// Fill each tile with one or more sprites randomly.
 	l.tiles = make([][]*Tile, l.h)
-	for y := 0; y < l.h; y++ {
+	for y := range l.h {
 		l.tiles[y] = make([]*Tile, l.w)
-		for x := 0; x < l.w; x++ {
+		for x := range l.w {
 			t := &Tile{}
 			isBorderSpace := x == 0 || y == 0 || x == l.w-1 || y == l.h-1
 			val := terrain[y][x]
@@ -181,31 +193,35 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage []
 				t.AddSprite(ss.Ice)
 			case val < Water:
 				t.AddSprite(ss.Water)
+				if rand.Float64() < 0.1 {
+					t.AddFoliageSprite(Sfoliage2[folIdx][0])
+					t.AddFoliageSprite(foliage2[folIdx][0])
+				}
 			case val < Sand:
 				t.AddSprite(ss.Sand) // Use desert sprite for sandy shores
-				t.AddSprite(Sfoliage[folIdx][1])
-				t.AddSprite(foliage[folIdx][1])
+				t.AddFoliageSprite(Sfoliage[folIdx][1])
+				t.AddFoliageSprite(foliage[folIdx][1])
 			case val < Marsh:
 				t.AddSprite(ss.Marsh)
-				t.AddSprite(Sfoliage[folIdx][0])
-				t.AddSprite(foliage[folIdx][0])
+				t.AddFoliageSprite(Sfoliage[folIdx][0])
+				t.AddFoliageSprite(foliage[folIdx][0])
 			case val < Plains:
 				t.AddSprite(ss.Plains)
-				t.AddSprite(Sfoliage[folIdx][4])
-				t.AddSprite(foliage[folIdx][4])
+				t.AddFoliageSprite(Sfoliage[folIdx][4])
+				t.AddFoliageSprite(foliage[folIdx][4])
 			case val < Forest:
 				t.AddSprite(ss.Forest)
-				t.AddSprite(Sfoliage[folIdx][2])
-				t.AddSprite(foliage[folIdx][2])
+				t.AddFoliageSprite(Sfoliage[folIdx][2])
+				t.AddFoliageSprite(foliage[folIdx][2])
 			case val < Mountains:
 				t.AddSprite(ss.Plains)
-				t.AddSprite(Sfoliage[folIdx][3])
-				t.AddSprite(foliage[folIdx][3])
+				t.AddFoliageSprite(Sfoliage[folIdx][3])
+				t.AddFoliageSprite(foliage[folIdx][3])
 			default:
 				t.AddSprite(ss.Plains)
 				if rand.Float64() < 0.7 {
-					t.AddSprite(Sfoliage[folIdx][4])
-					t.AddSprite(foliage[folIdx][4])
+					t.AddFoliageSprite(Sfoliage[folIdx][4])
+					t.AddFoliageSprite(foliage[folIdx][4])
 				}
 			}
 			l.tiles[y][x] = t

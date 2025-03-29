@@ -24,6 +24,12 @@ var (
 	//go:embed sprites/world/land/Sland2.spr.png
 	Sland2_png []byte
 
+	//go:embed sprites/world/land/Cstline2.spr.png
+	Cstline2_png []byte
+
+	//go:embed sprites/world/land/Cstline1.spr.png
+	Cstline_png []byte
+
 	// world frame
 	//go:embed Advinter1024.pic.png
 	WorldFrame_png []byte

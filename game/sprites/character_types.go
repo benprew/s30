@@ -4,7 +4,7 @@ package sprites
 type CharacterName string
 
 const (
-	// White characters
+	// White enemies
 	WhiteArchmage   CharacterName = "W_Amg"
 	WhiteFirewizard CharacterName = "W_Fwz"
 	WhiteKnight     CharacterName = "W_Kht"
@@ -12,7 +12,7 @@ const (
 	WhiteMagicwiz   CharacterName = "W_Mwz"
 	WhiteWingedguy  CharacterName = "W_Wg"
 
-	// Black characters
+	// Black enemies
 	BlackArchmage   CharacterName = "Bk_Amg"
 	BlackDjinn      CharacterName = "Bk_Djn"
 	BlackFirewizard CharacterName = "Bk_Fwz"
@@ -21,7 +21,7 @@ const (
 	BlackMagicwiz   CharacterName = "Bk_Mwz"
 	BlackWingedguy  CharacterName = "Bk_Wg"
 
-	// Blue characters
+	// Blue enemies
 	BlueSafer      CharacterName = "B_Sfr"
 	BlueArchmage   CharacterName = "Bu_Amg"
 	BlueDjinn      CharacterName = "Bu_Djn"
@@ -30,7 +30,7 @@ const (
 	BlueMagicwiz   CharacterName = "Bu_Mwz"
 	BlueWyrm       CharacterName = "Bu_Wrm"
 
-	// Dragon characters
+	// Dragon enemies
 	DragonBRU CharacterName = "Dg_Bru"
 	DragonGWR CharacterName = "Dg_Gwr"
 	DragonRBG CharacterName = "Dg_Rbg"
@@ -39,7 +39,7 @@ const (
 
 	Troll CharacterName = "Troll"
 
-	// Multi characters
+	// Multi enemies
 	MultiApe        CharacterName = "M_Ape"
 	MultiCentaur    CharacterName = "M_Cen"
 	MultiCentaur2   CharacterName = "M_Cen2"
@@ -56,8 +56,8 @@ const (
 	EgoMale   CharacterName = "Ego_M"
 )
 
-// getShadowName returns the corresponding shadow sprite name for a character
-func getShadowName(name CharacterName) string {
+// shadowName returns the corresponding shadow sprite name for a character
+func shadowName(name CharacterName) string {
 	// Special cases first
 	switch name {
 	case Troll:

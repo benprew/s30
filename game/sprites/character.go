@@ -54,7 +54,7 @@ func NewCharacter(animations, shadows [][]*ebiten.Image) *Character {
 // LoadCharacter loads a character and its shadow sprites by character name
 func LoadCharacter(name CharacterName) (*Character, error) {
 	// Get the shadow name for this character
-	shadowName := getShadowName(name)
+	shadowName := shadowName(name)
 
 	// Get the embedded sprite files
 	charFile := getEmbeddedFile(string(name) + ".spr.png")
