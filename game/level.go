@@ -27,8 +27,7 @@ const (
 
 // Level represents a Game level.
 type Level struct {
-	w, h int
-
+	w, h       int
 	tiles      [][]*Tile // (Y,X) array of tiles
 	tileWidth  int
 	tileHeight int
@@ -50,8 +49,8 @@ func (l *Level) Size() (width, height int) {
 // NewLevel returns a new randomly generated Level.
 func NewLevel() (*Level, error) {
 	l := &Level{
-		w:          200,
-		h:          200,
+		w:          52,
+		h:          30,
 		tileWidth:  206,
 		tileHeight: 102,
 	}
@@ -227,4 +226,65 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 			l.tiles[y][x] = t
 		}
 	}
+}
+
+func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
+	tileWidth := l.tileWidth
+	tileHeight := l.tileHeight
+
+	op := &ebiten.DrawImageOptions{}
+
+	// the visible drawable area
+	visibleXOrigin := pX - padX
+	visibleYOrigin := pY - padY
+	visibleXOpposite := pX + padX
+	visibleYOpposite := pY + padY
+
+	for y := 0; y < l.h; y++ {
+		for x := 0; x < l.w; x++ {
+			tile := l.Tile(x, y)
+			if tile == nil {
+				continue
+			}
+
+			// Calculate screen position
+			pixelX := x * tileWidth
+			pixelY := y * tileHeight / 2
+
+			// Offset every other row to create the zigzag pattern
+			if y%2 != 0 {
+				pixelX += tileWidth / 2
+			}
+
+			if pixelX < visibleXOrigin || pixelX > visibleXOpposite {
+				continue // Skip rendering if outside visible area
+			}
+
+			if pixelY < visibleYOrigin || pixelY > visibleYOpposite {
+				continue // Skip rendering if outside visible area
+			}
+			screenX := pixelX - (pX - 1024/2)
+			screenY := pixelY - (pY - 768/2)
+
+			op.GeoM.Reset()
+			op.GeoM.Translate(float64(screenX), float64(screenY))
+			tile.Draw(screen, 1.0, op)
+		}
+	}
+}
+
+func (l *Level) PointToTile(pixelX, pixelY int) (tileX, tileY int) {
+	tileWidth := l.tileWidth
+	tileHeight := l.tileHeight
+
+	// Calculate the approximate row and column
+	tileY = pixelY / tileHeight
+	tileX = (pixelX - (tileY%2)*(tileWidth/2)) / tileWidth
+
+	// Ensure the tile coordinates are within bounds
+	if pixelX < 0 || tileX >= l.w || pixelY < 0 || tileY >= l.h {
+		return -1, -1 // Return invalid coordinates if out of bounds
+	}
+
+	return tileX, tileY
 }

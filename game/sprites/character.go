@@ -3,7 +3,6 @@ package sprites
 import (
 	"fmt"
 	_ "image/png"
-	"math"
 	"time"
 
 	"github.com/benprew/s30/art"
@@ -40,9 +39,9 @@ type Character struct {
 	Frame      int
 	LastUpdate time.Time
 	IsMoving   bool
-	X          float64
-	Y          float64
-	MoveSpeed  float64
+	X          int
+	Y          int
+	MoveSpeed  int
 }
 
 // NewCharacter creates a new character sprite with animations and shadows
@@ -54,7 +53,7 @@ func NewCharacter(animations, shadows [][]*ebiten.Image) *Character {
 		Frame:      0,
 		LastUpdate: time.Now(),
 		IsMoving:   false,
-		MoveSpeed:  3.75,
+		MoveSpeed:  3,
 	}
 }
 
@@ -141,49 +140,39 @@ func (c *Character) Update(dirBits int) {
 		c.X += c.MoveSpeed
 	}
 	if dirBits&DirDown != 0 {
-		c.Y -= c.MoveSpeed
+		c.Y += c.MoveSpeed
 	}
 	if dirBits&DirUp != 0 {
-		c.Y += c.MoveSpeed
+		c.Y -= c.MoveSpeed
 	}
 }
 
 // UpdateAI updates an enemy character's movement based on AI behavior
-func (c *Character) UpdateAI(playerX, playerY float64) int {
-	// Calculate distance to player
-	dx := playerX - c.X
-	dy := playerY - c.Y
-	distanceToPlayer := math.Sqrt(dx*dx + dy*dy)
-
-	dx /= distanceToPlayer
-	dy /= distanceToPlayer
-
-	// Convert to directional movement
+func (c *Character) UpdateAI(playerX, playerY int) int {
 	dirbits := 0
-	if dx > 0.3 {
+	if playerX > c.X {
 		dirbits |= DirRight
 	}
-	if dx < -0.3 {
+	if playerX < c.X {
 		dirbits |= DirLeft
 	}
-	if dy < 0.3 {
+	if playerY > c.Y {
 		dirbits |= DirDown
 	}
-	if dy > -0.3 {
+	if playerY < c.Y {
 		dirbits |= DirUp
 	}
-
 	return dirbits
 }
 
 // SetPosition sets the character's position on the map
-func (c *Character) SetPosition(x, y float64) {
+func (c *Character) SetPosition(x, y int) {
 	c.X = x
 	c.Y = y
 }
 
 // Draw renders the character and its shadow at the center of the screen
-func (c *Character) Draw(screen *ebiten.Image, screenWidth, screenHeight int, scale float64, options *ebiten.DrawImageOptions) {
+func (c *Character) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 	// Update animation frame if moving
 	if c.IsMoving && time.Since(c.LastUpdate) > time.Millisecond*100 {
 		c.Frame = (c.Frame + 1) % CharacterColumns

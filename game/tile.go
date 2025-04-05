@@ -53,7 +53,7 @@ func (t *Tile) AddFoliageSprite(s *ebiten.Image) {
 // 3,4,3,4 BR,R,BR,R
 
 // Draw draws the Tile on the screen using the provided options.
-func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+func (t *Tile) Draw(screen *ebiten.Image, scale float64, options *ebiten.DrawImageOptions) {
 	// Draw regular sprites
 	for _, s := range t.sprites {
 		screen.DrawImage(s, options)
@@ -66,6 +66,7 @@ func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 		posOptions.GeoM.Concat(options.GeoM)
 
 		// Apply the offset
+		// posOptions.GeoM.Scale(scale, scale)
 		posOptions.GeoM.Translate(ps.OffsetX, ps.OffsetY)
 
 		screen.DrawImage(ps.Image, posOptions)
