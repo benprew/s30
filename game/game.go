@@ -278,6 +278,7 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
 	options.GeoM.Translate(float64(g.screenW)/2, float64(g.screenH)/2)
+	options.GeoM.Translate(-float64(124)*scale, -float64(87)*scale) // Center the sprite
 	g.playerSprite.Draw(screen, options)
 
 	// Draw enemies
@@ -288,6 +289,7 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 
 		screenX, screenY := g.screenOffset(e.X, e.Y)
 		enemyOp := &ebiten.DrawImageOptions{}
+		enemyOp.GeoM.Translate(-float64(124)*scale, -float64(87)*scale) // Center the sprite
 		enemyOp.GeoM.Translate(float64(screenX), float64(screenY))
 
 		// Draw the enemy
@@ -295,8 +297,8 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 	}
 
 	// Draw the worldFrame over everything
-	// frameOp := &ebiten.DrawImageOptions{}
-	// screen.DrawImage(g.worldFrame, frameOp)
+	frameOp := &ebiten.DrawImageOptions{}
+	screen.DrawImage(g.worldFrame, frameOp)
 }
 
 // x,y is the position of the tile, width and height are the dimensions of the tile

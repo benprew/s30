@@ -53,7 +53,7 @@ func NewCharacter(animations, shadows [][]*ebiten.Image) *Character {
 		Frame:      0,
 		LastUpdate: time.Now(),
 		IsMoving:   false,
-		MoveSpeed:  3,
+		MoveSpeed:  20,
 	}
 }
 
@@ -150,16 +150,16 @@ func (c *Character) Update(dirBits int) {
 // UpdateAI updates an enemy character's movement based on AI behavior
 func (c *Character) UpdateAI(playerX, playerY int) int {
 	dirbits := 0
-	if playerX > c.X {
+	if playerX > c.X+3 {
 		dirbits |= DirRight
 	}
-	if playerX < c.X {
+	if playerX < c.X-3 {
 		dirbits |= DirLeft
 	}
-	if playerY > c.Y {
+	if playerY > c.Y+3 {
 		dirbits |= DirDown
 	}
-	if playerY < c.Y {
+	if playerY < c.Y-3 {
 		dirbits |= DirUp
 	}
 	return dirbits
