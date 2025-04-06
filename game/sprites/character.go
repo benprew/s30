@@ -53,7 +53,7 @@ func NewCharacter(animations, shadows [][]*ebiten.Image) *Character {
 		Frame:      0,
 		LastUpdate: time.Now(),
 		IsMoving:   false,
-		MoveSpeed:  20,
+		MoveSpeed:  3,
 	}
 }
 
