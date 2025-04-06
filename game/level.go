@@ -49,8 +49,8 @@ func (l *Level) Size() (width, height int) {
 // NewLevel returns a new randomly generated Level.
 func NewLevel() (*Level, error) {
 	l := &Level{
-		w:          52,
-		h:          30,
+		w:          56,
+		h:          38,
 		tileWidth:  206,
 		tileHeight: 102,
 	}
@@ -184,12 +184,12 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 		l.tiles[y] = make([]*Tile, l.w)
 		for x := range l.w {
 			t := &Tile{}
-			isBorderSpace := x == 0 || y == 0 || x == l.w-1 || y == l.h-1
+			isBorderSpace := x < 4 || y < 8 || x > l.w-4 || y > l.h-8
 			val := terrain[y][x]
 			folIdx := rand.Intn(11)
 			switch {
 			case isBorderSpace:
-				t.AddSprite(ss.Ice)
+				t.AddSprite(ss.Water)
 			case val < Water:
 				t.AddSprite(ss.Water)
 				if rand.Float64() < 0.1 {

@@ -159,7 +159,6 @@ func (g *Game) Update() error {
 
 	// Move player and update direction via keyboard using bit flags
 	var dirBits int = 0
-
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 		dirBits |= sprites.DirLeft
 	}
@@ -172,7 +171,6 @@ func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
 		dirBits |= sprites.DirUp
 	}
-
 	g.playerSprite.Update(dirBits)
 
 	// Update enemies with AI movement
@@ -183,16 +181,16 @@ func (g *Game) Update() error {
 	}
 
 	// Clamp player position to world boundaries
-	if g.playerSprite.X < 0 {
-		g.playerSprite.X = 0
+	if g.playerSprite.X < g.screenW/2 {
+		g.playerSprite.X = g.screenW / 2
 	}
-	if g.playerSprite.X > g.levelW {
-		g.playerSprite.X = g.levelW
+	if g.playerSprite.X > g.levelW-g.screenW/2 {
+		g.playerSprite.X = g.levelW - g.screenW/2
 	}
-	if g.playerSprite.Y < 0 {
-		g.playerSprite.Y = 0
-	} else if g.playerSprite.Y > g.levelH {
-		g.playerSprite.Y = g.levelH
+	if g.playerSprite.Y < g.screenH/2 {
+		g.playerSprite.Y = g.screenH / 2
+	} else if g.playerSprite.Y > g.levelH-g.screenH/2 {
+		g.playerSprite.Y = g.levelH - g.screenH/2
 	}
 
 	// Randomize level.
