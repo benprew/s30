@@ -286,7 +286,6 @@ func (l *Level) placeCities(validLocations []struct{ x, y int }, citySprites [][
 			cityIdx := rand.Intn(12)
 			cityX := cityIdx % 6
 			cityY := 0
-			fmt.Println("cityIdx", cityIdx, "cityX", cityX)
 			if cityIdx > 5 {
 				cityY = 2
 			}
