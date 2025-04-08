@@ -30,6 +30,9 @@ var (
 	//go:embed sprites/world/land/Cstline1.spr.png
 	Cstline_png []byte
 
+	//go:embed sprites/world/land/Castles1.spr.png
+	Castles1_png []byte
+
 	// world frame
 	//go:embed Advinter1024.pic.png
 	WorldFrame_png []byte

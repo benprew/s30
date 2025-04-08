@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 
 	"github.com/aquilax/go-perlin"
@@ -89,8 +90,20 @@ func NewLevel() (*Level, error) {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
 
+	// Load city sprites from Castles1.spr.png
+	citySheetCols := 2
+	citySheetRows := 4 // Based on visual inspection (4 rows of structures)
+	citySprites, err := sprites.LoadSpriteSheet(citySheetCols, citySheetRows, art.Castles1_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load city spritesheet Castles1.spr.png: %w", err)
+	}
+	if len(citySprites) == 0 || len(citySprites[0]) == 0 {
+		return nil, fmt.Errorf("city spritesheet Castles1.spr.png loaded but is empty or has incorrect dimensions")
+	}
+	citySprite := citySprites[0][0] // Use the top-left white castle
+
 	noise := generateTerrain(l.w, l.h)
-	l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2)
+	l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprite) // Pass citySprite
 	return l, nil
 }
 
@@ -177,9 +190,12 @@ func generateTerrain(w, h int) [][]float64 {
 	return smoothTerrain
 }
 
-func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2 [][]*ebiten.Image) {
+// mapTerrainTypes assigns terrain and places cities based on noise values.
+func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2 [][]*ebiten.Image, citySprite *ebiten.Image) {
 	// Fill each tile with one or more sprites randomly.
 	l.tiles = make([][]*Tile, l.h)
+	validCityLocations := []struct{ x, y int }{} // Store potential city coordinates
+
 	for y := range l.h {
 		l.tiles[y] = make([]*Tile, l.w)
 		for x := range l.w {
@@ -187,11 +203,14 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 			isBorderSpace := x < 4 || y < 8 || x > l.w-4 || y > l.h-8
 			val := terrain[y][x]
 			folIdx := rand.Intn(11)
+			isWater := false // Track if the tile is water
 			switch {
 			case isBorderSpace:
 				t.AddSprite(ss.Water)
+				isWater = true // Border is treated as water for city placement
 			case val < Water:
 				t.AddSprite(ss.Water)
+				isWater = true
 				if rand.Float64() < 0.1 {
 					t.AddFoliageSprite(Sfoliage2[folIdx][0])
 					t.AddFoliageSprite(foliage2[folIdx][0])
@@ -224,8 +243,16 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 				}
 			}
 			l.tiles[y][x] = t
+
+			// If not water and not border, add to potential city locations
+			if !isWater && !isBorderSpace {
+				validCityLocations = append(validCityLocations, struct{ x, y int }{x, y})
+			}
 		}
 	}
+
+	// Place cities after terrain is mapped
+	l.placeCities(validCityLocations, citySprite, 35, 4)
 }
 
 func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {

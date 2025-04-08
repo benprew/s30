@@ -16,6 +16,7 @@ type PositionedSprite struct {
 type Tile struct {
 	sprites           []*ebiten.Image
 	positionedSprites []*PositionedSprite
+	IsCity            bool // Indicates if this tile represents a city
 }
 
 // AddSprite adds a sprite to the Tile.
@@ -39,6 +40,35 @@ func (t *Tile) AddFoliageSprite(s *ebiten.Image) {
 	}
 
 	t.positionedSprites = append(t.positionedSprites, foliageSprite)
+}
+
+// AddCitySprite adds a city sprite to the Tile with proper positioning.
+// City sprites are larger and need different offsets than foliage.
+func (t *Tile) AddCitySprite(s *ebiten.Image) {
+	if s == nil {
+		return
+	}
+
+	// Determine offsets needed to center the base of the city sprite
+	// on the tile, similar to foliage but potentially larger.
+	// Base tile is 206x102. Let's assume city sprite base aligns similarly
+	// but the sprite is taller. We need the actual city sprite dimensions.
+	// If city sprite is ~206x270, the offset might be around -(270 - 102) = -168?
+	// This needs tuning based on the actual sprite dimensions and desired look.
+	citySpriteHeight := float64(s.Bounds().Dy())
+	baseTileHeight := 102.0 // Height of the diamond part of the base tile
+	offsetY := -(citySpriteHeight - baseTileHeight)
+
+	// Create a new sprite with positioning information
+	cityPosSprite := &PositionedSprite{
+		Image: s,
+		// OffsetX might be needed if the city sprite isn't perfectly centered horizontally
+		OffsetX: 0,
+		OffsetY: offsetY, // Adjust Y to align base with tile center
+	}
+
+	// Add to positioned sprites (drawn after base tile, potentially overlapping foliage)
+	t.positionedSprites = append(t.positionedSprites, cityPosSprite)
 }
 
 // Transition tile between terrain types (Cstline/Cstline2)

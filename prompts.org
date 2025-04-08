@@ -1,0 +1,6 @@
+* Cities
+With level.go, game.go and tile.go
+
+When generating levels, also mark some squares as cities. These cities should be at least 4 tiles away from each other and there should be 35 cities on the map.
+
+Cities cannot be places on water tiles, but can be on any other tile.
