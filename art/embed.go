@@ -33,6 +33,16 @@ var (
 	//go:embed sprites/world/land/Castles1.spr.png
 	Castles1_png []byte
 
+	// 6x2 city + shadow x2
+	// Total 6x4
+	//go:embed sprites/world/land/Locatn01.spr.png
+	Cities1_png []byte
+
+	// 6x2 city + shadow x2
+	// Total 6x4
+	//go:embed sprites/world/land/Locatn03.spr.png
+	Dungeons_png []byte
+
 	// world frame
 	//go:embed Advinter1024.pic.png
 	WorldFrame_png []byte

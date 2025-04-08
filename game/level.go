@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 
 	"github.com/aquilax/go-perlin"
@@ -90,20 +89,13 @@ func NewLevel() (*Level, error) {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
 
-	// Load city sprites from Castles1.spr.png
-	citySheetCols := 2
-	citySheetRows := 4 // Based on visual inspection (4 rows of structures)
-	citySprites, err := sprites.LoadSpriteSheet(citySheetCols, citySheetRows, art.Castles1_png)
+	citySprites, err := sprites.LoadSpriteSheet(6, 4, art.Cities1_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load city spritesheet Castles1.spr.png: %w", err)
 	}
-	if len(citySprites) == 0 || len(citySprites[0]) == 0 {
-		return nil, fmt.Errorf("city spritesheet Castles1.spr.png loaded but is empty or has incorrect dimensions")
-	}
-	citySprite := citySprites[0][0] // Use the top-left white castle
 
 	noise := generateTerrain(l.w, l.h)
-	l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprite) // Pass citySprite
+	l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites)
 	return l, nil
 }
 
@@ -191,7 +183,7 @@ func generateTerrain(w, h int) [][]float64 {
 }
 
 // mapTerrainTypes assigns terrain and places cities based on noise values.
-func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2 [][]*ebiten.Image, citySprite *ebiten.Image) {
+func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites [][]*ebiten.Image) {
 	// Fill each tile with one or more sprites randomly.
 	l.tiles = make([][]*Tile, l.h)
 	validCityLocations := []struct{ x, y int }{} // Store potential city coordinates
@@ -252,7 +244,71 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 	}
 
 	// Place cities after terrain is mapped
-	l.placeCities(validCityLocations, citySprite, 35, 4)
+	l.placeCities(validCityLocations, citySprites, 35, 6)
+}
+
+// placeCities places a specified number of cities on valid land tiles, ensuring
+// they are at least minDistance apart.
+func (l *Level) placeCities(validLocations []struct{ x, y int }, citySprites [][]*ebiten.Image, numCities, minDistance int) {
+	if len(validLocations) == 0 || numCities <= 0 {
+		return // No valid locations or no cities to place
+	}
+
+	placedCities := []struct{ x, y int }{}
+
+	// Shuffle valid locations for random placement
+	rand.Shuffle(len(validLocations), func(i, j int) {
+		validLocations[i], validLocations[j] = validLocations[j], validLocations[i]
+	})
+
+	for _, loc := range validLocations {
+		if len(placedCities) >= numCities {
+			break // Reached the desired number of cities
+		}
+
+		// Check distance from already placed cities
+		isValidPlacement := true
+		for _, city := range placedCities {
+			dist := absInt(loc.x-city.x) + absInt(loc.y-city.y)
+			if dist <= minDistance {
+				isValidPlacement = false
+				break
+			}
+		}
+
+		if !isValidPlacement {
+			continue
+		}
+
+		// Place the city
+		tile := l.Tile(loc.x, loc.y)
+		if tile != nil { // Should always be non-nil based on how validLocations is generated
+			cityIdx := rand.Intn(12)
+			cityX := cityIdx % 6
+			cityY := 0
+			fmt.Println("cityIdx", cityIdx, "cityX", cityX)
+			if cityIdx > 5 {
+				cityY = 2
+			}
+
+			tile.IsCity = true
+			tile.AddCitySprite(citySprites[cityY][cityX])
+			tile.AddCitySprite(citySprites[cityY+1][cityX])
+			placedCities = append(placedCities, loc)
+			// fmt.Printf("Placed city at (%d, %d)\n", loc.x, loc.y) // Optional: for debugging
+		}
+	}
+
+	if len(placedCities) < numCities {
+		fmt.Printf("Warning: Could only place %d out of %d requested cities with min distance %d.\n", len(placedCities), numCities, minDistance)
+	}
+}
+
+func absInt(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
