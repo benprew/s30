@@ -4,3 +4,31 @@ With level.go, game.go and tile.go
 When generating levels, also mark some squares as cities. These cities should be at least 4 tiles away from each other and there should be 35 cities on the map.
 
 Cities cannot be places on water tiles, but can be on any other tile.
+* Enemies
+Generate some enemies that move randomly throughout the map. They should appear in the players view and move towards the player
+
+1. Add AI movement to enemies that makes them move randomly when the player is out of view range
+2. Make enemies move toward the player when they're within view range
+3. Add a system to spawn enemies at random positions on the map
+4. Update the game to render enemies and manage their movement
+5. Add the ability to spawn more enemies with the 'Q' key
+
+* Direction
+Instead of representing direction like this:
+
+	up := ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW)
+	down := ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS)
+	left := ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
+	right := ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD)
+
+
+I want to represent it as an int with bits
+
+Examples:
+
+Up: 1000 = 8
+Down: 0100 = 4
+Left: 0010 = 2
+Right: 0001 = 1
+
+UpLeft: 1100 = 12
