@@ -1,6 +1,7 @@
 package game
 
 import (
+	"container/heap"
 	"fmt"
 	"math/rand"
 
@@ -340,8 +341,59 @@ func (l *Level) placeCities(validLocations []struct{ x, y int }, citySprites [][
 // --- Road Generation Logic ---
 
 // Coordinate struct for pathfinding nodes
-type bfsNode struct {
+type pathNode struct {
 	x, y int
+}
+
+// Item represents an item in the priority queue.
+type pqItem struct {
+	node     pathNode
+	cost     float64 // Cost to reach this node
+	priority float64 // Priority (cost + heuristic for A*) - using cost for Dijkstra
+	index    int     // Index in the heap
+}
+
+// PriorityQueue implements heap.Interface and holds Items.
+type PriorityQueue []*pqItem
+
+func (pq PriorityQueue) Len() int { return len(pq) }
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	// We want Pop to give us the lowest priority (cost) item, so we use less than.
+	return pq[i].priority < pq[j].priority
+}
+
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+
+// Push adds an item to the heap.
+func (pq *PriorityQueue) Push(x interface{}) {
+	n := len(*pq)
+	item := x.(*pqItem)
+	item.index = n
+	*pq = append(*pq, item)
+}
+
+// Pop removes and returns the lowest priority item from the heap.
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil  // avoid memory leak
+	item.index = -1 // for safety
+	*pq = old[0 : n-1]
+	return item
+}
+
+// update modifies the priority and value of an Item in the queue.
+func (pq *PriorityQueue) update(item *pqItem, node pathNode, cost, priority float64) {
+	item.node = node
+	item.cost = cost
+	item.priority = priority
+	heap.Fix(pq, item.index)
 }
 
 // Checks if a tile is suitable for placing a road segment.
@@ -359,48 +411,103 @@ func (l *Level) isTileTraversableForRoads(x, y int) bool {
 	}
 }
 
-// findPathBFS finds a path between start and end coordinates using Breadth-First Search.
-// It avoids non-traversable tiles.
+// findPathBFS finds a path between start and end coordinates using Dijkstra's algorithm
+// (implemented with a priority queue) to prioritize existing roads.
 func (l *Level) findPathBFS(start, end struct{ x, y int }) []struct{ x, y int } {
-	queue := []bfsNode{{start.x, start.y}}
-	visited := make(map[bfsNode]bool)
-	parent := make(map[bfsNode]bfsNode)
-	visited[bfsNode{start.x, start.y}] = true
+	startNode := pathNode{start.x, start.y}
+	endNode := pathNode{end.x, end.y}
+
+	pq := make(PriorityQueue, 0)
+	heap.Init(&pq)
+
+	// Add the starting node
+	startItem := &pqItem{
+		node:     startNode,
+		cost:     0,
+		priority: 0, // Priority is just cost for Dijkstra
+	}
+	heap.Push(&pq, startItem)
+
+	// Keep track of the cost to reach each node and the path parent
+	costSoFar := make(map[pathNode]float64)
+	parent := make(map[pathNode]pathNode)
+	costSoFar[startNode] = 0
+
+	// Map to quickly find items in the priority queue for updates
+	itemsInQueue := make(map[pathNode]*pqItem)
+	itemsInQueue[startNode] = startItem
 
 	found := false
-	endNode := bfsNode{end.x, end.y}
 
-	for len(queue) > 0 {
-		curr := queue[0]
-		queue = queue[1:]
+	for pq.Len() > 0 {
+		// Get the node with the lowest cost
+		currentItem := heap.Pop(&pq).(*pqItem)
+		curr := currentItem.node
+		delete(itemsInQueue, curr) // Remove from active queue map
 
 		if curr == endNode {
 			found = true
 			break
 		}
 
-		// Explore neighbors (N, E, S, W) - Order can influence path shape slightly
-		for _, offset := range []struct{ dx, dy int }{{0, -1}, {1, 0}, {0, 1}, {-1, 0}} {
+		// Explore neighbors (Cardinal + Diagonal)
+		for _, offset := range []struct{ dx, dy int }{
+			{0, -1}, {1, 0}, {0, 1}, {-1, 0}, // Cardinal (N, E, S, W)
+			{1, -1}, {1, 1}, {-1, 1}, {-1, -1}, // Diagonal (NE, SE, SW, NW)
+		} {
 			nx, ny := curr.x+offset.dx, curr.y+offset.dy
-			neighborNode := bfsNode{nx, ny}
+			neighborNode := pathNode{nx, ny}
 
 			// Check bounds
 			if nx < 0 || nx >= l.w || ny < 0 || ny >= l.h {
 				continue
 			}
 
-			// Check visited
-			if visited[neighborNode] {
-				continue
-			}
-
 			// Check traversability (allow pathing *into* the end city tile)
 			isEndTile := (nx == end.x && ny == end.y)
-			targetTile := l.Tile(nx, ny) // Tile being considered for traversal
-			if targetTile != nil && (l.isTileTraversableForRoads(nx, ny) || isEndTile) {
-				visited[neighborNode] = true
+			targetTile := l.Tile(nx, ny)
+			if targetTile == nil || (!l.isTileTraversableForRoads(nx, ny) && !isEndTile) {
+				continue // Skip non-existent or non-traversable tiles (unless it's the destination city)
+			}
+
+			// Calculate cost to move to neighbor
+			baseMoveCost := 1.0 // Default cost for cardinal move
+			if absInt(offset.dx)+absInt(offset.dy) == 2 {
+				baseMoveCost = 1.4 // Higher base cost for diagonal move (~sqrt(2))
+			}
+
+			moveCost := baseMoveCost // Start with base cost
+			if len(targetTile.roadSprites) > 0 {
+				// Apply the strong preference for existing roads
+				moveCost = baseMoveCost * 0.01
+			}
+			if isEndTile {
+				moveCost = 0 // No cost to enter the final destination city tile
+			}
+
+			newCost := costSoFar[curr] + moveCost
+
+			// If we haven't found a path to the neighbor yet, or found a cheaper path
+			currentNeighborCost, costKnown := costSoFar[neighborNode]
+			if !costKnown || newCost < currentNeighborCost {
+				costSoFar[neighborNode] = newCost
 				parent[neighborNode] = curr
-				queue = append(queue, neighborNode)
+				priority := newCost // For Dijkstra, priority is just the cost
+
+				// Check if the neighbor is already in the priority queue
+				if item, exists := itemsInQueue[neighborNode]; exists {
+					// Update existing item
+					pq.update(item, neighborNode, newCost, priority)
+				} else {
+					// Add new item to queue
+					newItem := &pqItem{
+						node:     neighborNode,
+						cost:     newCost,
+						priority: priority,
+					}
+					heap.Push(&pq, newItem)
+					itemsInQueue[neighborNode] = newItem
+				}
 			}
 		}
 	}
@@ -412,17 +519,21 @@ func (l *Level) findPathBFS(start, end struct{ x, y int }) []struct{ x, y int } 
 
 	// Reconstruct path from end to start
 	path := []struct{ x, y int }{}
-	curr := endNode
-	for curr != (bfsNode{start.x, start.y}) {
-		path = append(path, struct{ x, y int }{curr.x, curr.y})
-		p, ok := parent[curr]
+	currNode := endNode
+	for currNode != startNode { // Check against startNode
+		path = append(path, struct{ x, y int }{currNode.x, currNode.y})
+		p, ok := parent[currNode]
 		if !ok {
-			fmt.Printf("BFS Path Reconstruction Error: No parent for %+v\n", curr)
+			// This can happen if start == end, handle gracefully
+			if startNode == endNode {
+				break // Path is just the start/end node
+			}
+			fmt.Printf("Path Reconstruction Error: No parent for %+v (start: %+v, end: %+v)\n", currNode, startNode, endNode)
 			return nil // Error in path reconstruction
 		}
-		curr = p
+		currNode = p // Move to the parent node
 	}
-	path = append(path, struct{ x, y int }{start.x, start.y}) // Add start node
+	path = append(path, struct{ x, y int }{startNode.x, startNode.y}) // Add start node
 
 	// Reverse path to be start -> end
 	for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
@@ -431,44 +542,83 @@ func (l *Level) findPathBFS(start, end struct{ x, y int }) []struct{ x, y int } 
 	return path
 }
 
-// getRoadSpritesForTile determines the correct road sprite based on path direction.
-// Currently only supports straight N-S and E-W segments based on roadsInfo.
+// findFirstSpriteForPattern searches roadSpriteInfo for the first occurrence of the pattern
+// and returns the corresponding sprite from roadSprites.
+func (l *Level) findFirstSpriteForPattern(pattern string) *ebiten.Image {
+	for r, rowInfo := range l.roadSpriteInfo {
+		for c, p := range rowInfo {
+			if p == pattern {
+				// Ensure indices are valid for roadSprites
+				if r < len(l.roadSprites) && c < len(l.roadSprites[r]) && l.roadSprites[r][c] != nil {
+					return l.roadSprites[r][c]
+				}
+			}
+		}
+	}
+	// fmt.Printf("Sprite pattern '%s' not found in roadsInfo\n", pattern)
+	return nil // Pattern not found or sprite missing
+}
+
+// getDirectionPattern determines the road pattern string based on movement delta.
+func getDirectionPattern(dx, dy int) string {
+	if dx == 0 && dy != 0 { // Vertical (N-S)
+		return "N,S"
+	} else if dy == 0 && dx != 0 { // Horizontal (E-W)
+		return "E,W"
+	} else if dx != 0 && dy != 0 { // Diagonal
+		if (dx > 0 && dy > 0) || (dx < 0 && dy < 0) { // SE or NW direction
+			return "SE,NW"
+		} else { // NE or SW direction
+			return "NE,SW"
+		}
+	}
+	return "" // No movement or invalid delta
+}
+
+// getRoadSpritesForTile determines the correct road sprite(s) based on path direction.
+// Handles straight paths and turns by combining sprites.
 func (l *Level) getRoadSpritesForTile(prev, curr, next struct{ x, y int }) []*ebiten.Image {
 	dxIn := curr.x - prev.x
 	dyIn := curr.y - prev.y
 	dxOut := next.x - curr.x
 	dyOut := next.y - curr.y
 
-	sprites := make([]*ebiten.Image, 1)
+	sprites := []*ebiten.Image{}
 
-	var requiredPattern string
-	// Check for vertical movement (allow for slight diagonal if needed, but focus on cardinal)
-	if dyIn != 0 && dyOut != 0 && dxIn == 0 && dxOut == 0 { // Moving N->S or S->N
-		requiredPattern = "N,S"
-	} else if dxIn != 0 && dxOut != 0 && dyIn == 0 && dyOut == 0 { // Moving W->E or E->W
-		requiredPattern = "E,W"
-	} else {
-		// Turn detected or diagonal - currently unsupported based on simple roadsInfo interpretation.
-		// A more complex version could try to find corner sprites like "NE,SW" if needed.
-		// For now, let's try to find *any* matching sprite based on the simple patterns.
-		// If moving vertically then horizontally, maybe use "N,S" then "E,W"?
-		// Or just return nil for turns. Let's return nil for now.
-		// fmt.Printf("Turn/Diagonal detected at (%d,%d): In(%d,%d) Out(%d,%d) - No simple sprite\n", curr.x, curr.y, dxIn, dyIn, dxOut, dyOut)
+	// Check for straight movement (cardinal or diagonal)
+	if dxIn == dxOut && dyIn == dyOut {
+		pattern := getDirectionPattern(dxIn, dyIn)
+		if pattern != "" {
+			sprite := l.findFirstSpriteForPattern(pattern)
+			if sprite != nil {
+				sprites = append(sprites, sprite)
+			}
+		}
+	} else { // Turn detected
+		// Get pattern for incoming segment
+		inPattern := getDirectionPattern(dxIn, dyIn)
+		// Get pattern for outgoing segment
+		outPattern := getDirectionPattern(dxOut, dyOut)
+
+		// Find sprites for both segments
+		inSprite := l.findFirstSpriteForPattern(inPattern)
+		outSprite := l.findFirstSpriteForPattern(outPattern)
+
+		// Add sprites to the list, avoiding nils and duplicates
+		if inSprite != nil {
+			sprites = append(sprites, inSprite)
+		}
+		if outSprite != nil && outSprite != inSprite { // Check for nil and avoid adding the same sprite twice
+			sprites = append(sprites, outSprite)
+		}
+		// fmt.Printf("Turn at (%d,%d): In(%s), Out(%s) -> Sprites: %d\n", curr.x, curr.y, inPattern, outPattern, len(sprites))
+	}
+
+	if len(sprites) == 0 {
+		// fmt.Printf("No sprites determined for move at (%d,%d) from (%d,%d) to (%d,%d)\n", curr.x, curr.y, prev.x, prev.y, next.x, next.y)
 		return nil
 	}
 
-	// Find the sprite matching the pattern in the stored roadSpriteInfo
-	for r, rowInfo := range l.roadSpriteInfo {
-		for c, pattern := range rowInfo {
-			if pattern == requiredPattern {
-				// Ensure indices are valid for roadSprites
-				if r < len(l.roadSprites) && c < len(l.roadSprites[r]) {
-					// fmt.Printf("Found sprite for %s at [%d][%d] for tile (%d,%d)\n", requiredPattern, r, c, curr.x, curr.y)
-					sprites = append(sprites, l.roadSprites[r][c])
-				}
-			}
-		}
-	}
 	return sprites
 }
 
@@ -490,13 +640,25 @@ func (l *Level) placeRoadSpritesOnPath(path []struct{ x, y int }) {
 			continue
 		}
 
-		roadSprites := l.getRoadSpritesForTile(prev, curr, next)
-		if len(roadSprites) != 0 {
-			// If a road already exists, we might need logic for intersections later.
-			// For now, just overwrite. If getRoadSpriteForTile returns nil (e.g., for a turn),
-			// no road sprite is placed for that segment.
-			tile.roadSprites = roadSprites
-			fmt.Printf("Placed road sprite at (%d, %d)\n", curr.x, curr.y)
+		newRoadSprites := l.getRoadSpritesForTile(prev, curr, next)
+		if newRoadSprites != nil && len(newRoadSprites) > 0 {
+			// Append new road sprites to existing ones, avoiding duplicates.
+			// This handles cases where a tile might be part of multiple paths or intersections.
+			existingSprites := tile.roadSprites
+			for _, newSprite := range newRoadSprites {
+				isDuplicate := false
+				for _, existing := range existingSprites {
+					if existing == newSprite {
+						isDuplicate = true
+						break
+					}
+				}
+				if !isDuplicate {
+					existingSprites = append(existingSprites, newSprite)
+				}
+			}
+			tile.roadSprites = existingSprites // Update the tile's road sprites
+			// fmt.Printf("Placed/Updated road sprite(s) at (%d, %d)\n", curr.x, curr.y)
 		}
 	}
 }

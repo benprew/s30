@@ -2,6 +2,12 @@
 I want to connect the cities in the map by roads. The roads variable contains the sprites and the roadsInfo contains the info about the sprite. The info is the compass directions that the roads represent. So a vertical road has an info of "N,S" because it connects the North and South points of the tile.
 
 Write a function to create these connections between cities and add the correct road sprite for each tile that is used.
+** Road refinement - prefer existing paths
+There are too many parallel roads. The BFS algorithm should prefer to use existing tiles that have roads on them already, even if the path is longer
+** Road refinement - diagonals
+Roads can also be diagonal. Find paths that include diagonals.
+** Road refinement - turns
+A turn can be made by combining 2 road sprites together. For example if you are on a diagonal entering from the SE part of the tile, you can combine SE,NW with E,W to make a turn to the East.
 
 * Cities
 With level.go, game.go and tile.go
