@@ -47,6 +47,9 @@ var (
 	//go:embed Advinter1024.pic.png
 	WorldFrame_png []byte
 
+	//go:embed sprites/world/land/Roads.spr.png
+	Roads_png []byte
+
 	// Character sprites
 	//go:embed sprites/world/characters/*.spr.png
 	CharacterFS embed.FS

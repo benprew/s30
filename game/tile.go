@@ -16,7 +16,9 @@ type PositionedSprite struct {
 type Tile struct {
 	sprites           []*ebiten.Image
 	positionedSprites []*PositionedSprite
-	IsCity            bool // Indicates if this tile represents a city
+	roadSprites       []*ebiten.Image // Added for roads
+	IsCity            bool            // Indicates if this tile represents a city
+	TerrainType       int             // Added terrain type
 }
 
 // AddSprite adds a sprite to the Tile.
@@ -84,12 +86,24 @@ func (t *Tile) AddCitySprite(s *ebiten.Image) {
 
 // Draw draws the Tile on the screen using the provided options.
 func (t *Tile) Draw(screen *ebiten.Image, scale float64, options *ebiten.DrawImageOptions) {
-	// Draw regular sprites
+	// Draw regular sprites (base terrain)
 	for _, s := range t.sprites {
-		screen.DrawImage(s, options)
+		// Use a copy of options
+		spriteOpts := *options
+		screen.DrawImage(s, &spriteOpts)
 	}
 
-	// Draw positioned sprites with their offsets
+	// Draw road first if it exists, so it's under other elements
+	for _, s := range t.roadSprites {
+		if s == nil {
+			continue
+		}
+		// Use a copy of options to avoid modifying the original transform for other sprites
+		roadOpts := *options
+		screen.DrawImage(s, &roadOpts)
+	}
+
+	// Draw positioned sprites (foliage, cities) with their offsets
 	for _, ps := range t.positionedSprites {
 		// Create a copy of the options to avoid modifying the original
 		posOptions := &ebiten.DrawImageOptions{}

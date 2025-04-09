@@ -1,3 +1,8 @@
+* Roads
+I want to connect the cities in the map by roads. The roads variable contains the sprites and the roadsInfo contains the info about the sprite. The info is the compass directions that the roads represent. So a vertical road has an info of "N,S" because it connects the North and South points of the tile.
+
+Write a function to create these connections between cities and add the correct road sprite for each tile that is used.
+
 * Cities
 With level.go, game.go and tile.go
 
