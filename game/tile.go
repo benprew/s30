@@ -26,6 +26,10 @@ func (t *Tile) AddSprite(s *ebiten.Image) {
 	t.sprites = append(t.sprites, s)
 }
 
+func (t *Tile) IsRoad() bool {
+	return len(t.roadSprites) > 0
+}
+
 // AddFoliageSprite adds a foliage sprite to the Tile with proper positioning.
 // Foliage sprites are taller than land tiles, so we need to position them
 // so their bottom is centered in the land tile.
@@ -71,6 +75,21 @@ func (t *Tile) AddCitySprite(s *ebiten.Image) {
 
 	// Add to positioned sprites (drawn after base tile, potentially overlapping foliage)
 	t.positionedSprites = append(t.positionedSprites, cityPosSprite)
+}
+
+// AddRoadSprite adds a road sprite to the tile, avoiding duplicates.
+func (t *Tile) AddRoadSprite(s *ebiten.Image) {
+	if s == nil {
+		return
+	}
+	// Check if this specific sprite is already added to prevent duplicates
+	// from path overlaps or multiple connections to the same tile.
+	for _, existing := range t.roadSprites {
+		if existing == s {
+			return // Already have this exact sprite instance
+		}
+	}
+	t.roadSprites = append(t.roadSprites, s)
 }
 
 // Transition tile between terrain types (Cstline/Cstline2)

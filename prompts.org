@@ -1,7 +1,22 @@
 * Roads
-I want to connect the cities in the map by roads. The roads variable contains the sprites and the roadsInfo contains the info about the sprite. The info is the compass directions that the roads represent. So a vertical road has an info of "N,S" because it connects the North and South points of the tile.
+Each road sprite starts at the middle of the tile and goes out to a compass direction. This means you could have at most 8 roads in a tile that intersect in the middle of the tile.
+
+Road spite info is defined in terms of which compass point the road leaves the tile at. So "N" would mean a road sprite that starts in the middle of the tile and exits at the north of the tile.
+
+When placing a road on a tile you will have at least 2 exit points for that tile. You can place multiple road tiles to make this happen.
+
+I want to connect the cities in the map by roads. The roads variable contains the sprites and the roadsInfo contains the info about the sprite. Each road tile is 206W x 102H.
 
 Write a function to create these connections between cities and add the correct road sprite for each tile that is used.
+
+There should only be one road between cities, though multiple roads can terminate at a single city.
+
+My algorithm is to build the roads as the cities are placed. So when the 2nd city is placed, we connect it to the first city. When the 3rd city is placed it connects to the nearest city or road. Same with the 4th and so on.
+
+As you're placing roads remember that roads can be placed in any adjacent direction (compass directions) not just the ordinal directions (up/down/left/right).
+
+
+
 ** Road refinement - prefer existing paths
 There are too many parallel roads. The BFS algorithm should prefer to use existing tiles that have roads on them already, even if the path is longer
 ** Road refinement - diagonals
