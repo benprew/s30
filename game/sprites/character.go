@@ -14,6 +14,9 @@ const (
 	CharacterRows    = 8
 	CharacterColumns = 5
 
+	CharSprW = 206
+	CharSprH = 102
+
 	// Direction bit flags
 	DirUp    = 0x8 // 1000
 	DirDown  = 0x4 // 0100

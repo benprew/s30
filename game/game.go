@@ -276,7 +276,7 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
 	options.GeoM.Translate(float64(g.screenW)/2, float64(g.screenH)/2)
-	options.GeoM.Translate(-float64(124)*scale, -float64(87)*scale) // Center the sprite
+	options.GeoM.Translate(-float64(sprites.CharSprW/2)*scale, -float64(sprites.CharSprH/2)*scale)
 	g.playerSprite.Draw(screen, options)
 
 	// Draw enemies
@@ -286,11 +286,11 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 		}
 
 		screenX, screenY := g.screenOffset(e.X, e.Y)
+		// Draw enemy
 		enemyOp := &ebiten.DrawImageOptions{}
-		enemyOp.GeoM.Translate(-float64(124)*scale, -float64(87)*scale) // Center the sprite
+		enemyOp.GeoM.Scale(scale, scale)
+		enemyOp.GeoM.Translate(-float64(sprites.CharSprW/2)*scale, -float64(sprites.CharSprH/2)*scale)
 		enemyOp.GeoM.Translate(float64(screenX), float64(screenY))
-
-		// Draw the enemy
 		e.Draw(screen, enemyOp)
 	}
 
