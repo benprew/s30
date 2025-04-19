@@ -248,15 +248,6 @@ func (g *Game) cartesianToIso(x, y int) (int, int) {
 	return ix, iy
 }
 
-// isoToCartesian transforms isometric coordinates into cartesian coordinates.
-func (g *Game) isoToCartesian(x, y int) (int, int) {
-	tileW := g.currentLevel.tileWidth
-	tileH := g.currentLevel.tileHeight
-	cx := (x/tileW/2 + y/tileH/4) / 2
-	cy := (y/tileH/4 - (x / tileW / 2)) / 2
-	return cx, cy
-}
-
 // renderLevel draws the current Level on the screen.
 func (g *Game) renderLevel(screen *ebiten.Image) {
 	padding := 400
