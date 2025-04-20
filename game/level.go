@@ -38,6 +38,13 @@ const (
 
 type TilePoint image.Point
 
+// different directions based on which y row you're on, because it's a zigzag pattern
+var Directions = [2][8]TilePoint{
+	{{0, 2}, {0, -2}, {1, 0}, {-1, 0}, {0, -1}, {-1, -1}, {0, 1}, {-1, 1}},
+	{{0, 2}, {0, -2}, {1, 0}, {-1, 0}, {1, -1}, {0, -1}, {1, 1}, {0, 1}},
+}
+var DirNames = []string{"N", "S", "E", "W", "NE", "NW", "SE", "SW"}
+
 // Level represents a Game level.
 type Level struct {
 	w, h       int
@@ -50,9 +57,9 @@ type Level struct {
 }
 
 // Tile returns the tile at the provided coordinates, or nil.
-func (l *Level) Tile(x, y int) *Tile {
-	if x >= 0 && y >= 0 && x < l.w && y < l.h {
-		return l.tiles[y][x]
+func (l *Level) Tile(p TilePoint) *Tile {
+	if p.X >= 0 && p.Y >= 0 && p.X < l.w && p.Y < l.h {
+		return l.tiles[p.Y][p.X]
 	}
 	return nil
 }
@@ -119,10 +126,8 @@ func NewLevel() (*Level, error) {
 	// Define the mapping from sprite sheet index to compass direction exit point.
 	// Based on Roads.spr.png layout (6 columns, 2 rows)
 	l.roadSpriteInfo = [][]string{
-		// Row 0: Primarily diagonal and S/SW exits
-		{"", "NE", "E", "SE", "S", "SW"}, // Indices 0,0 to 0,5
-		// Row 1: Primarily cardinal (except E) and NW exits
-		{"W", "NW", "N", "", "", ""}, // Indices 1,0 to 1,5 (Note: some might be empty based on the 6x2 sheet)
+		{"", "NE", "E", "SE", "N", "SW"},
+		{"W", "NW", "S", "", "", ""},
 	}
 	noise := generateTerrain(l.w, l.h)
 	// mapTerrainTypes now returns valid city locations and sets Tile.TerrainType
@@ -318,7 +323,7 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 		}
 
 		// Place the city
-		tile := l.Tile(loc.X, loc.Y)
+		tile := l.Tile(loc)
 		if tile != nil { // Should always be non-nil based on how validLocations is generated
 			cityIdx := rand.Intn(12)
 			cityX := cityIdx % 6
@@ -347,16 +352,6 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 	return placedCities // Return the list of placed cities
 }
 
-// Checks if a tile is suitable for placing a road segment.
-func (l *Level) isTileTraversableForRoads(x, y int) bool {
-	tile := l.Tile(x, y)
-	if tile == nil || tile.IsCity || tile.TerrainType == TerrainWater {
-		return false
-	}
-	return true
-
-}
-
 func absInt(x int) int {
 	if x < 0 {
 		return -x
@@ -379,7 +374,7 @@ func (l *Level) connectCityBFS(start TilePoint) []TilePoint {
 
 		// Check if the current tile is a target (existing road or another city)
 		// Don't target the start city itself if it's the first city placed and roadTiles is empty.
-		tile := l.Tile(current.X, current.Y)
+		tile := l.Tile(current)
 		if current != start && (tile.IsCity || tile.IsRoad()) {
 			// Target found, reconstruct path
 			path := []TilePoint{}
@@ -395,51 +390,34 @@ func (l *Level) connectCityBFS(start TilePoint) []TilePoint {
 				temp = parent
 			}
 			path = append(path, start) // Add the start node itself
-
-			// Reverse the path
-			for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
-				path[i], path[j] = path[j], path[i]
-			}
 			// fmt.Printf("BFS Path found from %v to %v: %v\n", start, current, path)
+			// fmt.Printf("Visited: %+v\n", visited)
 			return path
 		}
 
 		// Explore neighbors (including diagonals)
-		for dy := -1; dy <= 1; dy++ {
-			for dx := -1; dx <= 1; dx++ {
-				if dx == 0 && dy == 0 {
-					continue // Skip self
-				}
-				neighborPos := TilePoint{X: current.X + dx, Y: current.Y + dy}
+		// because we render in a zigzag pattern, the neighbors are more than the range -1, +1
+		dirs := Directions[current.Y%2]
+		// fmt.Println("current:", current, "dirs:", dirs)
+		for _, n := range dirs {
+			neighborPos := TilePoint{X: current.X + n.X, Y: current.Y + n.Y}
+			// fmt.Println("current:", current, "neighborPos:", neighborPos)
 
-				// Check bounds
-				if neighborPos.X < 0 || neighborPos.X >= l.w || neighborPos.Y < 0 || neighborPos.Y >= l.h {
-					continue
-				}
+			// Check bounds
+			if neighborPos.X < 0 || neighborPos.X >= l.w || neighborPos.Y < 0 || neighborPos.Y >= l.h {
+				continue
+			}
 
-				// Check if traversable for roads (allow pathing *to* a city, but not *through* water/mountains etc.)
-				// The target check above handles finding cities/roads. Here we check general traversability.
-				if !l.isTileTraversableForRoads(neighborPos.X, neighborPos.Y) {
-					// Check if the non-traversable neighbor is actually our target city/road tile
-					neighborTile := l.Tile(neighborPos.X, neighborPos.Y)
-					isNeighborTarget := false
-					if neighborTile.IsRoad() {
-						isNeighborTarget = true
-					} else if neighborTile != nil && neighborTile.IsCity && neighborPos != start {
-						isNeighborTarget = true
-					}
-					// If it's not traversable AND it's not the target we are looking for, skip.
-					// This allows the path to end *at* a city even if isTileTraversableForRoads returns false for cities.
-					if !isNeighborTarget {
-						continue
-					}
-				}
+			tile := l.Tile(neighborPos)
 
-				// Check if visited
-				if _, seen := visited[neighborPos]; !seen {
-					visited[neighborPos] = current // Mark visited and store parent
-					queue = append(queue, neighborPos)
-				}
+			if tile.TerrainType == TerrainWater {
+				continue
+			}
+
+			// Check if visited
+			if _, seen := visited[neighborPos]; !seen {
+				visited[neighborPos] = current // Mark visited and store parent
+				queue = append(queue, neighborPos)
 			}
 		}
 	}
@@ -447,49 +425,21 @@ func (l *Level) connectCityBFS(start TilePoint) []TilePoint {
 	panic(fmt.Sprintf("Warning: BFS from %v found no target road or city.\n", start))
 }
 
-// getDirection determines the compass direction from one point to another adjacent point.
+// getDirection determines the compass direction from one tile to an adjacent tile.
+// because we render tiles in a zigzag pattern, it's not a simple X/Y grid
 func getDirection(from, to TilePoint) string {
 	dx := to.X - from.X
 	dy := to.Y - from.Y
 
-	// Clamp dx, dy to -1, 0, 1
-	if dx > 0 {
-		dx = 1
-	} else if dx < 0 {
-		dx = -1
-	}
-	if dy > 0 {
-		dy = 1
-	} else if dy < 0 {
-		dy = -1
-	}
+	dir := TilePoint{dx, dy}
 
-	if dx == 0 && dy == -1 {
-		return "N"
+	dirs := Directions[from.Y%2]
+	for i, d := range dirs {
+		if d == dir {
+			return DirNames[i]
+		}
 	}
-	if dx == 1 && dy == -1 {
-		return "NE"
-	}
-	if dx == 1 && dy == 0 {
-		return "E"
-	}
-	if dx == 1 && dy == 1 {
-		return "SE"
-	}
-	if dx == 0 && dy == 1 {
-		return "S"
-	}
-	if dx == -1 && dy == 1 {
-		return "SW"
-	}
-	if dx == -1 && dy == 0 {
-		return "W"
-	}
-	if dx == -1 && dy == -1 {
-		return "NW"
-	}
-
-	panic(fmt.Sprintf("Warning: Could not determine direction from %v to %v (dx=%d, dy=%d)\n", from, to, dx, dy))
+	panic(fmt.Sprintf("unknown dir: %+v, from: %v, to: %v", dir, from, to))
 }
 
 // getRoadSprite finds the road sprite corresponding to a specific exit direction.
@@ -510,12 +460,13 @@ func (l *Level) getRoadSprite(direction string) *ebiten.Image {
 
 // drawRoadAlongPath adds road sprites to tiles along a given path.
 func (l *Level) drawRoadAlongPath(path []TilePoint) {
+	fmt.Println("path:", path)
 	if len(path) < 2 {
 		return // Need at least two points for a path segment
 	}
 
 	for i, currentPos := range path {
-		tile := l.Tile(currentPos.X, currentPos.Y)
+		tile := l.Tile(currentPos)
 		if tile == nil {
 			fmt.Printf("Warning: Tile not found at %v during road drawing.\n", currentPos)
 			continue
@@ -576,7 +527,7 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
 
 	for y := 0; y < l.h; y++ {
 		for x := 0; x < l.w; x++ {
-			tile := l.Tile(x, y)
+			tile := l.Tile(TilePoint{x, y})
 			if tile == nil {
 				continue
 			}
@@ -612,7 +563,7 @@ func (l *Level) PointToTile(pixelX, pixelY int) (tileX, tileY int) {
 	tileHeight := l.tileHeight
 
 	// Calculate the approximate row and column
-	tileY = pixelY / tileHeight
+	tileY = pixelY / (tileHeight / 2)
 	tileX = (pixelX - (tileY%2)*(tileWidth/2)) / tileWidth
 
 	// Ensure the tile coordinates are within bounds
@@ -621,4 +572,27 @@ func (l *Level) PointToTile(pixelX, pixelY int) (tileX, tileY int) {
 	}
 
 	return tileX, tileY
+}
+
+func PrintLevel(l *Level) {
+	for i, row := range l.tiles {
+		for _, col := range row {
+			t := "T"
+			if col.IsRoad() {
+				t = "R"
+			}
+			if col.IsCity {
+				t = "C"
+			}
+			if col.TerrainType == TerrainWater {
+				t = "W"
+			}
+			if i%2 == 1 {
+				fmt.Print("-", t)
+			} else {
+				fmt.Print(t, "-")
+			}
+		}
+		fmt.Println()
+	}
 }

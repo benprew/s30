@@ -14,7 +14,7 @@ import (
 // Game is an isometric demo game.
 type Game struct {
 	screenW, screenH int
-	currentLevel     *Level
+	level            *Level
 
 	camScale   float64
 	camScaleTo float64
@@ -50,7 +50,7 @@ func NewGame() (*Game, error) {
 	g := &Game{
 		screenW:      1024,
 		screenH:      768,
-		currentLevel: l,
+		level:        l,
 		camScale:     1.25,
 		camScaleTo:   1.25,
 		mousePanX:    math.MinInt32,
@@ -200,7 +200,7 @@ func (g *Game) Update() error {
 			return fmt.Errorf("failed to create new level: %s", err)
 		}
 
-		g.currentLevel = l
+		g.level = l
 		g.enemies = make([]*sprites.Character, 0)
 
 		// Respawn enemies on new level
@@ -224,12 +224,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Render level.
 	g.renderLevel(screen)
 
+	tX, tY := g.level.PointToTile(g.playerSprite.X, g.playerSprite.Y)
+
 	// Print game info.
 	ebitenutil.DebugPrint(
 		screen,
 		fmt.Sprintf(
-			"KEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nSCA  %0.2f\nPOS  %d,%d\nEPOS  %d,%d",
-			ebiten.ActualFPS(), ebiten.ActualTPS(), g.camScale, g.playerSprite.X, g.playerSprite.Y, g.enemies[0].X, g.enemies[0].Y,
+			"KEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nEPOS  %d,%d",
+			ebiten.ActualFPS(), ebiten.ActualTPS(), g.playerSprite.X, g.playerSprite.Y, tX, tY, g.enemies[0].X, g.enemies[0].Y,
 		),
 	)
 }
@@ -243,8 +245,8 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 // cartesianToIso transforms cartesian coordinates into isometric coordinates.
 func (g *Game) cartesianToIso(x, y int) (int, int) {
 	// Adjust for isometric projection
-	ix := (x - y) * (g.currentLevel.tileWidth / 2)
-	iy := (x + y) * (g.currentLevel.tileHeight / 2)
+	ix := (x - y) * (g.level.tileWidth / 2)
+	iy := (x + y) * (g.level.tileHeight / 2)
 	return ix, iy
 }
 
@@ -253,7 +255,7 @@ func (g *Game) renderLevel(screen *ebiten.Image) {
 	padding := 400
 	scale := 1.0
 
-	g.currentLevel.RenderZigzag(screen, g.playerSprite.X, g.playerSprite.Y, (g.screenW/2)+padding, (g.screenH/2)+padding)
+	g.level.RenderZigzag(screen, g.playerSprite.X, g.playerSprite.Y, (g.screenW/2)+padding, (g.screenH/2)+padding)
 
 	// if scaleLater {
 	// 	op := &ebiten.DrawImageOptions{}

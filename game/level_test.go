@@ -39,7 +39,7 @@ func TestConnectCityBFS(t *testing.T) {
 		{
 			name: "Simple direct path to road",
 			levelSetup: func(l *Level) {
-				l.Tile(3, 1).AddRoadSprite(l.roadSprites[0][1])
+				l.Tile(TilePoint{3, 1}).AddRoadSprite(l.roadSprites[0][1])
 			},
 			start:        TilePoint{X: 1, Y: 1},
 			expectedPath: []TilePoint{{X: 1, Y: 1}, {X: 2, Y: 1}, {X: 3, Y: 1}},
@@ -47,27 +47,27 @@ func TestConnectCityBFS(t *testing.T) {
 		{
 			name: "Simple direct path to city",
 			levelSetup: func(l *Level) {
-				l.Tile(1, 3).IsCity = true // Target city
+				l.Tile(TilePoint{1, 3}).IsCity = true // Target city
 			},
 			start:        TilePoint{X: 1, Y: 1},
-			expectedPath: []TilePoint{{X: 1, Y: 1}, {X: 1, Y: 2}, {X: 1, Y: 3}},
+			expectedPath: []TilePoint{{X: 1, Y: 1}, {X: 1, Y: 3}}, // go south 1
 		},
-		// {
-		// 	name: "Path around water obstacle",
-		// 	levelSetup: func(l *Level) {
-		// 		l.Tile(2, 1).TerrainType = TerrainWater   // Obstacle
-		// 		l.roadTiles[TilePoint{X: 3, Y: 1}] = true // Target road
-		// 	},
-		// 	start: TilePoint{X: 1, Y: 1},
-		// 	// Expected path might vary slightly based on diagonal preference, this is one possibility
-		// 	expectedPath: []TilePoint{{X: 1, Y: 1}, {X: 1, Y: 2}, {X: 2, Y: 2}, {X: 3, Y: 2}, {X: 3, Y: 1}},
-		// 	// Alternative if diagonals are preferred: {{X: 1, Y: 1}, {X: 2, Y: 2}, {X: 3, Y: 1}} - depends on BFS neighbor order
-		// },
+		{
+			name: "Path around water obstacle",
+			levelSetup: func(l *Level) {
+				l.Tile(TilePoint{2, 1}).TerrainType = TerrainWater // Obstacle
+				l.Tile(TilePoint{4, 1}).AddRoadSprite(l.roadSprites[0][1])
+			},
+			start: TilePoint{X: 1, Y: 1},
+			// Expected path might vary slightly based on diagonal preference, this is one possibility
+			expectedPath: []TilePoint{{X: 4, Y: 1}, {X: 3, Y: 1}, {X: 3, Y: 2}, {X: 2, Y: 2}, {X: 1, Y: 1}},
+			// Alternative if diagonals are preferred: {{X: 1, Y: 1}, {X: 2, Y: 2}, {X: 3, Y: 1}} - depends on BFS neighbor order
+		},
 		// {
 		// 	name: "Path to nearest target (road closer than city)",
 		// 	levelSetup: func(l *Level) {
-		// 		l.roadTiles[TilePoint{X: 3, Y: 1}] = true // Closer target (road)
-		// 		l.Tile(1, 4).IsCity = true                // Further target (city)
+		// 		l.Tile(TilePoint{3, 1}).AddRoadSprite(l.roadSprites[0][1]) // Closer target (road)
+		// 		l.Tile(TilePoint{1, 4}).IsCity = true                      // Further target (city)
 		// 	},
 		// 	start:        TilePoint{X: 1, Y: 1},
 		// 	expectedPath: []TilePoint{{X: 1, Y: 1}, {X: 2, Y: 1}, {X: 3, Y: 1}},
@@ -75,8 +75,8 @@ func TestConnectCityBFS(t *testing.T) {
 		// {
 		// 	name: "Path to nearest target (city closer than road)",
 		// 	levelSetup: func(l *Level) {
-		// 		l.roadTiles[TilePoint{X: 4, Y: 4}] = true // Further target (road)
-		// 		l.Tile(1, 3).IsCity = true                // Closer target (city)
+		// 		l.Tile(TilePoint{4, 4}).AddRoadSprite(l.roadSprites[0][1]) // Further target (road)
+		// 		l.Tile(TilePoint{1, 3}).IsCity = true                      // Closer target (city)
 		// 	},
 		// 	start:        TilePoint{X: 1, Y: 1},
 		// 	expectedPath: []TilePoint{{X: 1, Y: 1}, {X: 1, Y: 2}, {X: 1, Y: 3}},
@@ -84,9 +84,9 @@ func TestConnectCityBFS(t *testing.T) {
 		// {
 		// 	name: "Start on a road tile (should find nearest other road/city)",
 		// 	levelSetup: func(l *Level) {
-		// 		l.roadTiles[TilePoint{X: 1, Y: 1}] = true // Start is also a road
-		// 		l.roadTiles[TilePoint{X: 3, Y: 1}] = true // Target road
-		// 		l.Tile(1, 3).IsCity = true                // Another potential target
+		// 		l.Tile(TilePoint{1, 1}).AddRoadSprite(l.roadSprites[0][1]) // Start is also a road
+		// 		l.Tile(TilePoint{3, 1}).AddRoadSprite(l.roadSprites[0][1]) // Target road
+		// 		l.Tile(TilePoint{1, 3}).IsCity = true                      // Another potential target
 		// 	},
 		// 	start:        TilePoint{X: 1, Y: 1},
 		// 	expectedPath: []TilePoint{{X: 1, Y: 1}, {X: 2, Y: 1}, {X: 3, Y: 1}}, // Path to the nearest *other* target
@@ -97,6 +97,7 @@ func TestConnectCityBFS(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create a fresh level for each test case
 			level := createTestLevel(5, 5) // Use a 5x5 grid for these tests
+			level.Tile(TilePoint{1, 1}).IsCity = true
 
 			roads, _ := sprites.LoadSpriteSheet(6, 2, art.Roads_png)
 			// Store roads and info in the level struct
@@ -114,6 +115,8 @@ func TestConnectCityBFS(t *testing.T) {
 			if tc.levelSetup != nil {
 				tc.levelSetup(level)
 			}
+
+			PrintLevel(level)
 
 			// Override the panic behavior for testing "no path" cases
 			defer func() {
@@ -149,11 +152,10 @@ func TestConnectCityBFS(t *testing.T) {
 
 			// Additional check: If a path was found, ensure the end tile is actually a target
 			if actualPath != nil && len(actualPath) > 0 {
-				endPoint := actualPath[len(actualPath)-1]
-				endTile := level.Tile(endPoint.X, endPoint.Y)
-				isRoad := endTile.IsRoad()
-				if !(endTile != nil && endTile.IsCity && endPoint != tc.start) && !isRoad {
-					t.Errorf("connectCityBFS path endpoint %v is not a valid target (city or road)", endPoint)
+				endPoint := actualPath[0]
+				endTile := level.Tile(endPoint)
+				if endTile == nil || endPoint == tc.start || !(endTile.IsCity || endTile.IsRoad()) {
+					t.Errorf("connectCityBFS path endpoint %v is not a valid target (city or road) %v", endPoint, endTile)
 				}
 			}
 		})
