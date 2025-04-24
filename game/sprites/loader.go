@@ -9,6 +9,9 @@ import (
 )
 
 // LoadSpriteSheet loads the embedded SpriteSheet.
+// sprWidth is the number of images horizontally in the sheet
+// sprHeight is the number of images vertically in the sheet
+// pixel size of a single sprite iamge is deteremined by the image width divided by sprWidth
 func LoadSpriteSheet(sprWidth, sprHeight int, file []byte) ([][]*ebiten.Image, error) {
 	img, _, err := image.Decode(bytes.NewReader(file))
 	if err != nil {

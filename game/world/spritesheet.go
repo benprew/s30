@@ -1,4 +1,4 @@
-package game
+package world
 
 import (
 	"bytes"
@@ -19,8 +19,8 @@ type SpriteSheet struct {
 	Ice    *ebiten.Image
 }
 
-// LoadSpriteSheet loads the embedded SpriteSheet.
-func LoadSpriteSheet(tileWidth, tileHeight int) (*SpriteSheet, error) {
+// LoadWorldTileSheet loads the embedded SpriteSheet.
+func LoadWorldTileSheet(tileWidth, tileHeight int) (*SpriteSheet, error) {
 	img, _, err := image.Decode(bytes.NewReader(art.Landtile_png))
 	if err != nil {
 		return nil, err

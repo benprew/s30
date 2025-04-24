@@ -1,4 +1,4 @@
-package sprites
+package entities
 
 // CharacterName represents a specific character type and role combination
 type CharacterName string

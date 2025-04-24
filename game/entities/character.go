@@ -1,4 +1,4 @@
-package sprites
+package entities
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benprew/s30/art"
+	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -34,7 +35,7 @@ const (
 	DirectionDownRight = 7
 )
 
-// Character represents an animated character sprite with its shadow
+// contains the common character traits between players and enemies
 type Character struct {
 	Animations [][]*ebiten.Image // [direction][frame]
 	Shadows    [][]*ebiten.Image // [direction][frame]
@@ -45,19 +46,40 @@ type Character struct {
 	X          int
 	Y          int
 	MoveSpeed  int
+	Width      int
+	Height     int
 }
 
 // NewCharacter creates a new character sprite with animations and shadows
-func NewCharacter(animations, shadows [][]*ebiten.Image) *Character {
+func NewCharacter(name CharacterName) (*Character, error) {
+	// Get the shadow name for this character
+	charFileName := string(name) + ".spr.png"
+	shadowFileName := shadowName(name) + ".spr.png"
+	fmt.Printf("char %s shad %s\n", charFileName, shadowFileName)
+
+	charFile := getEmbeddedFile(charFileName)
+	charSheet, err := sprites.LoadSpriteSheet(5, 8, charFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load character sprite: %w file: %s", err, charFile)
+	}
+
+	shadowFile := getEmbeddedFile(shadowFileName)
+	shadowSheet, err := sprites.LoadSpriteSheet(5, 8, shadowFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load shadow sprite: %w file: %s", err, shadowFile)
+	}
+
 	return &Character{
-		Animations: animations,
-		Shadows:    shadows,
+		Animations: charSheet,
+		Shadows:    shadowSheet,
 		Direction:  DirectionDown,
 		Frame:      0,
 		LastUpdate: time.Now(),
 		IsMoving:   false,
 		MoveSpeed:  3,
-	}
+		Width:      charSheet[0][0].Bounds().Dx(),
+		Height:     charSheet[0][0].Bounds().Dy(),
+	}, nil
 }
 
 // DirectionToSpriteIndex converts bit-based direction to sprite index
@@ -84,34 +106,6 @@ func DirectionToSpriteIndex(dirBits int) int {
 	}
 }
 
-// LoadCharacter loads a character and its shadow sprites by character name
-func LoadCharacter(name CharacterName) (*Character, error) {
-	// Get the shadow name for this character
-	charFileName := string(name) + ".spr.png"
-	shadowFileName := shadowName(name) + ".spr.png"
-	fmt.Printf("char %s shad %s\n", charFileName, shadowFileName)
-
-	// Get the embedded sprite files
-	charFile := getEmbeddedFile(charFileName)
-	shadowFile := getEmbeddedFile(shadowFileName)
-
-	if charFile == nil || shadowFile == nil {
-		return nil, fmt.Errorf("failed to find sprite files for character %s", name)
-	}
-
-	charSheet, err := LoadSpriteSheet(5, 8, charFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load character sprite: %w", err)
-	}
-
-	shadowSheet, err := LoadSpriteSheet(5, 8, shadowFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load shadow sprite: %w", err)
-	}
-
-	return NewCharacter(charSheet, shadowSheet), nil
-}
-
 // Helper function to get embedded file bytes
 func getEmbeddedFile(filename string) []byte {
 	// Access character sprites from the embedded filesystem
@@ -122,6 +116,22 @@ func getEmbeddedFile(filename string) []byte {
 		return nil
 	}
 	return data
+}
+
+// Draw renders the character and its shadow at the center of the screen
+func (c *Character) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	// Update animation frame if moving
+	if c.IsMoving && time.Since(c.LastUpdate) > time.Millisecond*100 {
+		c.Frame = (c.Frame + 1) % CharacterColumns
+		c.LastUpdate = time.Now()
+	} else if !c.IsMoving {
+		c.Frame = 0
+	}
+
+	// Draw shadow first
+	screen.DrawImage(c.Shadows[c.Direction][c.Frame], options)
+	// Draw character
+	screen.DrawImage(c.Animations[c.Direction][c.Frame], options)
 }
 
 // Update characters location
@@ -150,44 +160,10 @@ func (c *Character) Update(dirBits int) {
 	}
 }
 
-// UpdateAI updates an enemy character's movement based on AI behavior
-func (c *Character) UpdateAI(playerX, playerY int) int {
-	dirbits := 0
-	if playerX > c.X+3 {
-		dirbits |= DirRight
-	}
-	if playerX < c.X-3 {
-		dirbits |= DirLeft
-	}
-	if playerY > c.Y+3 {
-		dirbits |= DirDown
-	}
-	if playerY < c.Y-3 {
-		dirbits |= DirUp
-	}
-	return dirbits
-}
-
 // SetPosition sets the character's position on the map
 func (c *Character) SetPosition(x, y int) {
 	c.X = x
 	c.Y = y
-}
-
-// Draw renders the character and its shadow at the center of the screen
-func (c *Character) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	// Update animation frame if moving
-	if c.IsMoving && time.Since(c.LastUpdate) > time.Millisecond*100 {
-		c.Frame = (c.Frame + 1) % CharacterColumns
-		c.LastUpdate = time.Now()
-	} else if !c.IsMoving {
-		c.Frame = 0
-	}
-
-	// Draw shadow first
-	screen.DrawImage(c.Shadows[c.Direction][c.Frame], options)
-	// Draw character
-	screen.DrawImage(c.Animations[c.Direction][c.Frame], options)
 }
 
 // SetDirection changes the character's facing direction

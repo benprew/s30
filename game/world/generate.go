@@ -1,4 +1,6 @@
-package game
+package world
+
+// generates the overworld map and terrain
 
 import (
 	"fmt"
@@ -6,8 +8,6 @@ import (
 	"math/rand"
 
 	"github.com/aquilax/go-perlin"
-	"github.com/benprew/s30/art"
-	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -44,100 +44,6 @@ var Directions = [2][8]TilePoint{
 	{{0, 2}, {0, -2}, {1, 0}, {-1, 0}, {1, -1}, {0, -1}, {1, 1}, {0, 1}},
 }
 var DirNames = []string{"N", "S", "E", "W", "NE", "NW", "SE", "SW"}
-
-// Level represents a Game level.
-type Level struct {
-	w, h       int
-	tiles      [][]*Tile // (Y,X) array of tiles
-	tileWidth  int
-	tileHeight int
-
-	roadSprites    [][]*ebiten.Image // Sprites for roads
-	roadSpriteInfo [][]string        // Maps sprite index to direction string (e.g., "N", "NE")
-}
-
-// Tile returns the tile at the provided coordinates, or nil.
-func (l *Level) Tile(p TilePoint) *Tile {
-	if p.X >= 0 && p.Y >= 0 && p.X < l.w && p.Y < l.h {
-		return l.tiles[p.Y][p.X]
-	}
-	return nil
-}
-
-// Size returns the size of the Level.
-func (l *Level) Size() (width, height int) {
-	return l.w, l.h
-}
-
-// NewLevel returns a new randomly generated Level.
-func NewLevel() (*Level, error) {
-	l := &Level{
-		w:          56,
-		h:          38,
-		tileWidth:  206,
-		tileHeight: 102,
-	}
-
-	// Load embedded SpriteSheet.
-	ss, err := LoadSpriteSheet(l.tileWidth, l.tileHeight)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
-	}
-
-	// widths are the 5 terrain types:
-	// marsh, desert, forest, mountain, plains
-	// foliage is 206x134
-	// land tile is 206x102
-	foliage, err := sprites.LoadSpriteSheet(5, 11, art.Land_png)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
-	}
-	// shadows for lands
-	Sfoliage, err := sprites.LoadSpriteSheet(5, 11, art.Sland_png)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
-	}
-
-	foliage2, err := sprites.LoadSpriteSheet(5, 11, art.Land2_png)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
-	}
-	Sfoliage2, err := sprites.LoadSpriteSheet(5, 11, art.Sland2_png)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
-	}
-
-	Cstline2, err := sprites.LoadSpriteSheet(4, 14, art.Cstline2_png)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
-	}
-
-	citySprites, err := sprites.LoadSpriteSheet(6, 4, art.Cities1_png)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load city spritesheet Castles1.spr.png: %w", err)
-	}
-
-	roads, err := sprites.LoadSpriteSheet(6, 2, art.Roads_png)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load city spritesheet Roads_png: %w", err)
-	}
-	// Store roads and info in the level struct
-	l.roadSprites = roads
-	// Define the mapping from sprite sheet index to compass direction exit point.
-	// Based on Roads.spr.png layout (6 columns, 2 rows)
-	l.roadSpriteInfo = [][]string{
-		{"", "NE", "E", "SE", "N", "SW"},
-		{"W", "NW", "S", "", "", ""},
-	}
-	noise := generateTerrain(l.w, l.h)
-	// mapTerrainTypes now returns valid city locations and sets Tile.TerrainType
-	validCityLocations := l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites)
-
-	// placeCities now returns the list of placed cities
-	_ = l.placeCities(validCityLocations, citySprites, 35, 6)
-
-	return l, nil
-}
 
 func generateTerrain(w, h int) [][]float64 {
 	// Multiple Perlin noise generators with different frequencies
@@ -352,13 +258,6 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 	return placedCities // Return the list of placed cities
 }
 
-func absInt(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
 // connectCityBFS finds the shortest path from a new city to the nearest existing
 // road tile or another city using Breadth-First Search.
 func (l *Level) connectCityBFS(start TilePoint) []TilePoint {
@@ -460,7 +359,7 @@ func (l *Level) getRoadSprite(direction string) *ebiten.Image {
 
 // drawRoadAlongPath adds road sprites to tiles along a given path.
 func (l *Level) drawRoadAlongPath(path []TilePoint) {
-	fmt.Println("path:", path)
+	// fmt.Println("path:", path)
 	if len(path) < 2 {
 		return // Need at least two points for a path segment
 	}
@@ -513,86 +412,9 @@ func (l *Level) drawRoadAlongPath(path []TilePoint) {
 
 // --- End Road Generation Logic ---
 
-func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
-	tileWidth := l.tileWidth
-	tileHeight := l.tileHeight
-
-	op := &ebiten.DrawImageOptions{}
-
-	// the visible drawable area
-	visibleXOrigin := pX - padX
-	visibleYOrigin := pY - padY
-	visibleXOpposite := pX + padX
-	visibleYOpposite := pY + padY
-
-	for y := 0; y < l.h; y++ {
-		for x := 0; x < l.w; x++ {
-			tile := l.Tile(TilePoint{x, y})
-			if tile == nil {
-				continue
-			}
-
-			// Calculate screen position
-			pixelX := x * tileWidth
-			pixelY := y * tileHeight / 2
-
-			// Offset every other row to create the zigzag pattern
-			if y%2 != 0 {
-				pixelX += tileWidth / 2
-			}
-
-			if pixelX < visibleXOrigin || pixelX > visibleXOpposite {
-				continue // Skip rendering if outside visible area
-			}
-
-			if pixelY < visibleYOrigin || pixelY > visibleYOpposite {
-				continue // Skip rendering if outside visible area
-			}
-			screenX := pixelX - (pX - 1024/2)
-			screenY := pixelY - (pY - 768/2)
-
-			op.GeoM.Reset()
-			op.GeoM.Translate(float64(screenX), float64(screenY))
-			tile.Draw(screen, 1.0, op)
-		}
+func absInt(x int) int {
+	if x < 0 {
+		return -x
 	}
-}
-
-func (l *Level) PointToTile(pixelX, pixelY int) (tileX, tileY int) {
-	tileWidth := l.tileWidth
-	tileHeight := l.tileHeight
-
-	// Calculate the approximate row and column
-	tileY = pixelY / (tileHeight / 2)
-	tileX = (pixelX - (tileY%2)*(tileWidth/2)) / tileWidth
-
-	// Ensure the tile coordinates are within bounds
-	if pixelX < 0 || tileX >= l.w || pixelY < 0 || tileY >= l.h {
-		return -1, -1 // Return invalid coordinates if out of bounds
-	}
-
-	return tileX, tileY
-}
-
-func PrintLevel(l *Level) {
-	for i, row := range l.tiles {
-		for _, col := range row {
-			t := "T"
-			if col.IsRoad() {
-				t = "R"
-			}
-			if col.IsCity {
-				t = "C"
-			}
-			if col.TerrainType == TerrainWater {
-				t = "W"
-			}
-			if i%2 == 1 {
-				fmt.Print("-", t)
-			} else {
-				fmt.Print(t, "-")
-			}
-		}
-		fmt.Println()
-	}
+	return x
 }
