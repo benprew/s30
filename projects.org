@@ -1,0 +1,42 @@
+* make world look like shandalar lore (locations, general terrain, etc.
+- https://mtg.fandom.com/wiki/Shandalar
+- [[file:shandalar_map.jpeg][Map of Shandalar]]
+
+* dungeon scenes
+Build dungeon area. Dungeons are procedurally generated mazes. These paths in the maze are single-tile width. Along the maze there are interactions that can be added to a square. These interactions are:
+
+1. Enemies - same as in the world, but are fixed (don't move)
+2. Riddles - these are trivia questions about Magic (power/toughness of a card, color, ability, etc). Multi-choice questions. Answering correctly solves the riddle, answering incorrectly replaces the riddle with a monster
+3. Treasure - the reason you're in the dungeon. These are only at the end of tunnels and contain unique cards you're unable to get anywhere else in the game. They can also be filled with gold and gems
+* town interactions
+Options:
+- Speak to wise man
+- buy cards
+- buy food
+
+Background is different for villages/cities
+
+Food and card prices are more expensive in cities and cheaper in towns (Cities are named, towns are not). Villages have different sprites from cities.
+* mini-map display
+Same as the world map, but on a single screen. Shows roads, terrain and cities. City names give you info about the city
+- White - you have a manalink to this city
+- Yellow - you don't have a manalink to this city
+- Red - city is under siege or has been taken over by a wizard
+
+- [[file:mini-map-example.jpg][Example MiniMap]]
+
+* dungeon/castle screens
+* deck editor
+The screen that has the most static interactive elements. When you edit your deck you need to be able to see the cards in the deck, add and remove cards from the deck and search your card collection to find cards to add.
+
+In the original version, you could filter by color and by type, but there was no way to order the cards. The default order is your most recently added cards, since the game is mostly about getting new cards and tuning up your deck. Other ordering options are casting cost and name.
+* mtg rules engine - Revised/3rd ed. Rules
+Rules at https://hudecekpetr.cz/other/rulebooks/rulebook-revised-1994-04.txt
+
+Start with implementing basic phases and casting creatures. Then move on to more interactive rules like combat, playing instants and interrupts and casting spells that affect your opponent or their cards.
+** mtg cardset
+add individual cards from unlimited/revised, arabian nights, antiquities and legends. Start with basic lands and creatures
+* mtg AI opponent
+Similar to a chess engine, min/max algo looking 10-20 phases ahead. Chess engines use plys (aka 'half-turns"), so maybe something similar for each phase or potential interaction?
+
+Hidden information makes this difficult to look that far in the future, so we could cheat and allow the AI to see cards in the players hand and library.
