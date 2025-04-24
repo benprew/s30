@@ -198,6 +198,7 @@ func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 // spawnEnemies creates a specified number of enemies at random positions
 func (l *Level) spawnEnemies(count int) error {
 	// Enemy character types to choose from
+	// TODO this should be all enemy types
 	enemyTypes := []entities.CharacterName{
 		entities.WhiteArchmage, entities.BlackKnight, entities.BlueDjinn,
 		entities.DragonBRU, entities.MultiTroll, entities.Troll,
