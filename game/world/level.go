@@ -5,6 +5,7 @@ import (
 	"image"
 	"math"
 	"math/rand"
+	"time"
 
 	"github.com/benprew/s30/art"
 	"github.com/benprew/s30/game/entities"
@@ -25,13 +26,22 @@ type Level struct {
 
 	player  *entities.Player
 	enemies []entities.Enemy
+	frame   *ebiten.Image
 }
 
 // NewLevel returns a new randomly generated Level.
 func NewLevel() (*Level, error) {
+	startTime := time.Now()
+	fmt.Println("NewLevel start")
+
 	c, err := entities.NewPlayer(entities.EgoFemale)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load player sprite: %s", err)
+	}
+
+	frame, err := LoadWorldFrame()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load world frame: %s", err)
 	}
 
 	l := &Level{
@@ -41,6 +51,7 @@ func NewLevel() (*Level, error) {
 		tileHeight: 102,
 		enemies:    make([]entities.Enemy, 0),
 		player:     c,
+		frame:      frame,
 	}
 
 	// Load embedded SpriteSheet.
@@ -110,6 +121,7 @@ func NewLevel() (*Level, error) {
 		return nil, fmt.Errorf("failed to spawn enemies: %s", err)
 	}
 
+	fmt.Printf("NewLevel execution time: %s\n", time.Since(startTime))
 	return l, nil
 }
 
@@ -144,6 +156,9 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int) {
 	options.GeoM.Translate(float64(screenW)/2, float64(screenH)/2)
 	options.GeoM.Translate(-float64(entities.CharSprW/2)*scale, -float64(entities.CharSprH/2)*scale)
 	l.player.Draw(screen, options)
+
+	// Draw the worldFrame over everything
+	screen.DrawImage(l.frame, &ebiten.DrawImageOptions{})
 }
 
 // Update reads current user input and updates the Game state.

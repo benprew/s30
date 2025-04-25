@@ -41,7 +41,6 @@ type Character struct {
 	Shadows    [][]*ebiten.Image // [direction][frame]
 	Direction  int
 	Frame      int
-	LastUpdate time.Time
 	IsMoving   bool
 	X          int
 	Y          int
@@ -50,36 +49,104 @@ type Character struct {
 	Height     int
 }
 
+type CharacterSprites struct {
+	Animations [][]*ebiten.Image // [direction][frame]
+	Shadows    [][]*ebiten.Image // [direction][frame]
+}
+
+var Characters map[CharacterName]CharacterSprites = LoadAllCharacterSprites()
+
 // NewCharacter creates a new character sprite with animations and shadows
 func NewCharacter(name CharacterName) (*Character, error) {
+	charSprite := Characters[name]
+
+	return &Character{
+		Animations: charSprite.Animations,
+		Shadows:    charSprite.Shadows,
+		Direction:  DirectionDown,
+		Frame:      0,
+		IsMoving:   false,
+		MoveSpeed:  10,
+		Width:      charSprite.Animations[0][0].Bounds().Dx(),
+		Height:     charSprite.Animations[0][0].Bounds().Dy(),
+	}, nil
+}
+
+// Draw renders the character and its shadow at the center of the screen
+func (c *Character) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	// Draw shadow first
+	screen.DrawImage(c.Shadows[c.Direction][c.Frame], options)
+	// Draw character
+	screen.DrawImage(c.Animations[c.Direction][c.Frame], options)
+}
+
+// Update characters location
+func (c *Character) Update(dirBits int) {
+	if dirBits == 0 {
+		c.IsMoving = false
+		return
+	} else {
+		c.IsMoving = true
+	}
+	// Update sprite direction based on movement direction
+	c.Direction = DirectionToSpriteIndex(dirBits)
+
+	// Apply movement based on direction bits
+	if dirBits&DirLeft != 0 {
+		c.X -= c.MoveSpeed
+	}
+	if dirBits&DirRight != 0 {
+		c.X += c.MoveSpeed
+	}
+	if dirBits&DirDown != 0 {
+		c.Y += c.MoveSpeed
+	}
+	if dirBits&DirUp != 0 {
+		c.Y -= c.MoveSpeed
+	}
+
+	// Update animation frame if moving
+	if c.IsMoving {
+		c.Frame = (c.Frame + 1) % CharacterColumns
+	} else if !c.IsMoving {
+		c.Frame = 0
+	}
+}
+
+func LoadAllCharacterSprites() map[CharacterName]CharacterSprites {
+	startTime := time.Now()
+	fmt.Println("LoadAllCharacterSprites start")
+	charMap := make(map[CharacterName]CharacterSprites, 40)
+
+	for _, c := range CharacterNames {
+		charMap[c] = LoadCharacterSprite(c)
+	}
+
+	fmt.Printf("LoadAllCharacterSprites execution time: %s\n", time.Since(startTime))
+	return charMap
+}
+
+func LoadCharacterSprite(name CharacterName) CharacterSprites {
 	// Get the shadow name for this character
 	charFileName := string(name) + ".spr.png"
 	shadowFileName := shadowName(name) + ".spr.png"
-	fmt.Printf("char %s shad %s\n", charFileName, shadowFileName)
+	// fmt.Printf("char %s shad %s\n", charFileName, shadowFileName)
 
 	charFile := getEmbeddedFile(charFileName)
 	charSheet, err := sprites.LoadSpriteSheet(5, 8, charFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load character sprite: %w file: %s", err, charFile)
+		panic(fmt.Sprintf("failed to load character sprite: %w file: %s", err, charFile))
 	}
 
 	shadowFile := getEmbeddedFile(shadowFileName)
 	shadowSheet, err := sprites.LoadSpriteSheet(5, 8, shadowFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load shadow sprite: %w file: %s", err, shadowFile)
+		panic(fmt.Sprintf("failed to load shadow sprite: %w file: %s", err, shadowFile))
 	}
 
-	return &Character{
-		Animations: charSheet,
-		Shadows:    shadowSheet,
-		Direction:  DirectionDown,
-		Frame:      0,
-		LastUpdate: time.Now(),
-		IsMoving:   false,
-		MoveSpeed:  3,
-		Width:      charSheet[0][0].Bounds().Dx(),
-		Height:     charSheet[0][0].Bounds().Dy(),
-	}, nil
+	return CharacterSprites{
+		Animations: charSheet, Shadows: shadowSheet,
+	}
 }
 
 // DirectionToSpriteIndex converts bit-based direction to sprite index
@@ -116,48 +183,6 @@ func getEmbeddedFile(filename string) []byte {
 		return nil
 	}
 	return data
-}
-
-// Draw renders the character and its shadow at the center of the screen
-func (c *Character) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	// Update animation frame if moving
-	if c.IsMoving && time.Since(c.LastUpdate) > time.Millisecond*100 {
-		c.Frame = (c.Frame + 1) % CharacterColumns
-		c.LastUpdate = time.Now()
-	} else if !c.IsMoving {
-		c.Frame = 0
-	}
-
-	// Draw shadow first
-	screen.DrawImage(c.Shadows[c.Direction][c.Frame], options)
-	// Draw character
-	screen.DrawImage(c.Animations[c.Direction][c.Frame], options)
-}
-
-// Update characters location
-func (c *Character) Update(dirBits int) {
-	if dirBits == 0 {
-		c.IsMoving = false
-		return
-	} else {
-		c.IsMoving = true
-	}
-	// Update sprite direction based on movement direction
-	c.Direction = DirectionToSpriteIndex(dirBits)
-
-	// Apply movement based on direction bits
-	if dirBits&DirLeft != 0 {
-		c.X -= c.MoveSpeed
-	}
-	if dirBits&DirRight != 0 {
-		c.X += c.MoveSpeed
-	}
-	if dirBits&DirDown != 0 {
-		c.Y += c.MoveSpeed
-	}
-	if dirBits&DirUp != 0 {
-		c.Y -= c.MoveSpeed
-	}
 }
 
 // SetPosition sets the character's position on the map

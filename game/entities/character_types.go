@@ -1,5 +1,9 @@
 package entities
 
+import (
+	"strings"
+)
+
 // CharacterName represents a specific character type and role combination
 type CharacterName string
 
@@ -22,7 +26,7 @@ const (
 	BlackWingedguy  CharacterName = "Bk_Wg"
 
 	// Blue enemies
-	BlueSafer      CharacterName = "B_Sfr"
+	BlueShifter    CharacterName = "Bu_Sft"
 	BlueArchmage   CharacterName = "Bu_Amg"
 	BlueDjinn      CharacterName = "Bu_Djn"
 	BlueFirewizard CharacterName = "Bu_Fwz"
@@ -56,21 +60,80 @@ const (
 	EgoMale   CharacterName = "Ego_M"
 )
 
+var CharacterNames = []CharacterName{
+	WhiteArchmage,
+	WhiteFirewizard,
+	WhiteKnight,
+	WhiteLord,
+	WhiteMagicwiz,
+	WhiteWingedguy,
+
+	// Black enemies
+	BlackArchmage,
+	BlackDjinn,
+	BlackFirewizard,
+	BlackKnight,
+	BlackLord,
+	BlackMagicwiz,
+	BlackWingedguy,
+
+	// Blue enemies
+	BlueSafer,
+	BlueArchmage,
+	BlueDjinn,
+	BlueFirewizard,
+	BlueLord,
+	BlueMagicwiz,
+	BlueWyrm,
+
+	// Dragon enemies
+	DragonBRU,
+	DragonGWR,
+	DragonRBG,
+	DragonUWB,
+	DragonWUG,
+
+	Troll,
+
+	// Multi enemies
+	MultiApe,
+	MultiCentaur,
+	MultiCentaur2,
+	MultiFang,
+	MultiFirewizard,
+	MultiKnight,
+	MultiLord,
+	MultiTroll,
+	MultiTusk,
+	MultiWingedguy,
+
+	// Player characters
+	EgoFemale,
+	EgoMale,
+}
+
 // shadowName returns the corresponding shadow sprite name for a character
 func shadowName(name CharacterName) string {
 	// Special cases first
-	switch name {
-	case Troll, MultiTroll:
-		return "Strl"
-	case EgoFemale:
-		return "Sego_F"
-	case EgoMale:
-		return "Sego_M"
-	case DragonBRU, DragonGWR, DragonRBG, DragonUWB, DragonWUG:
-		return "S_Dg"
-	case BlackDjinn, BlueDjinn:
-		return "Sdjn"
+	xref := map[string]string{
+		"Kht":   "Skht",
+		"Djn":   "Sdjn",
+		"Fwz":   "Sfwz",
+		"Mwz":   "Smwz",
+		"Trl":   "Strl",
+		"Troll": "Strl",
+		"Wrm":   "Swrm",
+		"Dg_":   "S_Dg",
+		"Ego_F": "Sego_F",
+		"Ego_M": "Sego_M",
 	}
+	for str, shadow := range xref {
+		if strings.Index(string(name), str) != -1 {
+			return shadow
+		}
+	}
+
+	// fmt.Println(name)
 
 	// Get the prefix and base name
 	str := string(name)
@@ -78,24 +141,28 @@ func shadowName(name CharacterName) string {
 		return "S" + str
 	}
 
-	prefix := str[:2]
-	base := str[3:]
+	parts := strings.Split(string(name), "_")
+
+	prefix := parts[0]
+	base := parts[1]
+
+	// fmt.Println(prefix, base)
 
 	// Map prefixes to shadow prefixes
 	shadowPrefix := "S"
 	switch prefix {
-	case "W_":
+	case "W":
 		shadowPrefix = "Sw_"
 		base = str[2:]
 	case "Bk":
 		shadowPrefix = "Sb_"
 	case "Bu":
 		shadowPrefix = "Su_"
-	case "G_":
+	case "G":
 		shadowPrefix = "Sg_"
-	case "R_":
+	case "R":
 		shadowPrefix = "Sr_"
-	case "M_":
+	case "M":
 		shadowPrefix = "Sm_"
 	}
 
