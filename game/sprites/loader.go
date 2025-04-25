@@ -3,7 +3,6 @@ package sprites
 import (
 	"bytes"
 	"image"
-	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -21,23 +20,11 @@ func LoadSpriteSheet(sprWidth, sprHeight int, file []byte) ([][]*ebiten.Image, e
 	bounds := img.Bounds()
 	width := bounds.Max.X - bounds.Min.X
 	height := bounds.Max.Y - bounds.Min.Y
-	rgba := image.NewRGBA(bounds)
 
 	tileWidth := width / sprWidth
 	tileHeight := height / sprHeight
 
-	// Convert indexed color to RGBA and set transparency
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			c := img.(*image.Paletted).ColorIndexAt(x, y)
-			if c == 255 { // Assuming index 255 is the transparent color
-				rgba.Set(x, y, color.RGBA{0, 0, 0, 0}) // Transparent
-			} else {
-				rgba.Set(x, y, img.At(x, y))
-			}
-		}
-	}
-	sheet := ebiten.NewImageFromImage(rgba)
+	sheet := ebiten.NewImageFromImage(img)
 
 	// spriteAt returns a sprite at the provided coordinates.
 	spriteAt := func(x, y int) *ebiten.Image {
