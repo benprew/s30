@@ -3,7 +3,6 @@ package entities
 import (
 	"fmt"
 	_ "image/png"
-	"time"
 
 	"github.com/benprew/s30/art"
 	"github.com/benprew/s30/game/sprites"
@@ -12,11 +11,10 @@ import (
 
 const (
 	// Sprite sheet dimensions
-	CharacterRows    = 8
-	CharacterColumns = 5
-
-	CharSprW = 206
-	CharSprH = 102
+	SpriteRows   = 8
+	SpriteCols   = 5
+	SpriteWidth  = 206
+	SpriteHeight = 102
 
 	// Direction bit flags
 	DirUp    = 0x8 // 1000
@@ -49,16 +47,21 @@ type Character struct {
 	Height     int
 }
 
-type CharacterSprites struct {
+type Sprites struct {
 	Animations [][]*ebiten.Image // [direction][frame]
 	Shadows    [][]*ebiten.Image // [direction][frame]
 }
 
-var Characters map[CharacterName]CharacterSprites = LoadAllCharacterSprites()
+var Characters map[CharacterName]Sprites = make(map[CharacterName]Sprites, 0)
 
 // NewCharacter creates a new character sprite with animations and shadows
 func NewCharacter(name CharacterName) (*Character, error) {
-	charSprite := Characters[name]
+	charSprite, ok := Characters[name]
+
+	if !ok {
+		charSprite = LoadCharacterSprite(name)
+		Characters[name] = charSprite
+	}
 
 	return &Character{
 		Animations: charSprite.Animations,
@@ -107,26 +110,13 @@ func (c *Character) Update(dirBits int) {
 
 	// Update animation frame if moving
 	if c.IsMoving {
-		c.Frame = (c.Frame + 1) % CharacterColumns
+		c.Frame = (c.Frame + 1) % SpriteCols
 	} else if !c.IsMoving {
 		c.Frame = 0
 	}
 }
 
-func LoadAllCharacterSprites() map[CharacterName]CharacterSprites {
-	startTime := time.Now()
-	fmt.Println("LoadAllCharacterSprites start")
-	charMap := make(map[CharacterName]CharacterSprites, 40)
-
-	for _, c := range CharacterNames {
-		charMap[c] = LoadCharacterSprite(c)
-	}
-
-	fmt.Printf("LoadAllCharacterSprites execution time: %s\n", time.Since(startTime))
-	return charMap
-}
-
-func LoadCharacterSprite(name CharacterName) CharacterSprites {
+func LoadCharacterSprite(name CharacterName) Sprites {
 	// Get the shadow name for this character
 	charFileName := string(name) + ".spr.png"
 	shadowFileName := shadowName(name) + ".spr.png"
@@ -144,7 +134,7 @@ func LoadCharacterSprite(name CharacterName) CharacterSprites {
 		panic(fmt.Sprintf("failed to load shadow sprite: %w file: %s", err, shadowFile))
 	}
 
-	return CharacterSprites{
+	return Sprites{
 		Animations: charSheet, Shadows: shadowSheet,
 	}
 }
@@ -193,7 +183,7 @@ func (c *Character) SetPosition(x, y int) {
 
 // SetDirection changes the character's facing direction
 func (c *Character) SetDirection(direction int) {
-	if direction >= 0 && direction < CharacterRows {
+	if direction >= 0 && direction < SpriteRows {
 		c.Direction = direction
 	}
 }

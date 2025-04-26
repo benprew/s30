@@ -9,30 +9,48 @@ type CharacterName string
 
 const (
 	// White enemies
-	WhiteArchmage   CharacterName = "W_Amg"
-	WhiteFirewizard CharacterName = "W_Fwz"
-	WhiteKnight     CharacterName = "W_Kht"
-	WhiteLord       CharacterName = "W_Lrd"
-	WhiteMagicwiz   CharacterName = "W_Mwz"
-	WhiteWingedguy  CharacterName = "W_Wg"
+	WhiteArchmage  CharacterName = "W_Amg"
+	WhiteFemaleWiz CharacterName = "W_Fwz"
+	WhiteKnight    CharacterName = "W_Kht"
+	WhiteLord      CharacterName = "W_Lrd"
+	WhiteMaleWiz   CharacterName = "W_Mwz"
+	WhiteAngel     CharacterName = "W_Wg"
 
 	// Black enemies
-	BlackArchmage   CharacterName = "Bk_Amg"
-	BlackDjinn      CharacterName = "Bk_Djn"
-	BlackFirewizard CharacterName = "Bk_Fwz"
-	BlackKnight     CharacterName = "Bk_Kht"
-	BlackLord       CharacterName = "Bk_Lrd"
-	BlackMagicwiz   CharacterName = "Bk_Mwz"
-	BlackWingedguy  CharacterName = "Bk_Wg"
+	BlackArchmage  CharacterName = "Bk_Amg"
+	BlackDjinn     CharacterName = "Bk_Djn"
+	BlackFemaleWiz CharacterName = "Bk_Fwz"
+	BlackKnight    CharacterName = "Bk_Kht"
+	BlackLord      CharacterName = "Bk_Lrd"
+	BlackMaleWiz   CharacterName = "Bk_Mwz"
+	BlackWingedguy CharacterName = "Bk_Wg"
 
 	// Blue enemies
-	BlueShifter    CharacterName = "Bu_Sft"
-	BlueArchmage   CharacterName = "Bu_Amg"
-	BlueDjinn      CharacterName = "Bu_Djn"
-	BlueFirewizard CharacterName = "Bu_Fwz"
-	BlueLord       CharacterName = "Bu_Lrd"
-	BlueMagicwiz   CharacterName = "Bu_Mwz"
-	BlueWyrm       CharacterName = "Bu_Wrm"
+	BlueArchmage  CharacterName = "Bu_Amg"
+	BlueDjinn     CharacterName = "Bu_Djn"
+	BlueFemaleWiz CharacterName = "Bu_Fwz"
+	BlueLord      CharacterName = "Bu_Lrd"
+	BlueMaleWiz   CharacterName = "Bu_Mwz"
+	BlueWurm      CharacterName = "Bu_Wrm"
+	BlueShifter   CharacterName = "Bu_Sft"
+
+	// Red enemies
+	RedArchmage  CharacterName = "R_Amg"
+	RedDjinn     CharacterName = "R_Djn"
+	RedFemaleWiz CharacterName = "R_Fwz"
+	RedLord      CharacterName = "R_Lrd"
+	RedMaleWiz   CharacterName = "R_Mwz"
+	RedWurm      CharacterName = "R_Wrm"
+	Troll        CharacterName = "Troll"
+
+	// Green enemies
+	GreenArchmage  CharacterName = "G_Amg"
+	GreenDjinn     CharacterName = "G_Djn"
+	GreenFemaleWiz CharacterName = "G_Fwz"
+	GreenKnight    CharacterName = "G_Kht"
+	GreenLord      CharacterName = "G_Lrd"
+	GreenMaleWiz   CharacterName = "G_Mwz"
+	GreenWurm      CharacterName = "G_Wrm"
 
 	// Dragon enemies
 	DragonBRU CharacterName = "Dg_Bru"
@@ -41,17 +59,15 @@ const (
 	DragonUWB CharacterName = "Dg_Uwb"
 	DragonWUG CharacterName = "Dg_Wug"
 
-	Troll CharacterName = "Troll"
-
 	// Multi enemies
 	MultiApe        CharacterName = "M_Ape"
 	MultiCentaur    CharacterName = "M_Cen"
 	MultiCentaur2   CharacterName = "M_Cen2"
-	MultiFang       CharacterName = "M_Fng"
-	MultiFirewizard CharacterName = "M_Fwz"
+	MultiFungus     CharacterName = "M_Fng"
+	MultiFemaleWiz  CharacterName = "M_Fwz"
 	MultiKnight     CharacterName = "M_Kht"
 	MultiLord       CharacterName = "M_Lrd"
-	MultiTroll      CharacterName = "M_Trl"
+	MultiSedgeBeast CharacterName = "M_Trl"
 	MultiTusk       CharacterName = "M_Tsk"
 	MultiWingedguy  CharacterName = "M_Wg"
 
@@ -60,31 +76,50 @@ const (
 	EgoMale   CharacterName = "Ego_M"
 )
 
-var CharacterNames = []CharacterName{
+var Enemies = []CharacterName{
+	// White enemies
 	WhiteArchmage,
-	WhiteFirewizard,
+	WhiteFemaleWiz,
 	WhiteKnight,
 	WhiteLord,
-	WhiteMagicwiz,
-	WhiteWingedguy,
+	WhiteMaleWiz,
+	WhiteAngel,
 
 	// Black enemies
 	BlackArchmage,
 	BlackDjinn,
-	BlackFirewizard,
+	BlackFemaleWiz,
 	BlackKnight,
 	BlackLord,
-	BlackMagicwiz,
+	BlackMaleWiz,
 	BlackWingedguy,
 
 	// Blue enemies
-	BlueSafer,
 	BlueArchmage,
 	BlueDjinn,
-	BlueFirewizard,
+	BlueFemaleWiz,
 	BlueLord,
-	BlueMagicwiz,
-	BlueWyrm,
+	BlueMaleWiz,
+	BlueWurm,
+	BlueShifter,
+
+	// Red enemies
+	RedArchmage,
+	RedDjinn,
+	RedFemaleWiz,
+	RedLord,
+	RedMaleWiz,
+	RedWurm,
+	Troll,
+
+	// Green enemies
+	GreenArchmage,
+	GreenDjinn,
+	GreenFemaleWiz,
+	GreenKnight,
+	GreenLord,
+	GreenMaleWiz,
+	GreenWurm,
 
 	// Dragon enemies
 	DragonBRU,
@@ -93,23 +128,17 @@ var CharacterNames = []CharacterName{
 	DragonUWB,
 	DragonWUG,
 
-	Troll,
-
 	// Multi enemies
 	MultiApe,
 	MultiCentaur,
 	MultiCentaur2,
-	MultiFang,
-	MultiFirewizard,
+	MultiFungus,
+	MultiFemaleWiz,
 	MultiKnight,
 	MultiLord,
-	MultiTroll,
+	MultiSedgeBeast,
 	MultiTusk,
 	MultiWingedguy,
-
-	// Player characters
-	EgoFemale,
-	EgoMale,
 }
 
 // shadowName returns the corresponding shadow sprite name for a character

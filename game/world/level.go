@@ -145,7 +145,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int) {
 		// Draw enemy
 		enemyOp := &ebiten.DrawImageOptions{}
 		enemyOp.GeoM.Scale(scale, scale)
-		enemyOp.GeoM.Translate(-float64(entities.CharSprW/2)*scale, -float64(entities.CharSprH/2)*scale)
+		enemyOp.GeoM.Translate(-float64(entities.SpriteWidth/2)*scale, -float64(entities.SpriteHeight/2)*scale)
 		enemyOp.GeoM.Translate(float64(screenX), float64(screenY))
 		e.Draw(screen, enemyOp)
 	}
@@ -154,7 +154,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
 	options.GeoM.Translate(float64(screenW)/2, float64(screenH)/2)
-	options.GeoM.Translate(-float64(entities.CharSprW/2)*scale, -float64(entities.CharSprH/2)*scale)
+	options.GeoM.Translate(-float64(entities.SpriteWidth/2)*scale, -float64(entities.SpriteHeight/2)*scale)
 	l.player.Draw(screen, options)
 
 	// Draw the worldFrame over everything
@@ -213,11 +213,7 @@ func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 // spawnEnemies creates a specified number of enemies at random positions
 func (l *Level) spawnEnemies(count int) error {
 	// Enemy character types to choose from
-	// TODO this should be all enemy types
-	enemyTypes := []entities.CharacterName{
-		entities.WhiteArchmage, entities.BlackKnight, entities.BlueDjinn,
-		entities.DragonBRU, entities.MultiTroll, entities.Troll,
-	}
+	enemyTypes := entities.Enemies
 
 	pLoc := l.player.Loc()
 
