@@ -1,4 +1,4 @@
-package mtg
+package rules
 
 type AbilityType string
 

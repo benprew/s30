@@ -1,49 +1,53 @@
-package mtg
+package rules
 
-type ManaPool struct {
-	White     int
-	Blue      int
-	Black     int
-	Red       int
-	Green     int
-	Colorless int
+import (
+	"fmt"
+	"slices"
+)
+
+type ManaPool [][]rune
+
+func (m *ManaPool) AddMana(manaType []rune) {
+	*m = append(*m, manaType)
 }
 
-func (m *ManaPool) AddMana(color string, amount int) {
-	switch color {
-	case "White":
-		m.White += amount
-	case "Blue":
-		m.Blue += amount
-	case "Black":
-		m.Black += amount
-	case "Red":
-		m.Red += amount
-	case "Green":
-		m.Green += amount
-	case "Colorless":
-		m.Colorless += amount
+func (m *ManaPool) RemoveMana(manaType rune) {
+	for i, mt := range *m {
+		if len(mt) == 1 && mt[0] == manaType {
+			*m = slices.Delete((*m), i, i+1)
+			break
+		}
 	}
 }
 
-func (m *ManaPool) RemoveMana(color string, amount int) {
-	switch color {
-	case "White":
-		m.White -= amount
-	case "Blue":
-		m.Blue -= amount
-	case "Black":
-		m.Black -= amount
-	case "Red":
-		m.Red -= amount
-	case "Green":
-		m.Green -= amount
-	case "Colorless":
-		m.Colorless -= amount
+func (m ManaPool) CanPay(cost string) bool {
+	requiredMana := make(map[rune]int)
+	for _, mana := range cost {
+		requiredMana[mana]++
 	}
+
+	availableMana := make(map[rune]int)
+	for _, manaType := range m {
+		if len(manaType) == 1 {
+			availableMana[manaType[0]]++
+		}
+	}
+
+	for manaType, required := range requiredMana {
+		if availableMana[manaType] < required {
+			return false
+		}
+	}
+
+	return true
 }
 
-func (m *ManaPool) CanPay(cost string) bool {
-	// TODO: Implement mana cost parsing and payment logic
-	return false
+func (m *ManaPool) Pay(cost string) error {
+	if !m.CanPay(cost) {
+		return fmt.Errorf("not enough mana to pay the cost")
+	}
+	for _, mana := range cost {
+		m.RemoveMana(mana)
+	}
+	return nil
 }

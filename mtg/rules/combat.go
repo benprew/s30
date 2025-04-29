@@ -1,4 +1,4 @@
-package mtg
+package rules
 
 func BeginCombat() {
 	// TODO: Implement combat logic

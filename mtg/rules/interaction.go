@@ -1,4 +1,4 @@
-package mtg
+package rules
 
 func CanTarget(source *Card, target *Card) bool {
 	// TODO: Implement targeting logic

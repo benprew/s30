@@ -1,4 +1,4 @@
-package mtg
+package rules
 
 type Phase string
 
@@ -14,7 +14,8 @@ const (
 )
 
 type Turn struct {
-	Phase Phase
+	Phase      Phase
+	LandPlayed bool
 }
 
 func (t *Turn) NextPhase() {
