@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -14,85 +15,72 @@ import (
 type Game struct {
 	screenW, screenH int
 	level            *world.Level
+	miniMap          *minimap.MiniMap
 
 	camScale   float64
 	camScaleTo float64
 
 	mousePanX, mousePanY int
+
+	currentScreen int
 }
+
+const (
+	StartScr = iota
+	WorldScr
+	MiniMapScr
+)
 
 // NewGame returns a new isometric demo Game.
 func NewGame() (*Game, error) {
 	l, err := world.NewLevel()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new level: %s", err)
-	}
-
+	m := minimap.NewMiniMap()
 	g := &Game{
-		screenW:    1024,
-		screenH:    768,
-		level:      l,
-		camScale:   1.25,
-		camScaleTo: 1.25,
-		mousePanX:  math.MinInt32,
-		mousePanY:  math.MinInt32,
+		screenW:       1024,
+		screenH:       768,
+		level:         l,
+		miniMap:       &m,
+		camScale:      1,
+		camScaleTo:    1,
+		mousePanX:     math.MinInt32,
+		mousePanY:     math.MinInt32,
+		currentScreen: MiniMapScr,
 	}
 
-	return g, nil
+	ebiten.SetWindowSize(g.screenW, g.screenH)
+
+	return g, err
 }
 
 func (g *Game) Update() error {
-	// Update target zoom level.
-	var scrollY float64
-	if ebiten.IsKeyPressed(ebiten.KeyC) || ebiten.IsKeyPressed(ebiten.KeyPageDown) {
-		scrollY = -0.25
-	} else if ebiten.IsKeyPressed(ebiten.KeyE) || ebiten.IsKeyPressed(ebiten.KeyPageUp) {
-		scrollY = .25
-	} else {
-		_, scrollY = ebiten.Wheel()
-		if scrollY < -1 {
-			scrollY = -1
-		} else if scrollY > 1 {
-			scrollY = 1
+	switch g.currentScreen {
+	case WorldScr:
+		// Randomize level.
+		if inpututil.IsKeyJustPressed(ebiten.KeyR) {
+			l, err := world.NewLevel()
+			if err != nil {
+				return fmt.Errorf("failed to create new level: %s", err)
+			}
+			g.level = l
 		}
-	}
-	g.camScaleTo += scrollY * (g.camScaleTo / 7)
-	g.camScaleTo = 1
-	g.camScale = 1
-
-	// // Clamp target zoom level.
-	// if g.camScaleTo < 0.075 {
-	//  g.camScaleTo = 0.075
-	// } else if g.camScaleTo > 2.25 {
-	//  g.camScaleTo = 2.25
-	// }
-
-	// // Smooth zoom transition.
-	// div := 10.0
-	// if g.camScaleTo > g.camScale {
-	//  g.camScale += (g.camScaleTo - g.camScale) / div
-	// } else if g.camScaleTo < g.camScale {
-	//  g.camScale -= (g.camScale - g.camScaleTo) / div
-	// }
-
-	// Randomize level.
-	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		l, err := world.NewLevel()
-		if err != nil {
-			return fmt.Errorf("failed to create new level: %s", err)
-		}
-		g.level = l
+		return g.level.Update(g.screenW, g.screenH)
+	case MiniMapScr:
+		return g.miniMap.Update()
 	}
 
-	if err := g.level.Update(g.screenW, g.screenH); err != nil {
-		return err
-	}
 	return nil
 }
 
 // Draw draws the Game on the screen.
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.level.Draw(screen, g.screenW, g.screenH)
+	switch g.currentScreen {
+	case WorldScr:
+		g.level.Draw(screen, g.screenW, g.screenH, g.camScale)
+		// case MiniMapScr:
+		// 	g.minimap.Draw(screen)
+	case MiniMapScr:
+		g.miniMap.Draw(screen, g.camScale, g.level)
+	}
 
 	// Print game info.
 	charT := g.level.CharacterTile()

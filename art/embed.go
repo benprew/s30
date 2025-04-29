@@ -44,7 +44,7 @@ var (
 	Dungeons_png []byte
 
 	// world frame
-	//go:embed Advinter1024.pic.png
+	//go:embed sprites/world/Advinter1024.pic.png
 	WorldFrame_png []byte
 
 	//go:embed sprites/world/land/Roads.spr.png
@@ -53,4 +53,19 @@ var (
 	// Character sprites
 	//go:embed sprites/world/characters/*.spr.png
 	CharacterFS embed.FS
+
+	//go:embed sprites/mini_map/*.png
+	MiniMapFS embed.FS
+
+	//go:embed sprites/mini_map/Ttsprite.spr.png
+	MiniMapTerrSpr_png []byte
+
+	//go:embed sprites/mini_map/Mapback.pic.png
+	MiniMapFrame_png []byte
+
+	//go:embed sprites/mini_map/Mapbttns.pic.png
+	MiniMapFrameSprite_png []byte
+
+	//go:embed sprites/mini_map/Mapbttns_map.json
+	MiniMapFrameSprite_json []byte
 )

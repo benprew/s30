@@ -9,7 +9,7 @@ import (
 
 func main() {
 	ebiten.SetWindowTitle("Isometric (Ebitengine Demo)")
-	ebiten.SetWindowSize(1024, 768)
+	// ebiten.SetWindowSize(1024, 768)
 	ebiten.SetTPS(10)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeDisabled)
 	// ebiten.SetFullscreen(true)
