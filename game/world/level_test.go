@@ -13,15 +13,15 @@ func createTestLevel(w, h int) *Level {
 	l := &Level{
 		w:     w,
 		h:     h,
-		tiles: make([][]*Tile, h),
+		Tiles: make([][]*Tile, h),
 		// Initialize other fields if necessary for the function being tested
 		// roadSprites, roadSpriteInfo might not be needed for BFS logic itself
 	}
 	for y := 0; y < h; y++ {
-		l.tiles[y] = make([]*Tile, w)
+		l.Tiles[y] = make([]*Tile, w)
 		for x := 0; x < w; x++ {
 			// Default to Plains, can be overridden in tests
-			l.tiles[y][x] = &Tile{TerrainType: TerrainPlains}
+			l.Tiles[y][x] = &Tile{TerrainType: TerrainPlains}
 		}
 	}
 	return l

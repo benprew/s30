@@ -17,14 +17,14 @@ import (
 // Level represents a Game level.
 type Level struct {
 	w, h       int
-	tiles      [][]*Tile // (Y,X) array of tiles
+	Tiles      [][]*Tile // (Y,X) array of tiles
 	tileWidth  int
 	tileHeight int
 
 	roadSprites    [][]*ebiten.Image // Sprites for roads
 	roadSpriteInfo [][]string        // Maps sprite index to direction string (e.g., "N", "NE")
 
-	player  *entities.Player
+	Player  *entities.Player
 	enemies []entities.Enemy
 	frame   *ebiten.Image
 }
@@ -46,11 +46,11 @@ func NewLevel() (*Level, error) {
 
 	l := &Level{
 		w:          56,
-		h:          38,
+		h:          76,
 		tileWidth:  206,
 		tileHeight: 102,
 		enemies:    make([]entities.Enemy, 0),
-		player:     c,
+		Player:     c,
 		frame:      frame,
 	}
 
@@ -113,7 +113,7 @@ func NewLevel() (*Level, error) {
 
 	// Set initial player position at center of map
 	loc := image.Point{X: l.LevelW() / 2, Y: l.LevelH() / 2}
-	l.player.SetLoc(loc)
+	l.Player.SetLoc(loc)
 	fmt.Printf("Starting player at position: %d, %d\n", loc.X, loc.Y)
 
 	// Spawn initial enemies
@@ -125,13 +125,12 @@ func NewLevel() (*Level, error) {
 	return l, nil
 }
 
-func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int) {
+func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) {
 	padding := 400
-	scale := 1.0
 
-	pLoc := l.player.Loc()
+	pLoc := l.Player.Loc()
 
-	l.RenderZigzag(screen, pLoc.X, pLoc.Y, (screenW/2)+padding, (screenH/2)+padding)
+	l.RenderZigzag(screen, pLoc.X, pLoc.Y, (screenW/2)+padding, (screenH/2)+padding, scale)
 
 	// Draw enemies
 	for _, e := range l.enemies {
@@ -155,22 +154,24 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int) {
 	options.GeoM.Scale(scale, scale)
 	options.GeoM.Translate(float64(screenW)/2, float64(screenH)/2)
 	options.GeoM.Translate(-float64(entities.SpriteWidth/2)*scale, -float64(entities.SpriteHeight/2)*scale)
-	l.player.Draw(screen, options)
+	l.Player.Draw(screen, options)
 
 	// Draw the worldFrame over everything
-	screen.DrawImage(l.frame, &ebiten.DrawImageOptions{})
+	frameOpts := &ebiten.DrawImageOptions{}
+	frameOpts.GeoM.Scale(scale, scale)
+	screen.DrawImage(l.frame, frameOpts)
 }
 
 // Update reads current user input and updates the Game state.
 func (l *Level) Update(screenW, screenH int) error {
 	// Move player and update direction via keyboard using bit flags
-	if err := l.player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
+	if err := l.Player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
 		return err
 	}
 
 	// Update enemies to move towards character
 	for _, e := range l.enemies {
-		e.Update(l.player.Loc())
+		e.Update(l.Player.Loc())
 	}
 
 	// Add more enemies with the 'N' key
@@ -188,7 +189,7 @@ func (l *Level) Update(screenW, screenH int) error {
 // return the position of the tile in the screen
 func (l *Level) isVisible(x, y, width, height, screenW, screenH int) bool {
 	// convert screenW and screenH based on the player position
-	pLoc := l.player.Loc()
+	pLoc := l.Player.Loc()
 	screenX := pLoc.X - (screenW / 2)
 	screenY := pLoc.Y - (screenH / 2)
 
@@ -201,7 +202,7 @@ func (l *Level) isVisible(x, y, width, height, screenW, screenH int) bool {
 }
 
 func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
-	pLoc := l.player.Loc()
+	pLoc := l.Player.Loc()
 	// Calculate screen position based on player position
 	screenX := pLoc.X - screenW/2
 	screenY := pLoc.Y - screenH/2
@@ -215,7 +216,7 @@ func (l *Level) spawnEnemies(count int) error {
 	// Enemy character types to choose from
 	enemyTypes := entities.Enemies
 
-	pLoc := l.player.Loc()
+	pLoc := l.Player.Loc()
 
 	for i := 0; i < count; i++ {
 		// Choose a random enemy type
@@ -266,7 +267,7 @@ func (l *Level) LevelH() int {
 // Tile returns the tile at the provided coordinates, or nil.
 func (l *Level) Tile(p TilePoint) *Tile {
 	if p.X >= 0 && p.Y >= 0 && p.X < l.w && p.Y < l.h {
-		return l.tiles[p.Y][p.X]
+		return l.Tiles[p.Y][p.X]
 	}
 	return nil
 }
@@ -276,7 +277,7 @@ func (l *Level) Size() (width, height int) {
 	return l.w, l.h
 }
 
-func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
+func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale float64) {
 	tileWidth := l.tileWidth
 	tileHeight := l.tileHeight
 
@@ -315,18 +316,19 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
 			screenY := pixelY - (pY - 768/2)
 
 			op.GeoM.Reset()
+			op.GeoM.Scale(scale, scale)
 			op.GeoM.Translate(float64(screenX), float64(screenY))
-			tile.Draw(screen, 1.0, op)
+			tile.Draw(screen, op)
 		}
 	}
 }
 
 func (l *Level) CharacterPos() image.Point {
-	return l.player.Loc()
+	return l.Player.Loc()
 }
 
 func (l *Level) CharacterTile() TilePoint {
-	pLoc := l.player.Loc()
+	pLoc := l.Player.Loc()
 	pixelX := pLoc.X
 	pixelY := pLoc.Y
 
@@ -346,7 +348,7 @@ func (l *Level) CharacterTile() TilePoint {
 }
 
 func PrintLevel(l *Level) {
-	for i, row := range l.tiles {
+	for i, row := range l.Tiles {
 		for _, col := range row {
 			t := "T"
 			if col.IsRoad() {

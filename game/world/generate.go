@@ -131,11 +131,11 @@ func generateTerrain(w, h int) [][]float64 {
 // mapTerrainTypes assigns terrain based on noise values and returns potential city locations.
 func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites [][]*ebiten.Image) []TilePoint {
 	// Fill each tile with one or more sprites randomly.
-	l.tiles = make([][]*Tile, l.h)
+	l.Tiles = make([][]*Tile, l.h)
 	validCityLocations := []TilePoint{} // Store potential city coordinates
 
 	for y := range l.h {
-		l.tiles[y] = make([]*Tile, l.w)
+		l.Tiles[y] = make([]*Tile, l.w)
 		for x := range l.w {
 			t := &Tile{}
 			isBorderSpace := x < 4 || y < 8 || x > l.w-4 || y > l.h-8
@@ -184,7 +184,7 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 				t.AddFoliageSprite(foliage[folIdx][3])
 			}
 			t.TerrainType = terrainType // Set the type on the tile
-			l.tiles[y][x] = t
+			l.Tiles[y][x] = t
 
 			// If not water and not border, add to potential city locations
 			if !isWater && !isBorderSpace {

@@ -104,12 +104,10 @@ func (t *Tile) AddRoadSprite(s *ebiten.Image) {
 // 3,4,3,4 BR,R,BR,R
 
 // Draw draws the Tile on the screen using the provided options.
-func (t *Tile) Draw(screen *ebiten.Image, scale float64, options *ebiten.DrawImageOptions) {
+func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 	// Draw regular sprites (base terrain)
 	for _, s := range t.sprites {
-		// Use a copy of options
-		spriteOpts := *options
-		screen.DrawImage(s, &spriteOpts)
+		screen.DrawImage(s, options)
 	}
 
 	// Draw road first if it exists, so it's under other elements
@@ -117,20 +115,15 @@ func (t *Tile) Draw(screen *ebiten.Image, scale float64, options *ebiten.DrawIma
 		if s == nil {
 			continue
 		}
-		// Use a copy of options to avoid modifying the original transform for other sprites
-		roadOpts := *options
-		screen.DrawImage(s, &roadOpts)
+		screen.DrawImage(s, options)
 	}
 
 	// Draw positioned sprites (foliage, cities) with their offsets
 	for _, ps := range t.positionedSprites {
 		// Create a copy of the options to avoid modifying the original
 		posOptions := &ebiten.DrawImageOptions{}
-		posOptions.GeoM.Concat(options.GeoM)
-
-		// Apply the offset
-		// posOptions.GeoM.Scale(scale, scale)
 		posOptions.GeoM.Translate(ps.OffsetX, ps.OffsetY)
+		posOptions.GeoM.Concat(options.GeoM)
 
 		screen.DrawImage(ps.Image, posOptions)
 	}
