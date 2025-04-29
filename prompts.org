@@ -1,3 +1,23 @@
+* General
+I'm building a 2d isometric game based on the collectible card game Magic: The Gathering.
+
+* Rules Engine
+I'd like to build a rules engine for mtg that can be used to play the game. The engine should be able to handle the rules of the game, including card interactions, combat, and mana generation.
+How can I break this down into smaller tasks?
+
+** tasks
+1. Define the Card Model: Create a data structure to represent MTG cards, including attributes like name, mana cost, colors, card type, abilities, and power/toughness (if applicable).
+2. Implement Mana System: Develop a system for managing mana pools, including mana generation, mana costs, and mana abilities.
+3. Implement Turn Structure: Define the phases of a turn (untap, upkeep, draw, main, combat, main, end) and the actions that can be taken during each phase.
+4. Implement Card Abilities: Implement the logic for different card abilities, such as triggered abilities, activated abilities, and static abilities.
+5. Implement Combat System: Develop a system for handling combat, including declaring attackers and blockers, assigning damage, and resolving combat damage.
+6. Implement Game State Management: Create a system for tracking the game state, including life totals, card positions (library, hand, battlefield, graveyard, exile), and other relevant information.
+7. Implement Card Interactions: Implement the logic for card interactions, such as spells that target other cards, abilities that modify other cards, and effects that counter spells.
+8. Implement Winning/Losing Conditions: Define the conditions for winning or losing the game, such as reducing an opponent's life total to zero or running out of cards in the library.
+9. Create a Card Database: Create a database of MTG cards that can be used by the engine.
+10, Implement a User Interface (Optional): Create a user interface for interacting with the engine, such as a command-line interface or a graphical user interface.
+
+
 * Roads
 Each road sprite starts at the middle of the tile and goes out to a compass direction. This means you could have at most 8 roads in a tile that intersect in the middle of the tile.
 
