@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/world"
@@ -33,6 +34,9 @@ const (
 
 // NewGame returns a new isometric demo Game.
 func NewGame() (*Game, error) {
+	startTime := time.Now()
+	fmt.Println("NewGame start")
+
 	l, err := world.NewLevel()
 	m := minimap.NewMiniMap()
 	g := &Game{
@@ -49,6 +53,7 @@ func NewGame() (*Game, error) {
 
 	ebiten.SetWindowSize(g.screenW, g.screenH)
 
+	fmt.Printf("NewGame execution time: %s\n", time.Since(startTime))
 	return g, err
 }
 

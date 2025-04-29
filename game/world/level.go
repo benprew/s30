@@ -232,7 +232,6 @@ func (l *Level) spawnEnemies(count int) error {
 		// Set random position (avoiding player's immediate area)
 		minDistance := 5000.0 // Minimum distance from player
 		for {
-			fmt.Println(l.LevelH(), l.LevelW())
 			// Random position within world bounds
 			x = rand.Intn(l.LevelW())
 			y = rand.Intn(l.LevelH())
