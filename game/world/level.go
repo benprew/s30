@@ -247,7 +247,7 @@ func (l *Level) spawnEnemies(count int) error {
 		}
 
 		enemy.SetLoc(image.Point{X: x, Y: y})
-		enemy.Speed(1 + rand.Intn(3))
+		enemy.Speed(5 + rand.Intn(7))
 
 		l.enemies = append(l.enemies, enemy)
 	}
