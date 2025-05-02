@@ -1,0 +1,59 @@
+{
+    "Giant Growth": {
+        "Name": "Giant Growth",
+        "ManaCost": "G",
+        "Colors": [
+            "Green"
+        ],
+        "CardType": "Instant",
+        "Abilities": [
+            "Target creature gets +3/+3 until end of turn."
+        ],
+        "Text": "Target creature gets +3/+3 until end of turn."
+    },
+    "Forest": {
+        "Name": "Forest",
+        "CardType": "Land",
+        "Subtypes": [
+            "Forest"
+        ],
+        "Text": "({T}: Add {G} to your mana pool.)",
+        "ManaProduction": [
+            "G"
+        ]
+    },
+    "Llanowar Elves": {
+        "Name": "Llanowar Elves",
+        "ManaCost": "G",
+        "Colors": [
+            "Green"
+        ],
+        "CardType": "Creature",
+        "Subtypes": [
+            "Elf"
+        ],
+        "Power": 1,
+        "Toughness": 1,
+        "Abilities": [
+            "{T}: Add {G} to your mana pool."
+        ],
+        "Text": "{T}: Add {G} to your mana pool.",
+        "ManaProduction": [
+            "G"
+        ]
+    },
+    "Grizzly Bears": {
+        "Name": "Grizzly Bears",
+        "ManaCost": "1G",
+        "Colors": [
+            "Green"
+        ],
+        "CardType": "Creature",
+        "Subtypes": [
+            "Bear"
+        ],
+        "Power": 2,
+        "Toughness": 2,
+        "Text": ""
+    }
+}
