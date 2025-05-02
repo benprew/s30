@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -48,8 +47,6 @@ func TestNewGame(t *testing.T) {
 	players := createTestPlayer(2)
 	game := NewGame(players)
 	game.StartGame()
-
-	fmt.Printf("%+v\n", players)
 
 	// Check player state
 	for i, player := range game.Players {

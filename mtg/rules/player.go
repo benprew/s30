@@ -1,6 +1,9 @@
 package rules
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 type Player struct {
 	LifeTotal   int
@@ -16,11 +19,11 @@ type Player struct {
 func (p *Player) DeepCopy() *Player {
 	newPlayer := &Player{
 		LifeTotal:   p.LifeTotal,
-		Hand:        append([]*Card{}, p.Hand...),
-		Library:     append([]*Card{}, p.Library...),
-		Battlefield: append([]*Card{}, p.Battlefield...),
-		Graveyard:   append([]*Card{}, p.Graveyard...),
-		Exile:       append([]*Card{}, p.Exile...),
+		Hand:        slices.Clone(p.Hand),
+		Library:     slices.Clone(p.Library),
+		Battlefield: slices.Clone(p.Battlefield),
+		Graveyard:   slices.Clone(p.Graveyard),
+		Exile:       slices.Clone(p.Exile),
 		Turn:        p.Turn, // Assuming Turn doesn't need to be deep copied
 	}
 
