@@ -1,4 +1,4 @@
-package rules
+package core_engine
 
 type AbilityType string
 

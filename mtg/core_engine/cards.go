@@ -1,4 +1,4 @@
-package rules
+package core_engine
 
 import (
 	"encoding/json"

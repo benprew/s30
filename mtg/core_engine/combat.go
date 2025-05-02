@@ -1,4 +1,4 @@
-package rules
+package core_engine
 
 func BeginCombat() {
 	// TODO: Implement combat logic
