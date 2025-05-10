@@ -3,6 +3,7 @@ package core_engine
 import (
 	"fmt"
 	"slices"
+	"time"
 )
 
 type GameState struct {
@@ -20,12 +21,7 @@ func NewGame(players []*Player) *GameState {
 func (g *GameState) CheckWinConditions() {
 	for _, player := range g.Players {
 		if player.LifeTotal <= 0 {
-			// Player lost
-			// TODO: Implement game over logic
-		}
-		if len(player.Library) == 0 {
-			// Player lost due to running out of cards
-			// TODO: Implement game over logic
+			player.HasLost = true
 		}
 	}
 }
@@ -42,18 +38,105 @@ func (g *GameState) StartGame() {
 	}
 }
 
+func (g *GameState) DeterminePriority() *Player {
+	return g.Players[g.CurrentPlayer]
+}
+
+func (g *GameState) WaitForPlayerInput() {
+	// Determine which player has priority
+	playerWithPriority := g.DeterminePriority()
+
+	fmt.Printf("Waiting for player input on %s\n", playerWithPriority.Turn.Phase)
+
+	AITurnTimeout := 5 * time.Second
+
+	// Wait for input from the specific player who has priority
+	if playerWithPriority.IsAI {
+		select {
+		case action := <-playerWithPriority.InputChan:
+			g.ProcessAction(playerWithPriority, action)
+		case <-time.After(AITurnTimeout):
+		}
+	} else {
+		action := <-playerWithPriority.InputChan
+		g.ProcessAction(playerWithPriority, action)
+	}
+	// Process game rules after action
+	// g.ApplyStateBasedActions()
+}
+
+func (g *GameState) ProcessAction(player *Player, action PlayerAction) {
+	// Neither the player nor the AI should be able to create invalid actions
+
+	// Process the action taken by the player
+	switch action.Type {
+	case "CastSpell":
+		g.CastCard(player, action.Card)
+	case "PlayLand":
+		g.PlayLand(player, action.Card)
+	case "PassPriority":
+		// Pass priority to the next player
+	default:
+		fmt.Println("Unknown action type:", action.Type)
+	}
+}
+
 func (g *GameState) NextTurn() {
 	player := g.Players[g.CurrentPlayer]
-	player.Turn.NextPhase()
-	if player.Turn.Phase == PhaseUntap {
-		// Start of new turn
-		// TODO: Implement untap logic
-		// TODO: Implement upkeep logic
-		// TODO: Implement draw logic
-		player.Turn.LandPlayed = false
+	for player.Turn.Phase != PhaseEnd {
+		fmt.Println("Phase:", player.Turn.Phase)
+		cards, err := g.CardsWithActions(player)
+		if err != nil {
+			fmt.Println("Error getting cards with actions:", err)
+			return
+		}
+		switch player.Turn.Phase {
+		case PhaseUntap:
+			g.UntapPhase(player, cards)
+		case PhaseUpkeep:
+			g.UpkeepPhase(player, cards)
+			g.WaitForPlayerInput()
+		case PhaseDraw:
+			g.DrawPhase(player, cards)
+			g.WaitForPlayerInput()
+		case PhaseMain1:
+			g.MainPhase(player, cards)
+			g.WaitForPlayerInput()
+		case PhaseCombat:
+			g.WaitForPlayerInput()
+		case PhaseMain2:
+			g.WaitForPlayerInput()
+		case PhaseEnd:
+			g.WaitForPlayerInput()
+		}
+		g.CheckWinConditions()
+
+		if player.HasLost {
+			return
+		}
+		player.Turn.NextPhase()
 	}
 
 	g.CurrentPlayer = (g.CurrentPlayer + 1) % len(g.Players)
+}
+
+func (g *GameState) UntapPhase(player *Player, cards []*Card) {
+	for _, card := range player.Battlefield {
+		card.Tapped = false
+	}
+}
+
+func (g *GameState) UpkeepPhase(player *Player, cards []*Card) {
+}
+
+func (g *GameState) DrawPhase(player *Player, cards []*Card) {
+	if err := player.DrawCard(); err != nil {
+		player.HasLost = true
+	}
+}
+
+func (g *GameState) MainPhase(player *Player, cards []*Card) {
+
 }
 
 func (g *GameState) CardsWithActions(player *Player) ([]*Card, error) {
@@ -72,45 +155,21 @@ func (g *GameState) CardsWithActions(player *Player) ([]*Card, error) {
 }
 
 func (g *GameState) CanTap(player *Player, card *Card) bool {
-	if card.CardType == "Land" && !card.IsTapped {
+	if card.CardType == CardTypeLand && !card.Tapped {
 		return true
 	}
 
-	if card.CardType == "Creature" && !card.IsTapped && player.Turn.Phase == PhaseCombat {
+	// Creatures can tap for abilities at instant speed, but attacking/blocking tap
+	// happens during combat. This function seems to be for tapping for mana or abilities.
+	// Assuming tapping for mana/abilities is possible if not tapped.
+	// If tapping is only for attacking/blocking, the combat phase check is relevant.
+	// Let's keep the combat phase check for now based on the original code's structure.
+	if card.CardType == CardTypeCreature && !card.Tapped && player.Turn.Phase == PhaseCombat {
+		// This condition seems specific to attacking/blocking.
+		// If creatures can tap for mana/abilities outside combat, this logic needs refinement.
 		return true
 	}
 	return false
-}
-
-func (g *GameState) PlayCard(player *Player, card *Card) {
-	if !g.CanCast(player, card) {
-		return
-	}
-
-	// Pay the mana cost
-	player.ManaPool.Pay(card.ManaCost)
-
-	// Move the card from the player's hand to the battlefield
-	for i, c := range player.Hand {
-		if c == card {
-			player.Hand = append(player.Hand[:i], player.Hand[i+1:]...)
-			player.Battlefield = append(player.Battlefield, card)
-			break
-		}
-	}
-}
-
-func (g *GameState) AvailableMana(player *Player, pPool ManaPool) (pool ManaPool) {
-	for _, card := range player.Battlefield {
-		if card.IsActive() || card.ManaProduction == nil {
-			continue
-		}
-		for _, manaStr := range card.ManaProduction {
-			manaRunes := []rune(manaStr)
-			pool.AddMana(manaRunes)
-		}
-	}
-	return pool
 }
 
 func (g *GameState) CanCast(player *Player, card *Card) bool {
@@ -120,61 +179,67 @@ func (g *GameState) CanCast(player *Player, card *Card) bool {
 		return false
 	}
 
-	pPool := ManaPool{}
-
-	for color, amount := range player.ManaPool {
-		pPool[color] = amount
-	}
-
+	pPool := make(ManaPool, len(player.ManaPool))
+	copy(pPool, player.ManaPool)
 	pool := g.AvailableMana(player, pPool)
 
 	return pool.CanPay(card.ManaCost)
 }
 
-func (g *GameState) CastCard(player *Player, card *Card) error {
-	if !g.CanCast(player, card) {
-		return fmt.Errorf("cannot cast card")
-	}
-
-	// Pay the mana cost
-	player.ManaPool.Pay(card.ManaCost)
-
-	// Move the card from the player's hand to the battlefield
-	for i, c := range player.Hand {
-		if c == card {
-			player.Hand = slices.Delete(player.Hand, i, i+1)
-			player.Battlefield = append(player.Battlefield, card)
-			break
-		}
-	}
-	return nil
-}
-
-func (g *GameState) PlayLand(player *Player, card *Card) error {
-	if !g.CanPlayLand(player) {
-		return fmt.Errorf("cannot play land this turn")
-	}
-	if card.CardType != "Land" {
-		return fmt.Errorf("not a land card")
-	}
-
-	for i, c := range player.Hand {
-		if c == card {
-			player.Hand = slices.Delete(player.Hand, i, i+1)
-			player.Battlefield = append(player.Battlefield, card)
-			player.Turn.LandPlayed = true
-			break
-		}
-	}
-	return nil
-}
-
-func (g *GameState) CanPlayLand(player *Player) bool {
+func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
 	if player.Turn.Phase != PhaseMain1 && player.Turn.Phase != PhaseMain2 {
 		return false
 	}
 	if player.Turn.LandPlayed {
 		return false
 	}
+	if card.CardType != CardTypeLand {
+		return false
+	}
+
 	return true
+}
+
+// PlayGame simulates the game turn by turn until only one player remains who hasn't lost.
+// It returns the slice of players who have not lost when the game ends (ideally one winner).
+func PlayGame(g *GameState) []*Player {
+	fmt.Println("Starting game simulation...")
+	maxTurns := 500
+	for totalTurns := range maxTurns {
+		// Check win conditions at the start of the loop, in case the game
+		// state is already resolved before the first turn.
+		g.CheckWinConditions()
+
+		nonLosingPlayers := []*Player{}
+		for _, player := range g.Players {
+			if !player.HasLost {
+				nonLosingPlayers = append(nonLosingPlayers, player)
+			}
+		}
+
+		// If 1 or fewer players haven't lost, the game is over.
+		if len(nonLosingPlayers) <= 1 {
+			fmt.Println("Game Over.")
+			if len(nonLosingPlayers) == 1 {
+				// Assuming Player has a Name field for printing the winner
+				// If not, you might need to adjust this line.
+				// fmt.Printf("Winner: %s\n", nonLosingPlayers[0].Name)
+				fmt.Printf("Winner found.\n")
+			} else {
+				fmt.Println("Draw or no winner.")
+			}
+			return nonLosingPlayers
+		}
+
+		// Call the method to advance the turn for the current player.
+		g.NextTurn()
+
+		// Optional: Add a safety break for infinite loops in case win condition is never met
+		// For example, after a certain number of turns:
+		if totalTurns > maxTurns {
+			fmt.Println("Game ended due to turn limit.")
+			return nonLosingPlayers
+		}
+	}
+	return nil
 }

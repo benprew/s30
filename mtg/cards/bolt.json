@@ -1,0 +1,23 @@
+{
+  "id": "CORE_LightningBolt", // Unique identifier
+  "name": "Lightning Bolt",
+  "mana_cost": { "R": 1 }, // Structured cost
+  "colors": ["Red"],        // Derived from mana cost
+  "type_line": "Instant",
+  "types": ["Instant"],
+  "subtypes": [],
+  "oracle_text": "Lightning Bolt deals 3 damage to any target.",
+  "image_url": "/images/lightning_bolt.jpg", // Path to card art
+
+  // --- Link to the effect script ---
+  "effects": [
+    {
+      "trigger": "OnResolve", // When this spell resolves
+      "script_id": "DealDamageToTarget", // Reference to the script logic
+      "parameters": {
+        "amount": 3,
+        "valid_target_types": ["Creature", "Player", "Planeswalker"] // Defines what 'any target' means
+      }
+    }
+  ]
+}

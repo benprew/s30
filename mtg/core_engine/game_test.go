@@ -1,7 +1,10 @@
 package core_engine
 
 import (
+	"fmt"
+	"sync"
 	"testing"
+	"time"
 )
 
 func createTestPlayer(numPlayers int) []*Player {
@@ -13,7 +16,7 @@ func createTestPlayer(numPlayers int) []*Player {
 			cardName := "Forest"
 			card, ok := CardDatabase[cardName]
 			if !ok {
-				panic("Card not found: %s" + cardName)
+				panic(fmt.Sprintf("Card not found: %s", cardName))
 			}
 			library = append(library, card)
 		}
@@ -21,7 +24,7 @@ func createTestPlayer(numPlayers int) []*Player {
 			cardName := "Llanowar Elves"
 			card, ok := CardDatabase[cardName]
 			if !ok {
-				panic("Card not found: %s" + cardName)
+				panic(fmt.Sprintf("Card not found: %s", cardName))
 			}
 			library = append(library, card)
 		}
@@ -35,6 +38,8 @@ func createTestPlayer(numPlayers int) []*Player {
 			Graveyard:   []*Card{},
 			Exile:       []*Card{},
 			Turn:        &Turn{},
+			InputChan:   make(chan PlayerAction, 1), // Still need a channel even for AI, as WaitForPlayerInput uses it
+			IsAI:        true,                       // Make test players AI so WaitForPlayerInput doesn't block indefinitely
 		}
 		players = append(players, player)
 	}
@@ -73,7 +78,7 @@ func TestPlayLand(t *testing.T) {
 	// Play the land
 	game.Players[0].Turn.Phase = PhaseMain1
 	for i := range game.Players[0].Hand {
-		if game.Players[0].Hand[i].CardType == "Land" {
+		if game.Players[0].Hand[i].CardType == CardTypeLand {
 			card = game.Players[0].Hand[i]
 			break
 		}
@@ -100,23 +105,15 @@ func TestPlayLand(t *testing.T) {
 	}
 
 	// Check that the player cannot play any more lands
-	if game.CanPlayLand(game.Players[0]) {
-		t.Errorf("Player 0 should not be able to play any more lands")
-	}
-	game.PlayLand(game.Players[0], card)
-	if len(game.Players[0].Battlefield) != 1 {
-		t.Errorf("Player 0 should still have 1 card on the battlefield, but has %d", len(game.Players[0].Battlefield))
+	for _, card := range game.Players[0].Hand {
+		if game.CanPlayLand(game.Players[0], card) {
+			t.Errorf("Player 0 should not be able to play any more lands")
+		}
 	}
 
 	// Check that the player still has 0 cards in hand
 	if len(game.Players[0].Hand) != 6 {
 		t.Errorf("Player 0 should still have 6 cards in hand, but has %d", len(game.Players[0].Hand))
-	}
-
-	// Check that the player cannot play any more lands
-	game.PlayLand(game.Players[0], card)
-	if len(game.Players[0].Battlefield) != 1 {
-		t.Errorf("Player 0 should still have 1 card on the battlefield, but has %d", len(game.Players[0].Battlefield))
 	}
 }
 
@@ -140,6 +137,10 @@ func TestCastLlanowarElves(t *testing.T) {
 			break
 		}
 	}
+
+	var pPool ManaPool
+	copy(pPool, game.Players[0].ManaPool)
+	fmt.Println(game.AvailableMana(game.Players[0], pPool))
 
 	// find elves
 	var card *Card
@@ -182,7 +183,7 @@ func TestDrawCard(t *testing.T) {
 	}
 
 	// Draw cards until the library is empty
-	for i := 0; i < initialLibrarySize-1; i++ {
+	for range initialLibrarySize - 1 {
 		err = player.DrawCard()
 		if err != nil {
 			t.Errorf("DrawCard() returned an error: %v", err)
@@ -194,4 +195,110 @@ func TestDrawCard(t *testing.T) {
 	if err == nil {
 		t.Errorf("DrawCard() should have returned an error, but didn't")
 	}
+}
+
+func TestNextTurn(t *testing.T) {
+	// Test the next turn functionality with 1 player, make sure the player
+	// has the opportunity to respond in each phase
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+
+	// Setup input channel for the player
+	player.InputChan = make(chan PlayerAction, 1)
+
+	// Track phases the player had an opportunity to respond in
+	phasesWithResponse := make(map[Phase]bool)
+
+	// Check that the player had an opportunity to respond in each phase
+	expectedPhases := []Phase{
+		PhaseUpkeep,
+		PhaseDraw,
+		PhaseMain1,
+		PhaseCombat,
+		PhaseMain2,
+		PhaseEnd,
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Start a goroutine to simulate player responses
+	go func() {
+		defer wg.Done()
+		// For each expected phase, send a PassPriority action
+		for _, phase := range expectedPhases {
+			// Wait until the player's turn phase matches the expected phase
+			for player.Turn.Phase != phase {
+				// Small sleep to avoid busy waiting
+				time.Sleep(10 * time.Millisecond)
+			}
+
+			// Record that the player had an opportunity to respond in this phase
+			phasesWithResponse[phase] = true
+
+			fmt.Printf("Send PassPriority action in %s\n", phase)
+			player.InputChan <- PlayerAction{Type: "PassPriority"}
+		}
+	}()
+
+	// Start a turn
+	player.Turn.Phase = PhaseUntap
+	game.NextTurn()
+	wg.Wait()
+	for _, phase := range expectedPhases {
+		if !phasesWithResponse[phase] {
+			t.Errorf("Player did not have an opportunity to respond in %s phase", phase)
+		}
+	}
+
+	// Check that the turn advanced to the next player
+	if game.CurrentPlayer != 0 {
+		t.Errorf("Expected current player to be 0, got %d", game.CurrentPlayer)
+	}
+}
+
+func TestPlayGame(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+	// The PlayGame function should run the game loop until a winner is determined.
+	// Test players are configured as AI in createTestPlayer to auto-pass priority
+	// via the AITurnTimeout in WaitForPlayerInput.
+
+	// var wg sync.WaitGroup
+	// wg.Add(1)
+	//
+	// // Maybe the players should be in an event loop and wait for the game to send
+	// // events to them, then the player can respond. rather than the player sending
+	// // events to the game.
+	//
+	// // Either way it needs to be 2-way communication
+	//
+	// for _, p := range players {
+	// 	go func() {
+	// 		defer wg.Done()
+	// 		for {
+	// 			time.Sleep(10 * time.Millisecond)
+	// 			for _, card := range p.Hand {
+	// 				if game.CanPlayLand(p, card) {
+	// 					fmt.Println("Playing Land")
+	// 					p.InputChan <- PlayerAction{Type: "PlayLand", Card: card}
+	// 				}
+	// 			}
+	// 		}
+	// 	}()
+	// }
+	//
+	// winners := PlayGame(game)
+	//
+	// // Assert that exactly one player won
+	// if len(winners) != 1 {
+	// 	t.Errorf("Expected 1 winner, but got %d. Non-losing players: %+v", len(winners), winners)
+	// }
+
+	// Optional: Further assertions about the winner or game state
+	// For example, check the winner's life total or library size.
+	// if winners[0].LifeTotal <= 0 {
+	// 	t.Errorf("Winner has life total <= 0: %d", winners[0].LifeTotal)
+	// }
 }

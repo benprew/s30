@@ -5,6 +5,11 @@ import (
 	"slices"
 )
 
+type PlayerAction struct {
+	Type string
+	Card *Card
+}
+
 type Player struct {
 	LifeTotal   int
 	ManaPool    ManaPool
@@ -14,6 +19,9 @@ type Player struct {
 	Graveyard   []*Card
 	Exile       []*Card
 	Turn        *Turn
+	HasLost     bool
+	InputChan   chan PlayerAction
+	IsAI        bool
 }
 
 func (p *Player) DeepCopy() *Player {
@@ -25,6 +33,9 @@ func (p *Player) DeepCopy() *Player {
 		Graveyard:   slices.Clone(p.Graveyard),
 		Exile:       slices.Clone(p.Exile),
 		Turn:        p.Turn, // Assuming Turn doesn't need to be deep copied
+		HasLost:     p.HasLost,
+		InputChan:   p.InputChan,
+		IsAI:        p.IsAI,
 	}
 
 	newManaPool := make(ManaPool, len(p.ManaPool))

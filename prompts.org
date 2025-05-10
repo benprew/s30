@@ -18,6 +18,9 @@ How can I break this down into smaller tasks?
 10, Implement a User Interface (Optional): Create a user interface for interacting with the engine, such as a command-line interface or a graphical user interface.
 
 
+** generic prompts
+write a function called PlayGame that keeps calling NextTurn until only 1 player hasn't lost.
+
 * Roads
 Each road sprite starts at the middle of the tile and goes out to a compass direction. This means you could have at most 8 roads in a tile that intersect in the middle of the tile.
 
@@ -62,10 +65,10 @@ Generate some enemies that move randomly throughout the map. They should appear 
 * Direction
 Instead of representing direction like this:
 
-	up := ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW)
-	down := ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS)
-	left := ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
-	right := ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD)
+        up := ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW)
+        down := ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS)
+        left := ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
+        right := ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD)
 
 
 I want to represent it as an int with bits
