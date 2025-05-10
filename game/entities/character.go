@@ -125,13 +125,13 @@ func LoadCharacterSprite(name CharacterName) Sprites {
 	charFile := getEmbeddedFile(charFileName)
 	charSheet, err := sprites.LoadSpriteSheet(5, 8, charFile)
 	if err != nil {
-		panic(fmt.Sprintf("failed to load character sprite: %w file: %s", err, charFile))
+		panic(fmt.Sprintf("failed to load character sprite: %s file: %s", err, charFile))
 	}
 
 	shadowFile := getEmbeddedFile(shadowFileName)
 	shadowSheet, err := sprites.LoadSpriteSheet(5, 8, shadowFile)
 	if err != nil {
-		panic(fmt.Sprintf("failed to load shadow sprite: %w file: %s", err, shadowFile))
+		panic(fmt.Sprintf("failed to load shadow sprite: %s file: %s", err, shadowFile))
 	}
 
 	return Sprites{

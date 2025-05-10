@@ -39,7 +39,7 @@ func (e *Enemy) Update(pLoc image.Point) error {
 // Direction enemy should move, it will move towards player
 func (e *Enemy) Move(playerX, playerY int) int {
 	dirbits := 0
-	buffer := 3 // pixel buffer so enemies don't tweak out
+	buffer := 10 // pixel buffer so enemies don't tweak out
 	if playerX > e.character.X+buffer {
 		dirbits |= DirRight
 	}
