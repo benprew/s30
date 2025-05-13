@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"maps"
 
 	"github.com/benprew/s30/mtg/cards"
 )
@@ -28,9 +29,7 @@ func LoadCardDatabase() {
 		return
 	}
 
-	for name, card := range cards {
-		CardDatabase[name] = card
-	}
+	maps.Copy(CardDatabase, cards)
 }
 
 func init() {
