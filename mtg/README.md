@@ -1,5 +1,3 @@
-Okay, building a rules engine for a game like Magic: The Gathering is a complex but rewarding challenge! The key, as you noted, is handling the intricate card interactions in a way that makes adding new cards manageable. Based on the game rules and common software design approaches, here are some good ways to structure your engine for extensibility:
-
 1.  **Separate Rules Logic from Core Engine (Rules Engine Pattern)**
     * Adopt the **Rules Engine Design Pattern**. This involves separating the core game mechanics (turn phases, mana system, combat) from the logic specific to individual cards.
     * **Core Engine**: Handles fundamental game processes: turn structure (untap, upkeep, draw, main phases, combat, end step), mana pool management, stack management (resolving spells and abilities last-in, first-out), combat sequence (declaring attackers/blockers, assigning damage, first strike, trample), and basic game state tracking (life totals, library, hand, graveyard, battlefield).
@@ -36,4 +34,5 @@ Okay, building a rules engine for a game like Magic: The Gathering is a complex 
 * **Testability**: The core engine and individual card scripts can be tested more easily in isolation.
 * **Clear Separation of Concerns**: Game mechanics, card logic, and presentation are distinct.
 
-You might also find it helpful to look at existing open-source Magic: The Gathering engines like Forge or XMage for inspiration on how they handle specific rules and card implementations. Frameworks like boardgame.io or specific engine tools like CardHouse (Unity) or Godot Card Game Framework might also offer relevant concepts.
+You might also find it helpful to look at existing open-source Magic: The Gathering engines like Forge or XMage for inspiration on how they handle specific rules and card implementations. Frameworks like boardgame.io or specific engine tools like CardHouse (Unity) or Godot Car
+d Game Framework might also offer relevant concepts.
