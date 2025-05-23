@@ -11,6 +11,7 @@ type PlayerAction struct {
 }
 
 type Player struct {
+	ID          EntityID
 	LifeTotal   int
 	ManaPool    ManaPool
 	Hand        []*Card
@@ -55,4 +56,44 @@ func (p *Player) DrawCard() error {
 	p.Hand = append(p.Hand, card)
 
 	return nil
+}
+
+func (p *Player) ReceiveDamage(amount int) {
+	p.LifeTotal -= amount
+}
+
+func (p *Player) Notify() {
+	// TODO: Send notification to player
+}
+
+func (p *Player) RemoveFrom(c *Card, loc []*Card, locStr string) {
+	for i, n := range loc {
+		if n == c {
+			f := loc[0:i]
+			l := loc[i+1:]
+			loc = f
+			loc = append(loc, l...)
+			break
+		}
+	}
+
+	switch locStr {
+	case "Hand":
+		p.Hand = loc
+	}
+}
+
+func (p *Player) AddTo(c *Card, loc string) {
+	switch loc {
+	case "Hand":
+		p.Hand = append(p.Hand, c)
+	case "Library":
+		p.Library = append(p.Library, c)
+	case "Battlefield":
+		p.Battlefield = append(p.Battlefield, c)
+	case "Graveyard":
+		p.Graveyard = append(p.Graveyard, c)
+	case "Exile":
+		p.Exile = append(p.Exile, c)
+	}
 }

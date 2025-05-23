@@ -49,6 +49,7 @@ func (m ManaPool) CanPay(cost string) bool {
 
 func (g *GameState) AvailableMana(player *Player, pPool ManaPool) (pool ManaPool) {
 	for _, card := range player.Battlefield {
+		fmt.Println("checking:", card)
 		if !card.IsActive() || card.ManaProduction == nil {
 			continue
 		}

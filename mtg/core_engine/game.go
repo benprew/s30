@@ -7,14 +7,22 @@ import (
 )
 
 type GameState struct {
-	Players       []*Player
-	CurrentPlayer int
+	Players           []*Player
+	CurrentPlayer     int
+	ActivePlayer      int
+	CurrentState      string
+	ConsecutivePasses int
+	Stack             Stack
 }
 
 func NewGame(players []*Player) *GameState {
 	return &GameState{
-		Players:       players,
-		CurrentPlayer: 0,
+		Players:           players,
+		CurrentPlayer:     0,
+		ActivePlayer:      0,
+		CurrentState:      "WaitingForAction",
+		ConsecutivePasses: 0,
+		Stack:             NewStack(),
 	}
 }
 
@@ -38,47 +46,90 @@ func (g *GameState) StartGame() {
 	}
 }
 
-func (g *GameState) DeterminePriority() *Player {
-	return g.Players[g.CurrentPlayer]
-}
-
-func (g *GameState) WaitForPlayerInput() {
-	// Determine which player has priority
-	playerWithPriority := g.DeterminePriority()
-
-	fmt.Printf("Waiting for player input on %s\n", playerWithPriority.Turn.Phase)
+// When game receives player input, it should be the total input needed for the spell. Ie. for bolt
+// it should receive that it's casting LB and have already chosen a target. No decisions should be
+// remaining to be made. The UI should handle all the decisions before it's passed off to the game
+func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
+	fmt.Printf("Waiting for player %d input on %s\n", player.ID, player.Turn.Phase)
 
 	AITurnTimeout := 5 * time.Second
 
 	// Wait for input from the specific player who has priority
-	if playerWithPriority.IsAI {
+	if player.IsAI {
 		select {
-		case action := <-playerWithPriority.InputChan:
-			g.ProcessAction(playerWithPriority, action)
+		case action = <-player.InputChan:
 		case <-time.After(AITurnTimeout):
 		}
 	} else {
-		action := <-playerWithPriority.InputChan
-		g.ProcessAction(playerWithPriority, action)
+		action = <-player.InputChan
 	}
-	// Process game rules after action
-	// g.ApplyStateBasedActions()
+
+	return action
 }
 
-func (g *GameState) ProcessAction(player *Player, action PlayerAction) {
-	// Neither the player nor the AI should be able to create invalid actions
+func (g *GameState) Resolve(item *StackItem) error {
+	if item == nil {
+		return nil
+	}
+	p := item.Player
+	c := item.Card
+	if c.CardType != CardTypeInstant && c.CardType != CardTypeSorcery {
+		p.RemoveFrom(c, p.Hand, "Hand")
+		p.AddTo(c, "Battlefield")
+	} else {
+		p.RemoveFrom(c, p.Hand, "Hand")
+		p.AddTo(c, "Graveyard")
+	}
+	return nil
+}
 
-	// Process the action taken by the player
+func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackResult, *StackItem) {
 	switch action.Type {
 	case "CastSpell":
-		g.CastCard(player, action.Card)
+		// TODO: spells will have decisions that need to be made when cast
+		// the player will need to make those decisions (ie Lightning Bolt target)
+		g.Stack.Next(EventPlayerAddsAction, &StackItem{Player: player, Events: action.Card.Actions})
+		g.CastCreature(player, action.Card)
 	case "PlayLand":
 		g.PlayLand(player, action.Card)
 	case "PassPriority":
-		// Pass priority to the next player
+		return g.Stack.Next(EventPlayerPassesPriority, nil)
 	default:
 		fmt.Println("Unknown action type:", action.Type)
 	}
+	return -1, nil
+}
+
+func (g *GameState) RunStack() {
+	player := g.Players[g.CurrentPlayer]
+	player2 := g.Players[g.CurrentPlayer+1%2]
+	cnt := 0
+	result, item := g.Stack.Next(-1, nil)
+	for g.Stack.CurrentState != StateEmpty {
+		if cnt > 500 {
+			break
+		}
+		fmt.Println("Stack State: ", g.Stack.CurrentState)
+		switch result {
+		case ActPlayerPriority:
+			fmt.Println("Waiting for player1")
+			action := g.WaitForPlayerInput(player)
+			fmt.Println("Got Action", action)
+			result, _ = g.ProcessAction(player, action)
+		case NonActPlayerPriority:
+			fmt.Println("Waiting for player2")
+			action := g.WaitForPlayerInput(player2)
+			result, _ = g.ProcessAction(player2, action)
+		case Resolve:
+			// TODO: resolve cards
+			g.Resolve(item)
+			result, item = g.Stack.Next(-1, nil)
+		default:
+			result, item = g.Stack.Next(-1, nil)
+		}
+		cnt++
+	}
+
 }
 
 func (g *GameState) NextTurn() {
@@ -95,19 +146,19 @@ func (g *GameState) NextTurn() {
 			g.UntapPhase(player, cards)
 		case PhaseUpkeep:
 			g.UpkeepPhase(player, cards)
-			g.WaitForPlayerInput()
+			g.RunStack()
 		case PhaseDraw:
 			g.DrawPhase(player, cards)
-			g.WaitForPlayerInput()
+			g.RunStack()
 		case PhaseMain1:
 			g.MainPhase(player, cards)
-			g.WaitForPlayerInput()
+			g.RunStack()
 		case PhaseCombat:
-			g.WaitForPlayerInput()
+			g.RunStack()
 		case PhaseMain2:
-			g.WaitForPlayerInput()
+			g.RunStack()
 		case PhaseEnd:
-			g.WaitForPlayerInput()
+			g.RunStack()
 		}
 		g.CheckWinConditions()
 
@@ -183,7 +234,18 @@ func (g *GameState) CanCast(player *Player, card *Card) bool {
 	copy(pPool, player.ManaPool)
 	pool := g.AvailableMana(player, pPool)
 
-	return pool.CanPay(card.ManaCost)
+	return pool.CanPay(card.ManaCost) && g.hasTarget(card)
+}
+
+// If card doesn't have a targetable type, it has a target, otherwise check if
+// there are valid targets
+func (g *GameState) hasTarget(card *Card) bool {
+	// this is always true since either player is damageable and if you're still
+	// playing the game you have a target
+	if card.Targetable == "DamageableTarget" {
+		return true
+	}
+	return true
 }
 
 func (g *GameState) CanPlayLand(player *Player, card *Card) bool {

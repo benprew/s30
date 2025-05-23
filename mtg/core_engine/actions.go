@@ -5,6 +5,17 @@ import (
 	"slices"
 )
 
+// An event is either
+type Action struct {
+	ActionID int     // One of the available actions (deal damage, draw card)
+	TargetID int     // either cardid or playerid, can be null (-1)
+	Player   *Player // owner of the action
+}
+
+func (a *Action) Resolve() {
+
+}
+
 // Action functions assume the player can perform them
 // validating actions happens earlier
 func (g *GameState) PlayLand(player *Player, card *Card) error {
@@ -20,7 +31,7 @@ func (g *GameState) PlayLand(player *Player, card *Card) error {
 	return nil
 }
 
-func (g *GameState) CastCard(player *Player, card *Card) error {
+func (g *GameState) CastCreature(player *Player, card *Card) error {
 	if !g.CanCast(player, card) {
 		return fmt.Errorf("cannot cast card")
 	}
@@ -28,13 +39,20 @@ func (g *GameState) CastCard(player *Player, card *Card) error {
 	// Pay the mana cost
 	player.ManaPool.Pay(card.ManaCost)
 
-	// Move the card from the player's hand to the battlefield
-	for i, c := range player.Hand {
-		if c == card {
-			player.Hand = slices.Delete(player.Hand, i, i+1)
-			player.Battlefield = append(player.Battlefield, card)
-			break
-		}
-	}
+	e := []Event{}
+
+	g.Stack.Push(&StackItem{Events: e, Player: player})
+
 	return nil
 }
+
+// func CastFromHand(player *Player, card *Card) {
+// 	// Move the card from the player's hand to the battlefield
+// 	for i, c := range player.Hand {
+// 		if c == card {
+// 			player.Hand = slices.Delete(player.Hand, i, i+1)
+// 			player.Battlefield = append(player.Battlefield, card)
+// 			break
+// 		}
+// 	}
+// }

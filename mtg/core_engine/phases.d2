@@ -1,0 +1,113 @@
+# MTG Stack Interaction State Machine
+
+Stack State Machine: {
+    Legend: {
+      a: {
+        label: Event
+        shape: diamond
+      }
+      b: {
+        label: State
+        shape: square}
+      c: {
+        label: Input
+        shape: step
+      }
+    }
+
+
+  Initial Events: { shape: step }
+  Push Stack: { shape: diamond }
+  Pop Stack: { shape: diamond }
+  Player Passes Priority: { shape: diamond }
+
+    Initial Events -> Start Stack: "push onto stack"
+    Start Stack -> Wait For Player
+    Wait For Player -> Push Stack: "player takes action"
+    Push Stack -> Wait For Player
+    Wait For Player -> Player Passes Priority
+    Player Passes Priority -> Pop Stack: "Both players passed"
+    Player Passes Priority -> Wait For Player: "Non Active player activates"
+    Pop Stack -> Resolve Item
+    Resolve Item -> Empty: "No more items to process"
+    Resolve Item -> Wait For Player
+    Empty -> Start Stack: "New item added"
+  }
+
+UnTap Phase: {
+    Start -> Phase Triggers
+    # State Based Effects  # Q: Does winterorb effect go on stack?  How to represent state-based effects (ex. statis)
+    # State Based Effects -> Phase Triggers # ex. winter orb
+    Phase Triggers -> Stack SM
+    Stack SM -> Phase Cleanup
+    Stack SM -> Stack SM
+    Phase Cleanup -> End
+}
+#
+# Upkeep Phase: {
+#     Start -> Phase Triggers
+#     Phase Triggers -> Stack SM
+#     Stack SM -> Phase Cleanup
+#     Stack SM -> Stack SM
+#     Phase Cleanup -> End
+# }
+#
+# Draw Phase: {
+#     Start -> Phase Triggers
+#     Phase Triggers -> Stack SM
+#     Stack SM -> Phase Cleanup
+#     Stack SM -> Stack SM
+#     Phase Cleanup -> End
+# }
+#
+# Main Phase 1: {
+#     Start -> Phase Triggers
+#     Phase Triggers -> Stack SM
+#     Start -> Cast Spell
+#     Cast Spell -> Stack SM
+#     Stack SM -> Start
+#     Stack SM -> Stack SM: ETB trigger
+#     Start -> Play Land
+#     Play Land -> Stack SM: land trigger
+#     Play Land -> Start
+#     Start -> Phase Cleanup
+#     Phase Cleanup -> End
+# }
+#
+# Combat Phase: {
+#     Start -> Phase Triggers
+#     Phase Triggers -> Stack SM
+#     Stack SM -> CombatPhase
+#     CombatPhase ->\
+#     AnnounceAttack ->\
+#     StackSM ->\
+#     Declare Attackers ->\
+#     StackSM ->\
+#     Declare Blockers ->\
+#     StackSM ->\
+#     Resolve Combat ->\
+#     End
+#     AnnounceAttack -> Declare Attackers
+#     Declare Attackers -> Declare Blockers
+#     Declare Blockers -> Resolve Combat
+# }
+#
+# Main Phase 2:{
+#     Start -> Cast Spell
+#     Cast Spell -> Stack SM
+#     Stack SM -> Start
+#     Stack SM -> Stack SM: ETB trigger
+#     Start -> Play Land
+#     Play Land -> Stack SM: land trigger
+#     Play Land -> Start
+#     Start -> Phase Cleanup
+#     Phase Cleanup -> End
+# }
+#
+# End of Turn Phase:{
+#     Start -> Phase Triggers
+#     Phase Triggers -> Stack SM
+#     Stack SM -> Phase Cleanup
+#     Stack SM -> Stack SM
+#     Phase Cleanup -> End
+# }
