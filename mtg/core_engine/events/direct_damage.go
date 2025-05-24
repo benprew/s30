@@ -1,19 +1,22 @@
 package events
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type DirectDamage struct {
-	Target Targetable
-	Amount int // Amount of damage dealt
+	tgt     Targetable
+	Amount  int // Amount of damage dealt
+	tgtType string
 }
 
 func (c *DirectDamage) Name() string         { return "Direct Damage" }
 func (c *DirectDamage) RequiresTarget() bool { return true }
 func (c *DirectDamage) AddTarget(target Targetable) {
-	c.Target = target
+	c.tgt = target
 }
 
 func (c *DirectDamage) Resolve() {
-	fmt.Printf("Lightning Bolt deals 3 damage to %s\n", c.Target.Name())
-	c.Target.ReceiveDamage(c.Amount)
+	fmt.Printf("Lightning Bolt deals 3 damage to %s\n", c.tgt.Name())
+	c.tgt.ReceiveDamage(c.Amount)
 }

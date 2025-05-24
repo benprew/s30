@@ -18,7 +18,7 @@ type EntityID int
 
 type Card struct {
 	ID             EntityID // In a game, each card will have an entitiyID
-	Name           string
+	CardName       string   `json:"name"`
 	ManaCost       string
 	ManaProduction []string
 	Colors         []string
@@ -39,13 +39,24 @@ type Card struct {
 	Actions []Event
 }
 
-func (c *Card) IsActive() bool {
-	return !c.Tapped && c.Active
+func (c *Card) Name() string {
+	return c.CardName
 }
 
 func (c *Card) ReceiveDamage(amount int) {
 	c.DamageTaken += amount
 }
 
-func (c *Card) CardName() string                   { return c.Name }
+func (c *Card) TargetType() string {
+	return "Card"
+}
+
+func (c *Card) IsDead() bool {
+	return c.DamageTaken >= c.Toughness
+}
+
+func (c *Card) IsActive() bool {
+	return !c.Tapped && c.Active
+}
+
 func (c *Card) AddTarget(target events.Targetable) {}

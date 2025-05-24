@@ -81,7 +81,7 @@ func TestAvailableMana(t *testing.T) {
 	// Find a Forest card and put it on the battlefield
 	var forest *Card
 	for _, card := range player.Hand {
-		if card.Name == "Forest" {
+		if card.Name() == "Forest" {
 			forest = card
 			break
 		}
@@ -99,7 +99,7 @@ func TestAvailableMana(t *testing.T) {
 	// Find a Llanowar Elves card and put it on the battlefield
 	var elvesCard *Card
 	for _, card := range player.Hand {
-		if card.Name == "Llanowar Elves" {
+		if card.Name() == "Llanowar Elves" {
 			elvesCard = card
 			break
 		}

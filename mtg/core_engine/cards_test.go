@@ -22,8 +22,8 @@ func TestLoadCardDatabase(t *testing.T) {
 	}
 
 	// Check some properties of the known card
-	if forestCard.Name != "Forest" {
-		t.Errorf("Expected Forest name 'Forest', got '%s'", forestCard.Name)
+	if forestCard.Name() != "Forest" {
+		t.Errorf("Expected Forest name 'Forest', got '%s'", forestCard.Name())
 	}
 
 	if forestCard.CardType != CardTypeLand {

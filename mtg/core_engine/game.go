@@ -59,6 +59,9 @@ func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
 		select {
 		case action = <-player.InputChan:
 		case <-time.After(AITurnTimeout):
+			// If AI times out, default to passing priority
+			fmt.Printf("AI player %d timed out, passing priority.\n", player.ID)
+			action = PlayerAction{Type: "PassPriority"}
 		}
 	} else {
 		action = <-player.InputChan
@@ -73,6 +76,19 @@ func (g *GameState) Resolve(item *StackItem) error {
 	}
 	p := item.Player
 	c := item.Card
+	for _, e := range item.Events {
+		e.Resolve()
+		tgt := e.Target()
+		if tgt.TargetType() == "Card" && tgt.IsDead() {
+			card, ok := tgt.(*Card)
+			if !ok {
+				fmt.Printf("Resolve Error: Targetable with TargetType 'Card' is not a *Card pointer. Actual type: %T\n", tgt)
+				continue
+			}
+			p.RemoveFrom(card, p.Battlefield, "Battlefield")
+			p.AddTo(card, "Graveyard")
+		}
+	}
 	if c.CardType != CardTypeInstant && c.CardType != CardTypeSorcery {
 		p.RemoveFrom(c, p.Hand, "Hand")
 		p.AddTo(c, "Battlefield")

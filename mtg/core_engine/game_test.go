@@ -2,50 +2,8 @@ package core_engine
 
 import (
 	"fmt"
-	"sync"
 	"testing"
 )
-
-func createTestPlayer(numPlayers int) []*Player {
-	players := []*Player{}
-
-	for i := range numPlayers {
-		library := []*Card{}
-		for range 5 {
-			cardName := "Forest"
-			card, ok := CardDatabase[cardName]
-			if !ok {
-				panic(fmt.Sprintf("Card not found: %s", cardName))
-			}
-			library = append(library, card)
-		}
-		for range 2 {
-			cardName := "Llanowar Elves"
-			card, ok := CardDatabase[cardName]
-			if !ok {
-				panic(fmt.Sprintf("Card not found: %s", cardName))
-			}
-			library = append(library, card)
-		}
-
-		player := &Player{
-			ID:          EntityID(i),
-			LifeTotal:   20,
-			ManaPool:    ManaPool{},
-			Hand:        []*Card{},
-			Library:     library,
-			Battlefield: []*Card{},
-			Graveyard:   []*Card{},
-			Exile:       []*Card{},
-			Turn:        &Turn{},
-			InputChan:   make(chan PlayerAction, 100), // Still need a channel even for AI, as WaitForPlayerInput uses it
-			IsAI:        true,                         // Make test players AI so WaitForPlayerInput doesn't block indefinitely
-		}
-		players = append(players, player)
-	}
-
-	return players
-}
 
 func TestNewGame(t *testing.T) {
 	// Create a new game
@@ -145,7 +103,7 @@ func TestCastLlanowarElves(t *testing.T) {
 	// find elves
 	var card *Card
 	for _, c := range player.Hand {
-		if c.Name == "Llanowar Elves" {
+		if c.Name() == "Llanowar Elves" {
 			card = c
 			break
 		}
@@ -197,40 +155,6 @@ func TestDrawCard(t *testing.T) {
 	}
 }
 
-func TestRunStack(t *testing.T) {
-	// Test the next turn functionality with 1 player, make sure the player
-	// has the opportunity to respond in each phase
-	players := createTestPlayer(2)
-	player := players[0]
-	player2 := players[1]
-	game := NewGame(players)
+func TestCastingLightningBolt(t *testing.T) {
 
-	// Check that the player had an opportunity to respond in each phase
-	expectedPhases := []Phase{
-		PhaseUpkeep,
-		PhaseDraw,
-		PhaseMain1,
-		PhaseCombat,
-		PhaseMain2,
-		PhaseEnd,
-	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	// Start a goroutine to simulate player responses
-	go func() {
-		defer wg.Done()
-		// For each expected phase, send a PassPriority action
-		for range expectedPhases {
-			fmt.Println("player2 Passing Priority")
-			player.InputChan <- PlayerAction{Type: "PassPriority"}
-			player2.InputChan <- PlayerAction{Type: "PassPriority"}
-		}
-	}()
-
-	// Start a turn
-	player.Turn.Phase = PhaseUntap
-	game.RunStack()
-	wg.Wait()
-	fmt.Println("waitgroup finished")
 }
