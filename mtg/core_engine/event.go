@@ -25,8 +25,7 @@ import "github.com/benprew/s30/mtg/core_engine/events"
 // identifier so they can be targeted
 
 type Event interface {
-    Name() string
-    Resolve()
-    Target() events.Targetable
-    TargetType() string
+	Name() string
+	Resolve()
+	Target() events.Targetable
 }

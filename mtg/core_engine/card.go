@@ -1,6 +1,10 @@
 package core_engine
 
-import "github.com/benprew/s30/mtg/core_engine/events"
+import (
+	"fmt"
+
+	"github.com/benprew/s30/mtg/core_engine/events"
+)
 
 // CardType represents the type of a Magic: The Gathering card.
 type CardType string
@@ -32,7 +36,7 @@ type Card struct {
 	Active         bool
 	DamageTaken    int
 	Targetable     string
-	Target         EntityID // target when casting this card. can be an instance
+	target         EntityID // target when casting this card. can be an instance
 	// of something: another card, or a player. can also be a zone: library or hand
 	// but it has to be something in the game
 	Events  [][]string // Events that happen when a card is cast, format: [["EventType", param1, param2], ...]
@@ -60,3 +64,19 @@ func (c *Card) IsActive() bool {
 }
 
 func (c *Card) AddTarget(target events.Targetable) {}
+
+func (c *Card) UnMarshalActions() {
+	for _, e := range c.Events {
+		switch e[0] {
+		case "DirectDamage":
+			// Convert string amount to int
+			amount := 0
+			fmt.Sscanf(e[1], "%d", &amount)
+
+			// Create DirectDamage with proper amount and target
+			// The target should be set based on the card's Target field
+			damage := events.DirectDamage{Amount: amount}
+			c.Actions = append(c.Actions, &damage)
+		}
+	}
+}
