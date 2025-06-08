@@ -115,7 +115,7 @@ func TestCastLlanowarElves(t *testing.T) {
 	}
 
 	// Cast the card
-	if err := game.CastCreature(player, card); err != nil {
+	if err := game.CastSpell(player, card, nil); err != nil {
 		t.Errorf("Failed to cast Llanowar Elves: %v", err)
 	}
 }
@@ -156,5 +156,130 @@ func TestDrawCard(t *testing.T) {
 }
 
 func TestCastingLightningBolt(t *testing.T) {
+	// Create a new game
+	players := createTestPlayer(2)
 
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+	card := game.FindCard(FindArgs{Name: "Mountain"}, player.Hand)
+	game.PlayLand(player, card)
+	elf := game.FindCard(FindArgs{Name: "Llanowar Elves"}, player.Hand)
+	if ok := moveCard(elf, &player.Hand, &player.Battlefield); !ok {
+		t.Errorf("Unable to move Elves")
+	}
+
+	bolt := game.FindCard(FindArgs{Name: "Lightning Bolt"}, player.Hand)
+	if bolt == nil {
+		t.Errorf("Failed to find card")
+	}
+
+	fmt.Println("Battlefield:")
+	for _, c := range player.Battlefield {
+		fmt.Println(c)
+	}
+
+	fmt.Println("Actions", bolt.Actions)
+	err := game.CastSpell(player, bolt, elf)
+	if err != nil {
+		t.Errorf("Failed to cast spell: %v", err)
+
+	}
+	fmt.Println("Doing resolve")
+	if err := game.Resolve(game.Stack.Pop()); err != nil {
+		t.Errorf("Failed to do resolve: %v", err)
+	}
+
+	fmt.Printf("Elf %+v\n", elf)
+	fmt.Println("Elf is dead?", elf.IsDead())
+
+	if game.FindCard(FindArgs{ID: elf.ID}, player.Graveyard) == nil {
+		t.Errorf("Elves not in Graveyard")
+		fmt.Println("Graveyard:")
+		for _, c := range player.Graveyard {
+			fmt.Println(c)
+		}
+	}
+}
+
+func TestCastArtifact(t *testing.T) {
+	// Create a new game
+	players := createTestPlayer(2)
+
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+
+	// Play land to get mana
+	game.Players[0].Turn.Phase = PhaseMain1
+	landCard := game.FindCard(FindArgs{Name: "Mountain"}, player.Hand) // Assuming Mountain exists
+	if landCard == nil {
+		landCard = game.FindCard(FindArgs{Name: "Forest"}, player.Hand) // Or Forest
+	}
+	if landCard == nil {
+		t.Skip("Skipping TestCastArtifact: No basic land found in hand")
+		return
+	}
+	if err := game.PlayLand(player, landCard); err != nil {
+		t.Errorf("Failed to play land: %v", err)
+		return
+	}
+
+	// Find the artifact card (assuming "Sol Ring" exists)
+	artifactCard := game.FindCard(FindArgs{Name: "Sol Ring"}, player.Hand)
+	if artifactCard == nil {
+		t.Errorf("Skipping TestCastArtifact: 'Sol Ring' not found in hand. Add 'Sol Ring' to the test player's library.")
+		return
+	}
+
+	initialHandSize := len(player.Hand)
+	initialBattlefieldSize := len(player.Battlefield)
+
+	fmt.Println("Battlefield:")
+	for _, c := range player.Battlefield {
+		fmt.Println(c)
+	}
+
+	// Check if the player can cast the artifact
+	if !game.CanCast(player, artifactCard) {
+		t.Errorf("Player should be able to cast %s, but cannot. Mana Pool: %+v", artifactCard.Name(), player.ManaPool)
+		return
+	}
+
+	// Cast the artifact
+	// Artifacts typically don't target, so nil is appropriate here.
+	if err := game.CastSpell(player, artifactCard, nil); err != nil {
+		t.Errorf("Failed to cast %s: %v", artifactCard.Name(), err)
+		return
+	}
+
+	// Resolve the stack (casting an artifact usually just puts it on the battlefield)
+	// The CastSpell function might push an event onto the stack.
+	// We need to run the stack until it's empty.
+	// Note: A full stack implementation would involve priority passing.
+	// For this simple test, we'll just resolve whatever was pushed.
+	fmt.Println("Doing resolve")
+	if err := game.Resolve(game.Stack.Pop()); err != nil {
+		t.Errorf("Failed to do resolve: %v", err)
+	}
+
+	// Check that the artifact is on the battlefield using FindCard
+	foundOnBattlefield := game.FindCard(FindArgs{ID: artifactCard.ID}, player.Battlefield)
+	if foundOnBattlefield == nil {
+		t.Errorf("%s not found on the battlefield after casting", artifactCard.Name())
+	}
+	if len(player.Battlefield) != initialBattlefieldSize+1 {
+		t.Errorf("Player battlefield size should be %d, but is %d", initialBattlefieldSize+1, len(player.Battlefield))
+	}
+
+	// Check that the artifact is no longer in the hand
+	foundInHand := game.FindCard(FindArgs{ID: artifactCard.ID}, player.Hand)
+	if foundInHand != nil {
+		t.Errorf("%s still found in hand after casting", artifactCard.Name())
+	}
+	if len(player.Hand) != initialHandSize-1 {
+		t.Errorf("Player hand size should be %d, but is %d", initialHandSize-1, len(player.Hand))
+	}
 }

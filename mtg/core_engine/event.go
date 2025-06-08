@@ -1,7 +1,5 @@
 package core_engine
 
-import "github.com/benprew/s30/mtg/core_engine/events"
-
 // - effects - effects are an interface to the different types of actions that can
 //   happen in a game. Things like dealing direct damage to a target, casting a
 //   creature, drawing a card, using an ability of a card in play. These are generic
@@ -27,5 +25,6 @@ import "github.com/benprew/s30/mtg/core_engine/events"
 type Event interface {
 	Name() string
 	Resolve()
-	Target() events.Targetable
+	Target() Targetable
+	AddTarget(Targetable)
 }

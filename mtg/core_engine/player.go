@@ -97,3 +97,16 @@ func (p *Player) AddTo(c *Card, loc string) {
 		p.Exile = append(p.Exile, c)
 	}
 }
+
+func moveCard(card *Card, source *[]*Card, dest *[]*Card) bool {
+	for i, c := range *source {
+		if c == card {
+			// Add to destination
+			*dest = append(*dest, c)
+			// Remove from source
+			*source = slices.Delete(*source, i, i+1)
+			return true
+		}
+	}
+	return false // card not found
+}

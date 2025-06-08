@@ -28,5 +28,12 @@ func LoadCardDatabase() map[string]*Card {
 		return nil
 	}
 
+	for _, c := range cards {
+		fmt.Println("working on ", c.Name())
+		c.UnMarshalActions()
+		if len(c.Actions) > 0 {
+			fmt.Printf("%v\n", c.Actions[0])
+		}
+	}
 	return cards
 }

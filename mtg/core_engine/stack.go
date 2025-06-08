@@ -10,7 +10,6 @@ type Stack struct {
 	ConsecutivePasses int        // Tracks consecutive passes to determine stack resolution
 }
 
-// this may need a "card" object
 type StackItem struct {
 	Events []Event // a spell can have multiple events associated with it
 	Player *Player
@@ -105,9 +104,11 @@ func (s *Stack) Next(event StackEvent, item *StackItem) (StackResult, *StackItem
 // Push adds an action to the top of the stack.
 func (s *Stack) Push(item *StackItem) {
 	s.Items = append(s.Items, item)
+	fmt.Println("Push stack", len(s.Items))
 }
 
 func (s *Stack) Pop() *StackItem {
+	fmt.Println("Pop stack", s.IsEmpty())
 	if s.IsEmpty() {
 		panic("Nothing to pop!")
 	}

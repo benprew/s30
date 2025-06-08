@@ -13,6 +13,7 @@ type GameState struct {
 	CurrentState      string
 	ConsecutivePasses int
 	Stack             Stack
+	CardMap           map[EntityID]*Card
 }
 
 func NewGame(players []*Player) *GameState {
@@ -23,6 +24,7 @@ func NewGame(players []*Player) *GameState {
 		CurrentState:      "WaitingForAction",
 		ConsecutivePasses: 0,
 		Stack:             NewStack(),
+		CardMap:           make(map[EntityID]*Card),
 	}
 }
 
@@ -35,6 +37,15 @@ func (g *GameState) CheckWinConditions() {
 }
 
 func (g *GameState) StartGame() {
+	eID := EntityID(1)
+	for _, player := range g.Players {
+		for j := range player.Library {
+			player.Library[j].ID = eID
+			fmt.Println(player.Library[j])
+			g.CardMap[eID] = player.Library[j]
+			eID++
+		}
+	}
 	for i, player := range g.Players {
 		for range 7 {
 			player.DrawCard()
@@ -72,23 +83,32 @@ func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
 
 func (g *GameState) Resolve(item *StackItem) error {
 	if item == nil {
-		return nil
+		return fmt.Errorf("Resolve: Item is nil")
 	}
+
 	p := item.Player
 	c := item.Card
-	for _, e := range item.Events {
+	if c == nil {
+		return fmt.Errorf("Resolve: nil card")
+	}
+	events := item.Events
+
+	fmt.Println("Resolve: Events", events)
+	// events = append(events, c.Actions...)
+	for _, e := range events {
+		fmt.Println("Resolving event", e.Name())
 		e.Resolve()
-		tgt := e.Target()
-		if tgt.TargetType() == "Card" && tgt.IsDead() {
-			card, ok := tgt.(*Card)
-			if !ok {
-				fmt.Printf("Resolve Error: Targetable with TargetType 'Card' is not a *Card pointer. Actual type: %T\n", tgt)
-				continue
+		if e.Target().TargetType() == TargetTypeCard {
+			tgt := e.Target().(*Card)
+			if tgt.IsDead() {
+				card := tgt
+				if !moveCard(card, &p.Battlefield, &p.Graveyard) {
+					return fmt.Errorf("Unable to move card from battlefield to graveyard")
+				}
 			}
-			p.RemoveFrom(card, p.Battlefield, "Battlefield")
-			p.AddTo(card, "Graveyard")
 		}
 	}
+	// Move card from hand to correct zone
 	if c.CardType != CardTypeInstant && c.CardType != CardTypeSorcery {
 		p.RemoveFrom(c, p.Hand, "Hand")
 		p.AddTo(c, "Battlefield")
@@ -99,13 +119,31 @@ func (g *GameState) Resolve(item *StackItem) error {
 	return nil
 }
 
+type FindArgs struct {
+	ID   EntityID
+	Name string
+}
+
+func (g *GameState) FindCard(args FindArgs, zone []*Card) *Card {
+	if args.ID > 0 && zone == nil {
+		return g.CardMap[args.ID]
+	}
+	for _, c := range zone {
+		fmt.Println(c)
+		if c.Name() == args.Name || c.ID == args.ID {
+			return c
+		}
+	}
+	return nil
+}
+
 func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackResult, *StackItem) {
 	switch action.Type {
 	case "CastSpell":
 		// TODO: spells will have decisions that need to be made when cast
 		// the player will need to make those decisions (ie Lightning Bolt target)
 		g.Stack.Next(EventPlayerAddsAction, &StackItem{Player: player, Events: action.Card.Actions})
-		g.CastCreature(player, action.Card)
+		g.CastSpell(player, action.Card, nil) // TODO: fix this, add target where appropriate
 	case "PlayLand":
 		g.PlayLand(player, action.Card)
 	case "PassPriority":
@@ -249,6 +287,8 @@ func (g *GameState) CanCast(player *Player, card *Card) bool {
 	pPool := make(ManaPool, len(player.ManaPool))
 	copy(pPool, player.ManaPool)
 	pool := g.AvailableMana(player, pPool)
+
+	fmt.Println("CanCast: mana pool", pool)
 
 	return pool.CanPay(card.ManaCost) && g.hasTarget(card)
 }

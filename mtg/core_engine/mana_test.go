@@ -125,3 +125,12 @@ func TestAvailableMana(t *testing.T) {
 		}
 	}
 }
+
+func TestCanPayColorless(t *testing.T) {
+	cost := "2WW"
+	pool := ManaPool{[]rune{'W'}, []rune{'W'}, []rune{'R'}, []rune{'B'}}
+
+	if !pool.CanPay(cost) {
+		t.Errorf("Unable to pay colorless cost")
+	}
+}

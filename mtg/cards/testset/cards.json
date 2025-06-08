@@ -79,5 +79,18 @@
     "Power": 2,
     "Toughness": 2,
     "Text": ""
+  },
+  "Sol Ring": {
+    "Name": "Sol Ring",
+    "ManaCost": "1",
+    "Colors": [],
+    "CardType": "Artifact",
+    "Text": "{T}: Add {C}{C} to your mana pool.",
+    "ManaProduction": [
+      "2"
+    ],
+    "Abilities": [
+      "{T}: Add {C}{C} to your mana pool."
+    ]
   }
 }
