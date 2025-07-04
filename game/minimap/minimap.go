@@ -169,8 +169,12 @@ func (m *MiniMap) Update() (bool, error) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(SCALE, SCALE) // scale up from 640x480
 
+	donePressed := false
 	for _, b := range m.buttons {
 		b.Update(options)
+		if b.Text == "Done" && b.State == sprites.StatePressed {
+			donePressed = true
+		}
 	}
-	return false, nil
+	return donePressed, nil
 }

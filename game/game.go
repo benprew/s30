@@ -87,8 +87,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.currentScreen {
 	case WorldScr:
 		g.level.Draw(screen, g.screenW, g.screenH, g.camScale)
-		// case MiniMapScr:
-		// 	g.minimap.Draw(screen)
 	case MiniMapScr:
 		g.miniMap.Draw(screen, g.camScale, g.level)
 	}
