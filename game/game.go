@@ -70,7 +70,13 @@ func (g *Game) Update() error {
 		}
 		return g.level.Update(g.screenW, g.screenH)
 	case MiniMapScr:
-		return g.miniMap.Update()
+		done, err := g.miniMap.Update()
+		if err != nil {
+			return err
+		}
+		if done {
+			g.currentScreen = WorldScr
+		}
 	}
 
 	return nil
@@ -90,11 +96,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Print game info.
 	charT := g.level.CharacterTile()
 	charP := g.level.CharacterPos()
+	// Get mouse cursor screen position
+	mouseX, mouseY := ebiten.CursorPosition()
+
 	ebitenutil.DebugPrint(
 		screen,
 		fmt.Sprintf(
-			"KEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d",
-			ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y,
+			"KEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
+			ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
 		),
 	)
 }
