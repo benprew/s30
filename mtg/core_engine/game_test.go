@@ -86,8 +86,10 @@ func TestCastLlanowarElves(t *testing.T) {
 
 	// Play land
 	game.Players[0].Turn.Phase = PhaseMain1
+	var landCard *Card
 	for _, card := range player.Hand {
 		if card.CardType == "Land" {
+			landCard = card
 			if err := game.PlayLand(player, card); err != nil {
 				t.Errorf("Failed to play land: %v", err)
 				return
@@ -96,9 +98,10 @@ func TestCastLlanowarElves(t *testing.T) {
 		}
 	}
 
-	var pPool ManaPool
-	copy(pPool, game.Players[0].ManaPool)
-	fmt.Println(game.AvailableMana(game.Players[0], pPool))
+	if landCard == nil {
+		t.Errorf("No land card found in hand")
+		return
+	}
 
 	// find elves
 	var card *Card
@@ -109,9 +112,21 @@ func TestCastLlanowarElves(t *testing.T) {
 		}
 	}
 
-	// need to tap the land first
+	if card == nil {
+		t.Errorf("No Llanowar Elves found in hand")
+		return
+	}
+
+	// Tap the land for mana first
+	if err := game.TapLandForMana(player, landCard); err != nil {
+		t.Errorf("Failed to tap land for mana: %v", err)
+		return
+	}
+
+	// Check if we can cast after tapping for mana
 	if !game.CanCast(player, card) {
-		t.Errorf("Player should be able to cast Llanowar Elves, but can't: %+v", player.ManaPool)
+		t.Errorf("Player should be able to cast Llanowar Elves after tapping land, but can't: %+v", player.ManaPool)
+		return
 	}
 
 	// Cast the card
@@ -155,7 +170,7 @@ func TestDrawCard(t *testing.T) {
 	}
 }
 
-func TestCastingLightningBolt(t *testing.T) {
+func TestCastLightningBolt(t *testing.T) {
 	// Create a new game
 	players := createTestPlayer(2)
 
@@ -163,8 +178,8 @@ func TestCastingLightningBolt(t *testing.T) {
 	game.StartGame()
 
 	player := players[0]
-	card := game.FindCard(FindArgs{Name: "Mountain"}, player.Hand)
-	game.PlayLand(player, card)
+	mtn := game.FindCard(FindArgs{Name: "Mountain"}, player.Hand)
+	game.PlayLand(player, mtn)
 	elf := game.FindCard(FindArgs{Name: "Llanowar Elves"}, player.Hand)
 	if ok := moveCard(elf, &player.Hand, &player.Battlefield); !ok {
 		t.Errorf("Unable to move Elves")
@@ -175,12 +190,20 @@ func TestCastingLightningBolt(t *testing.T) {
 		t.Errorf("Failed to find card")
 	}
 
+	if elf == nil {
+		t.Errorf("Failed to find Llanowar Elves")
+		return
+	}
+
 	fmt.Println("Battlefield:")
 	for _, c := range player.Battlefield {
 		fmt.Println(c)
 	}
 
 	fmt.Println("Actions", bolt.Actions)
+
+	game.TapLandForMana(player, mtn)
+
 	err := game.CastSpell(player, bolt, elf)
 	if err != nil {
 		t.Errorf("Failed to cast spell: %v", err)
@@ -191,8 +214,9 @@ func TestCastingLightningBolt(t *testing.T) {
 		t.Errorf("Failed to do resolve: %v", err)
 	}
 
-	fmt.Printf("Elf %+v\n", elf)
-	fmt.Println("Elf is dead?", elf.IsDead())
+	if !mtn.Tapped {
+		t.Errorf("Mountain should be tapped after casting Lightning Bolt")
+	}
 
 	if game.FindCard(FindArgs{ID: elf.ID}, player.Graveyard) == nil {
 		t.Errorf("Elves not in Graveyard")
@@ -227,6 +251,12 @@ func TestCastArtifact(t *testing.T) {
 		return
 	}
 
+	// Tap the land for mana
+	if err := game.TapLandForMana(player, landCard); err != nil {
+		t.Errorf("Failed to tap land for mana: %v", err)
+		return
+	}
+
 	// Find the artifact card (assuming "Sol Ring" exists)
 	artifactCard := game.FindCard(FindArgs{Name: "Sol Ring"}, player.Hand)
 	if artifactCard == nil {
@@ -242,9 +272,9 @@ func TestCastArtifact(t *testing.T) {
 		fmt.Println(c)
 	}
 
-	// Check if the player can cast the artifact
+	// Check if the player can cast the artifact after tapping for mana
 	if !game.CanCast(player, artifactCard) {
-		t.Errorf("Player should be able to cast %s, but cannot. Mana Pool: %+v", artifactCard.Name(), player.ManaPool)
+		t.Errorf("Player should be able to cast %s after tapping land, but cannot. Mana Pool: %+v", artifactCard.Name(), player.ManaPool)
 		return
 	}
 

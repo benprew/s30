@@ -19,13 +19,45 @@ func (m *ManaPool) AddMana(manaType []rune) {
 }
 
 func (m *ManaPool) RemoveMana(manaType rune) bool {
-	for i, mt := range *m {
-		if len(mt) == 1 && mt[0] == manaType {
-			*m = slices.Delete((*m), i, i+1)
-			return true
+	// If the requested manaType is a digit or 'C', treat it as a request for colorless mana.
+	// Note: The Pay function currently iterates over the cost string runes.
+	// If the cost is "1G", it calls RemoveMana('1') and RemoveMana('G').
+	// This logic handles digit runes ('0'-'9') as requests for colorless.
+	isColorlessRequest := unicode.IsDigit(manaType) || manaType == 'C'
+
+	if isColorlessRequest {
+		// Try to remove an explicit colorless source first ('C')
+		for i, mt := range *m {
+			if len(mt) == 1 && mt[0] == 'C' {
+				*m = slices.Delete((*m), i, i+1)
+				return true
+			}
 		}
+		// If no explicit colorless source, try to remove any single-color source
+		colors := []rune{'W', 'U', 'B', 'R', 'G'}
+		for i, mt := range *m {
+			if len(mt) == 1 {
+				for _, color := range colors {
+					if mt[0] == color {
+						*m = slices.Delete((*m), i, i+1)
+						return true
+					}
+				}
+			}
+		}
+		// Could not find any source for colorless
+		return false
+	} else {
+		// If the requested manaType is a specific color (W, U, B, R, G)
+		for i, mt := range *m {
+			if len(mt) == 1 && mt[0] == manaType {
+				*m = slices.Delete((*m), i, i+1)
+				return true
+			}
+		}
+		// Could not find the specific colored source
+		return false
 	}
-	return false
 }
 
 func (m ManaPool) ParseCost(cost string) map[rune]int {
@@ -142,6 +174,7 @@ func (g *GameState) AvailableMana(player *Player, pPool ManaPool) (pool ManaPool
 			pool.AddMana(manaRunes)
 		}
 	}
+	pool = append(pool, pPool...)
 	return pool
 }
 

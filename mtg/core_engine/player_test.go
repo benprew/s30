@@ -16,7 +16,7 @@ func createTestPlayer(numPlayers int) []*Player {
 			if !ok {
 				panic(fmt.Sprintf("Card not found: %s", cardName))
 			}
-			library = append(library, card)
+			library = append(library, card.DeepCopy())
 		}
 		for range 2 {
 			cardName := "Llanowar Elves"
@@ -24,28 +24,28 @@ func createTestPlayer(numPlayers int) []*Player {
 			if !ok {
 				panic(fmt.Sprintf("Card not found: %s", cardName))
 			}
-			library = append(library, card)
+			library = append(library, card.DeepCopy())
 		}
 		cardName := "Lightning Bolt"
 		card, ok := CardDatabase[cardName]
 		if !ok {
 			panic(fmt.Sprintf("Card not found: %s", cardName))
 		}
-		library = append(library, card)
+		library = append(library, card.DeepCopy())
 
 		cardName = "Mountain"
 		card, ok = CardDatabase[cardName]
 		if !ok {
 			panic(fmt.Sprintf("Card not found: %s", cardName))
 		}
-		library = append(library, card)
+		library = append(library, card.DeepCopy())
 
 		cardName = "Sol Ring"
 		card, ok = CardDatabase[cardName]
 		if !ok {
 			panic(fmt.Sprintf("Card not found: %s", cardName))
 		}
-		library = append(library, card)
+		library = append(library, card.DeepCopy())
 
 		player := &Player{
 			ID:          EntityID(i),
