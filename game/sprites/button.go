@@ -6,11 +6,9 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/text"
-	"golang.org/x/image/font"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
-// ButtonState defines the possible states of a button.
 type ButtonState int
 
 const (
@@ -25,11 +23,11 @@ type Button struct {
 	Normal       *ebiten.Image
 	Pressed      *ebiten.Image
 	Text         string
-	Font         *font.Face
+	Font         text.Face // Changed from *font.Face to font.Face
 	TextColor    color.Color
-	TextOffset   image.Point           // offset relative to button 0,0
-	HandlerFuncs []*func(ebiten.Image) // handle hover, click, etc
-	State        ButtonState           // Current state of the button
+	TextOffset   image.Point // offset relative to button 0,0
+	HandlerFuncs []func()    // handle click
+	State        ButtonState
 	X            int
 	Y            int
 }
@@ -40,38 +38,64 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	var imgToDraw *ebiten.Image
 
 	options := &ebiten.DrawImageOptions{}
-	options.GeoM.Concat(options.GeoM)
+	options.GeoM.Concat(opts.GeoM)
+	options.GeoM.Translate(float64(b.X), float64(b.Y))
 
-	fmt.Println(options.GeoM)
-
-	// Select the image based on the button's state
 	switch b.State {
 	case StateHover:
 		imgToDraw = b.Hover
 	case StatePressed:
 		imgToDraw = b.Pressed
 	case StateNormal:
-		fallthrough // Explicit fallthrough for clarity
-	default: // Includes StateDisabled or any unexpected state
+		fallthrough
+	default:
 		imgToDraw = b.Normal
 	}
 
-	options.GeoM.Translate(float64(b.X), float64(b.Y))
 	screen.DrawImage(imgToDraw, options)
 
-	// Draw the text if font and text are provided
-	if b.Font != nil && b.Text != "" {
-		// Calculate text position:
-		// options.GeoM contains the translation for the button's top-left corner.
-		// We need to extract this translation.
-		tx := options.GeoM.Element(0, 2) // Translation X
-		ty := options.GeoM.Element(1, 2) // Translation Y
+	if b.Text != "" {
+		options.GeoM.Translate(float64(b.TextOffset.X), float64(b.TextOffset.Y))
+		R, G, B, A := b.TextColor.RGBA()
+		options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
+		textOpts := text.DrawOptions{DrawImageOptions: *options}
+		text.Draw(screen, b.Text, b.Font, &textOpts)
+	}
+}
 
-		// Add the button's position and the text's relative offset
-		textX := int(tx) + b.TextOffset.X
-		textY := int(ty) + b.TextOffset.Y
+// Update checks the button's state based on mouse interaction and the provided drawing options.
+func (b *Button) Update(opts *ebiten.DrawImageOptions) {
+	mx, my := ebiten.CursorPosition()
 
-		// Draw the text onto the screen
-		text.Draw(screen, b.Text, *b.Font, textX, textY, b.TextColor)
+	bounds := b.Normal.Bounds()
+	buttonWidth := bounds.Dx()
+	buttonHeight := bounds.Dy()
+	combinedGeoM := ebiten.GeoM{}
+	combinedGeoM.Concat(opts.GeoM)
+
+	scaledWidth, scaledHeight := combinedGeoM.Apply(float64(buttonWidth), float64(buttonHeight))
+
+	bx := b.X
+	by := b.Y
+
+	if mx >= bx && mx < bx+int(scaledWidth) && my >= by && my < by+int(scaledHeight) {
+		if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			fmt.Printf("Button Clicked: %s\n", b.Text)
+			for _, handler := range b.HandlerFuncs {
+				if handler != nil {
+					handler()
+				}
+			}
+		}
+
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			fmt.Println("Pressed")
+			b.State = StatePressed
+		} else {
+			fmt.Println("Hover", b.Text)
+			b.State = StateHover
+		}
+	} else {
+		b.State = StateNormal
 	}
 }

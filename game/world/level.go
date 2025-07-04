@@ -45,8 +45,8 @@ func NewLevel() (*Level, error) {
 	}
 
 	l := &Level{
-		w:          56,
-		h:          76,
+		w:          47,
+		h:          63,
 		tileWidth:  206,
 		tileHeight: 102,
 		enemies:    make([]entities.Enemy, 0),
