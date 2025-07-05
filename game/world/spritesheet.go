@@ -6,7 +6,7 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/benprew/s30/art"
+	"github.com/benprew/s30/assets/art"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 

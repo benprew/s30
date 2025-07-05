@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"image"
 
-	"github.com/benprew/s30/art"
+	"github.com/benprew/s30/assets/art"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 

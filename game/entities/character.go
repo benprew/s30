@@ -4,7 +4,7 @@ import (
 	"fmt"
 	_ "image/png"
 
-	"github.com/benprew/s30/art"
+	"github.com/benprew/s30/assets/art"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 )
