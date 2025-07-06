@@ -26,7 +26,7 @@ type Level struct {
 
 	Player  *entities.Player
 	enemies []entities.Enemy
-	frame   *ebiten.Image
+	Frame   *ebiten.Image
 }
 
 // NewLevel returns a new randomly generated Level.
@@ -51,7 +51,7 @@ func NewLevel() (*Level, error) {
 		tileHeight: 102,
 		enemies:    make([]entities.Enemy, 0),
 		Player:     c,
-		frame:      frame,
+		Frame:      frame,
 	}
 
 	// Load embedded SpriteSheet.
@@ -159,14 +159,33 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	// Draw the worldFrame over everything
 	frameOpts := &ebiten.DrawImageOptions{}
 	frameOpts.GeoM.Scale(scale, scale)
-	screen.DrawImage(l.frame, frameOpts)
+	screen.DrawImage(l.Frame, frameOpts)
 }
 
 // Update reads current user input and updates the Game state.
 func (l *Level) Update(screenW, screenH int) error {
+	// Store current player tile before moving
+	prevTile := l.CharacterTile()
+
 	// Move player and update direction via keyboard using bit flags
 	if err := l.Player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
 		return err
+	}
+
+	// Get player's new tile
+	currentTile := l.CharacterTile()
+
+	// Check if player entered a city or village and hasn't just come from one on the same tile
+	if currentTile != (TilePoint{-1, -1}) { // Ensure player is on a valid tile
+		tile := l.Tile(currentTile)
+		if tile != nil {
+			if tile.IsCity && prevTile != currentTile {
+				return ErrEnteredCity // Player entered a city
+			}
+			// if tile.IsVillage && prevTile != currentTile {
+			// 	return ErrEnteredVillage // Player entered a village
+			// }
+		}
 	}
 
 	// Update enemies to move towards character

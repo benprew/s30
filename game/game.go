@@ -1,10 +1,13 @@
 package game
 
 import (
+	"bytes"
 	"fmt"
+	"image"
 	"math"
 	"time"
 
+	"github.com/benprew/s30/assets/art"
 	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -24,12 +27,19 @@ type Game struct {
 	mousePanX, mousePanY int
 
 	currentScreen int
+
+	// City and village images
+	cityImage         *ebiten.Image
+	villageImage      *ebiten.Image
+	previousPlayerPos image.Point // Store player position when entering city/village
 }
 
 const (
 	StartScr = iota
 	WorldScr
 	MiniMapScr
+	CityScr    // New state for city view
+	VillageScr // New state for village view
 )
 
 // NewGame returns a new isometric demo Game.
@@ -38,7 +48,26 @@ func NewGame() (*Game, error) {
 	fmt.Println("NewGame start")
 
 	l, err := world.NewLevel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new level: %s", err)
+	}
+
 	m := minimap.NewMiniMap()
+
+	// Load city image
+	cityImg, _, err := image.Decode(bytes.NewReader(art.City_png))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode city image: %w", err)
+	}
+	cityImage := ebiten.NewImageFromImage(cityImg)
+
+	// Load village image
+	villageImg, _, err := image.Decode(bytes.NewReader(art.Village_png))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode village image: %w", err)
+	}
+	villageImage := ebiten.NewImageFromImage(villageImg)
+
 	g := &Game{
 		screenW:       1024,
 		screenH:       768,
@@ -48,7 +77,9 @@ func NewGame() (*Game, error) {
 		camScaleTo:    1,
 		mousePanX:     math.MinInt32,
 		mousePanY:     math.MinInt32,
-		currentScreen: MiniMapScr,
+		currentScreen: WorldScr, // Start on the world map
+		cityImage:     cityImage,
+		villageImage:  villageImage,
 	}
 
 	ebiten.SetWindowSize(g.screenW, g.screenH)
@@ -68,7 +99,44 @@ func (g *Game) Update() error {
 			}
 			g.level = l
 		}
-		return g.level.Update(g.screenW, g.screenH)
+
+		// Check if player entered a city or village
+		err := g.level.Update(g.screenW, g.screenH)
+		if err != nil {
+			// Check for specific errors indicating screen change
+			if err == world.ErrEnteredCity {
+				g.previousPlayerPos = g.level.Player.Loc() // Store player position
+				g.currentScreen = CityScr
+				fmt.Println("Entered city")
+				return nil // Consume the error, screen has changed
+			} else if err == world.ErrEnteredVillage {
+				g.previousPlayerPos = g.level.Player.Loc() // Store player position
+				g.currentScreen = VillageScr
+				fmt.Println("Entered village")
+				return nil // Consume the error, screen has changed
+			}
+			return fmt.Errorf("error updating world map: %w", err)
+		}
+		return nil // No screen change, continue in world map
+
+	case CityScr:
+		// Check for Escape key to return to world map
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+			g.currentScreen = WorldScr
+			g.level.Player.SetLoc(g.previousPlayerPos) // Restore player position
+			fmt.Println("Returned to world map from city")
+		}
+		return nil
+
+	case VillageScr:
+		// Check for Escape key to return to world map
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+			g.currentScreen = WorldScr
+			g.level.Player.SetLoc(g.previousPlayerPos) // Restore player position
+			fmt.Println("Returned to world map from village")
+		}
+		return nil
+
 	case MiniMapScr:
 		done, err := g.miniMap.Update()
 		if err != nil {
@@ -87,6 +155,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.currentScreen {
 	case WorldScr:
 		g.level.Draw(screen, g.screenW, g.screenH, g.camScale)
+	case CityScr:
+		g.drawCityView(screen, g.screenW, g.screenH, g.camScale)
+	case VillageScr:
+		g.drawVillageView(screen, g.screenW, g.screenH, g.camScale)
 	case MiniMapScr:
 		g.miniMap.Draw(screen, g.camScale, g.level)
 	}
@@ -100,10 +172,45 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(
 		screen,
 		fmt.Sprintf(
-			"KEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
-			ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
+			"Screen: %d\nKEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
+			g.currentScreen, ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
 		),
 	)
+}
+
+// drawCityView draws the city view screen
+func (g *Game) drawCityView(screen *ebiten.Image, screenW, screenH int, scale float64) {
+	// Draw city image centered on screen
+	cityOpts := &ebiten.DrawImageOptions{}
+	cityOpts.GeoM.Scale(1.6, 1.6)
+
+	// Offset the image
+	cityOpts.GeoM.Translate(100.0, 75.0)
+
+	screen.DrawImage(g.cityImage, cityOpts)
+	// Draw the worldFrame over everything
+	frameOpts := &ebiten.DrawImageOptions{}
+	frameOpts.GeoM.Scale(scale, scale)
+	screen.DrawImage(g.level.Frame, frameOpts)
+}
+
+// drawVillageView draws the village view screen
+func (g *Game) drawVillageView(screen *ebiten.Image, screenW, screenH int, scale float64) {
+	// Draw village image centered on screen
+	villageOpts := &ebiten.DrawImageOptions{}
+	villageOpts.GeoM.Scale(scale, scale)
+
+	// Center the village image
+	villageBounds := g.villageImage.Bounds()
+	villageW := float64(villageBounds.Dx()) * scale
+	villageH := float64(villageBounds.Dy()) * scale
+	villageOpts.GeoM.Translate((float64(screenW)-villageW)/2, (float64(screenH)-villageH)/2)
+
+	screen.DrawImage(g.villageImage, villageOpts)
+	// Draw the worldFrame over everything
+	frameOpts := &ebiten.DrawImageOptions{}
+	frameOpts.GeoM.Scale(scale, scale)
+	screen.DrawImage(g.level.Frame, frameOpts)
 }
 
 // Layout is called when the Game's layout changes.

@@ -1,6 +1,16 @@
 * General
 I'm building a 2d isometric game based on the collectible card game Magic: The Gathering.
 
+* City/Village Screen
+In the world map, a character can walk around and walk into a city or a village. When a character walks into a city or village it should open the City/Village image (behind the world frame) which you exit by pressing the escape key. Leaving takes you back to the world map.
+
+The hit detection for walking into a city/village should be the character is on the tile with the city/village.
+
+The City image is assets/art/sprites/world/City.png
+The Village image is assets/art/sprites/world/Village.png
+
+Add them to the embed.go file in art/
+
 * Rules Engine
 I'd like to build a rules engine for mtg that can be used to play the game. The engine should be able to handle the rules of the game, including card interactions, combat, and mana generation.
 How can I break this down into smaller tasks?

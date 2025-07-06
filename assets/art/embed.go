@@ -50,6 +50,12 @@ var (
 	//go:embed sprites/world/land/Roads.spr.png
 	Roads_png []byte
 
+	//go:embed sprites/world/City.png
+	City_png []byte
+
+	//go:embed sprites/world/Village.png
+	Village_png []byte
+
 	// Character sprites
 	//go:embed sprites/world/characters/*.spr.png
 	CharacterFS embed.FS
