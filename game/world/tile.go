@@ -18,7 +18,8 @@ type Tile struct {
 	positionedSprites []*PositionedSprite
 	roadSprites       []*ebiten.Image // Added for roads
 	IsCity            bool            // Indicates if this tile represents a city
-	TerrainType       int             // Added terrain type
+	City              City
+	TerrainType       int // Added terrain type
 }
 
 // AddSprite adds a sprite to the Tile.

@@ -196,10 +196,9 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 }
 
 // placeCities places cities and returns their locations.
-func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.Image, numCities, minDistance int) []TilePoint {
+func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.Image, numCities, minDistance int) {
 	if len(validLocations) == 0 || numCities <= 0 {
 		fmt.Println("Warning: No valid locations provided or numCities <= 0.")
-		return nil
 	}
 
 	placedCities := []TilePoint{}
@@ -241,8 +240,15 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 			tile.IsCity = true
 			tile.AddCitySprite(citySprites[cityY][cityX])
 			tile.AddCitySprite(citySprites[cityY+1][cityX])
+			tier := 2
+			tile.City = City{
+				tier:            tier,
+				Name:            genCityName(),
+				X:               loc.X,
+				Y:               loc.Y,
+				BackgroundImage: cityBgImage(tier),
+			}
 			placedCities = append(placedCities, loc)
-			// fmt.Printf("Placed city at (%d, %d)\n", loc.x, loc.y) // Optional: for debugging
 		}
 		// connect the city to the nearest road/city
 		if len(placedCities) > 1 {
@@ -255,7 +261,6 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 	if len(placedCities) < numCities {
 		fmt.Printf("Warning: Could only place %d out of %d requested cities with min distance %d.\n", len(placedCities), numCities, minDistance)
 	}
-	return placedCities // Return the list of placed cities
 }
 
 // connectCityBFS finds the shortest path from a new city to the nearest existing

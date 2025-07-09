@@ -38,8 +38,7 @@ const (
 	StartScr = iota
 	WorldScr
 	MiniMapScr
-	CityScr    // New state for city view
-	VillageScr // New state for village view
+	CityScr
 )
 
 // NewGame returns a new isometric demo Game.
@@ -109,11 +108,6 @@ func (g *Game) Update() error {
 				g.currentScreen = CityScr
 				fmt.Println("Entered city")
 				return nil // Consume the error, screen has changed
-			} else if err == world.ErrEnteredVillage {
-				g.previousPlayerPos = g.level.Player.Loc() // Store player position
-				g.currentScreen = VillageScr
-				fmt.Println("Entered village")
-				return nil // Consume the error, screen has changed
 			}
 			return fmt.Errorf("error updating world map: %w", err)
 		}
@@ -125,15 +119,6 @@ func (g *Game) Update() error {
 			g.currentScreen = WorldScr
 			g.level.Player.SetLoc(g.previousPlayerPos) // Restore player position
 			fmt.Println("Returned to world map from city")
-		}
-		return nil
-
-	case VillageScr:
-		// Check for Escape key to return to world map
-		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-			g.currentScreen = WorldScr
-			g.level.Player.SetLoc(g.previousPlayerPos) // Restore player position
-			fmt.Println("Returned to world map from village")
 		}
 		return nil
 
@@ -157,8 +142,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.level.Draw(screen, g.screenW, g.screenH, g.camScale)
 	case CityScr:
 		g.drawCityView(screen, g.screenW, g.screenH, g.camScale)
-	case VillageScr:
-		g.drawVillageView(screen, g.screenW, g.screenH, g.camScale)
 	case MiniMapScr:
 		g.miniMap.Draw(screen, g.camScale, g.level)
 	}
@@ -180,33 +163,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 // drawCityView draws the city view screen
 func (g *Game) drawCityView(screen *ebiten.Image, screenW, screenH int, scale float64) {
-	// Draw city image centered on screen
+	tile := g.level.Tile(g.level.CharacterTile())
 	cityOpts := &ebiten.DrawImageOptions{}
 	cityOpts.GeoM.Scale(1.6, 1.6)
 
 	// Offset the image
 	cityOpts.GeoM.Translate(100.0, 75.0)
 
-	screen.DrawImage(g.cityImage, cityOpts)
-	// Draw the worldFrame over everything
-	frameOpts := &ebiten.DrawImageOptions{}
-	frameOpts.GeoM.Scale(scale, scale)
-	screen.DrawImage(g.level.Frame, frameOpts)
-}
-
-// drawVillageView draws the village view screen
-func (g *Game) drawVillageView(screen *ebiten.Image, screenW, screenH int, scale float64) {
-	// Draw village image centered on screen
-	villageOpts := &ebiten.DrawImageOptions{}
-	villageOpts.GeoM.Scale(scale, scale)
-
-	// Center the village image
-	villageBounds := g.villageImage.Bounds()
-	villageW := float64(villageBounds.Dx()) * scale
-	villageH := float64(villageBounds.Dy()) * scale
-	villageOpts.GeoM.Translate((float64(screenW)-villageW)/2, (float64(screenH)-villageH)/2)
-
-	screen.DrawImage(g.villageImage, villageOpts)
+	screen.DrawImage(tile.City.BackgroundImage, cityOpts)
 	// Draw the worldFrame over everything
 	frameOpts := &ebiten.DrawImageOptions{}
 	frameOpts.GeoM.Scale(scale, scale)

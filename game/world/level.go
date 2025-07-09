@@ -109,7 +109,7 @@ func NewLevel() (*Level, error) {
 	// mapTerrainTypes now returns valid city locations and sets Tile.TerrainType
 	validCityLocations := l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites)
 
-	_ = l.placeCities(validCityLocations, citySprites, 35, 6)
+	l.placeCities(validCityLocations, citySprites, 35, 6)
 
 	// Set initial player position at center of map
 	loc := image.Point{X: l.LevelW() / 2, Y: l.LevelH() / 2}
@@ -175,16 +175,12 @@ func (l *Level) Update(screenW, screenH int) error {
 	// Get player's new tile
 	currentTile := l.CharacterTile()
 
-	// Check if player entered a city or village and hasn't just come from one on the same tile
 	if currentTile != (TilePoint{-1, -1}) { // Ensure player is on a valid tile
 		tile := l.Tile(currentTile)
 		if tile != nil {
 			if tile.IsCity && prevTile != currentTile {
 				return ErrEnteredCity // Player entered a city
 			}
-			// if tile.IsVillage && prevTile != currentTile {
-			// 	return ErrEnteredVillage // Player entered a village
-			// }
 		}
 	}
 
