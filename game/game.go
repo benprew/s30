@@ -1,13 +1,10 @@
 package game
 
 import (
-	"bytes"
 	"fmt"
-	"image"
 	"math"
 	"time"
 
-	"github.com/benprew/s30/assets/art"
 	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -15,23 +12,14 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
-// Game is an isometric demo game.
 type Game struct {
-	screenW, screenH int
-	level            *world.Level
-	miniMap          *minimap.MiniMap
-
-	camScale   float64
-	camScaleTo float64
-
+	screenW, screenH     int
+	level                *world.Level
+	miniMap              *minimap.MiniMap
+	camScale             float64
+	camScaleTo           float64
 	mousePanX, mousePanY int
-
-	currentScreen int
-
-	// City and village images
-	cityImage         *ebiten.Image
-	villageImage      *ebiten.Image
-	previousPlayerPos image.Point // Store player position when entering city/village
+	currentScreen        int
 }
 
 const (
@@ -53,20 +41,6 @@ func NewGame() (*Game, error) {
 
 	m := minimap.NewMiniMap()
 
-	// Load city image
-	cityImg, _, err := image.Decode(bytes.NewReader(art.City_png))
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode city image: %w", err)
-	}
-	cityImage := ebiten.NewImageFromImage(cityImg)
-
-	// Load village image
-	villageImg, _, err := image.Decode(bytes.NewReader(art.Village_png))
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode village image: %w", err)
-	}
-	villageImage := ebiten.NewImageFromImage(villageImg)
-
 	g := &Game{
 		screenW:       1024,
 		screenH:       768,
@@ -77,8 +51,6 @@ func NewGame() (*Game, error) {
 		mousePanX:     math.MinInt32,
 		mousePanY:     math.MinInt32,
 		currentScreen: WorldScr, // Start on the world map
-		cityImage:     cityImage,
-		villageImage:  villageImage,
 	}
 
 	ebiten.SetWindowSize(g.screenW, g.screenH)
@@ -104,7 +76,6 @@ func (g *Game) Update() error {
 		if err != nil {
 			// Check for specific errors indicating screen change
 			if err == world.ErrEnteredCity {
-				g.previousPlayerPos = g.level.Player.Loc() // Store player position
 				g.currentScreen = CityScr
 				fmt.Println("Entered city")
 				return nil // Consume the error, screen has changed
@@ -117,7 +88,6 @@ func (g *Game) Update() error {
 		// Check for Escape key to return to world map
 		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			g.currentScreen = WorldScr
-			g.level.Player.SetLoc(g.previousPlayerPos) // Restore player position
 			fmt.Println("Returned to world map from city")
 		}
 		return nil
@@ -135,7 +105,6 @@ func (g *Game) Update() error {
 	return nil
 }
 
-// Draw draws the Game on the screen.
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.currentScreen {
 	case WorldScr:
@@ -161,7 +130,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	)
 }
 
-// drawCityView draws the city view screen
 func (g *Game) drawCityView(screen *ebiten.Image, screenW, screenH int, scale float64) {
 	tile := g.level.Tile(g.level.CharacterTile())
 	cityOpts := &ebiten.DrawImageOptions{}
