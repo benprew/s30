@@ -17,6 +17,11 @@ var (
 	//go:embed sprites/world/land/Sland.spr.png
 	Sland_png []byte
 
+	//go:embed sprites/Icons.spr.png
+	Icons_png []byte
+	//go:embed sprites/Iconb.spr.png
+	Iconb_png []byte
+
 	// trees
 	//go:embed sprites/world/land/Land2.spr.png
 	Land2_png []byte

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benprew/s30/game/minimap"
+	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -16,6 +17,7 @@ type Game struct {
 	screenW, screenH     int
 	level                *world.Level
 	miniMap              *minimap.MiniMap
+	cityScreen           screens.CityScreen
 	camScale             float64
 	camScaleTo           float64
 	mousePanX, mousePanY int
@@ -28,6 +30,11 @@ const (
 	MiniMapScr
 	CityScr
 )
+
+// TODO: World should be a screen, level shouldn't be part of world
+// Build a "Screen" interface that has an Draw and Update function
+// Then game.draw can be game.CurrentScreen.Draw()
+// same for game.Update()
 
 // NewGame returns a new isometric demo Game.
 func NewGame() (*Game, error) {
@@ -51,6 +58,7 @@ func NewGame() (*Game, error) {
 		mousePanX:     math.MinInt32,
 		mousePanY:     math.MinInt32,
 		currentScreen: WorldScr, // Start on the world map
+		cityScreen:    screens.NewCityScreen(l.Frame),
 	}
 
 	ebiten.SetWindowSize(g.screenW, g.screenH)
@@ -78,6 +86,8 @@ func (g *Game) Update() error {
 			if err == world.ErrEnteredCity {
 				g.currentScreen = CityScr
 				fmt.Println("Entered city")
+				tile := g.level.Tile(g.level.CharacterTile())
+				g.cityScreen.BgImage = tile.City.BackgroundImage
 				return nil // Consume the error, screen has changed
 			}
 			return fmt.Errorf("error updating world map: %w", err)
@@ -85,13 +95,13 @@ func (g *Game) Update() error {
 		return nil // No screen change, continue in world map
 
 	case CityScr:
-		// Check for Escape key to return to world map
-		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-			g.currentScreen = WorldScr
-			fmt.Println("Returned to world map from city")
+		done, err := g.cityScreen.Update()
+		if err != nil {
+			return err
 		}
-		return nil
-
+		if done {
+			g.currentScreen = WorldScr
+		}
 	case MiniMapScr:
 		done, err := g.miniMap.Update()
 		if err != nil {
@@ -110,7 +120,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	case WorldScr:
 		g.level.Draw(screen, g.screenW, g.screenH, g.camScale)
 	case CityScr:
-		g.drawCityView(screen, g.screenW, g.screenH, g.camScale)
+		g.cityScreen.Draw(screen, g.screenW, g.screenH, g.camScale)
 	case MiniMapScr:
 		g.miniMap.Draw(screen, g.camScale, g.level)
 	}
@@ -128,21 +138,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			g.currentScreen, ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
 		),
 	)
-}
-
-func (g *Game) drawCityView(screen *ebiten.Image, screenW, screenH int, scale float64) {
-	tile := g.level.Tile(g.level.CharacterTile())
-	cityOpts := &ebiten.DrawImageOptions{}
-	cityOpts.GeoM.Scale(1.6, 1.6)
-
-	// Offset the image
-	cityOpts.GeoM.Translate(100.0, 75.0)
-
-	screen.DrawImage(tile.City.BackgroundImage, cityOpts)
-	// Draw the worldFrame over everything
-	frameOpts := &ebiten.DrawImageOptions{}
-	frameOpts.GeoM.Scale(scale, scale)
-	screen.DrawImage(g.level.Frame, frameOpts)
 }
 
 // Layout is called when the Game's layout changes.
