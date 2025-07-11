@@ -1,4 +1,4 @@
-package sprites
+package elements
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ type Button struct {
 	Normal       *ebiten.Image
 	Pressed      *ebiten.Image
 	Text         string
-	Font         text.Face // Changed from *font.Face to font.Face
+	Font         text.Face // Changed from *font.Face to text.Face
 	TextColor    color.Color
 	TextOffset   image.Point // offset relative to button 0,0
 	HandlerFuncs []func()    // handle click
@@ -98,4 +98,20 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions) {
 	} else {
 		b.State = StateNormal
 	}
+}
+
+// CombineButton combines the 3 images into a single button image
+// Moved from game/screens/city.go
+func CombineButton(btnFrame, btnIcon, txtBox *ebiten.Image, scale float64) *ebiten.Image {
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(scale, scale)
+	combinedImage := ebiten.NewImage(120, 100)
+	combinedImage.DrawImage(btnFrame, op)
+	op.GeoM.Translate(8.0*scale, 5.0*scale)
+	combinedImage.DrawImage(btnIcon, op)
+	op = &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(scale, scale)
+	op.GeoM.Translate(1*scale, 55.0*scale)
+	combinedImage.DrawImage(txtBox, op)
+	return combinedImage
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/benprew/s30/assets/art"
 	"github.com/benprew/s30/assets/fonts"
 	"github.com/benprew/s30/game/sprites"
+	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -18,7 +19,7 @@ type MiniMap struct {
 	terrainSprite [][]*ebiten.Image
 	frame         *ebiten.Image
 	frameSprite   []*ebiten.Image
-	buttons       []*sprites.Button
+	buttons       []*elements.Button
 }
 
 const (
@@ -57,8 +58,8 @@ func NewMiniMap() MiniMap {
 		panic(err)
 	}
 
-	buttons := []*sprites.Button{
-		&sprites.Button{
+	buttons := []*elements.Button{
+		&elements.Button{
 			Normal:     frameSprite[0],
 			Hover:      frameSprite[1],
 			Pressed:    frameSprite[2],
@@ -66,11 +67,11 @@ func NewMiniMap() MiniMap {
 			Font:       fontFace,
 			TextColor:  color.White,
 			TextOffset: image.Point{X: 25, Y: 14},
-			State:      sprites.StateNormal,
+			State:      elements.StateNormal,
 			X:          85,
 			Y:          7,
 		},
-		&sprites.Button{
+		&elements.Button{
 			Normal:     frameSprite[0],
 			Hover:      frameSprite[1],
 			Pressed:    frameSprite[2],
@@ -78,11 +79,11 @@ func NewMiniMap() MiniMap {
 			Font:       fontFace,
 			TextColor:  color.White,
 			TextOffset: image.Point{X: 25, Y: 14},
-			State:      sprites.StateNormal,
+			State:      elements.StateNormal,
 			X:          85 + 160,
 			Y:          7,
 		},
-		&sprites.Button{
+		&elements.Button{
 			Normal:     frameSprite[0],
 			Hover:      frameSprite[1],
 			Pressed:    frameSprite[2],
@@ -90,11 +91,11 @@ func NewMiniMap() MiniMap {
 			Font:       fontFace,
 			TextColor:  color.White,
 			TextOffset: image.Point{X: 40, Y: 14},
-			State:      sprites.StateNormal,
+			State:      elements.StateNormal,
 			X:          635,
 			Y:          7,
 		},
-		&sprites.Button{
+		&elements.Button{
 			Normal:     frameSprite[0],
 			Hover:      frameSprite[1],
 			Pressed:    frameSprite[2],
@@ -102,7 +103,7 @@ func NewMiniMap() MiniMap {
 			Font:       fontFace,
 			TextColor:  color.White,
 			TextOffset: image.Point{X: 60, Y: 14},
-			State:      sprites.StateNormal,
+			State:      elements.StateNormal,
 			X:          635 + 160,
 			Y:          7,
 		},
@@ -172,7 +173,7 @@ func (m *MiniMap) Update() (bool, error) {
 	donePressed := false
 	for _, b := range m.buttons {
 		b.Update(options)
-		if b.Text == "Done" && b.State == sprites.StatePressed {
+		if b.Text == "Done" && b.State == elements.StatePressed {
 			donePressed = true
 		}
 	}

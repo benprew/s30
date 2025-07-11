@@ -6,8 +6,9 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/assets/art"
-	"github.com/benprew/s30/assets/fonts"
 	"github.com/benprew/s30/game/sprites"
+	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -20,7 +21,7 @@ const (
 
 type CityScreen struct {
 	Frame   *ebiten.Image
-	Buttons []*sprites.Button
+	Buttons []*elements.Button
 	City    *world.City
 }
 
@@ -72,7 +73,7 @@ func (c *CityScreen) Update() (bool, error) {
 
 // Make buttons for City screen
 // Iconb and Icons "b" stands for border
-func mk_buttons(scale float64, city *world.City) []*sprites.Button {
+func mk_buttons(scale float64, city *world.City) []*elements.Button {
 	Icons, err := sprites.LoadSpriteSheet(12, 2, art.Icons_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load icons sprite sheet: %w", err))
@@ -96,7 +97,7 @@ func mk_buttons(scale float64, city *world.City) []*sprites.Button {
 		{"Edit Deck", 4, 700, 125},
 	}
 
-	buttons := make([]*sprites.Button, len(buttonConfigs))
+	buttons := make([]*elements.Button, len(buttonConfigs))
 	for i, config := range buttonConfigs {
 		buttons[i] = mk_button(config, fontFace, Icons, Iconb, scale)
 	}
@@ -104,12 +105,12 @@ func mk_buttons(scale float64, city *world.City) []*sprites.Button {
 	return buttons
 }
 
-func mk_button(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]*ebiten.Image, scale float64) *sprites.Button {
-	norm := combineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
-	hover := combineButton(Iconb[0][2], Icons[0][config.Index], Iconb[0][3], scale)
-	pressed := combineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
+func mk_button(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]*ebiten.Image, scale float64) *elements.Button {
+	norm := elements.CombineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
+	hover := elements.CombineButton(Iconb[0][2], Icons[0][config.Index], Iconb[0][3], scale)
+	pressed := elements.CombineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
 
-	return &sprites.Button{
+	return &elements.Button{
 		Normal:     norm,
 		Hover:      hover,
 		Pressed:    pressed,
@@ -117,23 +118,8 @@ func mk_button(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]
 		Font:       fontFace,
 		TextColor:  color.White,
 		TextOffset: image.Point{X: int(10 * scale), Y: int(60 * scale)},
-		State:      sprites.StateNormal,
+		State:      elements.StateNormal,
 		X:          config.X,
 		Y:          config.Y,
 	}
-}
-
-// combines the 3 images into a single image
-func combineButton(btnFrame, btnIcon, txtBox *ebiten.Image, scale float64) *ebiten.Image {
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(scale, scale)
-	combinedImage := ebiten.NewImage(120, 100)
-	combinedImage.DrawImage(btnFrame, op)
-	op.GeoM.Translate(8.0*scale, 5.0*scale)
-	combinedImage.DrawImage(btnIcon, op)
-	op = &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(SCALE, SCALE)
-	op.GeoM.Translate(1*scale, 55.0*scale)
-	combinedImage.DrawImage(txtBox, op)
-	return combinedImage
 }
