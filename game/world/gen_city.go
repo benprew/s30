@@ -22,13 +22,14 @@ type City struct {
 }
 
 var cityPrefixes = []string{"Sharmal",
-	"Freyalise",
 	"Ardestan",
 	"Azar",
+	"Bakur",
+	"Freyalise",
+	"Jalira",
 	"Kurkesh",
 	"Talrand",
 	"Yisan",
-	"Jalira",
 }
 
 var cityPostfixes = []string{
@@ -104,4 +105,8 @@ func cityBgImage(tier int) *ebiten.Image {
 		return loadedVillageImage
 	}
 	return loadedCityImage
+}
+
+func (c *City) FoodCost() int {
+	return c.tier * 10
 }

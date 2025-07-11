@@ -58,7 +58,6 @@ func NewGame() (*Game, error) {
 		mousePanX:     math.MinInt32,
 		mousePanY:     math.MinInt32,
 		currentScreen: WorldScr, // Start on the world map
-		cityScreen:    screens.NewCityScreen(l.Frame),
 	}
 
 	ebiten.SetWindowSize(g.screenW, g.screenH)
@@ -87,7 +86,7 @@ func (g *Game) Update() error {
 				g.currentScreen = CityScr
 				fmt.Println("Entered city")
 				tile := g.level.Tile(g.level.CharacterTile())
-				g.cityScreen.BgImage = tile.City.BackgroundImage
+				g.cityScreen = screens.NewCityScreen(g.level.Frame, &tile.City)
 				return nil // Consume the error, screen has changed
 			}
 			return fmt.Errorf("error updating world map: %w", err)

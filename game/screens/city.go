@@ -1,7 +1,6 @@
 package screens
 
 import (
-	"bytes"
 	"fmt"
 	"image"
 	"image/color"
@@ -9,6 +8,7 @@ import (
 	"github.com/benprew/s30/assets/art"
 	"github.com/benprew/s30/assets/fonts"
 	"github.com/benprew/s30/game/sprites"
+	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -20,15 +20,22 @@ const (
 
 type CityScreen struct {
 	Frame   *ebiten.Image
-	BgImage *ebiten.Image
 	Buttons []*sprites.Button
+	City    *world.City
 }
 
-func NewCityScreen(frame *ebiten.Image) CityScreen {
+type ButtonConfig struct {
+	Text  string
+	Index int
+	X     int
+	Y     int
+}
+
+func NewCityScreen(frame *ebiten.Image, city *world.City) CityScreen {
 	return CityScreen{
 		Frame:   frame,
-		BgImage: nil,
-		Buttons: mk_buttons(SCALE - 0.4),
+		Buttons: mk_buttons(SCALE-0.4, city),
+		City:    city,
 	}
 }
 
@@ -36,9 +43,8 @@ func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	cityOpts := &ebiten.DrawImageOptions{}
 	cityOpts.GeoM.Scale(SCALE, SCALE)
 	cityOpts.GeoM.Translate(100.0, 75.0) // Offset the image
+	screen.DrawImage(c.City.BackgroundImage, cityOpts)
 
-	screen.DrawImage(c.BgImage, cityOpts)
-	// Draw the worldFrame over everything
 	frameOpts := &ebiten.DrawImageOptions{}
 	frameOpts.GeoM.Scale(scale, scale)
 	screen.DrawImage(c.Frame, frameOpts)
@@ -47,6 +53,8 @@ func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		b.Draw(screen, frameOpts)
 	}
 
+	// fonts.DrawText
+	// c.drawCityName(screen)
 }
 
 func (c *CityScreen) Update() (bool, error) {
@@ -64,7 +72,7 @@ func (c *CityScreen) Update() (bool, error) {
 
 // Make buttons for City screen
 // Iconb and Icons "b" stands for border
-func mk_buttons(scale float64) []*sprites.Button {
+func mk_buttons(scale float64, city *world.City) []*sprites.Button {
 	Icons, err := sprites.LoadSpriteSheet(12, 2, art.Icons_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load icons sprite sheet: %w", err))
@@ -75,36 +83,47 @@ func mk_buttons(scale float64) []*sprites.Button {
 	}
 
 	// Create a font face using ebiten's text v2
-	fontSource, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.Magic_ttf))
-	if err != nil {
-		panic(fmt.Errorf("failed to create font source: %w", err))
-	}
-
 	fontFace := &text.GoTextFace{
-		Source: fontSource,
+		Source: fonts.MtgFont,
 		Size:   20,
 	}
 
-	buyCardsNorm := combineButton(Iconb[0][0], Icons[0][3], Iconb[0][1], scale)
-	buyCardsHover := combineButton(Iconb[0][2], Icons[0][3], Iconb[0][3], scale)
-	buyCardsPressed := combineButton(Iconb[0][0], Icons[0][3], Iconb[0][1], scale)
+	buttonConfigs := []ButtonConfig{
+		{"Buy Cards", 3, 200, 125},
+		{"Begin Quest", 2, 450, 250},
+		{fmt.Sprintf("Buy food %d gold", city.FoodCost()), 0, 200, 400},
+		{"Leave Village", 1, 700, 400},
+		{"Edit Deck", 4, 700, 125},
+	}
 
-	buyCards := sprites.Button{
-		Normal:     buyCardsNorm,
-		Hover:      buyCardsHover,
-		Pressed:    buyCardsPressed,
-		Text:       "Buy Cards",
+	buttons := make([]*sprites.Button, len(buttonConfigs))
+	for i, config := range buttonConfigs {
+		buttons[i] = mk_button(config, fontFace, Icons, Iconb, scale)
+	}
+
+	return buttons
+}
+
+func mk_button(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]*ebiten.Image, scale float64) *sprites.Button {
+	norm := combineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
+	hover := combineButton(Iconb[0][2], Icons[0][config.Index], Iconb[0][3], scale)
+	pressed := combineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
+
+	return &sprites.Button{
+		Normal:     norm,
+		Hover:      hover,
+		Pressed:    pressed,
+		Text:       config.Text,
 		Font:       fontFace,
 		TextColor:  color.White,
 		TextOffset: image.Point{X: int(10 * scale), Y: int(60 * scale)},
 		State:      sprites.StateNormal,
-		X:          150,
-		Y:          100,
+		X:          config.X,
+		Y:          config.Y,
 	}
-
-	return []*sprites.Button{&buyCards}
 }
 
+// combines the 3 images into a single image
 func combineButton(btnFrame, btnIcon, txtBox *ebiten.Image, scale float64) *ebiten.Image {
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(scale, scale)
