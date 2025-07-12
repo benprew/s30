@@ -15,6 +15,7 @@ const (
 	StateNormal ButtonState = iota
 	StateHover
 	StatePressed
+	StateClicked  // Click is registered on mouseup when button already pressed
 	StateDisabled // Added for completeness, though not used in Draw yet
 )
 
@@ -44,6 +45,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	switch b.State {
 	case StateHover:
 		imgToDraw = b.Hover
+	case StateClicked:
 	case StatePressed:
 		imgToDraw = b.Pressed
 	case StateNormal:
@@ -63,7 +65,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	}
 }
 
-// Update checks the button's state based on mouse interaction and the provided drawing options.
+// Update checks the button's state based on mouse interaction. Button box is button size + scale. Scale is passed in opts
 func (b *Button) Update(opts *ebiten.DrawImageOptions) {
 	mx, my := ebiten.CursorPosition()
 
@@ -79,18 +81,20 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions) {
 	by := b.Y
 
 	if mx >= bx && mx < bx+int(scaledWidth) && my >= by && my < by+int(scaledHeight) {
-		if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			fmt.Printf("Button Clicked: %s\n", b.Text)
-			for _, handler := range b.HandlerFuncs {
-				if handler != nil {
-					handler()
-				}
-			}
-		}
+		// if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		// 	for _, handler := range b.HandlerFuncs {
+		// 		if handler != nil {
+		// 			handler()
+		// 		}
+		// 	}
+		// }
 
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			fmt.Println("Pressed")
 			b.State = StatePressed
+		} else if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && b.State == StatePressed {
+			fmt.Printf("Button Clicked: %s\n", b.Text)
+			b.State = StateClicked
 		} else {
 			fmt.Println("Hover", b.Text)
 			b.State = StateHover
@@ -110,7 +114,7 @@ func CombineButton(btnFrame, btnIcon, txtBox *ebiten.Image, scale float64) *ebit
 	op.GeoM.Translate(8.0*scale, 5.0*scale)
 	combinedImage.DrawImage(btnIcon, op)
 	op = &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(scale, scale)
+	op.GeoM.Scale(scale+1.2, scale+0.6)
 	op.GeoM.Translate(1*scale, 55.0*scale)
 	combinedImage.DrawImage(txtBox, op)
 	return combinedImage

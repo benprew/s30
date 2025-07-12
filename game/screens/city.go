@@ -54,8 +54,7 @@ func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		b.Draw(screen, frameOpts)
 	}
 
-	// fonts.DrawText
-	// c.drawCityName(screen)
+	c.drawCityName(screen)
 }
 
 func (c *CityScreen) Update() (bool, error) {
@@ -66,9 +65,38 @@ func (c *CityScreen) Update() (bool, error) {
 	options := &ebiten.DrawImageOptions{}
 	for _, b := range c.Buttons {
 		b.Update(options)
+		if b.Text == "Leave Village" && b.State == elements.StateClicked {
+			fmt.Println("Leave Village button pressed, returning to world map.")
+			return true, nil
+		}
 	}
 
 	return false, nil
+}
+
+func (c *CityScreen) drawCityName(screen *ebiten.Image) {
+	// Use the same font face as the buttons for consistency
+	fontFace := &text.GoTextFace{
+		Source: fonts.MtgFont,
+		Size:   30, // Adjust size as needed
+	}
+
+	// Position the text at the top center of the screen
+	// We need the screen width to center it. Assuming W is available.
+	// For now, let's hardcode a position or use a fixed offset.
+	// A better approach would be to pass screen dimensions to Draw.
+
+	textX := 512 - (len(c.City.Name) * 6) // Centered around the middle of the screen (adjust as needed)
+	textY := 100                          // Near the top
+
+	options := &ebiten.DrawImageOptions{}
+	options.GeoM.Translate(float64(textX), float64(textY))
+	R, G, B, A := color.White.RGBA()
+	options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
+
+	textOpts := text.DrawOptions{DrawImageOptions: *options}
+
+	text.Draw(screen, c.City.Name, fontFace, &textOpts)
 }
 
 // Make buttons for City screen
