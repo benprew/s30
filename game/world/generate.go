@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/aquilax/go-perlin"
+	"github.com/benprew/s30/game/domain"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -241,8 +242,8 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 			tile.AddCitySprite(citySprites[cityY][cityX])
 			tile.AddCitySprite(citySprites[cityY+1][cityX])
 			tier := 2
-			tile.City = City{
-				tier:            tier,
+			tile.City = domain.City{
+				Tier:            tier,
 				Name:            genCityName(),
 				X:               loc.X,
 				Y:               loc.Y,

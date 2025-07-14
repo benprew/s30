@@ -1,6 +1,7 @@
 package world
 
 import (
+	"github.com/benprew/s30/game/domain"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -18,7 +19,7 @@ type Tile struct {
 	positionedSprites []*PositionedSprite
 	roadSprites       []*ebiten.Image // Added for roads
 	IsCity            bool            // Indicates if this tile represents a city
-	City              City
+	City              domain.City
 	TerrainType       int // Added terrain type
 }
 

@@ -11,16 +11,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// represents the cities and villages on the map
-type City struct {
-	tier            int // 1,2 or 3
-	Name            string
-	X               int
-	Y               int
-	population      int
-	BackgroundImage *ebiten.Image
-}
-
 var cityPrefixes = []string{"Sharmal",
 	"Ardestan",
 	"Azar",
@@ -105,8 +95,4 @@ func cityBgImage(tier int) *ebiten.Image {
 		return loadedVillageImage
 	}
 	return loadedCityImage
-}
-
-func (c *City) FoodCost() int {
-	return c.tier * 10
 }

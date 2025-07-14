@@ -6,10 +6,11 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/assets/art"
+	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
-	"github.com/benprew/s30/game/world"
+	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -22,7 +23,7 @@ const (
 type CityScreen struct {
 	Frame   *ebiten.Image
 	Buttons []*elements.Button
-	City    *world.City
+	City    *domain.City
 }
 
 type ButtonConfig struct {
@@ -32,10 +33,10 @@ type ButtonConfig struct {
 	Y     int
 }
 
-func NewCityScreen(frame *ebiten.Image, city *world.City) CityScreen {
-	return CityScreen{
+func NewCityScreen(frame *ebiten.Image, city *domain.City) *CityScreen {
+	return &CityScreen{
 		Frame:   frame,
-		Buttons: mk_buttons(SCALE-0.4, city),
+		Buttons: mkButtons(SCALE-0.4, city),
 		City:    city,
 	}
 }
@@ -57,21 +58,20 @@ func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	c.drawCityName(screen)
 }
 
-func (c *CityScreen) Update() (bool, error) {
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		fmt.Println("Returned to world map from city")
-		return true, nil
-	}
+func (c *CityScreen) Update(W, H int) (screenui.ScreenName, error) {
 	options := &ebiten.DrawImageOptions{}
-	for _, b := range c.Buttons {
+	for i := range c.Buttons {
+		b := c.Buttons[i]
 		b.Update(options)
 		if b.Text == "Leave Village" && b.State == elements.StateClicked {
-			fmt.Println("Leave Village button pressed, returning to world map.")
-			return true, nil
+			return screenui.WorldScr, nil
 		}
 	}
 
-	return false, nil
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		return screenui.WorldScr, nil
+	}
+	return screenui.CityScr, nil
 }
 
 func (c *CityScreen) drawCityName(screen *ebiten.Image) {
@@ -101,7 +101,7 @@ func (c *CityScreen) drawCityName(screen *ebiten.Image) {
 
 // Make buttons for City screen
 // Iconb and Icons "b" stands for border
-func mk_buttons(scale float64, city *world.City) []*elements.Button {
+func mkButtons(scale float64, city *domain.City) []*elements.Button {
 	Icons, err := sprites.LoadSpriteSheet(12, 2, art.Icons_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load icons sprite sheet: %w", err))
@@ -127,18 +127,19 @@ func mk_buttons(scale float64, city *world.City) []*elements.Button {
 
 	buttons := make([]*elements.Button, len(buttonConfigs))
 	for i, config := range buttonConfigs {
-		buttons[i] = mk_button(config, fontFace, Icons, Iconb, scale)
+		btn := mkButton(config, fontFace, Icons, Iconb, scale)
+		buttons[i] = &btn
 	}
 
 	return buttons
 }
 
-func mk_button(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]*ebiten.Image, scale float64) *elements.Button {
+func mkButton(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]*ebiten.Image, scale float64) elements.Button {
 	norm := elements.CombineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
 	hover := elements.CombineButton(Iconb[0][2], Icons[0][config.Index], Iconb[0][3], scale)
 	pressed := elements.CombineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
 
-	return &elements.Button{
+	return elements.Button{
 		Normal:     norm,
 		Hover:      hover,
 		Pressed:    pressed,

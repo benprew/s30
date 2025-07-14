@@ -10,6 +10,7 @@ import (
 	"github.com/benprew/s30/assets/art"
 	"github.com/benprew/s30/game/entities"
 	"github.com/benprew/s30/game/sprites"
+	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
@@ -163,13 +164,13 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 }
 
 // Update reads current user input and updates the Game state.
-func (l *Level) Update(screenW, screenH int) error {
+func (l *Level) Update(screenW, screenH int) (screenui.ScreenName, error) {
 	// Store current player tile before moving
 	prevTile := l.CharacterTile()
 
 	// Move player and update direction via keyboard using bit flags
 	if err := l.Player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
-		return err
+		return screenui.WorldScr, err
 	}
 
 	// Get player's new tile
@@ -179,7 +180,7 @@ func (l *Level) Update(screenW, screenH int) error {
 		tile := l.Tile(currentTile)
 		if tile != nil {
 			if tile.IsCity && prevTile != currentTile {
-				return ErrEnteredCity // Player entered a city
+				return screenui.CityScr, nil
 			}
 		}
 	}
@@ -192,11 +193,11 @@ func (l *Level) Update(screenW, screenH int) error {
 	// Add more enemies with the 'N' key
 	if inpututil.IsKeyJustPressed(ebiten.KeyN) {
 		if err := l.spawnEnemies(5); err != nil {
-			return fmt.Errorf("failed to spawn additional enemies: %s", err)
+			return screenui.WorldScr, fmt.Errorf("failed to spawn additional enemies: %s", err)
 		}
 	}
 
-	return nil
+	return screenui.WorldScr, nil
 }
 
 // x,y is the position of the tile, width and height are the dimensions of the tile

@@ -10,6 +10,7 @@ import (
 	"github.com/benprew/s30/assets/fonts"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -20,13 +21,14 @@ type MiniMap struct {
 	frame         *ebiten.Image
 	frameSprite   []*ebiten.Image
 	buttons       []*elements.Button
+	level         *world.Level
 }
 
 const (
 	SCALE = 1.6
 )
 
-func NewMiniMap() MiniMap {
+func NewMiniMap(l *world.Level) *MiniMap {
 	// Create a font face using ebiten's text v2
 	fontSource, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.Magic_ttf))
 	if err != nil {
@@ -108,15 +110,16 @@ func NewMiniMap() MiniMap {
 			Y:          7,
 		},
 	}
-	return MiniMap{
+	return &MiniMap{
 		terrainSprite: s,
 		frame:         ebiten.NewImageFromImage(img),
 		frameSprite:   frameSprite,
 		buttons:       buttons,
+		level:         l,
 	}
 }
 
-func (m *MiniMap) Draw(screen *ebiten.Image, scale float64, l *world.Level) {
+func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
 	options.GeoM.Scale(SCALE, SCALE)   // scale up from 640x480
@@ -135,12 +138,12 @@ func (m *MiniMap) Draw(screen *ebiten.Image, scale float64, l *world.Level) {
 		world.TerrainPlains:    18,
 	}
 	city := m.terrainSprite[0][49]
-	pLoc := l.CharacterTile()
+	pLoc := m.level.CharacterTile()
 	player := m.terrainSprite[0][54]
 	width := int(float64(m.terrainSprite[0][0].Bounds().Dx())*SCALE) - 1
 	height := int(float64(m.terrainSprite[0][0].Bounds().Dy())*SCALE) - 1
 	//Draw level from T
-	for i, row := range l.Tiles {
+	for i, row := range m.level.Tiles {
 		offset := 0
 		if i%2 == 1 {
 			offset = width / 2
@@ -166,19 +169,20 @@ func (m *MiniMap) Draw(screen *ebiten.Image, scale float64, l *world.Level) {
 	}
 }
 
-func (m *MiniMap) Update() (bool, error) {
+func (m *MiniMap) Update(W, H int) (screenui.ScreenName, error) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(SCALE, SCALE) // scale up from 640x480
 
-	for _, b := range m.buttons {
+	for i := range m.buttons {
+		b := m.buttons[i]
 		b.Update(options)
 		if b.Text == "Done" && b.State == elements.StateClicked {
-			return true, nil
+			return screenui.WorldScr, nil
 		}
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		return true, nil
+		return screenui.WorldScr, nil
 	}
-	return false, nil
+	return screenui.MiniMapScr, nil
 }

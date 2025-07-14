@@ -7,6 +7,7 @@ import (
 
 	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/screens"
+	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -15,28 +16,24 @@ import (
 
 type Game struct {
 	screenW, screenH     int
-	level                *world.Level
-	miniMap              *minimap.MiniMap
 	cityScreen           screens.CityScreen
 	camScale             float64
 	camScaleTo           float64
 	mousePanX, mousePanY int
-	currentScreen        int
+	currentScreenName    screenui.ScreenName
+	screenMap            map[screenui.ScreenName]screenui.Screen
 }
 
-const (
-	StartScr = iota
-	WorldScr
-	MiniMapScr
-	CityScr
-)
+func (g *Game) CurrentScreen() screenui.Screen {
+	return g.screenMap[g.currentScreenName]
+}
 
-// TODO: World should be a screen, level shouldn't be part of world
-// Build a "Screen" interface that has an Draw and Update function
-// Then game.draw can be game.CurrentScreen.Draw()
-// same for game.Update()
+// helper function to run the level
+func (g *Game) Level() *world.Level {
+	l := g.screenMap[screenui.WorldScr]
+	return l.(*world.Level)
+}
 
-// NewGame returns a new isometric demo Game.
 func NewGame() (*Game, error) {
 	startTime := time.Now()
 	fmt.Println("NewGame start")
@@ -46,18 +43,20 @@ func NewGame() (*Game, error) {
 		return nil, fmt.Errorf("failed to create new level: %s", err)
 	}
 
-	m := minimap.NewMiniMap()
+	m := minimap.NewMiniMap(l)
 
 	g := &Game{
-		screenW:       1024,
-		screenH:       768,
-		level:         l,
-		miniMap:       &m,
-		camScale:      1,
-		camScaleTo:    1,
-		mousePanX:     math.MinInt32,
-		mousePanY:     math.MinInt32,
-		currentScreen: WorldScr, // Start on the world map
+		screenW:           1024,
+		screenH:           768,
+		camScale:          1,
+		camScaleTo:        1,
+		mousePanX:         math.MinInt32,
+		mousePanY:         math.MinInt32,
+		currentScreenName: screenui.WorldScr,
+		screenMap: map[screenui.ScreenName]screenui.Screen{
+			screenui.WorldScr:   l,
+			screenui.MiniMapScr: m,
+		},
 	}
 
 	ebiten.SetWindowSize(g.screenW, g.screenH)
@@ -67,74 +66,41 @@ func NewGame() (*Game, error) {
 }
 
 func (g *Game) Update() error {
-	switch g.currentScreen {
-	case WorldScr:
-		// Randomize level.
-		if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-			l, err := world.NewLevel()
-			if err != nil {
-				return fmt.Errorf("failed to create new level: %s", err)
-			}
-			g.level = l
-		}
-
-		// Check if player entered a city or village
-		err := g.level.Update(g.screenW, g.screenH)
+	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
+		l, err := world.NewLevel()
 		if err != nil {
-			// Check for specific errors indicating screen change
-			if err == world.ErrEnteredCity {
-				g.currentScreen = CityScr
-				fmt.Println("Entered city")
-				tile := g.level.Tile(g.level.CharacterTile())
-				g.cityScreen = screens.NewCityScreen(g.level.Frame, &tile.City)
-				return nil // Consume the error, screen has changed
-			}
-			return fmt.Errorf("error updating world map: %w", err)
+			return fmt.Errorf("failed to create new level: %s", err)
 		}
-		return nil // No screen change, continue in world map
-
-	case CityScr:
-		done, err := g.cityScreen.Update()
-		if err != nil {
-			return err
-		}
-		if done {
-			g.currentScreen = WorldScr
-		}
-	case MiniMapScr:
-		done, err := g.miniMap.Update()
-		if err != nil {
-			return err
-		}
-		if done {
-			g.currentScreen = WorldScr
-		}
+		g.screenMap[screenui.WorldScr] = l
 	}
+
+	name, err := g.CurrentScreen().Update(g.screenW, g.screenH)
+	if err != nil {
+		panic(fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err))
+	}
+	if name == screenui.CityScr && g.currentScreenName != screenui.CityScr {
+		tile := g.Level().Tile(g.Level().CharacterTile())
+		g.screenMap[name] = screens.NewCityScreen(g.Level().Frame, &tile.City)
+	}
+	g.currentScreenName = name
 
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	switch g.currentScreen {
-	case WorldScr:
-		g.level.Draw(screen, g.screenW, g.screenH, g.camScale)
-	case CityScr:
-		g.cityScreen.Draw(screen, g.screenW, g.screenH, g.camScale)
-	case MiniMapScr:
-		g.miniMap.Draw(screen, g.camScale, g.level)
-	}
+	g.CurrentScreen().Draw(screen, g.screenW, g.screenH, g.camScale)
 
 	// Print game info.
-	charT := g.level.CharacterTile()
-	charP := g.level.CharacterPos()
+	charT := g.Level().CharacterTile()
+	charP := g.Level().CharacterPos()
 	// Get mouse cursor screen position
 	mouseX, mouseY := ebiten.CursorPosition()
 
 	ebitenutil.DebugPrint(
 		screen,
 		fmt.Sprintf(
-			"Screen: %d\nKEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
-			g.currentScreen, ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
+			"Screen: %s\nKEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
+			screenui.ScreenNameToString(g.currentScreenName), ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
 		),
 	)
 }
