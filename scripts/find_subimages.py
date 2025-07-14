@@ -5,6 +5,7 @@ import json
 import sys
 from PIL import Image
 
+
 def find_subimages(image_path):
     """
     Finds rectangular subimages in a sprite sheet separated by a specific color.
@@ -49,14 +50,18 @@ def find_subimages(image_path):
                     # Find the width of the subimage
                     sub_width = 0
                     for i in range(start_x, width):
-                        if (i, start_y) in visited or pixels[i, start_y] == separator_color:
+                        if (i, start_y) in visited or pixels[
+                            i, start_y
+                        ] == separator_color:
                             break
                         sub_width += 1
 
                     # Find the height of the subimage
                     sub_height = 0
                     for j in range(start_y, height):
-                        if (start_x, j) in visited or pixels[start_x, j] == separator_color:
+                        if (start_x, j) in visited or pixels[
+                            start_x, j
+                        ] == separator_color:
                             break
                         sub_height += 1
 
@@ -79,7 +84,7 @@ def find_subimages(image_path):
 
                     if not is_rectangular:
                         # print(f"Skipping non-rectangular area starting at {coord}", file=sys.stderr)
-                        continue # Skip this starting pixel and let outer loops continue
+                        continue  # Skip starting pixel
 
                     # --- Store and Mark ---
                     info = {
@@ -111,13 +116,13 @@ def main():
         description="Find subimages in a sprite sheet separated by the color at pixel (0,0) and output their coordinates and dimensions as JSON."
     )
     parser.add_argument(
-        "image_file",
-        help="Path to the sprite sheet image file (e.g., PNG)."
+        "image_file", help="Path to the sprite sheet image file (e.g., PNG)."
     )
     args = parser.parse_args()
 
     json_output = find_subimages(args.image_file)
     print(json_output)
+
 
 if __name__ == "__main__":
     main()
