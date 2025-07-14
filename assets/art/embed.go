@@ -55,28 +55,37 @@ var (
 	//go:embed sprites/world/land/Roads.spr.png
 	Roads_png []byte
 
-	//go:embed sprites/world/City.png
-	City_png []byte
-
-	//go:embed sprites/world/Village.png
-	Village_png []byte
-
 	// Character sprites
 	//go:embed sprites/world/characters/*.spr.png
 	CharacterFS embed.FS
 
+	//////////////////////
+	// Visit City Screens
+	//////////////////////
+
+	//go:embed sprites/city/City.png
+	City_png []byte
+	//go:embed sprites/city/Village.png
+	Village_png []byte
+	//go:embed sprites/city/Buycards.png
+	BuyCards_png []byte
+	//go:embed sprites/city/Smbuybttn.png
+	BuyCardsSprite_png []byte
+	//go:embed sprites/city/Smbuybttn_map.json
+	BuyCardsSpriteMap_json []byte
+
+	//////////
+	// MiniMap
+	//////////
+
 	//go:embed sprites/mini_map/*.png
 	MiniMapFS embed.FS
-
 	//go:embed sprites/mini_map/Ttsprite.spr.png
 	MiniMapTerrSpr_png []byte
-
 	//go:embed sprites/mini_map/Mapback.pic.png
 	MiniMapFrame_png []byte
-
 	//go:embed sprites/mini_map/Mapbttns.pic.png
 	MiniMapFrameSprite_png []byte
-
 	//go:embed sprites/mini_map/Mapbttns_map.json
 	MiniMapFrameSprite_json []byte
 )

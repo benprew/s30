@@ -82,6 +82,10 @@ func (g *Game) Update() error {
 		tile := g.Level().Tile(g.Level().CharacterTile())
 		g.screenMap[name] = screens.NewCityScreen(g.Level().Frame, &tile.City)
 	}
+	if name == screenui.BuyCardsScr && g.currentScreenName != screenui.BuyCardsScr {
+		tile := g.Level().Tile(g.Level().CharacterTile())
+		g.screenMap[name] = screens.NewBuyCardsScreen(g.Level().Frame, &tile.City)
+	}
 	g.currentScreenName = name
 
 	return nil

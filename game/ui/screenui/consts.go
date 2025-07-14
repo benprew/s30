@@ -9,6 +9,7 @@ const (
 	WorldScr
 	MiniMapScr
 	CityScr
+	BuyCardsScr
 )
 
 type Screen interface {

@@ -46,6 +46,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	case StateHover:
 		imgToDraw = b.Hover
 	case StateClicked:
+		fallthrough
 	case StatePressed:
 		imgToDraw = b.Pressed
 	case StateNormal:

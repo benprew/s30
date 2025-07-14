@@ -66,6 +66,9 @@ func (c *CityScreen) Update(W, H int) (screenui.ScreenName, error) {
 		if b.Text == "Leave Village" && b.State == elements.StateClicked {
 			return screenui.WorldScr, nil
 		}
+		if b.Text == "Buy Cards" && b.State == elements.StateClicked {
+			return screenui.BuyCardsScr, nil
+		}
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
