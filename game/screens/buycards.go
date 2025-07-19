@@ -40,7 +40,7 @@ func NewBuyCardsScreen(frame *ebiten.Image, city *domain.City) *BuyCardsScreen {
 
 	return &BuyCardsScreen{
 		Frame:   frame,
-		Buttons: mkCardButtons(SCALE-0.4, city),
+		Buttons: mkCardButtons(SCALE, city),
 		City:    city,
 		BgImage: ebiten.NewImageFromImage(img),
 	}
@@ -81,7 +81,7 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 	sprite := loadButtonMap(art.BuyCardsSprite_png, art.BuyCardsSpriteMap_json)
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
-		Size:   20,
+		Size:   32,
 	}
 
 	// buttons := make([]*elements.Button, len(buttonConfigs))
@@ -89,6 +89,9 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 	//  btn := mkButton(config, fontFace, Icons, Iconb, scale)
 	//  buttons[i] = &btn
 	// }
+
+	// TODO make a way to make scaled buttons
+	// TODO make button pngs transparent, maybe I need to re-export that file?
 
 	buttons := []*elements.Button{
 		&elements.Button{
@@ -98,10 +101,11 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 			Text:       "Done",
 			Font:       fontFace,
 			TextColor:  color.White,
-			TextOffset: image.Point{X: 25, Y: 10},
+			TextOffset: image.Point{X: 33, Y: 13},
 			State:      elements.StateNormal,
-			X:          480,
+			X:          430,
 			Y:          420,
+			Scale:      SCALE,
 		},
 	}
 

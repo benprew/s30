@@ -80,9 +80,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		buttonHeight := float64(bounds.Dy())
 
 		// Measure text dimensions
-		textBounds, _ := text.Measure(b.Text, b.Font, 0)
-		textWidth := textBounds.X
-		textHeight := textBounds.Y
+		textWidth, textHeight := text.Measure(b.Text, b.Font, 0)
 
 		// Calculate centered position
 		centerX := (buttonWidth - textWidth) / 2
