@@ -35,21 +35,25 @@ const (
 	StateDisabled // Added for completeness, though not used in Draw yet
 )
 
-type Button struct {
-	Hover            *ebiten.Image
-	Normal           *ebiten.Image
-	Pressed          *ebiten.Image
+type ButtonText struct {
 	Text             string
-	Font             text.Face // Changed from *font.Face to text.Face
+	Font             text.Face
 	TextColor        color.Color
 	TextOffset       image.Point // offset relative to button 0,0
 	HorizontalCenter HorizontalAlignment
 	VerticalCenter   VerticalAlignment
-	HandlerFuncs     []func() // handle click
-	State            ButtonState
-	X                int
-	Y                int
-	Scale            float64
+}
+
+type Button struct {
+	Hover        *ebiten.Image
+	Normal       *ebiten.Image
+	Pressed      *ebiten.Image
+	ButtonText   ButtonText
+	HandlerFuncs []func() // handle click
+	State        ButtonState
+	X            int
+	Y            int
+	Scale        float64
 }
 
 func scaleImage(img *ebiten.Image, scale float64) *ebiten.Image {
@@ -90,18 +94,18 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	}
 	screen.DrawImage(imgToDraw, options)
 
-	if b.Text != "" {
+	if b.ButtonText.Text != "" {
 		// Get button dimensions
 		bounds := imgToDraw.Bounds()
 		buttonWidth := float64(bounds.Dx())
 		buttonHeight := float64(bounds.Dy())
 
 		// Measure text dimensions
-		textWidth, textHeight := text.Measure(b.Text, b.Font, 0)
+		textWidth, textHeight := text.Measure(b.ButtonText.Text, b.ButtonText.Font, 0)
 
 		// Calculate horizontal position
 		var textX float64
-		switch b.HorizontalCenter {
+		switch b.ButtonText.HorizontalCenter {
 		case AlignLeft:
 			textX = 0
 		case AlignCenter:
@@ -112,7 +116,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 
 		// Calculate vertical position
 		var textY float64
-		switch b.VerticalCenter {
+		switch b.ButtonText.VerticalCenter {
 		case AlignTop:
 			textY = 0
 		case AlignMiddle:
@@ -122,10 +126,10 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		}
 
 		options.GeoM.Translate(textX, textY)
-		R, G, B, A := b.TextColor.RGBA()
+		R, G, B, A := b.ButtonText.TextColor.RGBA()
 		options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
 		textOpts := text.DrawOptions{DrawImageOptions: *options}
-		text.Draw(screen, b.Text, b.Font, &textOpts)
+		text.Draw(screen, b.ButtonText.Text, b.ButtonText.Font, &textOpts)
 	}
 }
 
@@ -161,10 +165,10 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions) {
 			fmt.Println("Pressed")
 			b.State = StatePressed
 		} else if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) || isTouch {
-			fmt.Printf("Button Clicked: %s\n", b.Text)
+			fmt.Printf("Button Clicked: %s\n", b.ButtonText.Text)
 			b.State = StateClicked
 		} else {
-			fmt.Println("Hover", b.Text)
+			fmt.Println("Hover", b.ButtonText.Text)
 			b.State = StateHover
 		}
 	} else {
