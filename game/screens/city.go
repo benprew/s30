@@ -63,10 +63,10 @@ func (c *CityScreen) Update(W, H int) (screenui.ScreenName, error) {
 	for i := range c.Buttons {
 		b := c.Buttons[i]
 		b.Update(options)
-		if b.Text == "Leave Village" && b.State == elements.StateClicked {
+		if b.ButtonText.Text == "Leave Village" && b.State == elements.StateClicked {
 			return screenui.WorldScr, nil
 		}
-		if b.Text == "Buy Cards" && b.State == elements.StateClicked {
+		if b.ButtonText.Text == "Buy Cards" && b.State == elements.StateClicked {
 			return screenui.BuyCardsScr, nil
 		}
 	}
@@ -143,15 +143,19 @@ func mkButton(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]*
 	pressed := elements.CombineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
 
 	return elements.Button{
-		Normal:     norm,
-		Hover:      hover,
-		Pressed:    pressed,
-		Text:       config.Text,
-		Font:       fontFace,
-		TextColor:  color.White,
-		TextOffset: image.Point{X: int(10 * scale), Y: int(60 * scale)},
-		State:      elements.StateNormal,
-		X:          config.X,
-		Y:          config.Y,
+		Normal:  norm,
+		Hover:   hover,
+		Pressed: pressed,
+		ButtonText: elements.ButtonText{
+			Text:             config.Text,
+			Font:             fontFace,
+			TextColor:        color.White,
+			TextOffset:       image.Point{X: int(10 * scale), Y: int(60 * scale)},
+			HorizontalCenter: elements.AlignLeft,
+			VerticalCenter:   elements.AlignTop,
+		},
+		State: elements.StateNormal,
+		X:     config.X,
+		Y:     config.Y,
 	}
 }
