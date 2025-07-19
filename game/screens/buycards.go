@@ -95,17 +95,19 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 
 	buttons := []*elements.Button{
 		&elements.Button{
-			Normal:     sprite[0],
-			Hover:      sprite[1],
-			Pressed:    sprite[2],
-			Text:       "Done",
-			Font:       fontFace,
-			TextColor:  color.White,
-			TextOffset: image.Point{X: 33, Y: 13},
-			State:      elements.StateNormal,
-			X:          430,
-			Y:          420,
-			Scale:      SCALE,
+			Normal:           sprite[0],
+			Hover:            sprite[1],
+			Pressed:          sprite[2],
+			Text:             "Done",
+			Font:             fontFace,
+			TextColor:        color.White,
+			TextOffset:       image.Point{X: 33, Y: 13},
+			HorizontalCenter: elements.AlignCenter,
+			VerticalCenter:   elements.AlignMiddle,
+			State:            elements.StateNormal,
+			X:                430,
+			Y:                420,
+			Scale:            SCALE,
 		},
 	}
 

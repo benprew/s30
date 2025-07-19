@@ -10,6 +10,21 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
+type HorizontalAlignment int
+type VerticalAlignment int
+
+const (
+	AlignLeft HorizontalAlignment = iota
+	AlignCenter
+	AlignRight
+)
+
+const (
+	AlignTop VerticalAlignment = iota
+	AlignMiddle
+	AlignBottom
+)
+
 type ButtonState int
 
 const (
@@ -21,18 +36,20 @@ const (
 )
 
 type Button struct {
-	Hover        *ebiten.Image
-	Normal       *ebiten.Image
-	Pressed      *ebiten.Image
-	Text         string
-	Font         text.Face // Changed from *font.Face to text.Face
-	TextColor    color.Color
-	TextOffset   image.Point // offset relative to button 0,0
-	HandlerFuncs []func()    // handle click
-	State        ButtonState
-	X            int
-	Y            int
-	Scale        float64
+	Hover            *ebiten.Image
+	Normal           *ebiten.Image
+	Pressed          *ebiten.Image
+	Text             string
+	Font             text.Face // Changed from *font.Face to text.Face
+	TextColor        color.Color
+	TextOffset       image.Point // offset relative to button 0,0
+	HorizontalCenter HorizontalAlignment
+	VerticalCenter   VerticalAlignment
+	HandlerFuncs     []func()    // handle click
+	State            ButtonState
+	X                int
+	Y                int
+	Scale            float64
 }
 
 func scaleImage(img *ebiten.Image, scale float64) *ebiten.Image {
@@ -82,11 +99,29 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		// Measure text dimensions
 		textWidth, textHeight := text.Measure(b.Text, b.Font, 0)
 
-		// Calculate centered position
-		centerX := (buttonWidth - textWidth) / 2
-		centerY := (buttonHeight - textHeight) / 2
+		// Calculate horizontal position
+		var textX float64
+		switch b.HorizontalCenter {
+		case AlignLeft:
+			textX = 0
+		case AlignCenter:
+			textX = (buttonWidth - textWidth) / 2
+		case AlignRight:
+			textX = buttonWidth - textWidth
+		}
 
-		options.GeoM.Translate(centerX, centerY)
+		// Calculate vertical position
+		var textY float64
+		switch b.VerticalCenter {
+		case AlignTop:
+			textY = 0
+		case AlignMiddle:
+			textY = (buttonHeight - textHeight) / 2
+		case AlignBottom:
+			textY = buttonHeight - textHeight
+		}
+
+		options.GeoM.Translate(textX, textY)
 		R, G, B, A := b.TextColor.RGBA()
 		options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
 		textOpts := text.DrawOptions{DrawImageOptions: *options}
