@@ -14,14 +14,14 @@ type HorizontalAlignment int
 type VerticalAlignment int
 
 const (
-	AlignLeft HorizontalAlignment = iota
-	AlignCenter
+	AlignCenter HorizontalAlignment = iota
+	AlignLeft
 	AlignRight
 )
 
 const (
-	AlignTop VerticalAlignment = iota
-	AlignMiddle
+	AlignMiddle VerticalAlignment = iota
+	AlignTop
 	AlignBottom
 )
 
