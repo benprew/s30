@@ -78,16 +78,16 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		bounds := imgToDraw.Bounds()
 		buttonWidth := float64(bounds.Dx())
 		buttonHeight := float64(bounds.Dy())
-		
+
 		// Measure text dimensions
 		textBounds, _ := text.Measure(b.Text, b.Font, 0)
 		textWidth := textBounds.X
 		textHeight := textBounds.Y
-		
+
 		// Calculate centered position
 		centerX := (buttonWidth - textWidth) / 2
 		centerY := (buttonHeight - textHeight) / 2
-		
+
 		options.GeoM.Translate(centerX, centerY)
 		R, G, B, A := b.TextColor.RGBA()
 		options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
