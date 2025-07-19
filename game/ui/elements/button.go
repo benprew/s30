@@ -45,7 +45,7 @@ type Button struct {
 	TextOffset       image.Point // offset relative to button 0,0
 	HorizontalCenter HorizontalAlignment
 	VerticalCenter   VerticalAlignment
-	HandlerFuncs     []func()    // handle click
+	HandlerFuncs     []func() // handle click
 	State            ButtonState
 	X                int
 	Y                int
