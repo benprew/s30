@@ -32,6 +32,19 @@ type Button struct {
 	State        ButtonState
 	X            int
 	Y            int
+	Scale        float64
+}
+
+func scaleImage(img *ebiten.Image, scale float64) *ebiten.Image {
+	X := img.Bounds().Dx()
+	Y := img.Bounds().Dy()
+
+	newImg := ebiten.NewImage(int(float64(X)*scale), int(float64(Y)*scale))
+
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Scale(scale, scale)
+	newImg.DrawImage(img, opts)
+	return newImg
 }
 
 // Draw renders the button onto the screen.
@@ -42,7 +55,6 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Concat(opts.GeoM)
 	options.GeoM.Translate(float64(b.X), float64(b.Y))
-
 	switch b.State {
 	case StateHover:
 		imgToDraw = b.Hover
@@ -56,6 +68,9 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		imgToDraw = b.Normal
 	}
 
+	if b.Scale != 0 {
+		imgToDraw = scaleImage(imgToDraw, b.Scale)
+	}
 	screen.DrawImage(imgToDraw, options)
 
 	if b.Text != "" {
