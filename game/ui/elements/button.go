@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 
+	"github.com/benprew/s30/game/ui"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
@@ -68,7 +69,11 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 
 // Update checks the button's state based on mouse interaction. Button box is button size + scale. Scale is passed in opts
 func (b *Button) Update(opts *ebiten.DrawImageOptions) {
-	mx, my := ebiten.CursorPosition()
+	mx, my := ui.TouchPosition()
+	isTouch := mx > 0
+	if mx == 0 {
+		mx, my = ebiten.CursorPosition()
+	}
 
 	bounds := b.Normal.Bounds()
 	buttonWidth := bounds.Dx()
@@ -83,17 +88,17 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions) {
 
 	if mx >= bx && mx < bx+int(scaledWidth) && my >= by && my < by+int(scaledHeight) {
 		// if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		// 	for _, handler := range b.HandlerFuncs {
-		// 		if handler != nil {
-		// 			handler()
-		// 		}
-		// 	}
+		//  for _, handler := range b.HandlerFuncs {
+		//      if handler != nil {
+		//          handler()
+		//      }
+		//  }
 		// }
 
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			fmt.Println("Pressed")
 			b.State = StatePressed
-		} else if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && b.State == StatePressed {
+		} else if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) || isTouch {
 			fmt.Printf("Button Clicked: %s\n", b.Text)
 			b.State = StateClicked
 		} else {

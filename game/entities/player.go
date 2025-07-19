@@ -3,6 +3,7 @@ package entities
 import (
 	"image"
 
+	"github.com/benprew/s30/game/ui"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -25,7 +26,7 @@ func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 }
 
 func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
-	dirBits := p.Move()
+	dirBits := p.Move(screenW, screenH)
 	p.character.Update(dirBits)
 
 	// Clamp player position to world boundaries
@@ -49,7 +50,7 @@ func (p *Player) SetLoc(loc image.Point) {
 	p.character.Y = loc.Y
 }
 
-func (p *Player) Move() (dirBits int) {
+func (p *Player) Move(screenW, screenH int) (dirBits int) {
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 		dirBits |= DirLeft
 	}
@@ -62,6 +63,35 @@ func (p *Player) Move() (dirBits int) {
 	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
 		dirBits |= DirUp
 	}
+
+	var cursorX, cursorY = ui.TouchPosition()
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		cursorX, cursorY = ebiten.CursorPosition()
+	}
+
+	if cursorX > 0 && cursorY > 0 {
+		playerScreenX := screenW / 2
+		playerScreenY := screenH / 2
+
+		deltaX := cursorX - playerScreenX
+		deltaY := cursorY - playerScreenY
+
+		const moveThreshold = 50
+
+		if deltaX > moveThreshold {
+			dirBits |= DirRight
+		}
+		if deltaX < -moveThreshold {
+			dirBits |= DirLeft
+		}
+		if deltaY > moveThreshold {
+			dirBits |= DirDown
+		}
+		if deltaY < -moveThreshold {
+			dirBits |= DirUp
+		}
+	}
+
 	return dirBits
 }
 
