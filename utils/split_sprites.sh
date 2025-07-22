@@ -18,7 +18,8 @@ for ((i=0; i<num_y; i++)); do
   for ((j=0; j<num_x; j++)); do
     x_offset=$((j * sub_width))
     y_offset=$((i * sub_height))
-    output_file="output_${i}_${j}.png"
+    img_num=$((j + i * num_x))
+    output_file=$(printf "output_%03d.png" $img_num)
     convert "$input_image" -crop "${sub_width}x${sub_height}+${x_offset}+${y_offset}" "$output_file"
   done
 done
