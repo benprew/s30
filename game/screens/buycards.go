@@ -91,8 +91,6 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 	// }
 
 	// TODO make a way to make scaled buttons
-	// TODO make button pngs transparent, maybe I need to re-export that file?
-
 	buttons := []*elements.Button{
 		&elements.Button{
 			Normal:  sprite[0],
