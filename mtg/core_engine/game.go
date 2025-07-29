@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/benprew/s30/game/domain"
 )
 
 type GameState struct {
@@ -109,7 +111,7 @@ func (g *GameState) Resolve(item *StackItem) error {
 		}
 	}
 	// Move card from hand to correct zone
-	if c.CardType != CardTypeInstant && c.CardType != CardTypeSorcery {
+	if c.CardType != domain.CardTypeInstant && c.CardType != domain.CardTypeSorcery {
 		p.RemoveFrom(c, p.Hand, "Hand")
 		p.AddTo(c, "Battlefield")
 	} else {
@@ -260,7 +262,7 @@ func (g *GameState) CardsWithActions(player *Player) ([]*Card, error) {
 }
 
 func (g *GameState) CanTap(player *Player, card *Card) bool {
-	if card.CardType == CardTypeLand && !card.Tapped {
+	if card.CardType == domain.CardTypeLand && !card.Tapped {
 		return true
 	}
 
@@ -269,7 +271,7 @@ func (g *GameState) CanTap(player *Player, card *Card) bool {
 	// Assuming tapping for mana/abilities is possible if not tapped.
 	// If tapping is only for attacking/blocking, the combat phase check is relevant.
 	// Let's keep the combat phase check for now based on the original code's structure.
-	if card.CardType == CardTypeCreature && !card.Tapped && player.Turn.Phase == PhaseCombat {
+	if card.CardType == domain.CardTypeCreature && !card.Tapped && player.Turn.Phase == PhaseCombat {
 		// This condition seems specific to attacking/blocking.
 		// If creatures can tap for mana/abilities outside combat, this logic needs refinement.
 		return true
@@ -311,7 +313,7 @@ func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
 	if player.Turn.LandPlayed {
 		return false
 	}
-	if card.CardType != CardTypeLand {
+	if card.CardType != domain.CardTypeLand {
 		return false
 	}
 

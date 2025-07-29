@@ -62,24 +62,41 @@ func (m *ManaPool) RemoveMana(manaType rune) bool {
 
 func (m ManaPool) ParseCost(cost string) map[rune]int {
 	costMap := make(map[rune]int, 0)
-	// Find the end of the integer part
+
+	// Parse the new format with curly braces: {3}{G}{R}
 	i := 0
-	for i < len(cost) && unicode.IsDigit(rune(cost[i])) {
-		i++
-	}
+	for i < len(cost) {
+		if cost[i] == '{' {
+			// Find the closing brace
+			j := i + 1
+			for j < len(cost) && cost[j] != '}' {
+				j++
+			}
+			if j < len(cost) {
+				// Extract content between braces
+				content := cost[i+1 : j]
 
-	// Parse the integer part if it exists
-	if i > 0 {
-		intValue, err := strconv.Atoi(cost[:i])
-		if err == nil { // Handle potential errors, though IsDigit should prevent most
-			// Use 'C' or '0' or similar to represent colorless mana
-			costMap['C'] = intValue
+				// Check if it's a number (colorless mana)
+				if intValue, err := strconv.Atoi(content); err == nil {
+					costMap['C'] += intValue
+				} else if len(content) == 1 {
+					// Single color like {G}, {R}, etc.
+					costMap[rune(content[0])]++
+				} else if len(content) == 3 && content[1] == '/' {
+					// Hybrid mana like {R/W} - for now, treat as requiring either color
+					// This is a simplified implementation - hybrid mana is more complex
+					color1 := rune(content[0])
+					// For simplicity, we'll require one of the colors
+					// A more complete implementation would need special handling
+					costMap[color1]++ // Just use the first color for now
+				}
+				i = j + 1
+			} else {
+				i++
+			}
+		} else {
+			i++
 		}
-	}
-
-	// Process the rest of the string as colored mana
-	for _, r := range cost[i:] {
-		costMap[r]++
 	}
 	return costMap
 }

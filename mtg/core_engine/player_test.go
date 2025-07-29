@@ -3,49 +3,67 @@ package core_engine
 import (
 	"fmt"
 	"testing"
+
+	"github.com/benprew/s30/game/domain"
 )
 
 func createTestPlayer(numPlayers int) []*Player {
 	players := []*Player{}
+	entityID := EntityID(1) // Start with ID 1 and increment for each card
 
 	for i := range numPlayers {
 		library := []*Card{}
-		for range 2 {
-			cardName := "Forest"
-			card, ok := CardDatabase[cardName]
-			if !ok {
-				panic(fmt.Sprintf("Card not found: %s", cardName))
-			}
-			library = append(library, card.DeepCopy())
-		}
-		for range 2 {
-			cardName := "Llanowar Elves"
-			card, ok := CardDatabase[cardName]
-			if !ok {
-				panic(fmt.Sprintf("Card not found: %s", cardName))
-			}
-			library = append(library, card.DeepCopy())
-		}
-		cardName := "Lightning Bolt"
-		card, ok := CardDatabase[cardName]
-		if !ok {
-			panic(fmt.Sprintf("Card not found: %s", cardName))
-		}
-		library = append(library, card.DeepCopy())
 
-		cardName = "Mountain"
-		card, ok = CardDatabase[cardName]
-		if !ok {
-			panic(fmt.Sprintf("Card not found: %s", cardName))
+		// Add 2 Forest cards
+		for range 2 {
+			domainCard := domain.FindCardByName("Forest")
+			fmt.Println(domainCard)
+			if domainCard != nil {
+				coreCard := NewCardFromDomain(domainCard, entityID)
+				library = append(library, coreCard)
+				entityID++
+			}
 		}
-		library = append(library, card.DeepCopy())
 
-		cardName = "Sol Ring"
-		card, ok = CardDatabase[cardName]
-		if !ok {
-			panic(fmt.Sprintf("Card not found: %s", cardName))
+		// Add 2 Llanowar Elves cards
+		for range 2 {
+			domainCard := domain.FindCardByName("Llanowar Elves")
+			fmt.Println(domainCard)
+			if domainCard != nil {
+				coreCard := NewCardFromDomain(domainCard, entityID)
+				library = append(library, coreCard)
+				entityID++
+			}
 		}
-		library = append(library, card.DeepCopy())
+
+		// Add Lightning Bolt
+		domainCard := domain.FindCardByName("Lightning Bolt")
+		if domainCard != nil {
+			coreCard := NewCardFromDomain(domainCard, entityID)
+			library = append(library, coreCard)
+			entityID++
+		}
+
+		// Add Mountain
+		domainCard = domain.FindCardByName("Mountain")
+		if domainCard != nil {
+			coreCard := NewCardFromDomain(domainCard, entityID)
+			library = append(library, coreCard)
+			entityID++
+		}
+
+		// Add Sol Ring
+		domainCard = domain.FindCardByName("Sol Ring")
+		if domainCard != nil {
+			coreCard := NewCardFromDomain(domainCard, entityID)
+			library = append(library, coreCard)
+			entityID++
+		}
+
+		fmt.Println("Library")
+		for _, c := range library {
+			fmt.Println(c)
+		}
 
 		player := &Player{
 			ID:          EntityID(i),

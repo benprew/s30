@@ -134,3 +134,37 @@ func TestCanPayColorless(t *testing.T) {
 		t.Errorf("Unable to pay colorless cost")
 	}
 }
+
+func TestParseCostCurlyBraceFormat(t *testing.T) {
+	pool := ManaPool{}
+
+	tests := []struct {
+		cost     string
+		expected map[rune]int
+	}{
+		{"{3}{G}{R}", map[rune]int{'C': 3, 'G': 1, 'R': 1}},
+		{"{2}{W}{W}", map[rune]int{'C': 2, 'W': 2}},
+		{"{1}{U}{B}", map[rune]int{'C': 1, 'U': 1, 'B': 1}},
+		{"{5}", map[rune]int{'C': 5}},
+		{"{W}{U}{B}{R}{G}", map[rune]int{'W': 1, 'U': 1, 'B': 1, 'R': 1, 'G': 1}},
+		{"{0}", map[rune]int{'C': 0}},
+	}
+
+	for _, test := range tests {
+		result := pool.ParseCost(test.cost)
+
+		// Check that all expected keys are present with correct values
+		for expectedRune, expectedCount := range test.expected {
+			if result[expectedRune] != expectedCount {
+				t.Errorf("For cost %s, expected %c: %d, got %d", test.cost, expectedRune, expectedCount, result[expectedRune])
+			}
+		}
+
+		// Check that no unexpected keys are present
+		for resultRune, resultCount := range result {
+			if test.expected[resultRune] != resultCount {
+				t.Errorf("For cost %s, unexpected %c: %d", test.cost, resultRune, resultCount)
+			}
+		}
+	}
+}

@@ -2,38 +2,19 @@ package core_engine
 
 import (
 	"fmt"
-)
 
-// CardType represents the type of a Magic: The Gathering card.
-type CardType string
-
-const (
-	CardTypeLand        CardType = "Land"        // Produces mana.
-	CardTypeCreature    CardType = "Creature"    // Attacks and blocks.
-	CardTypeArtifact    CardType = "Artifact"    // Represents magical items or constructs.
-	CardTypeEnchantment CardType = "Enchantment" // Ongoing magical effects.
-	CardTypeInstant     CardType = "Instant"     // Cast at almost any time.
-	CardTypeSorcery     CardType = "Sorcery"     // Cast on your turn, main phase, stack empty.
+	"github.com/benprew/s30/game/domain"
 )
 
 type EntityID int
 
 type Card struct {
-	ID             EntityID // In a game, each card will have an entitiyID
-	CardName       string   `json:"name"`
-	ManaCost       string
-	ManaProduction []string
-	Colors         []string
-	CardType       CardType // Use the new CardType enum
-	Subtypes       []string
-	Abilities      []string
-	Text           string
-	Power          int
-	Toughness      int
-	Tapped         bool
-	Active         bool
-	DamageTaken    int
-	Targetable     string
+	domain.Card
+	ID          EntityID // In a game, each card will have an entitiyID
+	Tapped      bool
+	Active      bool
+	DamageTaken int
+	Targetable  string
 	// target         EntityID // target when casting this card. can be an instance
 	// of something: another card, or a player. can also be a zone: library or hand
 	// but it has to be something in the game
@@ -83,17 +64,26 @@ func (c *Card) UnMarshalActions() {
 	}
 }
 
+// NewCardFromDomain creates a new core_engine Card from a domain Card
+func NewCardFromDomain(domainCard *domain.Card, id EntityID) *Card {
+	return &Card{
+		Card:        *domainCard,
+		ID:          id,
+		Tapped:      false,
+		Active:      true,
+		DamageTaken: 0,
+		Targetable:  "",
+		Events:      [][]string{},
+		Actions:     []Event{},
+	}
+}
+
 // DeepCopy creates a deep copy of the Card struct.
 func (c *Card) DeepCopy() *Card {
 	// Create a new Card instance
 	newCard := &Card{
 		ID:          c.ID, // ID might need special handling depending on its use (e.g., unique per game instance)
-		CardName:    c.CardName,
-		ManaCost:    c.ManaCost,
-		CardType:    c.CardType,
-		Text:        c.Text,
-		Power:       c.Power,
-		Toughness:   c.Toughness,
+		Card:        c.Card,
 		Tapped:      c.Tapped,
 		Active:      c.Active,
 		DamageTaken: c.DamageTaken,
