@@ -6,8 +6,7 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/benprew/s30/assets/art"
-	"github.com/benprew/s30/assets/fonts"
+	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/screenui"
@@ -30,7 +29,7 @@ const (
 
 func NewMiniMap(l *world.Level) *MiniMap {
 	// Create a font face using ebiten's text v2
-	fontSource, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.Magic_ttf))
+	fontSource, err := text.NewGoTextFaceSource(bytes.NewReader(assets.Magic_ttf))
 	if err != nil {
 		panic(fmt.Errorf("failed to create font source: %w", err))
 	}
@@ -40,22 +39,22 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		Size:   14,
 	}
 
-	s, err := sprites.LoadSpriteSheet(75, 1, art.MiniMapTerrSpr_png)
+	s, err := sprites.LoadSpriteSheet(75, 1, assets.MiniMapTerrSpr_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load terrain sprite sheet: %w", err))
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(art.MiniMapFrame_png))
+	img, _, err := image.Decode(bytes.NewReader(assets.MiniMapFrame_png))
 	if err != nil {
 		panic(err)
 	}
 
-	sprInfo, err := sprites.LoadSprInfoFromJSON(art.MiniMapFrameSprite_json)
+	sprInfo, err := sprites.LoadSprInfoFromJSON(assets.MiniMapFrameSprite_json)
 	if err != nil {
 		panic(err)
 	}
 
-	frameSprite, err := sprites.LoadSubimages(art.MiniMapFrameSprite_png, &sprInfo)
+	frameSprite, err := sprites.LoadSubimages(assets.MiniMapFrameSprite_png, &sprInfo)
 	if err != nil {
 		panic(err)
 	}

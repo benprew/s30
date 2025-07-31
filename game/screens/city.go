@@ -5,7 +5,7 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/benprew/s30/assets/art"
+	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/elements"
@@ -105,11 +105,11 @@ func (c *CityScreen) drawCityName(screen *ebiten.Image) {
 // Make buttons for City screen
 // Iconb and Icons "b" stands for border
 func mkButtons(scale float64, city *domain.City) []*elements.Button {
-	Icons, err := sprites.LoadSpriteSheet(12, 2, art.Icons_png)
+	Icons, err := sprites.LoadSpriteSheet(12, 2, assets.Icons_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load icons sprite sheet: %w", err))
 	}
-	Iconb, err := sprites.LoadSpriteSheet(8, 1, art.Iconb_png)
+	Iconb, err := sprites.LoadSpriteSheet(8, 1, assets.Iconb_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load iconb sprite sheet: %w", err))
 	}

@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/benprew/s30/assets/art"
+	"github.com/benprew/s30/assets"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -76,14 +76,14 @@ func cityBgImage(tier int) *ebiten.Image {
 	// Check if images are already loaded
 	if loadedCityImage == nil && loadedVillageImage == nil && cityImageLoadError == nil {
 		// Load city image
-		cityImg, _, err := image.Decode(bytes.NewReader(art.City_png))
+		cityImg, _, err := image.Decode(bytes.NewReader(assets.City_png))
 		if err != nil {
 			panic(fmt.Sprintf("Unable to load cityBgImage: %s", err))
 		}
 		loadedCityImage = ebiten.NewImageFromImage(cityImg)
 
 		// Load village image
-		villageImg, _, err := image.Decode(bytes.NewReader(art.Village_png))
+		villageImg, _, err := image.Decode(bytes.NewReader(assets.Village_png))
 		if err != nil {
 			panic(fmt.Sprintf("Unable to load villageBgImage: %s", err))
 		}

@@ -6,7 +6,7 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/benprew/s30/assets/art"
+	"github.com/benprew/s30/assets"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -21,7 +21,7 @@ type SpriteSheet struct {
 
 // LoadWorldTileSheet loads the embedded SpriteSheet.
 func LoadWorldTileSheet(tileWidth, tileHeight int) (*SpriteSheet, error) {
-	img, _, err := image.Decode(bytes.NewReader(art.Landtile_png))
+	img, _, err := image.Decode(bytes.NewReader(assets.Landtile_png))
 	if err != nil {
 		return nil, err
 	}

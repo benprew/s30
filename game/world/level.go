@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/benprew/s30/assets/art"
+	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/entities"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/screenui"
@@ -65,36 +65,36 @@ func NewLevel() (*Level, error) {
 	// marsh, desert, forest, mountain, plains
 	// foliage is 206x134
 	// land tile is 206x102
-	foliage, err := sprites.LoadSpriteSheet(5, 11, art.Land_png)
+	foliage, err := sprites.LoadSpriteSheet(5, 11, assets.Land_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
 	// shadows for lands
-	Sfoliage, err := sprites.LoadSpriteSheet(5, 11, art.Sland_png)
+	Sfoliage, err := sprites.LoadSpriteSheet(5, 11, assets.Sland_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
 
-	foliage2, err := sprites.LoadSpriteSheet(5, 11, art.Land2_png)
+	foliage2, err := sprites.LoadSpriteSheet(5, 11, assets.Land2_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
-	Sfoliage2, err := sprites.LoadSpriteSheet(5, 11, art.Sland2_png)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
-	}
-
-	Cstline2, err := sprites.LoadSpriteSheet(4, 14, art.Cstline2_png)
+	Sfoliage2, err := sprites.LoadSpriteSheet(5, 11, assets.Sland2_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
 
-	citySprites, err := sprites.LoadSpriteSheet(6, 4, art.Cities1_png)
+	Cstline2, err := sprites.LoadSpriteSheet(4, 14, assets.Cstline2_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
+	}
+
+	citySprites, err := sprites.LoadSpriteSheet(6, 4, assets.Cities1_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load city spritesheet Castles1.spr.png: %w", err)
 	}
 
-	roads, err := sprites.LoadSpriteSheet(6, 2, art.Roads_png)
+	roads, err := sprites.LoadSpriteSheet(6, 2, assets.Roads_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load city spritesheet Roads_png: %w", err)
 	}

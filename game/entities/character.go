@@ -4,7 +4,7 @@ import (
 	"fmt"
 	_ "image/png"
 
-	"github.com/benprew/s30/assets/art"
+	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -166,7 +166,7 @@ func DirectionToSpriteIndex(dirBits int) int {
 // Helper function to get embedded file bytes
 func getEmbeddedFile(filename string) []byte {
 	// Access character sprites from the embedded filesystem
-	data, err := art.CharacterFS.ReadFile("sprites/world/characters/" + filename)
+	data, err := assets.CharacterFS.ReadFile("art/sprites/world/characters/" + filename)
 	if err != nil {
 		// Log the error but don't crash
 		fmt.Printf("Error loading sprite file %s: %v\n", filename, err)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"image/color"
 
-	"github.com/benprew/s30/assets/fonts"
+	"github.com/benprew/s30/assets"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
@@ -13,7 +13,7 @@ import (
 var MtgFont = mkMtgFont()
 
 func mkMtgFont() *text.GoTextFaceSource {
-	font, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.Magic_ttf))
+	font, err := text.NewGoTextFaceSource(bytes.NewReader(assets.Magic_ttf))
 	if err != nil {
 		panic(fmt.Errorf("failed to create font source: %w", err))
 	}

@@ -43,12 +43,12 @@ func (g *GameState) CastSpell(player *Player, card *Card, target Targetable) err
 	}
 	e := []Event{}
 
-	for _, a := range card.Actions {
+	for _, a := range card.CardActions() {
 		a.AddTarget(target)
 		e = append(e, a)
 	}
 
-	fmt.Println("pushing stack")
+	fmt.Printf("pushing stack, events: %v player: %v card: %v\n", e, player, card)
 	g.Stack.Push(&StackItem{Events: e, Player: player, Card: card})
 
 	return nil

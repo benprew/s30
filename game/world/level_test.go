@@ -3,7 +3,7 @@ package world
 import (
 	"testing"
 
-	"github.com/benprew/s30/assets/art"
+	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -99,7 +99,7 @@ func TestConnectCityBFS(t *testing.T) {
 			level := createTestLevel(5, 5) // Use a 5x5 grid for these tests
 			level.Tile(TilePoint{1, 1}).IsCity = true
 
-			roads, _ := sprites.LoadSpriteSheet(6, 2, art.Roads_png)
+			roads, _ := sprites.LoadSpriteSheet(6, 2, assets.Roads_png)
 			// Store roads and info in the level struct
 			level.roadSprites = roads
 			// Define the mapping from sprite sheet index to compass direction exit point.

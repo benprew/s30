@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"sort"
 
-	"github.com/benprew/s30/assets/card_info"
+	"github.com/benprew/s30/assets"
 )
 
 type CardType string
@@ -53,7 +53,7 @@ type Card struct {
 	Artist         string
 }
 
-var CARDS = LoadCardDatabase(bytes.NewReader(card_info.Cards_json))
+var CARDS = LoadCardDatabase(bytes.NewReader(assets.Cards_json))
 
 func (c *Card) Name() string {
 	return c.CardName
