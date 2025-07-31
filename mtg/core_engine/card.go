@@ -26,6 +26,13 @@ func (c *Card) Name() string {
 	return c.CardName
 }
 
+func (c *Card) CardActions() []Event {
+	if c.Name() == "Lightning Bolt" {
+		return []Event{&DirectDamage{Amount: 3}}
+	}
+	return nil
+}
+
 func (c *Card) ReceiveDamage(amount int) {
 	c.DamageTaken += amount
 }

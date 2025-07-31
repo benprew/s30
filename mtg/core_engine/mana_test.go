@@ -44,30 +44,30 @@ func TestManaPool_RemoveMana(t *testing.T) {
 func TestManaPool_CanPay(t *testing.T) {
 	pool := ManaPool{{'W'}, {'U'}, {'B'}, {'R'}, {'G'}}
 
-	if !pool.CanPay("WUBRG") {
-		t.Errorf("Expected to be able to pay WUBRG, but could not")
+	if !pool.CanPay("{W}{U}{B}{R}{G}") {
+		t.Errorf("Expected to be able to pay {W}{U}{B}{R}{G}, but could not")
 	}
 
-	if pool.CanPay("WWWWWW") {
-		t.Errorf("Expected to not be able to pay WWWWWW, but could")
+	if pool.CanPay("{W}{W}{W}{W}{W}{W}") {
+		t.Errorf("Expected to not be able to pay {W}{W}{W}{W}{W}{W}, but could")
 	}
 }
 
 func TestManaPool_Pay(t *testing.T) {
 	pool := ManaPool{{'W'}, {'U'}, {'B'}, {'R'}, {'G'}}
 
-	err := pool.Pay("UB")
+	err := pool.Pay("{U}{B}")
 	if err != nil {
-		t.Errorf("Expected to be able to pay UB, but got error: %v", err)
+		t.Errorf("Expected to be able to pay {U}{B}, but got error: %v", err)
 	}
 
-	if !pool.CanPay("WRG") {
-		t.Errorf("Expected to be able to pay WRG, but could not")
+	if !pool.CanPay("{W}{R}{G}") {
+		t.Errorf("Expected to be able to pay {W}{R}{G}, but could not")
 	}
 
-	err = pool.Pay("WWWWWW")
+	err = pool.Pay("{W}{W}{W}{W}{W}{W}")
 	if err == nil {
-		t.Errorf("Expected to not be able to pay WWWWWW, but could")
+		t.Errorf("Expected to not be able to pay {W}{W}{W}{W}{W}{W}, but could")
 	}
 }
 
@@ -127,7 +127,7 @@ func TestAvailableMana(t *testing.T) {
 }
 
 func TestCanPayColorless(t *testing.T) {
-	cost := "2WW"
+	cost := "{2}{W}{W}"
 	pool := ManaPool{[]rune{'W'}, []rune{'W'}, []rune{'R'}, []rune{'B'}}
 
 	if !pool.CanPay(cost) {
@@ -166,5 +166,66 @@ func TestParseCostCurlyBraceFormat(t *testing.T) {
 				t.Errorf("For cost %s, unexpected %c: %d", test.cost, resultRune, resultCount)
 			}
 		}
+	}
+}
+
+func TestCanPayCurlyBraceFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		pool     ManaPool
+		cost     string
+		expected bool
+	}{
+		{
+			name:     "Can pay simple colored cost",
+			pool:     ManaPool{[]rune{'G'}, []rune{'R'}},
+			cost:     "{G}{R}",
+			expected: true,
+		},
+		{
+			name:     "Can pay colorless and colored cost",
+			pool:     ManaPool{[]rune{'W'}, []rune{'W'}, []rune{'R'}, []rune{'B'}},
+			cost:     "{2}{W}{W}",
+			expected: true,
+		},
+		{
+			name:     "Can pay with excess mana",
+			pool:     ManaPool{[]rune{'G'}, []rune{'G'}, []rune{'G'}, []rune{'R'}},
+			cost:     "{1}{G}",
+			expected: true,
+		},
+		{
+			name:     "Cannot pay insufficient colored mana",
+			pool:     ManaPool{[]rune{'G'}, []rune{'R'}},
+			cost:     "{W}{U}",
+			expected: false,
+		},
+		{
+			name:     "Cannot pay insufficient colorless mana",
+			pool:     ManaPool{[]rune{'G'}},
+			cost:     "{3}{G}",
+			expected: false,
+		},
+		{
+			name:     "Can pay zero cost",
+			pool:     ManaPool{},
+			cost:     "{0}",
+			expected: true,
+		},
+		{
+			name:     "Can pay large colorless cost with many sources",
+			pool:     ManaPool{[]rune{'2'}, []rune{'W'}, []rune{'G'}},
+			cost:     "{3}{G}",
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := test.pool.CanPay(test.cost)
+			if result != test.expected {
+				t.Errorf("Expected CanPay(%s) to be %v, but got %v", test.cost, test.expected, result)
+			}
+		})
 	}
 }

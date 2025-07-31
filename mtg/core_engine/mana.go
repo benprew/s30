@@ -111,6 +111,7 @@ func (m ManaPool) CanPay(cost string) bool {
 
 	// Count available mana from sources in the pool
 	for _, manaType := range m {
+		fmt.Println("manaType", string(manaType), len(manaType))
 		if len(manaType) == 1 {
 			r := manaType[0]
 			switch r {
@@ -119,6 +120,11 @@ func (m ManaPool) CanPay(cost string) bool {
 			case 'C': // Source produces explicit colorless mana
 				availableColorlessFromSources++
 			default:
+				if r >= '0' && r <= '9' {
+					digitValue := int(r - '0')
+					availableColorlessFromSources += digitValue
+				}
+
 				// Ignore other single-rune types?
 			}
 		} else {
@@ -199,9 +205,27 @@ func (m *ManaPool) Pay(cost string) error {
 	if !m.CanPay(cost) {
 		return fmt.Errorf("not enough mana to pay the cost")
 	}
-	for _, mana := range cost {
-		if !m.RemoveMana(mana) {
-			panic(fmt.Sprintf("Should have been able to remove mana (%c), but couldn't (%v)", mana, *m))
+
+	requiredMana := m.ParseCost(cost)
+	fmt.Printf("Pay: paying: %v\n", requiredMana)
+
+	// First, pay for specific colored mana requirements
+	for manaType, count := range requiredMana {
+		if manaType == 'C' {
+			continue // Handle colorless separately
+		}
+		for i := 0; i < count; i++ {
+			if !m.RemoveMana(manaType) {
+				panic(fmt.Sprintf("Should have been able to remove mana (%c), but couldn't (%v)", manaType, *m))
+			}
+		}
+	}
+
+	// Then pay for colorless mana requirements
+	colorlessRequired := requiredMana['C']
+	for i := 0; i < colorlessRequired; i++ {
+		if !m.RemoveMana('C') {
+			panic(fmt.Sprintf("Should have been able to remove colorless mana, but couldn't (%v)", *m))
 		}
 	}
 
