@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"
@@ -16,12 +17,13 @@ import (
 
 type Game struct {
 	screenW, screenH     int
-	cityScreen           screens.CityScreen
 	camScale             float64
 	camScaleTo           float64
 	mousePanX, mousePanY int
+	worldFrame           *screens.WorldFrame
 	currentScreenName    screenui.ScreenName
 	screenMap            map[screenui.ScreenName]screenui.Screen
+	player               *domain.Player
 }
 
 func (g *Game) CurrentScreen() screenui.Screen {
@@ -45,6 +47,11 @@ func NewGame() (*Game, error) {
 
 	m := minimap.NewMiniMap(l)
 
+	wf, err := screens.NewWorldFrame()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create world frame: %s", err)
+	}
+
 	g := &Game{
 		screenW:           1024,
 		screenH:           768,
@@ -52,11 +59,13 @@ func NewGame() (*Game, error) {
 		camScaleTo:        1,
 		mousePanX:         math.MinInt32,
 		mousePanY:         math.MinInt32,
+		worldFrame:        wf,
 		currentScreenName: screenui.WorldScr,
 		screenMap: map[screenui.ScreenName]screenui.Screen{
 			screenui.WorldScr:   l,
 			screenui.MiniMapScr: m,
 		},
+		player: domain.NewPlayer("Bob"),
 	}
 
 	ebiten.SetWindowSize(g.screenW, g.screenH)
@@ -80,11 +89,11 @@ func (g *Game) Update() error {
 	}
 	if name == screenui.CityScr && g.currentScreenName != screenui.CityScr {
 		tile := g.Level().Tile(g.Level().CharacterTile())
-		g.screenMap[name] = screens.NewCityScreen(g.Level().Frame, &tile.City)
+		g.screenMap[name] = screens.NewCityScreen(&tile.City)
 	}
 	if name == screenui.BuyCardsScr && g.currentScreenName != screenui.BuyCardsScr {
 		tile := g.Level().Tile(g.Level().CharacterTile())
-		g.screenMap[name] = screens.NewBuyCardsScreen(g.Level().Frame, &tile.City)
+		g.screenMap[name] = screens.NewBuyCardsScreen(&tile.City)
 	}
 	g.currentScreenName = name
 
@@ -92,6 +101,13 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	if g.CurrentScreen().IsFramed() {
+		g.worldFrame.Draw(screen, g.camScale)
+		// frame := g.Level().Frame
+		// frameOpts := &ebiten.DrawImageOptions{}
+		// frameOpts.GeoM.Scale(g.camScale, g.camScale)
+		// screen.DrawImage(frame, frameOpts)
+	}
 	g.CurrentScreen().Draw(screen, g.screenW, g.screenH, g.camScale)
 
 	// Print game info.

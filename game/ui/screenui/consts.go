@@ -15,6 +15,7 @@ const (
 type Screen interface {
 	Update(W, H int) (ScreenName, error)
 	Draw(screen *ebiten.Image, W, H int, scale float64)
+	IsFramed() bool // True if we should draw the world frame
 }
 
 // screenNameToString converts a ScreenName to its string representation for debugging.

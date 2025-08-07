@@ -54,6 +54,7 @@ type Button struct {
 	X            int
 	Y            int
 	Scale        float64
+	ButtonID     string
 }
 
 func scaleImage(img *ebiten.Image, scale float64) *ebiten.Image {
@@ -117,13 +118,13 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions) {
 	buttonHeight := bounds.Dy()
 	combinedGeoM := ebiten.GeoM{}
 	combinedGeoM.Concat(opts.GeoM)
+	if b.Scale != 0 {
+		combinedGeoM.Scale(b.Scale, b.Scale)
+	}
 
 	scaledWidth, scaledHeight := combinedGeoM.Apply(float64(buttonWidth), float64(buttonHeight))
 
-	bx := b.X
-	by := b.Y
-
-	if mx >= bx && mx < bx+int(scaledWidth) && my >= by && my < by+int(scaledHeight) {
+	if mx >= b.X && mx < b.X+int(scaledWidth) && my >= b.Y && my < b.Y+int(scaledHeight) {
 		// if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		//  for _, handler := range b.HandlerFuncs {
 		//      if handler != nil {

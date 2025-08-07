@@ -126,6 +126,10 @@ func NewLevel() (*Level, error) {
 	return l, nil
 }
 
+func (l *Level) IsFramed() bool {
+	return true
+}
+
 func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) {
 	padding := 400
 

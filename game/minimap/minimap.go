@@ -134,6 +134,10 @@ func NewMiniMap(l *world.Level) *MiniMap {
 	}
 }
 
+func (m *MiniMap) IsFramed() bool {
+	return false
+}
+
 func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
