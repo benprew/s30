@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,12 +30,14 @@ type CardJSON struct {
 	Toughness      string // can be "*"
 	SetName        string
 	SetID          string
+	CollectorNo    string
 	Rarity         string
 	Frame          string
 	FlavorText     string
 	FrameEffects   []string
 	Watermark      string
 	Artist         string
+	PriceUSD       string
 }
 
 func LoadCardDatabase(reader io.Reader) []*Card {
@@ -85,11 +88,14 @@ func (cj *CardJSON) ToCard() *Card {
 	// Convert string power/toughness to int, handling special cases
 	power := convertPowerToughness(cj.Power)
 	toughness := convertPowerToughness(cj.Toughness)
+	collectorNo := toInt(cj.CollectorNo)
+	price := normalizePrice(toFloat(cj.PriceUSD))
 
 	return &Card{
 		CardSet: CardSet{
-			ID:   cj.SetID,
-			Name: cj.SetName,
+			ID:          cj.SetID,
+			Name:        cj.SetName,
+			CollectorNo: collectorNo,
 		},
 		ScryfallID:     cj.ScryfallID,
 		OracleID:       cj.OracleID,
@@ -112,7 +118,20 @@ func (cj *CardJSON) ToCard() *Card {
 		FrameEffects:   cj.FrameEffects,
 		Watermark:      cj.Watermark,
 		Artist:         cj.Artist,
+		Price:          price,
 	}
+}
+
+func toInt(str string) int {
+	if intValue, err := strconv.Atoi(str); err == nil {
+		return intValue
+	}
+	return -1
+}
+
+func toFloat(str string) float64 {
+	f, _ := strconv.ParseFloat(str, 64)
+	return f
 }
 
 // parseCardType converts a TypeLine string to a CardType enum
@@ -152,4 +171,32 @@ func convertPowerToughness(value string) int {
 		return intValue
 	}
 	return -1
+}
+
+// normalizePrice converts a price from input range to output range using logarithmic scaling
+func normalizePrice(price float64) int {
+	const (
+		minInput  = 0.01
+		maxInput  = 1200.0
+		minOutput = 15.0
+		maxOutput = 5000.0
+	)
+
+	// Clamp input to avoid log(0)
+	if price < minInput {
+		price = minInput
+	}
+
+	// Log-scale
+	logMin := math.Log(minInput)
+	logMax := math.Log(maxInput)
+	logPrice := math.Log(price)
+
+	// Normalize to [0, 1]
+	normalized := (logPrice - logMin) / (logMax - logMin)
+
+	// Scale to output range
+	scaled := minOutput + normalized*(maxOutput-minOutput)
+
+	return int(scaled)
 }

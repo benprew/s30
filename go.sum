@@ -1,5 +1,3 @@
-github.com/Kagami/go-avif v0.1.0 h1:8GHAGLxCdFfhpd4Zg8j1EqO7rtcQNenxIDerC/uu68w=
-github.com/Kagami/go-avif v0.1.0/go.mod h1:OPmPqzNdQq3+sXm0HqaUJQ9W/4k+Elbc3RSfJUemDKA=
 github.com/aquilax/go-perlin v1.1.0 h1:Gg+3jQ24wT4Y5GI7TCRLmYarzUG0k+n/JATFqOimb7s=
 github.com/aquilax/go-perlin v1.1.0/go.mod h1:z9Rl7EM4BZY0Ikp2fEN1I5mKSOJ26HQpk0O2TBdN2HE=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 h1:Gk1XUEttOk0/hb6Tq3WkmutWa0ZLhNn/6fc6XZpM7tM=

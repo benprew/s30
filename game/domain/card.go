@@ -23,9 +23,10 @@ type EntityID int
 // A struct representing the sets of magic
 // ex. Arabian Nights, Zendikar, etc
 type CardSet struct {
-	ID   string
-	Name string
-	Type string
+	ID          string
+	Name        string
+	Type        string
+	CollectorNo int
 }
 
 type Card struct {
@@ -51,6 +52,7 @@ type Card struct {
 	FrameEffects   []string
 	Watermark      string
 	Artist         string
+	Price          int // in game price
 }
 
 var CARDS = LoadCardDatabase(bytes.NewReader(assets.Cards_json))

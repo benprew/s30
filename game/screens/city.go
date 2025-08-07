@@ -21,7 +21,6 @@ const (
 )
 
 type CityScreen struct {
-	Frame   *ebiten.Image
 	Buttons []*elements.Button
 	City    *domain.City
 }
@@ -33,12 +32,15 @@ type ButtonConfig struct {
 	Y     int
 }
 
-func NewCityScreen(frame *ebiten.Image, city *domain.City) *CityScreen {
+func NewCityScreen(city *domain.City) *CityScreen {
 	return &CityScreen{
-		Frame:   frame,
 		Buttons: mkButtons(SCALE-0.4, city),
 		City:    city,
 	}
+}
+
+func (c *CityScreen) IsFramed() bool {
+	return true
 }
 
 func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
@@ -49,8 +51,6 @@ func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	frameOpts := &ebiten.DrawImageOptions{}
 	frameOpts.GeoM.Scale(scale, scale)
-	screen.DrawImage(c.Frame, frameOpts)
-
 	for _, b := range c.Buttons {
 		b.Draw(screen, frameOpts)
 	}

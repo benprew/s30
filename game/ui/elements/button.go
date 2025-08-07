@@ -95,36 +95,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	screen.DrawImage(imgToDraw, options)
 
 	if b.ButtonText.Text != "" {
-		// Get button dimensions
-		bounds := imgToDraw.Bounds()
-		buttonWidth := float64(bounds.Dx())
-		buttonHeight := float64(bounds.Dy())
-
-		// Measure text dimensions
-		textWidth, textHeight := text.Measure(b.ButtonText.Text, b.ButtonText.Font, 0)
-
-		// Calculate horizontal position
-		var textX float64
-		switch b.ButtonText.HorizontalCenter {
-		case AlignLeft:
-			textX = 0
-		case AlignCenter:
-			textX = (buttonWidth - textWidth) / 2
-		case AlignRight:
-			textX = buttonWidth - textWidth
-		}
-
-		// Calculate vertical position
-		var textY float64
-		switch b.ButtonText.VerticalCenter {
-		case AlignTop:
-			textY = 0
-		case AlignMiddle:
-			textY = (buttonHeight - textHeight) / 2
-		case AlignBottom:
-			textY = buttonHeight - textHeight
-		}
-
+		textX, textY := AlignText(imgToDraw, b.ButtonText.Text, b.ButtonText.Font, b.ButtonText.HorizontalCenter, b.ButtonText.VerticalCenter)
 		options.GeoM.Translate(textX, textY)
 		R, G, B, A := b.ButtonText.TextColor.RGBA()
 		options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
@@ -190,4 +161,38 @@ func CombineButton(btnFrame, btnIcon, txtBox *ebiten.Image, scale float64) *ebit
 	op.GeoM.Translate(1*scale, 55.0*scale)
 	combinedImage.DrawImage(txtBox, op)
 	return combinedImage
+}
+
+func AlignText(imgToDraw *ebiten.Image, txt string, font text.Face, hAlign HorizontalAlignment, vAlign VerticalAlignment) (float64, float64) {
+	// Get button dimensions
+	bounds := imgToDraw.Bounds()
+	buttonWidth := float64(bounds.Dx())
+	buttonHeight := float64(bounds.Dy())
+
+	// Measure text dimensions
+	textWidth, textHeight := text.Measure(txt, font, 0)
+
+	// Calculate horizontal position
+	var textX float64
+	switch hAlign {
+	case AlignLeft:
+		textX = 0
+	case AlignCenter:
+		textX = (buttonWidth - textWidth) / 2
+	case AlignRight:
+		textX = buttonWidth - textWidth
+	}
+
+	// Calculate vertical position
+	var textY float64
+	switch vAlign {
+	case AlignTop:
+		textY = 0
+	case AlignMiddle:
+		textY = (buttonHeight - textHeight) / 2
+	case AlignBottom:
+		textY = buttonHeight - textHeight
+	}
+
+	return textX, textY
 }
