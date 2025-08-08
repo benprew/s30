@@ -99,16 +99,4 @@ var (
 	MiniMapFrameSprite_png []byte
 	//go:embed art/sprites/mini_map/Mapbttns_map.json
 	MiniMapFrameSprite_json []byte
-
-	/////////
-	// Cards
-	/////////
-	//go:embed art/cardart/2ed-40-serra-angel.avif
-	SerraAngel_avif []byte
-
-	//go:embed art/cardart/2ed-40-200-serra-angel.png
-	SerraAngel_png []byte
-
-	//go:embed art/cardart/c16-143-burgeoning-small.jpg
-	Burgeoning_jpg []byte
 )
