@@ -2,7 +2,10 @@ package domain
 
 import (
 	"bytes"
+	"fmt"
+	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/benprew/s30/assets"
 )
@@ -26,7 +29,7 @@ type CardSet struct {
 	ID          string
 	Name        string
 	Type        string
-	CollectorNo int
+	CollectorNo string
 }
 
 type Card struct {
@@ -92,4 +95,22 @@ func FindAllCardsByName(name string) []*Card {
 	}
 
 	return result
+}
+
+func (c *Card) Filename() string {
+	fn := fmt.Sprintf("%s-%s-200-%s.png", c.CardSet.ID, c.CardSet.CollectorNo, sanitizeFilename(c.CardName))
+	fmt.Println(fn)
+	return fn
+}
+
+func sanitizeFilename(name string) string {
+	name = strings.ToLower(name)
+
+	re1 := regexp.MustCompile(`[^\w\s-]`)
+	name = re1.ReplaceAllString(name, "")
+
+	re2 := regexp.MustCompile(`[-\s]+`)
+	name = re2.ReplaceAllString(name, "-")
+
+	return strings.Trim(name, "-")
 }

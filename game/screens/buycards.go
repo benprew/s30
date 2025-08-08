@@ -7,8 +7,6 @@ import (
 	"image"
 	"image/color"
 	"io"
-	"regexp"
-	"strings"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -116,7 +114,7 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 	cards := make([]*elements.Button, 0)
 	for i, cardIdx := range city.CardsForSale {
 		card := domain.CARDS[cardIdx]
-		filename := cardFilename(card)
+		filename := card.Filename()
 		data, err := readFromZip("assets/art/carddata.zip", "carddata/"+filename)
 		if err != nil {
 			fmt.Errorf("failed to read image: %w", err)
@@ -138,7 +136,7 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 		priceLabel := ebiten.NewImageFromImage(sprite[4])
 		priceText := fmt.Sprintf("%d", card.Price)
 		priceFontFace := &text.GoTextFace{
-			Source: fonts.MtgSymFont,
+			Source: fonts.MtgFont,
 			Size:   16,
 		}
 		textX, textY := elements.AlignText(priceLabel, priceText, priceFontFace, elements.AlignCenter, elements.AlignMiddle)
@@ -197,12 +195,6 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 	return buttons
 }
 
-func cardFilename(c *domain.Card) string {
-	fn := fmt.Sprintf("%s-%d-200-%s.png", c.CardSet.ID, c.CardSet.CollectorNo, sanitizeFilename(c.CardName))
-	fmt.Println(fn)
-	return fn
-}
-
 func loadButtonMap(spriteFile []byte, mapFile []byte) []*ebiten.Image {
 	sprInfo, err := sprites.LoadSprInfoFromJSON(mapFile)
 	if err != nil {
@@ -244,16 +236,4 @@ func readFromZip(zipPath, filename string) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("file %s not found in zip", filename)
-}
-
-func sanitizeFilename(name string) string {
-	name = strings.ToLower(name)
-
-	re1 := regexp.MustCompile(`[^\w\s-]`)
-	name = re1.ReplaceAllString(name, "")
-
-	re2 := regexp.MustCompile(`[-\s]+`)
-	name = re2.ReplaceAllString(name, "-")
-
-	return strings.Trim(name, "-")
 }

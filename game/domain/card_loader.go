@@ -88,14 +88,13 @@ func (cj *CardJSON) ToCard() *Card {
 	// Convert string power/toughness to int, handling special cases
 	power := convertPowerToughness(cj.Power)
 	toughness := convertPowerToughness(cj.Toughness)
-	collectorNo := toInt(cj.CollectorNo)
 	price := normalizePrice(toFloat(cj.PriceUSD))
 
 	return &Card{
 		CardSet: CardSet{
 			ID:          cj.SetID,
 			Name:        cj.SetName,
-			CollectorNo: collectorNo,
+			CollectorNo: cj.CollectorNo,
 		},
 		ScryfallID:     cj.ScryfallID,
 		OracleID:       cj.OracleID,
@@ -176,10 +175,10 @@ func convertPowerToughness(value string) int {
 // normalizePrice converts a price from input range to output range using logarithmic scaling
 func normalizePrice(price float64) int {
 	const (
-		minInput  = 0.01
-		maxInput  = 1200.0
-		minOutput = 15.0
-		maxOutput = 5000.0
+		minInput  = 0.10
+		maxInput  = 20000.0
+		minOutput = 10.0
+		maxOutput = 1000.0
 	)
 
 	// Clamp input to avoid log(0)
