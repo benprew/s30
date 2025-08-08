@@ -7,10 +7,10 @@ import (
 
 var (
 	// Fonts
-	//go:embed fonts/Magim___.ttf
+	//go:embed fonts/Planewalker-38m6.ttf
 	Magic_ttf []byte
 
-	//go:embed fonts/Magis___.ttf
+	//go:embed fonts/PlanewalkerDings-Pl9d.ttf
 	MagicSym_ttf []byte
 
 	// Card data
