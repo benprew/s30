@@ -70,7 +70,7 @@ if ! jq 'map(select(.legalities.vintage != "not_legal" and (.set == "lea" or .se
   Watermark: .watermark,
   Artist: .artist,
   ManaProduction: .produced_mana,
-  PriceUSD: .prices.usd or .prices.eur,
+  PriceUSD: (if .prices.usd then (.prices.usd) else .prices.eur end),
   PngURL: .image_uris.png
 })' < "$INPUT_FILE" > "$OUTPUT_JSON"; then
     echo "Error: Failed to process cards with jq"

@@ -65,7 +65,7 @@ def download_and_process_card(card_data: Dict[str, Any], output_dir: Path) -> bo
         print(f"  Downloading from {png_url}")
         urllib.request.urlretrieve(png_url, original_path)
 
-        resize_size = "200x"
+        resize_size = "300x"
         # Resize image using ImageMagick convert
         print(f"  Resizing to {resize_size} width...")
         convert_cmd = [
@@ -87,6 +87,7 @@ def download_and_process_card(card_data: Dict[str, Any], output_dir: Path) -> bo
             "pngquant",
             "--quality=60-80",
             "--force",
+            "--strip",
             "--output",
             str(resized_path),
             str(resized_path),
