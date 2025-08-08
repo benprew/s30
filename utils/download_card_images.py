@@ -5,16 +5,22 @@ Downloads PNG images, resizes them to 200px width, and compresses them with pngq
 """
 
 import json
-import os
 import re
 import subprocess
 import sys
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Dict, Any, List
+
+# TODO: the transform cards have 2 images in for a single card.
+# Probably save the first image as the untransformed name?
+# And then split the cardname in domain.Card
+# see pyretic-prankster // glistening-goremonger
+# Or... just ignore them for now
 
 
-def sanitize_filename(name):
+def sanitize_filename(name: str) -> str:
     """Convert card name to a safe filename format."""
     # Convert to lowercase and replace spaces/special chars with hyphens
     name = re.sub(r"[^\w\s-]", "", name.lower())
@@ -22,17 +28,16 @@ def sanitize_filename(name):
     return name.strip("-")
 
 
-def download_and_process_card(card_data, output_dir):
+def download_and_process_card(card_data: Dict[str, Any], output_dir: Path) -> bool:
     """Download and process a single card image."""
     try:
         # Extract card information
-        card_name = card_data.get("name", "")
-        set_code = card_data.get("set", "")
-        collector_number = card_data.get("collector_number", "")
+        card_name = card_data.get("CardName", "")
+        set_code = card_data.get("SetID", "")
+        collector_number = card_data.get("CollectorNo", "")
 
         # Get PNG image URL
-        image_uris = card_data.get("image_uris", {})
-        png_url = image_uris.get("png")
+        png_url = card_data.get("PngURL")
 
         if not png_url:
             print(f"No PNG URL found for {card_name}")
@@ -60,7 +65,7 @@ def download_and_process_card(card_data, output_dir):
         print(f"  Downloading from {png_url}")
         urllib.request.urlretrieve(png_url, original_path)
 
-        resize_size = "300x"
+        resize_size = "200x"
         # Resize image using ImageMagick convert
         print(f"  Resizing to {resize_size} width...")
         convert_cmd = [
@@ -103,7 +108,7 @@ def download_and_process_card(card_data, output_dir):
         return False
 
 
-def main():
+def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python download_card_images.py <json_file>")
         sys.exit(1)
@@ -131,7 +136,7 @@ def main():
     # Load and process JSON data
     try:
         with open(json_file, "r", encoding="utf-8") as f:
-            cards_data = json.load(f)
+            cards_data: List[Dict[str, Any]] = json.load(f)
     except Exception as e:
         print(f"Error reading JSON file: {e}")
         sys.exit(1)
@@ -142,8 +147,8 @@ def main():
 
     print(f"Processing {len(cards_data)} cards...")
 
-    success_count = 0
-    max_workers = min(
+    success_count: int = 0
+    max_workers: int = min(
         8, len(cards_data)
     )  # Limit concurrent downloads to avoid overwhelming the server
 
