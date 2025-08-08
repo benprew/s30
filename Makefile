@@ -18,5 +18,8 @@ webbuild:
 	GOOS=js GOARCH=wasm go build -o s30.wasm github.com/benprew/s30
 	scp  s30.wasm /usr/local/go/lib/wasm/wasm_exec.js index.html main.html teamvite.com:/var/www/html/throwingbones/ben/s30/
 
-deps:
+builddeps:
 	sudo apt-get install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libxxf86vm-dev
+
+devdeps:
+	sudo apt install imagemagick pngquant
