@@ -10,10 +10,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
-var MtgFont = mkMtgFont()
+var MtgFont = mkFont(assets.Magic_ttf)
+var MtgSymFont = mkFont(assets.MagicSym_ttf)
 
-func mkMtgFont() *text.GoTextFaceSource {
-	font, err := text.NewGoTextFaceSource(bytes.NewReader(assets.Magic_ttf))
+func mkFont(fontBytes []byte) *text.GoTextFaceSource {
+	font, err := text.NewGoTextFaceSource(bytes.NewReader(fontBytes))
 	if err != nil {
 		panic(fmt.Errorf("failed to create font source: %w", err))
 	}

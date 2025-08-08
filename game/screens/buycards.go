@@ -138,7 +138,7 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 		priceLabel := ebiten.NewImageFromImage(sprite[4])
 		priceText := fmt.Sprintf("%d", card.Price)
 		priceFontFace := &text.GoTextFace{
-			Source: fonts.MtgFont,
+			Source: fonts.MtgSymFont,
 			Size:   16,
 		}
 		textX, textY := elements.AlignText(priceLabel, priceText, priceFontFace, elements.AlignCenter, elements.AlignMiddle)
