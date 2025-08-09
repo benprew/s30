@@ -15,6 +15,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
+// TODO this file should be separated into screen and world logic
+
 // Level represents a Game level.
 type Level struct {
 	w, h       int
@@ -27,7 +29,6 @@ type Level struct {
 
 	Player  *entities.Player
 	enemies []entities.Enemy
-	Frame   *ebiten.Image
 }
 
 // NewLevel returns a new randomly generated Level.
@@ -40,11 +41,6 @@ func NewLevel() (*Level, error) {
 		return nil, fmt.Errorf("failed to load player sprite: %s", err)
 	}
 
-	frame, err := LoadWorldFrame()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load world frame: %s", err)
-	}
-
 	l := &Level{
 		w:          47,
 		h:          63,
@@ -52,7 +48,6 @@ func NewLevel() (*Level, error) {
 		tileHeight: 102,
 		enemies:    make([]entities.Enemy, 0),
 		Player:     c,
-		Frame:      frame,
 	}
 
 	// Load embedded SpriteSheet.
@@ -160,11 +155,6 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	options.GeoM.Translate(float64(screenW)/2, float64(screenH)/2)
 	options.GeoM.Translate(-float64(entities.SpriteWidth/2)*scale, -float64(entities.SpriteHeight/2)*scale)
 	l.Player.Draw(screen, options)
-
-	// Draw the worldFrame over everything
-	frameOpts := &ebiten.DrawImageOptions{}
-	frameOpts.GeoM.Scale(scale, scale)
-	screen.DrawImage(l.Frame, frameOpts)
 }
 
 // Update reads current user input and updates the Game state.
