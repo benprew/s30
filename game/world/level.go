@@ -158,7 +158,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 }
 
 // Update reads current user input and updates the Game state.
-func (l *Level) Update(screenW, screenH int) (screenui.ScreenName, error) {
+func (l *Level) Update(screenW, screenH int, scale float64) (screenui.ScreenName, error) {
 	// Store current player tile before moving
 	prevTile := l.CharacterTile()
 
@@ -324,8 +324,8 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale
 			screenX := pixelX - (pX - 1024/2)
 			screenY := pixelY - (pY - 768/2)
 
+			// we don't scale the world view up
 			op.GeoM.Reset()
-			op.GeoM.Scale(scale, scale)
 			op.GeoM.Translate(float64(screenX), float64(screenY))
 			tile.Draw(screen, op)
 		}
@@ -341,12 +341,9 @@ func (l *Level) CharacterTile() TilePoint {
 	pixelX := pLoc.X
 	pixelY := pLoc.Y
 
-	tileWidth := l.tileWidth
-	tileHeight := l.tileHeight
-
 	// Calculate the approximate row and column
-	tileY := pixelY / (tileHeight / 2)
-	tileX := (pixelX - (tileY%2)*(tileWidth/2)) / tileWidth
+	tileY := pixelY / (l.tileHeight / 2)
+	tileX := (pixelX - (tileY%2)*(l.tileWidth/2)) / l.tileWidth
 
 	// Ensure the tile coordinates are within bounds
 	if pixelX < 0 || tileX >= l.w || pixelY < 0 || tileY >= l.h {
@@ -354,6 +351,42 @@ func (l *Level) CharacterTile() TilePoint {
 	}
 
 	return TilePoint{tileX, tileY}
+}
+
+// FindClosestCity returns the tile coordinates and distance of the closest city to the player
+func (l *Level) FindClosestCity() (TilePoint, float64) {
+	pLoc := l.Player.Loc()
+	closestTile := TilePoint{-1, -1}
+	minDistance := math.MaxFloat64
+
+	for y := 0; y < l.h; y++ {
+		for x := 0; x < l.w; x++ {
+			tile := l.Tile(TilePoint{x, y})
+			if tile != nil && tile.IsCity {
+				// Calculate pixel position of this tile
+				pixelX := x * l.tileWidth
+				pixelY := y * l.tileHeight / 2
+				if y%2 != 0 {
+					pixelX += l.tileWidth / 2
+				}
+
+				// Calculate distance from player
+				dx := float64(pixelX - pLoc.X)
+				dy := float64(pixelY - pLoc.Y)
+				distance := math.Sqrt(dx*dx + dy*dy)
+
+				// Apply camera scale to the distance
+				scaledDistance := distance
+
+				if scaledDistance < minDistance {
+					minDistance = scaledDistance
+					closestTile = TilePoint{x, y}
+				}
+			}
+		}
+	}
+
+	return closestTile, minDistance
 }
 
 func PrintLevel(l *Level) {

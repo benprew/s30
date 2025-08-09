@@ -13,7 +13,7 @@ const (
 )
 
 type Screen interface {
-	Update(W, H int) (ScreenName, error)
+	Update(W, H int, scale float64) (ScreenName, error)
 	Draw(screen *ebiten.Image, W, H int, scale float64)
 	IsFramed() bool // True if we should draw the world frame
 }

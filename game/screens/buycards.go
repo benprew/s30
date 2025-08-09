@@ -81,15 +81,15 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	frameOpts := &ebiten.DrawImageOptions{}
 	frameOpts.GeoM.Scale(scale, scale)
 	for _, b := range s.Buttons {
-		b.Draw(screen, frameOpts)
+		b.Draw(screen, frameOpts, scale)
 	}
 }
 
-func (s *BuyCardsScreen) Update(W, H int) (screenui.ScreenName, error) {
+func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
 	options := &ebiten.DrawImageOptions{}
 	for i := range s.Buttons {
 		b := s.Buttons[i]
-		b.Update(options)
+		b.Update(options, scale)
 		if b.ButtonID == "done" && b.State == elements.StateClicked {
 			return screenui.CityScr, nil
 		}

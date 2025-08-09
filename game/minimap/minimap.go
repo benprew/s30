@@ -145,7 +145,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.DrawImage(m.frame, options) // draw background frame
 
 	for _, b := range m.buttons {
-		b.Draw(screen, options)
+		b.Draw(screen, options, scale)
 	}
 
 	xref := map[int]int{
@@ -188,13 +188,13 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 }
 
-func (m *MiniMap) Update(W, H int) (screenui.ScreenName, error) {
+func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, error) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(SCALE, SCALE) // scale up from 640x480
 
 	for i := range m.buttons {
 		b := m.buttons[i]
-		b.Update(options)
+		b.Update(options, scale)
 		if b.ButtonText.Text == "Done" && b.State == elements.StateClicked {
 			return screenui.WorldScr, nil
 		}

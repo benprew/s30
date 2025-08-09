@@ -71,12 +71,12 @@ func scaleImage(img *ebiten.Image, scale float64) *ebiten.Image {
 
 // Draw renders the button onto the screen.
 // It draws the appropriate button image based on its state and overlays the text.
-func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale float64) {
 	var imgToDraw *ebiten.Image
 
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Concat(opts.GeoM)
-	options.GeoM.Translate(float64(b.X), float64(b.Y))
+	options.GeoM.Translate(float64(b.X)*scale, float64(b.Y)*scale)
 	switch b.State {
 	case StateHover:
 		imgToDraw = b.Hover
@@ -106,7 +106,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 }
 
 // Update checks the button's state based on mouse interaction. Button box is button size + scale. Scale is passed in opts
-func (b *Button) Update(opts *ebiten.DrawImageOptions) {
+func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64) {
 	mx, my := ui.TouchPosition()
 	isTouch := mx > 0
 	if mx == 0 {
@@ -114,8 +114,8 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions) {
 	}
 
 	bounds := b.Normal.Bounds()
-	buttonWidth := bounds.Dx()
-	buttonHeight := bounds.Dy()
+	buttonWidth := float64(bounds.Dx()) * scale
+	buttonHeight := float64(bounds.Dy()) * scale
 	combinedGeoM := ebiten.GeoM{}
 	combinedGeoM.Concat(opts.GeoM)
 	if b.Scale != 0 {

@@ -52,10 +52,12 @@ func NewGame() (*Game, error) {
 		return nil, fmt.Errorf("failed to create world frame: %s", err)
 	}
 
+	scale := 1.0
+
 	g := &Game{
-		screenW:           1024,
-		screenH:           768,
-		camScale:          1,
+		screenW:           int(1024 * scale),
+		screenH:           int(768 * scale),
+		camScale:          scale,
 		camScaleTo:        1,
 		mousePanX:         math.MinInt32,
 		mousePanY:         math.MinInt32,
@@ -83,7 +85,7 @@ func (g *Game) Update() error {
 		g.screenMap[screenui.WorldScr] = l
 	}
 
-	name, err := g.CurrentScreen().Update(g.screenW, g.screenH)
+	name, err := g.CurrentScreen().Update(g.screenW, g.screenH, g.camScale)
 	if err != nil {
 		panic(fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err))
 	}
@@ -101,28 +103,32 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	g.CurrentScreen().Draw(screen, g.screenW, g.screenH, g.camScale)
 	if g.CurrentScreen().IsFramed() {
 		g.worldFrame.Draw(screen, g.camScale)
-		// frame := g.Level().Frame
-		// frameOpts := &ebiten.DrawImageOptions{}
-		// frameOpts.GeoM.Scale(g.camScale, g.camScale)
-		// screen.DrawImage(frame, frameOpts)
 	}
-	g.CurrentScreen().Draw(screen, g.screenW, g.screenH, g.camScale)
 
 	// Print game info.
 	charT := g.Level().CharacterTile()
 	charP := g.Level().CharacterPos()
+	closestCityTile, closestCityDistance := g.Level().FindClosestCity()
+
 	// Get mouse cursor screen position
 	mouseX, mouseY := ebiten.CursorPosition()
 
-	ebitenutil.DebugPrint(
-		screen,
-		fmt.Sprintf(
-			"Screen: %s\nKEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
-			screenui.ScreenNameToString(g.currentScreenName), ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
-		),
+	debugText := fmt.Sprintf(
+		"Screen: %s\nKEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
+		screenui.ScreenNameToString(g.currentScreenName), ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
 	)
+
+	// Add closest city info if a city exists
+	if closestCityTile.X != -1 && closestCityTile.Y != -1 {
+		cityTile := g.Level().Tile(closestCityTile)
+		debugText += fmt.Sprintf("\nCLOSEST CITY: %s at (%d,%d) dist: %.0f",
+			cityTile.City.Name, closestCityTile.X, closestCityTile.Y, closestCityDistance)
+	}
+
+	ebitenutil.DebugPrint(screen, debugText)
 }
 
 // Layout is called when the Game's layout changes.

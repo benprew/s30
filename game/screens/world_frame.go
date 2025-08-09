@@ -38,6 +38,6 @@ func (f *WorldFrame) Draw(screen *ebiten.Image, scale float64) {
 	screen.DrawImage(f.img, frameOpts)
 }
 
-func (f *WorldFrame) Update(W, H int) error {
+func (f *WorldFrame) Update(W, H int, scale float64) error {
 	return nil
 }

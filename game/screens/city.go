@@ -45,24 +45,25 @@ func (c *CityScreen) IsFramed() bool {
 
 func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	cityOpts := &ebiten.DrawImageOptions{}
+	cityOpts.GeoM.Scale(scale, scale)
 	cityOpts.GeoM.Scale(SCALE, SCALE)
-	cityOpts.GeoM.Translate(100.0, 75.0) // Offset the image
+	cityOpts.GeoM.Translate(100.0*scale, 75.0*scale) // Offset the image
 	screen.DrawImage(c.City.BackgroundImage, cityOpts)
 
 	frameOpts := &ebiten.DrawImageOptions{}
 	frameOpts.GeoM.Scale(scale, scale)
 	for _, b := range c.Buttons {
-		b.Draw(screen, frameOpts)
+		b.Draw(screen, frameOpts, scale)
 	}
 
 	c.drawCityName(screen)
 }
 
-func (c *CityScreen) Update(W, H int) (screenui.ScreenName, error) {
+func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
 	options := &ebiten.DrawImageOptions{}
 	for i := range c.Buttons {
 		b := c.Buttons[i]
-		b.Update(options)
+		b.Update(options, scale)
 		if b.ButtonText.Text == "Leave Village" && b.State == elements.StateClicked {
 			return screenui.WorldScr, nil
 		}
