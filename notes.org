@@ -56,3 +56,262 @@ Can use MTG Oracle ID for card id, and keep updated with scryfall
 Converted buttons that had black background to transparent background.
 
 convert assets/art/sprites/city/Smbuybttn.png -transparent black assets/art/sprites/city/Smbuybttn.png
+* Scaling the game screen
+Some options for handling scaling
+
+## 1. **Percentage-Based Positioning**
+Instead of hardcoded pixel positions, use percentages of screen dimensions:
+
+```go
+// Instead of:
+buttonX := 100
+buttonY := 50
+
+// Use:
+buttonX := int(float64(screenW) * 0.1)  // 10% from left
+buttonY := int(float64(screenH) * 0.065) // 6.5% from top
+```
+
+## 2. **Anchor-Based Layout System**
+Create an anchor system for UI elements:
+
+```go
+type Anchor int
+const (
+    TopLeft Anchor = iota
+    TopCenter
+    TopRight
+    CenterLeft
+    Center
+    CenterRight
+    BottomLeft
+    BottomCenter
+    BottomRight
+)
+
+type UIElement struct {
+    Anchor Anchor
+    OffsetX, OffsetY int  // Offset from anchor point
+}
+
+func (ui *UIElement) GetPosition(screenW, screenH int) (int, int) {
+    switch ui.Anchor {
+    case TopLeft:
+        return ui.OffsetX, ui.OffsetY
+    case TopCenter:
+        return screenW/2 + ui.OffsetX, ui.OffsetY
+    case Center:
+        return screenW/2 + ui.OffsetX, screenH/2 + ui.OffsetY
+    // ... other cases
+    }
+}
+```
+
+## 3. **Responsive Layout Manager**
+Create a layout manager that handles different screen sizes:
+
+```go
+type LayoutManager struct {
+    baseWidth, baseHeight int  // Your original 1024x768
+}
+
+func (lm *LayoutManager) ScalePosition(x, y, currentW, currentH int) (int, int) {
+    scaleX := float64(currentW) / float64(lm.baseWidth)
+    scaleY := float64(currentH) / float64(lm.baseHeight)
+
+    return int(float64(x) * scaleX), int(float64(y) * scaleY)
+}
+```
+
+## 4. **Constraint-Based Layout**
+Define relationships between UI elements:
+
+```go
+type Constraint struct {
+    Element    *UIElement
+    RelativeTo *UIElement  // nil for screen edges
+    Spacing    int
+    Direction  Direction   // Above, Below, LeftOf, RightOf
+}
+```
+
+## 5. **Grid System**
+Divide the screen into a grid and position elements within grid cells:
+
+```go
+type GridLayout struct {
+    Rows, Cols int
+}
+
+func (g *GridLayout) GetCellPosition(row, col, screenW, screenH int) (int, int) {
+    cellW := screenW / g.Cols
+    cellH := screenH / g.Rows
+    return col * cellW, row * cellH
+}
+```
+
+## **Recommended Approach for Your Game:**
+
+Given your current setup, I'd suggest starting with **option #2 (Anchor-Based)** combined with **option #3 (Layout Manager)**:
+
+1. **Modify your Button struct** to include anchor information
+2. **Update your screen classes** (CityScreen, BuyCardsScreen, etc.) to use anchored positioning
+3. **Create a helper function** that converts your current hardcoded positions to anchored ones
+
+This approach:
+- Requires minimal changes to existing code
+- Provides good flexibility for different screen sizes
+- Is easy to understand and maintain
+- Works well with your existing UI element structure
+
+Would you like me to show you how to implement the anchor-based system for your specific button and UI setup?
+Tokens: 9.8k sent, 738 received. Cost: $0.04 message, $0.17 session.
+
+game/game.go
+game/world/level.go
+architect> /ask I'd like some abstract representation of pixels that I can use so that I don't have to pass scale around everywhere, what would that look like? and what are the shortcomings of that approach?
+
+Here's an abstract pixel representation approach:
+
+## **Virtual Pixel System**
+
+```go
+// Virtual pixel unit - always represents the same logical size
+type VPixel int
+type VPoint struct {
+    X, Y VPixel
+}
+type VRect struct {
+    X, Y, W, H VPixel
+}
+
+// Global viewport that handles conversion
+type Viewport struct {
+    baseWidth, baseHeight int     // Your reference resolution (1024x768)
+    currentWidth, currentHeight int
+    scale float64
+}
+
+var GlobalViewport *Viewport
+
+func (vp *Viewport) ToScreen(v VPixel) int {
+    return int(float64(v) * vp.scale)
+}
+
+func (vp *Viewport) ToScreenPoint(p VPoint) (int, int) {
+    return vp.ToScreen(p.X), vp.ToScreen(p.Y)
+}
+
+func (vp *Viewport) FromScreen(pixels int) VPixel {
+    return VPixel(float64(pixels) / vp.scale)
+}
+
+func (vp *Viewport) UpdateScale(newWidth, newHeight int) {
+    vp.currentWidth = newWidth
+    vp.currentHeight = newHeight
+    vp.scale = math.Min(
+        float64(newWidth)/float64(vp.baseWidth),
+        float64(newHeight)/float64(vp.baseHeight),
+    )
+}
+```
+
+## **Usage Example**
+
+```go
+// Instead of:
+buttonX := 100
+buttonY := 50
+
+// Use:
+buttonPos := VPoint{X: 100, Y: 50}
+
+// In your draw function:
+screenX, screenY := GlobalViewport.ToScreenPoint(buttonPos)
+drawButton(screen, screenX, screenY)
+```
+
+## **Integration with Your Button System**
+
+```go
+type Button struct {
+    // ... existing fields
+    Position VPoint  // Instead of X, Y int
+    Size     VPoint  // Instead of separate width/height
+}
+
+func (b *Button) Draw(screen *ebiten.Image) {
+    x, y := GlobalViewport.ToScreenPoint(b.Position)
+    w, h := GlobalViewport.ToScreenPoint(b.Size)
+
+    opts := &ebiten.DrawImageOptions{}
+    opts.GeoM.Scale(GlobalViewport.scale, GlobalViewport.scale)
+    opts.GeoM.Translate(float64(x), float64(y))
+    screen.DrawImage(b.Normal, opts)
+}
+```
+
+## **Shortcomings of This Approach**
+
+### **1. Global State Dependency**
+- Creates coupling between all UI code and the global viewport
+- Makes testing harder (need to initialize global state)
+- Can cause issues in multi-threaded scenarios
+
+### **2. Type Safety Issues**
+- Easy to accidentally mix VPixel and regular int values
+- Compiler won't catch when you forget to convert
+- Can lead to subtle bugs when values get passed around
+
+### **3. Performance Overhead**
+- Every pixel access requires a multiplication
+- Frequent conversions can add up, especially for complex UI
+- Cache misses from extra indirection
+
+### **4. Debugging Complexity**
+- Harder to debug layout issues (need to convert values mentally)
+- Print statements show virtual pixels, not actual screen positions
+- Tools/debuggers show actual pixels, creating disconnect
+
+### **5. Third-Party Library Integration**
+- Ebiten and other libraries expect real pixels
+- Need conversion at every boundary
+- Easy to forget conversions when using library functions
+
+### **6. Precision Loss**
+- Repeated conversions can accumulate floating-point errors
+- Small VPixel values might round to 0 at small scales
+- Can cause alignment issues with fractional scaling
+
+## **Alternative: Context-Based Approach**
+
+```go
+type RenderContext struct {
+    scale float64
+    screenW, screenH int
+}
+
+func (rc *RenderContext) ScaleX(x int) int {
+    return int(float64(x) * rc.scale)
+}
+
+// Pass context explicitly instead of global state
+func (b *Button) Draw(screen *ebiten.Image, ctx *RenderContext) {
+    x := ctx.ScaleX(b.X)
+    y := ctx.ScaleY(b.Y)
+    // ...
+}
+```
+
+This avoids global state but requires passing the context around, which you wanted to avoid.
+
+## **Recommendation**
+
+For your game, I'd suggest a **hybrid approach**:
+- Use the virtual pixel system for **UI layout and positioning**
+- Keep the global viewport for convenience
+- Add helper methods to your existing structs to handle conversion
+- Use real pixels for performance-critical rendering code
+
+This gives you the convenience without the full overhead everywhere.
+Tokens: 12k sent, 937 received. Cost: $0.05 message, $0.22 session.
