@@ -1,0 +1,58 @@
+* Card Art
+Image art should be 190x150
+card back images are 228 x 325
+
+Would also require text for:
+- mana cost
+- set symbol
+- card text
+- flavor text
+
+
+I've opted out of writing a cat decoder since I can get card art online: https://scryfall.com/docs/api/images
+
+** Sizes
+Medart.cat is 31MB
+
+That's 300 cards at 100k/card, which seems possible.
+- burgeoning.jpg is 160k
+- burgeoning-art.jpg is 130k
+
+Try converting them to .png and running:
+- pngquant --quality=60-80
+
+Example art image for burgeoning, size is 190x140
+
+-rw-r--r--  1 ben ben  59K Jul 23 23:19  c16-143-burgeoning-art.png
+-rw-rw-r--  1 ben ben  25K Jul 23 23:20  c16-143-burgeoning-art-fs8.png
+
+stripped down is 25k! That's pretty good! For all 25k cards, that's only 625MB
+
+For 1k cards that's only 25MB, much better than Medart! It could be even better if I could separate the palette from the image, but .png doesn't support that and ChatGPT doesn't give me any good standard image formats that do this.
+
+Google suggest GIF format, LZW compressed and can have separate palette
+
+Also look into AVIF format (https://en.wikipedia.org/wiki/AVIF)
+
+*** Resizing images:
+# Resize to specific width, height auto-calculated
+convert input.png -resize 300x output.png
+
+# Resize to specific height, width auto-calculated
+convert input.png -resize x200 output.png
+
+# Resize to fit within 300x200 box (won't exceed either dimension)
+convert input.png -resize 300x200 output.png
+
+# Resize by percentage
+convert input.png -resize 50% output.png
+* Storing cards
+Can use MTG Oracle ID for card id, and keep updated with scryfall
+
+- images: https://scryfall.com/docs/api/images
+- cards.json: https://scryfall.com/docs/api/bulk-data
+
+* Adding transparency to an image
+Converted buttons that had black background to transparent background.
+
+convert assets/art/sprites/city/Smbuybttn.png -transparent black assets/art/sprites/city/Smbuybttn.png
