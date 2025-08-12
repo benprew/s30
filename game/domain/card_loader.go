@@ -175,10 +175,10 @@ func convertPowerToughness(value string) int {
 // normalizePrice converts a price from input range to output range using logarithmic scaling
 func normalizePrice(price float64) int {
 	const (
-		minInput  = 0.10
+		minInput  = 0.25
 		maxInput  = 20000.0
 		minOutput = 10.0
-		maxOutput = 1000.0
+		maxOutput = 1500.0
 	)
 
 	// Clamp input to avoid log(0)
