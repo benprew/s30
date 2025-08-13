@@ -102,4 +102,8 @@ var (
 	MiniMapFrameSprite_png []byte
 	//go:embed art/sprites/mini_map/Mapbttns_map.json
 	MiniMapFrameSprite_json []byte
+
+	// Card images
+	//go:embed art/cardimages.zip
+	CardImages_zip []byte
 )

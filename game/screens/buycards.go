@@ -116,7 +116,7 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 		card := domain.CARDS[cardIdx]
 		filename := card.Filename()
 		fmt.Println("BuyCards: Loading card images")
-		data, err := readFromZip("carddata.zip", "carddata/"+filename)
+		data, err := readFromEmbeddedZip(assets.CardImages_zip, "carddata/"+filename)
 		if err != nil {
 			fmt.Printf("failed to read image: %w", err)
 			continue
@@ -210,13 +210,12 @@ func loadButtonMap(spriteFile []byte, mapFile []byte) []*ebiten.Image {
 	return frameSprite
 }
 
-func readFromZip(zipPath, filename string) ([]byte, error) {
-	// Open the zip file
-	r, err := zip.OpenReader(zipPath)
+func readFromEmbeddedZip(zipData []byte, filename string) ([]byte, error) {
+	// Create a reader from the embedded zip data
+	r, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open zip file: %w", err)
+		return nil, fmt.Errorf("failed to open embedded zip file: %w", err)
 	}
-	defer r.Close()
 
 	// Find the file in the zip
 	for _, f := range r.File {
