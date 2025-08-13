@@ -63,6 +63,9 @@ var (
 	//go:embed art/sprites/world/Advinter1024.pic.png
 	WorldFrame_png []byte
 
+	//go:embed art/sprites/world/Worlds.spr.png
+	WorldSpr_png []byte
+
 	//go:embed art/sprites/world/land/Roads.spr.png
 	Roads_png []byte
 

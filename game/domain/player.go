@@ -11,5 +11,5 @@ type Player struct {
 }
 
 func NewPlayer(name string) *Player {
-	return &Player{Name: name, Gold: 120, Food: 30, Life: 8}
+	return &Player{Name: name, Gold: 1200, Food: 30, Life: 8}
 }

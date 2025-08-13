@@ -47,7 +47,9 @@ func NewGame() (*Game, error) {
 
 	m := minimap.NewMiniMap(l)
 
-	wf, err := screens.NewWorldFrame()
+	player := domain.NewPlayer("Bob")
+
+	wf, err := screens.NewWorldFrame(player)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create world frame: %s", err)
 	}
@@ -67,7 +69,7 @@ func NewGame() (*Game, error) {
 			screenui.WorldScr:   l,
 			screenui.MiniMapScr: m,
 		},
-		player: domain.NewPlayer("Bob"),
+		player: player,
 	}
 
 	ebiten.SetWindowSize(g.screenW, g.screenH)
@@ -98,6 +100,16 @@ func (g *Game) Update() error {
 		g.screenMap[name] = screens.NewBuyCardsScreen(&tile.City)
 	}
 	g.currentScreenName = name
+
+	if g.CurrentScreen().IsFramed() {
+		name, err = g.worldFrame.Update(g.screenW, g.screenH, g.camScale)
+		if err != nil {
+			panic(fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err))
+		}
+		if name != -1 {
+			g.currentScreenName = name
+		}
+	}
 
 	return nil
 }
