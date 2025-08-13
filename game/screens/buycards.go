@@ -115,15 +115,16 @@ func mkCardButtons(scale float64, city *domain.City) []*elements.Button {
 	for i, cardIdx := range city.CardsForSale {
 		card := domain.CARDS[cardIdx]
 		filename := card.Filename()
-		data, err := readFromZip("assets/art/carddata.zip", "carddata/"+filename)
+		fmt.Println("BuyCards: Loading card images")
+		data, err := readFromZip("carddata.zip", "carddata/"+filename)
 		if err != nil {
-			fmt.Errorf("failed to read image: %w", err)
+			fmt.Printf("failed to read image: %w", err)
 			continue
 		}
 
 		cardPng, _, err := image.Decode(bytes.NewReader(data))
 		if err != nil {
-			fmt.Errorf("failed to decode image: %w", err)
+			fmt.Printf("failed to decode image: %w", err)
 			continue
 		}
 
