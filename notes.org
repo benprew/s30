@@ -1,3 +1,14 @@
+* Storing Large files?
+Should I store card art in the repo?
+
+Store card art on throwingbones.com in the format and compression I want. Also store full zip files.
+
+These files can be distributed with the game, like .wad files for quake/doom
+
+Don't store card art on throwingbones.com because then I'm responsible for keeping carddart up on throwingbones.com or the game breaks.
+
+Building the web version of the game will eventually involve uploading indivdual card images to a server somewhere and making http requests when loading them. For now the card images are embedded in the binary. This makes for a slow download, but easy distribution.
+
 * Card Art
 Image art should be 190x150
 card back images are 228 x 325
@@ -57,6 +68,8 @@ Converted buttons that had black background to transparent background.
 
 convert assets/art/sprites/city/Smbuybttn.png -transparent black assets/art/sprites/city/Smbuybttn.png
 * Scaling the game screen
+Note: why does web version scale up?
+
 Some options for handling scaling
 
 ## 1. **Percentage-Based Positioning**
