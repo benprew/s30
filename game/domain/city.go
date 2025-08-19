@@ -21,11 +21,11 @@ func (c *City) FoodCost() int {
 	return c.Tier * 10
 }
 
-func (c *City) MkCards() {
+func MkCards() []int {
 	// Pick 5 random indexes from CARDS
-	cardIndexes := make([]int, 5)
+	cards := make([]int, 0, 5)
 	for i := 0; i < 5; i++ {
-		cardIndexes[i] = rand.Intn(len(CARDS))
+		cards = append(cards, rand.Intn(len(CARDS)))
 	}
-	c.CardsForSale = cardIndexes
+	return cards
 }

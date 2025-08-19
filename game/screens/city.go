@@ -23,19 +23,22 @@ const (
 type CityScreen struct {
 	Buttons []*elements.Button
 	City    *domain.City
+	Player  *domain.Player
 }
 
 type ButtonConfig struct {
+	ID    string
 	Text  string
 	Index int
 	X     int
 	Y     int
 }
 
-func NewCityScreen(city *domain.City) *CityScreen {
+func NewCityScreen(city *domain.City, player *domain.Player) *CityScreen {
 	return &CityScreen{
 		Buttons: mkButtons(SCALE-0.4, city),
 		City:    city,
+		Player:  player,
 	}
 }
 
@@ -64,11 +67,24 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, error
 	for i := range c.Buttons {
 		b := c.Buttons[i]
 		b.Update(options, scale)
-		if b.ButtonText.Text == "Leave Village" && b.State == elements.StateClicked {
-			return screenui.WorldScr, nil
-		}
-		if b.ButtonText.Text == "Buy Cards" && b.State == elements.StateClicked {
-			return screenui.BuyCardsScr, nil
+		switch b.ID {
+		case "leave":
+			if b.State == elements.StateClicked {
+				return screenui.WorldScr, nil
+			}
+		case "buycards":
+			if b.State == elements.StateClicked {
+				return screenui.BuyCardsScr, nil
+			}
+		case "buyfood":
+			if b.State == elements.StateClicked {
+				cost := c.City.FoodCost()
+				if c.Player.Gold >= cost {
+					c.Player.Gold -= cost
+					c.Player.Food += 10
+				}
+				b.State = elements.StateNormal
+			}
 		}
 	}
 
@@ -122,16 +138,17 @@ func mkButtons(scale float64, city *domain.City) []*elements.Button {
 	}
 
 	buttonConfigs := []ButtonConfig{
-		{"Buy Cards", 3, 200, 125},
-		{"Begin Quest", 2, 450, 250},
-		{fmt.Sprintf("Buy food %d gold", city.FoodCost()), 0, 200, 400},
-		{"Leave Village", 1, 700, 400},
-		{"Edit Deck", 4, 700, 125},
+		{ID: "buycards", Text: "Buy Cards", Index: 3, X: 200, Y: 125},
+		{ID: "quest", Text: "Begin Quest", Index: 2, X: 450, Y: 250},
+		{ID: "buyfood", Text: fmt.Sprintf("%d gold = 10 food", city.FoodCost()), Index: 0, X: 200, Y: 400},
+		{ID: "leave", Text: "Leave Village", Index: 1, X: 700, Y: 400},
+		{ID: "editdeck", Text: "Edit Deck", Index: 4, X: 700, Y: 125},
 	}
 
 	buttons := make([]*elements.Button, len(buttonConfigs))
 	for i, config := range buttonConfigs {
 		btn := mkButton(config, fontFace, Icons, Iconb, scale)
+		btn.ID = config.ID
 		buttons[i] = &btn
 	}
 
@@ -148,11 +165,11 @@ func mkButton(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]*
 		Hover:   hover,
 		Pressed: pressed,
 		ButtonText: elements.ButtonText{
-			Text:           config.Text,
-			Font:           fontFace,
-			TextColor:      color.White,
-			TextOffset:     image.Point{X: int(10 * scale), Y: int(60 * scale)},
-			VerticalCenter: elements.AlignBottom,
+			Text:       config.Text,
+			Font:       fontFace,
+			TextColor:  color.White,
+			TextOffset: image.Point{X: int(10 * scale), Y: int(60 * scale)},
+			VAlign:     elements.AlignBottom,
 		},
 		State: elements.StateNormal,
 		X:     config.X,

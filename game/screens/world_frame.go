@@ -72,7 +72,7 @@ func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, error
 	for i := range f.Buttons {
 		b := f.Buttons[i]
 		b.Update(options, scale)
-		if b.ButtonID == "minimap" && b.State == elements.StateClicked {
+		if b.ID == "minimap" && b.State == elements.StateClicked {
 			return screenui.MiniMapScr, nil
 		}
 	}
@@ -89,13 +89,13 @@ func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {
 		offset := i * 90
 		buttons = append(buttons,
 			&elements.Button{
-				Hover:    worldSprs[4][i*2+1],
-				Normal:   worldSprs[4][i*2],
-				Pressed:  worldSprs[4][i*2],
-				X:        8,
-				Y:        110 + offset,
-				Scale:    1.7,
-				ButtonID: n,
+				Hover:   worldSprs[4][i*2+1],
+				Normal:  worldSprs[4][i*2],
+				Pressed: worldSprs[4][i*2],
+				X:       8,
+				Y:       110 + offset,
+				Scale:   1.7,
+				ID:      n,
 			},
 		)
 

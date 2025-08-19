@@ -93,11 +93,11 @@ func (g *Game) Update() error {
 	}
 	if name == screenui.CityScr && g.currentScreenName != screenui.CityScr {
 		tile := g.Level().Tile(g.Level().CharacterTile())
-		g.screenMap[name] = screens.NewCityScreen(&tile.City)
+		g.screenMap[name] = screens.NewCityScreen(&tile.City, g.player)
 	}
 	if name == screenui.BuyCardsScr && g.currentScreenName != screenui.BuyCardsScr {
 		tile := g.Level().Tile(g.Level().CharacterTile())
-		g.screenMap[name] = screens.NewBuyCardsScreen(&tile.City)
+		g.screenMap[name] = screens.NewBuyCardsScreen(&tile.City, g.player)
 	}
 	g.currentScreenName = name
 

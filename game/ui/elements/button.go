@@ -36,12 +36,12 @@ const (
 )
 
 type ButtonText struct {
-	Text             string
-	Font             text.Face
-	TextColor        color.Color
-	TextOffset       image.Point // offset relative to button 0,0
-	HorizontalCenter HorizontalAlignment
-	VerticalCenter   VerticalAlignment
+	Text       string
+	Font       text.Face
+	TextColor  color.Color
+	TextOffset image.Point // offset relative to button 0,0
+	HAlign     HorizontalAlignment
+	VAlign     VerticalAlignment
 }
 
 type Button struct {
@@ -54,7 +54,7 @@ type Button struct {
 	X            int
 	Y            int
 	Scale        float64
-	ButtonID     string
+	ID           string
 }
 
 func scaleImage(img *ebiten.Image, scale float64) *ebiten.Image {
@@ -96,7 +96,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale
 	screen.DrawImage(imgToDraw, options)
 
 	if b.ButtonText.Text != "" {
-		textX, textY := AlignText(imgToDraw, b.ButtonText.Text, b.ButtonText.Font, b.ButtonText.HorizontalCenter, b.ButtonText.VerticalCenter)
+		textX, textY := AlignText(imgToDraw, b.ButtonText.Text, b.ButtonText.Font, b.ButtonText.HAlign, b.ButtonText.VAlign)
 		options.GeoM.Translate(textX, textY)
 		R, G, B, A := b.ButtonText.TextColor.RGBA()
 		options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
@@ -137,10 +137,10 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64) {
 			fmt.Println("Pressed")
 			b.State = StatePressed
 		} else if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) || isTouch {
-			fmt.Printf("Button Clicked: %s\n", b.ButtonText.Text)
+			fmt.Printf("Button Clicked: %s\n", b.ID)
 			b.State = StateClicked
 		} else {
-			fmt.Println("Hover", b.ButtonText.Text)
+			fmt.Println("Hover", b.ID)
 			b.State = StateHover
 		}
 	} else {

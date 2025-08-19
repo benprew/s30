@@ -2,7 +2,6 @@ package assets
 
 import (
 	"embed"
-	_ "embed"
 )
 
 var (
@@ -87,6 +86,9 @@ var (
 	BuyCardsSprite_png []byte
 	//go:embed art/sprites/city/Smbuybttn_map.json
 	BuyCardsSpriteMap_json []byte
+
+	//go:embed art/sprites/Buybuttons.spr.png
+	BuyButtons_png []byte
 
 	//////////
 	// MiniMap
