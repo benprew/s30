@@ -2,7 +2,7 @@ default:
 	go run .
 
 test:
-	go test -v ./...
+	go test ./...
 
 winbuild:
 	GOOS=windows GOARCH=amd64 go build -o s30.exe
