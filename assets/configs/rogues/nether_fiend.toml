@@ -1,0 +1,20 @@
+name = "Nether Fiend"
+main_cards = [
+["20",	"Swamp"],
+["2",	"Soul Net"],
+["4",	"The Hive"],
+["4",	"Animate Dead"],
+["4",	"Nether Shadow"],
+["4",	"Lord of the Pit"],
+["3",	"Erg Raiders"],
+["4",	"Black Knight"],
+["2",	"Frozen Shade"],
+["4",	"Mishra's Factory"],
+["2",	"Junun Efreet"],
+["2",	"Kormus Bell"],
+["3",	"Xenic Poltergeist"],
+]
+sideboard_cards = [
+["3",	"Terror"],
+["3",	"Bog Imp"],
+]

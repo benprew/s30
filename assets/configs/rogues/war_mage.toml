@@ -1,0 +1,19 @@
+name = "War Mage"
+main_cards = [
+["23",	"Mountain"],
+["4",	"Mana Vault"],
+["2",	"Fellwar Stone"],
+["4",	"Lightning Bolt"],
+["4",	"Fireball"],
+["4",	"Earthquake"],
+["2",	"Smoke"],
+["4",	"Ball Lightning"],
+["4",	"Disintegrate"],
+["4",	"Manaflare"],
+["2",	"Aladdin's Ring"],
+]
+sideboard_cards = [
+["3",	"Detonate"],
+["1",	"Red Elemental Blast"],
+["1",	"Celestial Prism"],
+]

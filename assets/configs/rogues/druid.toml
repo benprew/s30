@@ -1,0 +1,23 @@
+name = "Druid"
+main_cards = [
+["20",	"Forest"],
+["4",	"Mishra's Factory"],
+["3",	"Ley Druid"],
+["3",	"Llanowar Elves"],
+["2",	"Oasis"],
+["3",	"Wooden Sphere"],
+["4",	"Giant Growth"],
+["3",	"Wanderlust"],
+["2",	"Wall of Wood"],
+["2",	"Naf's Asp"],
+["2",	"Giant Spider"],
+["2",	"Craw Wurm"],
+["2",	"Ironroot Treefolk"],
+["3",	"Instill Energy"],
+["2",	"Killer Bees"],
+["2",	"Durkwood Boars"],
+]
+sideboard_cards = [
+["3",	"Grizzly Bears"],
+["3",	"Shanodin Dryads"],
+]

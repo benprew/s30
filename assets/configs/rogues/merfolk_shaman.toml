@@ -1,0 +1,17 @@
+name = "Merfolk Shaman"
+main_cards = [
+["22",	"Island"],
+["4",	"Merfolk of the Pearl Trident"],
+["4",	"Lord of Atlantis"],
+["4",	"Segovian Leviathan"],
+["4",	"Unstable Mutation"],
+["4",	"Phantasmal Terrain"],
+["3",	"Pirate Ship"],
+["3",	"Sea Serpent"],
+["2",	"Island Fish Jasconius"],
+["3",	"Magical Hack"],
+["3",	"Lifetap"],
+["4",	"Unsummon"],
+]
+sideboard_cards = [
+]

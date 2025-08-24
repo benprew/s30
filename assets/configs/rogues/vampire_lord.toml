@@ -1,0 +1,19 @@
+name = "Vampire Lord"
+main_cards = [
+["22",	"Swamp"],
+["4",	"Dark Ritual"],
+["3",	"Mana Vault"],
+["4",	"Animate Dead"],
+["4",	"Weakness"],
+["4",	"Sengir Vampire"],
+["4",	"Sorceress Queen"],
+["4",	"Carrion Ants"],
+["4",	"Vampire Bats"],
+["2",	"Uncle Istvan"],
+["2",	"Terror"],
+]
+sideboard_cards = [
+["3",	"Howling Mine"],
+["3",	"Black Knight"],
+["3",	"Winter Orb"],
+]

@@ -1,0 +1,20 @@
+name = "Witch"
+main_cards = [
+["23",	"Swamp"],
+["3",	"Throne of Bone"],
+["4",	"Nevinyrral's Disk"],
+["2",	"Wall of Bone"],
+["4",	"Drudge Skeletons"],
+["4",	"Will-O-The-Wisp"],
+["2",	"Greed"],
+["3",	"Clay Statue"],
+["3",	"Diabolic Machine"],
+["4",	"Unholy Strength"],
+["2",	"Dark Ritual"],
+["3",	"Scavenging Ghoul"],
+["2",	"Drain Life"],
+]
+sideboard_cards = [
+["3",	"Weakness"],
+["1",	"Gloom"],
+]

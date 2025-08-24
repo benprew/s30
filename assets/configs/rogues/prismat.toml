@@ -1,0 +1,26 @@
+name = "Prismat"
+main_cards = [
+["7",	"Mountain"],
+["6",	"Plains"],
+["6",	"Forest"],
+["1",	"Mox Emerald"],
+["1",	"Mox Pearl"],
+["1",	"Mox Ruby"],
+["2",	"Fellwar Stone"],
+["1",	"Black Lotus"],
+["1",	"Sol Ring"],
+["2",	"Wrath of God"],
+["4",	"Hurricane"],
+["4",	"Earthquake"],
+["4",	"Inferno"],
+["4",	"Healing Salve"],
+["3",	"Stream of Life"],
+["2",	"Disenchant"],
+["2",	"Detonate"],
+["4",	"Living Artifact"],
+["2",	"Reverse Damage"],
+["4",	"Onulet"],
+["1",	"Ivory Tower"],
+]
+sideboard_cards = [
+]

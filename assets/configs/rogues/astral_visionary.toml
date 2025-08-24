@@ -1,0 +1,23 @@
+name = "Astral Visionary"
+main_cards = [
+["24",	"Island"],
+["4",	"Counterspell"],
+["1",	"Ancestral Recall"],
+["1",	"Time Walk"],
+["1",	"Timetwister"],
+["1",	"Copy Artifact"],
+["4",	"Leviathan"],
+["4",	"Stasis"],
+["1",	"Mox Sapphire"],
+["1",	"Black Lotus"],
+["2",	"Twiddle"],
+["4",	"Yotian Soldiers"],
+["4",	"Howling Mine"],
+["4",	"Zephyr Falcon"],
+["3",	"Unstable Mutation"],
+]
+sideboard_cards = [
+["3",	"Drain Power"],
+["2",	"Lifetap"],
+["2",	"Blue Elemental Blast"],
+]

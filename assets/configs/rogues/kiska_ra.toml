@@ -1,0 +1,33 @@
+name = "Kiska-Ra"
+main_cards = [
+["6",	"Plains"],
+["6",	"Island"],
+["6",	"Forest"],
+["3",	"Gem Bazaar"],
+["1",	"Mox Emerald"],
+["1",	"Mox Pearl"],
+["1",	"Mox Sapphire"],
+["2",	"Savannah Lions"],
+["2",	"Giant Tortoise"],
+["2",	"Elvish Archers"],
+["2",	"Scryb Sprites"],
+["2",	"Zephyr Falcons"],
+["2",	"Tundra Wolves"],
+["2",	"Timber Wolves"],
+["2",	"Samite Healer"],
+["2",	"Birds of Paradise"],
+["2",	"Pikemen"],
+["3",	"Unstable Mutation"],
+["3",	"Giant Growth"],
+["3",	"Holy Strength"],
+["4",	"Tawnos's Weaponry"],
+["2",	"Control Magic"],
+["2",	"Desert Twister"],
+["1",	"Ancestral Recall"],
+["1",	"Time Walk"],
+["1",	"Timetwister"],
+["1",	"Braingeyser"],
+["1",	"Regrowth"],
+]
+sideboard_cards = [
+]

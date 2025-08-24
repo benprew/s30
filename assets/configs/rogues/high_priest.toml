@@ -1,0 +1,19 @@
+name = "High Priest"
+main_cards = [
+["22",	"Plains"],
+["4",	"Armageddon"],
+["3",	"Dingus Egg"],
+["4",	"Healing Salve"],
+["4",	"Mesa Pegasus"],
+["4",	"Savannah Lions"],
+["2",	"Fellwar Stone"],
+["2",	"Holy Strength"],
+["1",	"Balance"],
+["2",	"White Mana Battery"],
+["4",	"White Knight"],
+["4",	"Tundra Wolves"],
+["2",	"Disenchant"],
+["3",	"Righteousness"],
+]
+sideboard_cards = [
+]

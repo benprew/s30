@@ -1,0 +1,29 @@
+name = "Whim"
+main_cards = [
+["7",	"Island"],
+["6",	"Plains"],
+["6",	"Swamp"],
+["1",	"Mox Jet"],
+["1",	"Mox Pearl"],
+["1",	"Mox Sapphire"],
+["1",	"Black Lotus"],
+["4",	"Psychic Venom"],
+["2",	"Drain Power"],
+["2",	"Twiddle"],
+["4",	"Power Sink"],
+["4",	"Royal Assassin"],
+["2",	"Siren's Call"],
+["2",	"Word of Binding"],
+["2",	"Meekstone"],
+["4",	"Yotian Soldiers"],
+["2",	"Serra Angel"],
+["2",	"Shapeshifter"],
+["1",	"Alabaster Potion"],
+["2",	"Colossus of Sardia"],
+["2",	"Carrion Ants"],
+["2",	"Kismet"],
+["1",	"Kormus Bell"],
+["1",	"Whimsy"],
+]
+sideboard_cards = [
+]

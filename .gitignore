@@ -1,3 +1,5 @@
 output*.png
 s30
 s30.wasm
+assets/art/carddata/*
+*.zip

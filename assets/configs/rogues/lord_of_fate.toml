@@ -1,0 +1,23 @@
+name = "Lord of Fate"
+main_cards = [
+["11",	"Plains"],
+["11",	"Swamp"],
+["2",	"Dark Ritual"],
+["3",	"Castle"],
+["3",	"Healing Salve"],
+["3",	"Holy Strength"],
+["3",	"Unholy Strength"],
+["4",	"Yotian Soldiers"],
+["4",	"Serra Angel"],
+["3",	"Osai Vultures"],
+["3",	"Pestilence"],
+["2",	"Necropolis of Azaar"],
+["3",	"Drudge Skeletons"],
+["2",	"Divine Transformation"],
+]
+sideboard_cards = [
+["3",	"Ornithopter"],
+["3",	"Brass Man"],
+["3",	"Animate Dead"],
+["3",	"Amulet of Kroog"],
+]

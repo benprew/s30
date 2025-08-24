@@ -1,0 +1,30 @@
+name = "Aga Galneer"
+main_cards = [
+["8",	"Swamp"],
+["6",	"Forest"],
+["8",	"Plains"],
+["1",	"Sol Ring"],
+["2",	"Gem Bazaar"],
+["2",	"Unholy Strength"],
+["2",	"Erg Raiders"],
+["2",	"El-Hajjaj"],
+["2",	"Healing Salve"],
+["2",	"Stream of Life"],
+["3",	"Onulet"],
+["2",	"Greed"],
+["2",	"Ashes to Ashes"],
+["2",	"Jade Monolith"],
+["3",	"Spirit Link"],
+["2",	"Serra Angel"],
+["2",	"Sengir Vampire"],
+["2",	"Giant Growth"],
+["2",	"Giant Spider"],
+["2",	"Fungusaur"],
+["2",	"Savannah Lions"],
+["2",	"Hurricane"],
+]
+sideboard_cards = [
+["3",	"Drain Life"],
+["2",	"Deathgrip"],
+["3",	"Disenchant"],
+]

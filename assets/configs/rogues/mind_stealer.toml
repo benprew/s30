@@ -1,0 +1,27 @@
+name = "Mind Stealer"
+main_cards = [
+["11",	"Swamp"],
+["11",	"Island"],
+["3",	"Hypnotic Specter"],
+["4",	"Sengir Vampire"],
+["3",	"Will-O-The-Wisp"],
+["4",	"Control Magic"],
+["2",	"Steal Artifact"],
+["4",	"Unholy Strength"],
+["2",	"Siren's Call"],
+["1",	"Mind Twist"],
+["2",	"Phantasmal Forces"],
+["2",	"Phantom Monster"],
+["2",	"Drain Power"],
+["2",	"Fellwar Stone"],
+["2",	"Junun Efreet"],
+["2",	"Animate Dead"],
+["2",	"Call from the Grave"],
+]
+sideboard_cards = [
+["3",	"Sindbad"],
+["1",	"Lifetap"],
+["1",	"Deathgrip"],
+["1",	"Volcanic Eruption"],
+["1",	"Gloom"],
+]

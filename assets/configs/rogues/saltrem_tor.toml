@@ -1,0 +1,24 @@
+name = "Saltrem Tor"
+main_cards = [
+["6",	"Mountain"],
+["6",	"Island"],
+["11",	"Forest"],
+["3",	"Birds of Paradise"],
+["3",	"Giant Strength"],
+["2",	"Web"],
+["3",	"Unstable Mutation"],
+["2",	"Regeneration"],
+["2",	"Eternal Warrior"],
+["2",	"Giant Tortoise"],
+["3",	"Prodigal Sorcerer"],
+["3",	"Crimson Manticore"],
+["2",	"Fungusaur"],
+["2",	"Timber Wolves"],
+["2",	"Verduran Enchantress"],
+["2",	"Whirling Dervish"],
+["2",	"Siren's Call"],
+["2",	"Control Magic"],
+["2",	"Fireball"],
+]
+sideboard_cards = [
+]

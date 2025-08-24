@@ -1,0 +1,20 @@
+name = "Ape Lord"
+main_cards = [
+["12",	"Forest"],
+["10",	"Mountain"],
+["2",	"Mana Vault"],
+["4",	"Birds of Paradise"],
+["4",	"Llanowar Elves"],
+["1",	"Detonate"],
+["4",	"Winter Blast"],
+["4",	"Killer Bees"],
+["2",	"Shivan Dragon"],
+["2",	"Craw Wurm"],
+["2",	"Dragon Engine"],
+["3",	"Stream of Life"],
+["3",	"Fireball"],
+["3",	"Disintegrate"],
+["4",	"Firebreathing"],
+]
+sideboard_cards = [
+]

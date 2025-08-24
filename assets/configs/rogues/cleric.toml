@@ -1,0 +1,22 @@
+name = "Cleric"
+main_cards = [
+["21",	"Plains"],
+["2",	"Swords to Plowshares"],
+["2",	"Disenchant"],
+["4",	"Holy Strength"],
+["3",	"Holy Armor"],
+["3",	"Meekstone"],
+["4",	"Benalish Hero"],
+["4",	"Mesa Pegasus"],
+["2",	"Samite Healer"],
+["2",	"Savannah Lions"],
+["4",	"Amrou Kithkin"],
+["2",	"Pikemen"],
+["4",	"Tawnos' Weaponry"],
+]
+sideboard_cards = [
+["2",	"Swords to Plowshares"],
+["1",	"Disenchant"],
+["1",	"Karma"],
+["1",	"Conversion"],
+]

@@ -1,0 +1,27 @@
+name = "Priestess"
+main_cards = [
+["23",	"Plains"],
+["4",	"Animate Wall"],
+["2",	"Reverse Damage"],
+["3",	"Healing Salve"],
+["3",	"Ivory Cup"],
+["4",	"Wall of Swords"],
+["4",	"Wall of Spears"],
+["3",	"Spirit Link"],
+["2",	"Pikemen"],
+["2",	"Fortified Area"],
+["2",	"Benalish Hero"],
+["2",	"Blessing"],
+["2",	"Mesa Pegasus"],
+["2",	"Castle"],
+["2",	"Elder Land Wurm"],
+]
+sideboard_cards = [
+["2",	"Swords to Plowshares"],
+["1",	"Disenchant"],
+["1",	"Circle of Protection Black"],
+["1",	"Circle of Protection Blue"],
+["1",	"Circle of Protection Green"],
+["1",	"Circle of Protection Red"],
+["1",	"Circle of Protection White"],
+]

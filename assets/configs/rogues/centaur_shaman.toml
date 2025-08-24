@@ -1,0 +1,23 @@
+name = "Centaur Shaman"
+main_cards = [
+["11",	"Forest"],
+["11",	"Swamp"],
+["3",	"Paralyze"],
+["4",	"Wanderlust"],
+["4",	"Warp Artifact"],
+["2",	"Stream of Life"],
+["4",	"Cursed Land"],
+["2",	"Birds of Paradise"],
+["3",	"Cockatrice"],
+["4",	"Onulet"],
+["2",	"Dark Ritual"],
+["2",	"Carrion Ants"],
+["1",	"Pestilence"],
+["4",	"Whirling Dervish"],
+]
+sideboard_cards = [
+["1",	"Pestilence"],
+["2",	"Carrion Ants"],
+["2",	"Lifeforce"],
+["2",	"Deathgrip"],
+]

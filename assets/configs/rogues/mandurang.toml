@@ -1,0 +1,31 @@
+name = "Mandurang"
+main_cards = [
+["2",	"Carrion Ants"],
+["4",	"Zephyr Falcon"],
+["4",	"Will-O-The-Wisp"],
+["4",	"Dancing Scimitar"],
+["4",	"Ornithopter"],
+["2",	"Celestial Prism"],
+["6",	"Mountain"],
+["6",	"Swamp"],
+["6",	"Island"],
+["1",	"Mox Ruby"],
+["1",	"Mox Jet"],
+["1",	"Mox Sapphire"],
+["2",	"Jayemdae Tome"],
+["4",	"Giant Strength"],
+["4",	"Unstable Mutation"],
+["4",	"Unholy Strength"],
+["1",	"Braingeyser"],
+["1",	"Blood Lust"],
+]
+sideboard_cards = [
+["3",	"Cursed Land"],
+["3",	"Bog Wraith"],
+["3",	"Red Elemental Blast"],
+["2",	"Deathgrip"],
+["1",	"Lifetap"],
+["3",	"Blue Elemental Blast"],
+["1",	"Gloom"],
+["2",	"Flashfires"],
+]

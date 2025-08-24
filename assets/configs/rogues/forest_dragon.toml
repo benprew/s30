@@ -1,0 +1,22 @@
+name = "Forest Dragon"
+main_cards = [
+["22",	"Forest"],
+["4",	"Craw Wurm"],
+["4",	"Cockatrice"],
+["4",	"Thicket Basilisk"],
+["3",	"Desert Twister"],
+["2",	"Stream of Life"],
+["4",	"Lure"],
+["2",	"Regeneration"],
+["4",	"Untamed Wilds"],
+["4",	"Llanowar Elves"],
+["3",	"Living Lands"],
+["2",	"Sandstorm"],
+]
+sideboard_cards = [
+["3",	"Wall of Brambles"],
+["1",	"Crumble"],
+["2",	"Giant Spider"],
+["2",	"Living Lands"],
+["2",	"Stream of Life"],
+]

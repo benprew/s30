@@ -1,0 +1,21 @@
+name = "Sedge Beast"
+main_cards = [
+["10",	"Mountain"],
+["10",	"Swamp"],
+["4",	"Strip Mine"],
+["2",	"Dancing Scimitar"],
+["4",	"Uthden Troll"],
+["4",	"Stone Rain"],
+["4",	"Blight"],
+["4",	"Fissure"],
+["4",	"Erg Raiders"],
+["4",	"Ironclaw Orcs"],
+["4",	"Cyclopean Mummy"],
+["2",	"Diabolic Machine"],
+["1",	"Immolation"],
+]
+sideboard_cards = [
+["2",	"Weakness"],
+["1",	"Immolation"],
+["2",	"Hurr Jackal"],
+]

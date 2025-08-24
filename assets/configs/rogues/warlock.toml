@@ -1,0 +1,21 @@
+name = "Warlock"
+main_cards = [
+["23",	"Swamp"],
+["4",	"Dark Ritual"],
+["4",	"Drain Life"],
+["4",	"Howl from Beyond"],
+["4",	"Hypnotic Specter"],
+["4",	"El-Hajjaj"],
+["4",	"Pit Scorpion"],
+["4",	"Tawnos' Wand"],
+["2",	"Frozen Shade"],
+["4",	"Murk Dwellers"],
+]
+sideboard_cards = [
+["1",	"Terror"],
+["2",	"Fear"],
+["3",	"Throne of Bone"],
+["1",	"Deathgrip"],
+["1",	"Conservator"],
+["1",	"Gloom"],
+]

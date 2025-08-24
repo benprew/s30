@@ -1,0 +1,18 @@
+name = "Seer"
+main_cards = [
+["22",	"Island"],
+["3",	"Drain Power"],
+["4",	"Crystal Rod"],
+["2",	"Counterspell"],
+["4",	"Unsummon"],
+["4",	"Zephyr Falcon"],
+["4",	"Ghost Ship"],
+["4",	"Unstable Mutation"],
+["2",	"Time Elemental"],
+["3",	"Tetravus"],
+["3",	"Triskelion"],
+["2",	"Hurkyl's Recall"],
+["3",	"Ornithopter"],
+]
+sideboard_cards = [
+]

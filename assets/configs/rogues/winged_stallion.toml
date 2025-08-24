@@ -1,0 +1,23 @@
+name = "Winged Stallion"
+main_cards = [
+["12",	"Plains"],
+["12",	"Island"],
+["3",	"Howling Mine"],
+["3",	"Island Sanctuary"],
+["4",	"Mesa Pegasus"],
+["2",	"Phantasmal Forces"],
+["2",	"Serra Angel"],
+["2",	"Dancing Scimitar"],
+["4",	"Magical Hack"],
+["2",	"Karma"],
+["2",	"Lifetap"],
+["4",	"Psionic Entity"],
+["3",	"Holy Armor"],
+["3",	"Holy Strength"],
+["2",	"Segovian Leviathan"],
+["1",	"Disenchant"],
+]
+sideboard_cards = [
+["2",	"Conversion"],
+["3",	"Counterspell"],
+]

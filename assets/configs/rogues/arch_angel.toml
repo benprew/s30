@@ -1,0 +1,19 @@
+name = "Arch Angel"
+main_cards = [
+["22",	"Plains"],
+["2",	"Mana Vault"],
+["4",	"Wrath of God"],
+["4",	"Soul Net"],
+["4",	"Mishra's Factory"],
+["4",	"The Hive"],
+["4",	"Serra Angel"],
+["4",	"Onulet"],
+["4",	"Osai Vultures"],
+["4",	"Tetravus"],
+["1",	"Swords to Plowshares"],
+]
+sideboard_cards = [
+["3",	"Swords to Plowshares"],
+["3",	"Reverse Damage"],
+["3",	"Disenchant"],
+]

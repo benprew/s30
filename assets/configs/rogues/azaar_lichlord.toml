@@ -1,0 +1,22 @@
+name = "Azaar - Lichlord"
+main_cards = [
+["22",	"Swamp"],
+["4",	"Dark Ritual"],
+["1",	"Sol Ring"],
+["1",	"Mox Jet"],
+["1",	"Black Lotus"],
+["1",	"Black Vise"],
+["1",	"Mind Twist"],
+["4",	"Drain Life"],
+["4",	"Hypnotic Specter"],
+["4",	"Sengir Vampire"],
+["3",	"Tetravus"],
+["2",	"Lord of the Pit"],
+["2",	"Greed"],
+["3",	"Will-O-The-Wisp"],
+["1",	"Gloom"],
+["3",	"Bog Imp"],
+["4",	"Howl from Beyond"],
+]
+sideboard_cards = [
+]

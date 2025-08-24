@@ -141,8 +141,8 @@ var Enemies = []CharacterName{
 	MultiWingedguy,
 }
 
-// shadowName returns the corresponding shadow sprite name for a character
-func shadowName(name CharacterName) string {
+// ShadowName returns the corresponding shadow sprite name for a character
+func ShadowName(name CharacterName) string {
 	// Special cases first
 	xref := map[string]string{
 		"Kht":   "Skht",
@@ -157,7 +157,7 @@ func shadowName(name CharacterName) string {
 		"Ego_M": "Sego_M",
 	}
 	for str, shadow := range xref {
-		if strings.Index(string(name), str) != -1 {
+		if strings.Contains(string(name), str) {
 			return shadow
 		}
 	}

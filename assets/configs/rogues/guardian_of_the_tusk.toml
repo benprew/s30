@@ -1,0 +1,20 @@
+name = "Guardian of the Tusk"
+main_cards = [
+["12",	"Forest"],
+["12",	"Plains"],
+["4",	"Birds of Paradise"],
+["4",	"Giant Growth"],
+["4",	"Holy Strength"],
+["2",	"Desert Twister"],
+["4",	"War Mammoth"],
+["3",	"Savannah Lions"],
+["2",	"Elder Land Wurm"],
+["3",	"Tundra Wolves"],
+["3",	"Timber Wolves"],
+["2",	"Force of Nature"],
+["2",	"Divine Transformation"],
+["2",	"Colossus of Sardia"],
+["1",	"Berserk"],
+]
+sideboard_cards = [
+]

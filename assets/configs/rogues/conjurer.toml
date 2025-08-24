@@ -1,0 +1,25 @@
+name = "Conjurer"
+main_cards = [
+["22",	"Island"],
+["2",	"Fellwar Stone"],
+["4",	"Prodigal Sorcerer"],
+["4",	"Pirate Ship"],
+["2",	"Wall of Water"],
+["2",	"Wall of Air"],
+["2",	"Counterspell"],
+["2",	"Steal Artifact"],
+["2",	"Animate Artifact"],
+["2",	"Unsummon"],
+["4",	"Rod of Ruin"],
+["2",	"Aladdin's Ring"],
+["4",	"Apprentice Wizard"],
+["3",	"Jayemdae Tome"],
+]
+sideboard_cards = [
+["3",	"Giant Tortoise"],
+["1",	"Mahamoti Djinn"],
+["1",	"Island Fish Jasconius"],
+["1",	"Blue Elemental Blast"],
+["1",	"Volcanic Eruption"],
+["3",	"Power Sink"],
+]

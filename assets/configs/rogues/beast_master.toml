@@ -1,0 +1,22 @@
+name = "Beast Master"
+main_cards = [
+["21",	"Forest"],
+["2",	"Birds of Paradise"],
+["4",	"Timber Wolves"],
+["4",	"Naf's Asp"],
+["4",	"Grizzly Bears"],
+["2",	"Stream of Life"],
+["4",	"Aspect of Wolf"],
+["4",	"Aswan Jaguar"],
+["2",	"Durkwood Boars"],
+["4",	"Giant Growth"],
+["2",	"Web"],
+["2",	"Untamed Wilds"],
+["2",	"Giant Spider"],
+]
+sideboard_cards = [
+["2",	"Desert Twister"],
+["1",	"Stream of Life"],
+["1",	"Tsunami"],
+["1",	"Tranquility"],
+]

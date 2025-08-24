@@ -1,0 +1,28 @@
+name = "Troll Shaman"
+main_cards = [
+["22",	"Mountain"],
+["2",	"Stripmine"],
+["2",	"Lightning Bolt"],
+["2",	"Conservator"],
+["3",	"Fireball"],
+["4",	"Stone Giant"],
+["4",	"Hill Giant"],
+["2",	"Gray Ogre"],
+["4",	"Uthden Troll"],
+["3",	"The Brute"],
+["3",	"Eternal Warrior"],
+["2",	"Hurloon Minotaur"],
+["2",	"Oasis"],
+["2",	"Dancing Scimitar"],
+]
+sideboard_cards = [
+["2",	"Shatter"],
+["1",	"Shivan Dragon"],
+["1",	"Throne of Bone"],
+["1",	"Red Elemental Blast"],
+["1",	"Wooden Sphere"],
+["1",	"Burrowing"],
+["1",	"Ivory Cup"],
+["1",	"Celestial Prism"],
+["1",	"Colossus of Sardia"],
+]

@@ -1,0 +1,29 @@
+name = "Alt-A-Kesh"
+main_cards = [
+["7",	"Forest"],
+["7",	"Swamp"],
+["7",	"Island"],
+["4",	"Gem Bazaar"],
+["2",	"Untamed Wilds"],
+["2",	"Wall of Ice"],
+["2",	"Wall of Bone"],
+["2",	"Wall of Air"],
+["2",	"Birds of Paradise"],
+["2",	"Bog Imp"],
+["2",	"Cockatrice"],
+["2",	"Mahamoti Djinn"],
+["2",	"Phantasmal Forces"],
+["2",	"Scryb Sprites"],
+["2",	"Vampire Bats"],
+["2",	"Zephyr Falcon"],
+["2",	"Phantom Monster"],
+["2",	"Junun Efreet"],
+["2",	"Lord of the Pit"],
+["2",	"Energy Flux"],
+["2",	"Stream of Life"],
+["1",	"Ancestral Recall"],
+["1",	"Time Walk"],
+["1",	"Timetwister"],
+]
+sideboard_cards = [
+]

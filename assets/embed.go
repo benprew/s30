@@ -108,4 +108,13 @@ var (
 	// Card images
 	//go:embed art/cardimages.zip
 	CardImages_zip []byte
+
+	// Rogues
+	// Paths used to load rogue configs and images
+	//go:embed art/sprites/world/characters/*.png
+	RogueSpriteFS embed.FS
+	//go:embed art/sprites/rogues/*.png
+	RogueVisageFS embed.FS
+	//go:embed configs/rogues/*.toml
+	RogueCfgFS embed.FS
 )

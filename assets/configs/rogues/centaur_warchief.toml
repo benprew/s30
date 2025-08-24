@@ -1,0 +1,24 @@
+name = "Centaur Warchief"
+main_cards = [
+["12",	"Plains"],
+["12",	"Mountain"],
+["4",	"Serra Angel"],
+["4",	"Yotian Soldiers"],
+["2",	"Wall of Swords"],
+["3",	"Smoke"],
+["2",	"Eternal Warrior"],
+["2",	"Lightning Bolt"],
+["2",	"Healing Salve"],
+["3",	"Kismet"],
+["2",	"Colossus of Sardia"],
+["2",	"Cave People"],
+["2",	"Ali Baba"],
+["2",	"Dragon Whelp"],
+["2",	"Savannah Lions"],
+["1",	"Land Tax"],
+]
+sideboard_cards = [
+["3",	"Swords to Plowshares"],
+["2",	"Kormus Bell"],
+["2",	"Magnetic Mountain"],
+]

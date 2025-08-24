@@ -119,7 +119,7 @@ func (c *Character) Update(dirBits int) {
 func LoadCharacterSprite(name CharacterName) Sprites {
 	// Get the shadow name for this character
 	charFileName := string(name) + ".spr.png"
-	shadowFileName := shadowName(name) + ".spr.png"
+	shadowFileName := ShadowName(name) + ".spr.png"
 	// fmt.Printf("char %s shad %s\n", charFileName, shadowFileName)
 
 	charFile := getEmbeddedFile(charFileName)

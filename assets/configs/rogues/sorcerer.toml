@@ -1,0 +1,20 @@
+name = "Sorcerer"
+main_cards = [
+["20",	"Mountain"],
+["4",	"Manabarbs"],
+["4",	"Goblin Balloon Brigade"],
+["3",	"Brass Man"],
+["4",	"Mons Goblin Raiders"],
+["3",	"Ali Baba"],
+["3",	"Hurr Jackal"],
+["4",	"Sisters of the Flame"],
+["4",	"Winds of Change"],
+["4",	"Lightning Bolt"],
+["4",	"Giant Strength"],
+]
+sideboard_cards = [
+["3",	"Immolation"],
+["2",	"Burrowing"],
+["1",	"Celestial Prism"],
+["2",	"Ornithopter"],
+]

@@ -1,0 +1,27 @@
+name = "Elementalist"
+main_cards = [
+["12",	"Mountain"],
+["12",	"Island"],
+["2",	"Gem Bazaar"],
+["2",	"Mana Vault"],
+["3",	"Air Elemental"],
+["3",	"Earth Elemental"],
+["3",	"Fire Elemental"],
+["3",	"Water Elemental"],
+["1",	"Wall of Air"],
+["1",	"Wall of Water"],
+["1",	"Wall of Fire"],
+["1",	"Wall of Stone"],
+["3",	"Earthquake"],
+["3",	"Fireball"],
+["2",	"Drain Power"],
+["2",	"Lightning Bolt"],
+["2",	"Unstable Mutation"],
+["1",	"Energy Flux"],
+]
+sideboard_cards = [
+["2",	"Drain Power"],
+["1",	"Energy Flux"],
+["3",	"Red Elemental Blast"],
+["3",	"Blue Elemental Blast"],
+]

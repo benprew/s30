@@ -1,0 +1,20 @@
+name = "Sea Drake"
+main_cards = [
+["22",	"Island"],
+["2",	"Island Fish Jasconius"],
+["2",	"Water Elemental"],
+["4",	"Sea Serpent"],
+["4",	"Siren's Call"],
+["4",	"Creature Bond"],
+["2",	"Mana Vault"],
+["4",	"Jump"],
+["4",	"Phantasmal Terrain"],
+["4",	"Segovian Leviathan"],
+["4",	"Giant Tortoise"],
+["1",	"Leviathan"],
+]
+sideboard_cards = [
+["3",	"Counterspell"],
+["1",	"Lifetap"],
+["1",	"Blue Elemental Blast"],
+]

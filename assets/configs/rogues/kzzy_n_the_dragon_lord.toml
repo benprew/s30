@@ -1,0 +1,24 @@
+name = "Kzzy'n - The Dragon Lord"
+main_cards = [
+["18",	"Mountain"],
+["2",	"Forest"],
+["2",	"Plains"],
+["4",	"Gem Bazaar"],
+["4",	"Birds of Paradise"],
+["2",	"Fellwar Stone"],
+["2",	"Manaflare"],
+["2",	"Disenchant"],
+["4",	"Lightning Bolt"],
+["4",	"Shivan Dragon"],
+["4",	"Dragon Whelp"],
+["2",	"Dragon Engine"],
+["2",	"Faerie Dragon"],
+["2",	"Prismatic Dragon"],
+["2",	"Celestial Prism"],
+["2",	"Craw Wurm"],
+["2",	"Elder Land Wurm"],
+["1",	"Ivory Tower"],
+["3",	"Winds of Change"],
+]
+sideboard_cards = [
+]

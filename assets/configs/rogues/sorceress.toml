@@ -1,0 +1,21 @@
+name = "Sorceress"
+main_cards = [
+["23",	"Mountain"],
+["3",	"Iron Star"],
+["4",	"Firebreathing"],
+["4",	"Hurr Jackal"],
+["4",	"Bird Maiden"],
+["4",	"Dwarven Warriors"],
+["2",	"Hurloon Minotaur"],
+["2",	"Dragon Whelp"],
+["4",	"Blood Lust"],
+["3",	"Ball Lightning"],
+["2",	"Meekstone"],
+["2",	"The Brute"],
+]
+sideboard_cards = [
+["2",	"Shatter"],
+["2",	"The Brute"],
+["1",	"Red Elemental Blast"],
+["1",	"Sunglasses of Urza"],
+]

@@ -1,0 +1,22 @@
+name = "Great Druid"
+main_cards = [
+["22",	"Forest"],
+["3",	"Llanowar Elves"],
+["3",	"Gaea's Liege"],
+["3",	"Birds of Paradise"],
+["4",	"Aspect of Wolf"],
+["3",	"Instill Energy"],
+["2",	"Living Lands"],
+["3",	"Stream of Life"],
+["3",	"Untamed Wilds"],
+["4",	"Killer Bees"],
+["3",	"Jayemdae Tome"],
+["2",	"Living Artifact"],
+["2",	"Verduran Enchantress"],
+]
+sideboard_cards = [
+["3",	"Desert Twister"],
+["2",	"Lifeforce"],
+["2",	"Tsunami"],
+["2",	"Shanodin Dryads"],
+]

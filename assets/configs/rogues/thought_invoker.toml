@@ -1,0 +1,21 @@
+name = "Thought Invoker"
+main_cards = [
+["22",	"Island"],
+["4",	"Giant Tortoise"],
+["4",	"Psychic Venom"],
+["3",	"Mana Short"],
+["3",	"Drain Power"],
+["2",	"Control Magic"],
+["3",	"Power Sink"],
+["3",	"Power Leak"],
+["4",	"Ghost Ship"],
+["2",	"Energy Flux"],
+["4",	"Phantom Monster"],
+["2",	"Time Elemental"],
+["1",	"Mahamoti Djinn"],
+]
+sideboard_cards = [
+["3",	"Twiddle"],
+["1",	"Lifetap"],
+["1",	"Volcanic Eruption"],
+]

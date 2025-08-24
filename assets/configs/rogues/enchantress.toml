@@ -1,0 +1,25 @@
+name = "Enchantress"
+main_cards = [
+["22",	"Forest"],
+["4",	"Llanowar Elves"],
+["3",	"Verduran Enchantress"],
+["3",	"Cockatrice"],
+["3",	"Thicket Basilisk"],
+["2",	"Durkwood Boars"],
+["1",	"Ivory Tower"],
+["3",	"Lure"],
+["2",	"Web"],
+["3",	"Regeneration"],
+["3",	"Living Artifact"],
+["4",	"Aspect of Wolf"],
+["2",	"Wild Growth"],
+["2",	"Coral Helm"],
+["2",	"Instill Energy"],
+]
+sideboard_cards = [
+["2",	"Desert Twister"],
+["1",	"Library of Leng"],
+["2",	"Kormus Bell"],
+["2",	"Living Lands"],
+["2",	"Primal Clay"],
+]

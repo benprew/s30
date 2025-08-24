@@ -1,0 +1,20 @@
+name = "Shapeshifter"
+main_cards = [
+["20",	"Island"],
+["4",	"Mishra's Factory"],
+["4",	"Unsummon"],
+["2",	"Power Struggle"],
+["4",	"Hurkyl's Recall"],
+["3",	"Shapeshifter"],
+["4",	"Primal Clay"],
+["3",	"Mana Vault"],
+["2",	"Fellwar Stone"],
+["3",	"Apprentice Wizard"],
+["2",	"Backfire"],
+["1",	"Ivory Tower"],
+["4",	"Unstable Mutation"],
+["3",	"Urza's Avenger"],
+["3",	"Triskelion"],
+]
+sideboard_cards = [
+]

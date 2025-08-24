@@ -1,0 +1,22 @@
+name = "Fungus Master"
+main_cards = [
+["11",	"Forest"],
+["11",	"Island"],
+["4",	"Prodigal Sorcerer"],
+["4",	"Fungusaur"],
+["3",	"Ironroot Treefolk"],
+["2",	"Wall of Brambles"],
+["4",	"Rod of Ruin"],
+["2",	"Carnivorous Plant"],
+["2",	"Untamed Wilds"],
+["2",	"Wild Growth"],
+["2",	"Wall of Wood"],
+["2",	"Oasis"],
+["4",	"Regeneration"],
+["4",	"Unsummon"],
+]
+sideboard_cards = [
+["3",	"Power Sink"],
+["2",	"Kormus Bell"],
+["2",	"Living Lands"],
+]

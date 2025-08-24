@@ -1,0 +1,22 @@
+name = "Elvish Magi"
+main_cards = [
+["22",	"Forest"],
+["4",	"Elvish Archers"],
+["4",	"Giant Spider"],
+["4",	"Elven Riders"],
+["4",	"Llanowar Elves"],
+["2",	"Jayemdae Tome"],
+["4",	"War Mammoth"],
+["4",	"Winter Blast"],
+["4",	"Hurricane"],
+["4",	"Stream of Life"],
+["1",	"Untamed Wilds"],
+]
+sideboard_cards = [
+["3",	"Untamed Wilds"],
+["1",	"Whirling Dervish"],
+["1",	"Web"],
+["1",	"Wall of Brambles"],
+["1",	"Living Artifact"],
+["1",	"Tranquility"],
+]

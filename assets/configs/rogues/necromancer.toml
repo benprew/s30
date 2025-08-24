@@ -1,0 +1,23 @@
+name = "Necromancer"
+main_cards = [
+["22",	"Swamp"],
+["2",	"Dark Ritual"],
+["1",	"Evil Presence"],
+["2",	"Unholy Strength"],
+["2",	"Drain Life"],
+["4",	"Scathe Zombies"],
+["4",	"Zombie Master"],
+["4",	"Bog Wraith"],
+["2",	"Wall of Bone"],
+["4",	"Lost Soul"],
+["2",	"Bad Moon"],
+["2",	"Raise Dead"],
+["2",	"Necropolis of Azaar"],
+["2",	"Animate Dead"],
+["2",	"Cosmic Horror"],
+]
+sideboard_cards = [
+["3",	"Evil Presence"],
+["2",	"Paralyze"],
+["1",	"Throne of Bone"],
+]
