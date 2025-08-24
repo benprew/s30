@@ -41,3 +41,19 @@ func TestLoadRogues(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadImages(t *testing.T) {
+	rogues, err := LoadRogues()
+	if err != nil {
+		t.Fatalf("LoadRogues failed: %v", err)
+	}
+
+	r, ok := rogues["Lord of Fate"]
+	if !ok || r == nil {
+		t.Fatalf("rogue 'Lord of Fate' not found in loaded rogues")
+	}
+
+	if err := r.LoadImages(); err != nil {
+		t.Fatalf("LoadImages failed for 'Lord of Fate': %v", err)
+	}
+}

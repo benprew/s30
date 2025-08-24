@@ -10,7 +10,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/entities"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -23,25 +22,29 @@ type DeckEntry struct {
 }
 
 type Rogue struct {
-	Name            string            `toml:"name"`
-	Visage          *ebiten.Image     // rogues headshot, seen at start of duel
-	VisageFn        string            `toml:"image"` // filename only, lazy-loaded later
-	WalkingSprite   [][]*ebiten.Image // sprites for walking animation
-	ShadowSprite    [][]*ebiten.Image // sprites for shadow animation
-	WalkingSpriteFn string            `toml:"world_sprite"` // filename only, lazy-loaded later
-	Life            int               `toml:"life"`
-	Catchphrases    []string          `toml:"catchphrases"`
-	DeckRaw         [][]string        `toml:"main_cards"`
-	Deck            []DeckEntry
-	SideboardRaw    [][]string `toml:"sideboard_cards"`
-	Sideboard       []DeckEntry
+	Name                  string            `toml:"name"`
+	Visage                *ebiten.Image     // rogues headshot, seen at start of duel
+	VisageFn              string            `toml:"image"` // filename only, lazy-loaded later
+	WalkingSprite         [][]*ebiten.Image // sprites for walking animation
+	ShadowSprite          [][]*ebiten.Image // sprites for shadow animation
+	WalkingSpriteFn       string            `toml:"walking_sprite"`        // filename only, lazy-loaded later
+	WalkingShadowSpriteFn string            `toml:"walking_shadow_sprite"` // filename only, lazy-loaded later
+	Life                  int               `toml:"life"`
+	Catchphrases          []string          `toml:"catchphrases"`
+	DeckRaw               [][]string        `toml:"main_cards"`
+	Deck                  []DeckEntry
+	SideboardRaw          [][]string `toml:"sideboard_cards"`
+	Sideboard             []DeckEntry
 }
 
 var Rogues map[string]*Rogue
 
 func (e *Rogue) LoadImages() error {
 	if e.Visage == nil {
-		data := getEmbeddedFile(e.VisageFn)
+		data, err := assets.RogueVisageFS.ReadFile("art/sprites/rogues/" + e.VisageFn)
+		if err != nil {
+			return err
+		}
 
 		img, _, err := image.Decode(bytes.NewReader(data))
 		if err != nil {
@@ -51,7 +54,10 @@ func (e *Rogue) LoadImages() error {
 		return nil
 	}
 	if e.WalkingSprite == nil {
-		data := getEmbeddedFile(e.WalkingSpriteFn)
+		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + e.WalkingSpriteFn)
+		if err != nil {
+			return err
+		}
 		spr, err := sprites.LoadSpriteSheet(5, 8, data)
 		if err != nil {
 			return err
@@ -59,14 +65,10 @@ func (e *Rogue) LoadImages() error {
 		e.WalkingSprite = spr
 	}
 	if e.ShadowSprite == nil {
-		// derive character name from walking sprite filename by trimming at first '.'
-		base := e.WalkingSpriteFn
-		if i := strings.Index(base, "."); i != -1 {
-			base = base[:i]
+		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + e.WalkingShadowSpriteFn)
+		if err != nil {
+			return err
 		}
-		charName := entities.CharacterName(base)
-		shadowFile := entities.ShadowName(charName) + ".spr.png"
-		data := getEmbeddedFile(shadowFile)
 		spr, err := sprites.LoadSpriteSheet(5, 8, data)
 		if err != nil {
 			return err
@@ -117,30 +119,4 @@ func LoadRogues() (map[string]*Rogue, error) {
 	}
 
 	return rogues, nil
-}
-
-// Helper function to get embedded file bytes
-func getEmbeddedFile(filename string) []byte {
-	// Try rogue-specific visage FS first (rogue portraits)
-	if data, err := assets.RogueVisageFS.ReadFile("art/sprites/rogues/" + filename); err == nil {
-		return data
-	}
-
-	// Try rogue-specific sprite FS (world character sprites)
-	if data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + filename); err == nil {
-		return data
-	}
-
-	// If all reads failed, log the last error via a best-effort read to obtain
-	// an error message for debugging.
-	if _, err := assets.CharacterFS.ReadFile("art/sprites/world/characters/" + filename); err != nil {
-		fmt.Printf("Error loading sprite file %s: %v\n", filename, err)
-	} else {
-		// unlikely: second read succeeded
-		if data, err := assets.CharacterFS.ReadFile("art/sprites/world/characters/" + filename); err == nil {
-			return data
-		}
-	}
-
-	return nil
 }
