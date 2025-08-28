@@ -10,6 +10,7 @@ const (
 	MiniMapScr
 	CityScr
 	BuyCardsScr
+	DuelAnteScr
 )
 
 type Screen interface {
@@ -29,6 +30,8 @@ func ScreenNameToString(sn ScreenName) string {
 		return "MiniMap"
 	case CityScr:
 		return "City"
+	case DuelAnteScr:
+		return "DuelAnte"
 	default:
 		return "Unknown"
 	}

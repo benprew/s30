@@ -66,8 +66,9 @@ func NewGame() (*Game, error) {
 		worldFrame:        wf,
 		currentScreenName: screenui.WorldScr,
 		screenMap: map[screenui.ScreenName]screenui.Screen{
-			screenui.WorldScr:   l,
-			screenui.MiniMapScr: m,
+			screenui.WorldScr:    l,
+			screenui.MiniMapScr:  m,
+			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
 		},
 		player: player,
 	}
@@ -90,6 +91,17 @@ func (g *Game) Update() error {
 	name, err := g.CurrentScreen().Update(g.screenW, g.screenH, g.camScale)
 	if err != nil {
 		panic(fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err))
+	}
+	// If the world level signaled a duel ante, construct the duel screen with the encountered enemy
+	if name == screenui.DuelAnteScr && g.currentScreenName != screenui.DuelAnteScr {
+		// try to take encounter from level
+		if lvl, ok := g.screenMap[screenui.WorldScr].(*world.Level); ok {
+			if lvl.EncounterPending() {
+				if e, ok := lvl.TakeEncounter(); ok {
+					g.screenMap[name] = screens.NewDuelAnteScreenWithEnemy(e)
+				}
+			}
+		}
 	}
 	if name == screenui.CityScr && g.currentScreenName != screenui.CityScr {
 		tile := g.Level().Tile(g.Level().CharacterTile())

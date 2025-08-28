@@ -29,6 +29,10 @@ type Level struct {
 
 	Player  *entities.Player
 	enemies []entities.Enemy
+	// encounterIndex holds the index of an enemy that triggered an encounter
+	// encounterPending indicates whether an encounter is waiting to be consumed
+	encounterIndex   int
+	encounterPending bool
 }
 
 // NewLevel returns a new randomly generated Level.
@@ -42,12 +46,13 @@ func NewLevel() (*Level, error) {
 	}
 
 	l := &Level{
-		w:          47,
-		h:          63,
-		tileWidth:  206,
-		tileHeight: 102,
-		enemies:    make([]entities.Enemy, 0),
-		Player:     c,
+		w:              47,
+		h:              63,
+		tileWidth:      206,
+		tileHeight:     102,
+		enemies:        make([]entities.Enemy, 0),
+		Player:         c,
+		encounterIndex: -1,
 	}
 
 	// Load embedded SpriteSheet.
@@ -182,6 +187,29 @@ func (l *Level) Update(screenW, screenH int, scale float64) (screenui.ScreenName
 	// Update enemies to move towards character
 	for _, e := range l.enemies {
 		e.Update(l.Player.Loc())
+	}
+
+	// Check for proximity between player and any enemy (center-to-center)
+	pLoc := l.Player.Loc()
+	for i, e := range l.enemies {
+		eLoc := e.Loc()
+
+		// compute center points
+		pCenterX := float64(pLoc.X)
+		pCenterY := float64(pLoc.Y)
+		eCenterX := float64(eLoc.X)
+		eCenterY := float64(eLoc.Y)
+
+		dx := pCenterX - eCenterX
+		dy := pCenterY - eCenterY
+		dist := math.Hypot(dx, dy)
+
+		if dist <= 20.0 {
+			// record which enemy triggered encounter and mark pending
+			l.encounterIndex = i
+			l.encounterPending = true
+			return screenui.DuelAnteScr, nil
+		}
 	}
 
 	// Add more enemies with the 'N' key
@@ -351,6 +379,24 @@ func (l *Level) CharacterTile() TilePoint {
 	}
 
 	return TilePoint{tileX, tileY}
+}
+
+// EncounterPending returns true if an encounter was recorded and not yet taken.
+func (l *Level) EncounterPending() bool {
+	return l.encounterPending && l.encounterIndex >= 0 && l.encounterIndex < len(l.enemies)
+}
+
+// TakeEncounter returns the enemy that triggered the encounter and clears the pending flag.
+// The second return value is false if no pending encounter exists.
+func (l *Level) TakeEncounter() (entities.Enemy, bool) {
+	if !l.EncounterPending() {
+		return entities.Enemy{}, false
+	}
+	e := l.enemies[l.encounterIndex]
+	// clear encounter
+	l.encounterPending = false
+	l.encounterIndex = -1
+	return e, true
 }
 
 // FindClosestCity returns the tile coordinates and distance of the closest city to the player
