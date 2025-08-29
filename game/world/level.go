@@ -192,6 +192,10 @@ func (l *Level) Update(screenW, screenH int, scale float64) (screenui.ScreenName
 	// Check for proximity between player and any enemy (center-to-center)
 	pLoc := l.Player.Loc()
 	for i, e := range l.enemies {
+		// skip already engaged enemies
+		if e.Engaged {
+			continue
+		}
 		eLoc := e.Loc()
 
 		// compute center points
@@ -388,15 +392,37 @@ func (l *Level) EncounterPending() bool {
 
 // TakeEncounter returns the enemy that triggered the encounter and clears the pending flag.
 // The second return value is false if no pending encounter exists.
-func (l *Level) TakeEncounter() (entities.Enemy, bool) {
+// TakeEncounter returns the enemy that triggered the encounter and its index, and clears the pending flag.
+// The second return value is false if no pending encounter exists.
+func (l *Level) TakeEncounter() (entities.Enemy, int, bool) {
 	if !l.EncounterPending() {
-		return entities.Enemy{}, false
+		return entities.Enemy{}, -1, false
 	}
-	e := l.enemies[l.encounterIndex]
+	idx := l.encounterIndex
+	e := l.enemies[idx]
 	// clear encounter
 	l.encounterPending = false
 	l.encounterIndex = -1
-	return e, true
+	return e, idx, true
+}
+
+// RemoveEnemyAt removes an enemy by index.
+func (l *Level) RemoveEnemyAt(idx int) {
+	if idx < 0 || idx >= len(l.enemies) {
+		return
+	}
+	l.enemies = append(l.enemies[:idx], l.enemies[idx+1:]...)
+}
+
+// SetEnemyEngaged marks the enemy at index as engaged or not.
+func (l *Level) SetEnemyEngaged(idx int, v bool) {
+	if idx < 0 || idx >= len(l.enemies) {
+		return
+	}
+	// modify the enemy in place
+	e := l.enemies[idx]
+	e.SetEngaged(v)
+	l.enemies[idx] = e
 }
 
 // FindClosestCity returns the tile coordinates and distance of the closest city to the player

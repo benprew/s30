@@ -18,6 +18,7 @@ type Enemy struct {
 	character *Character
 	name      CharacterName
 	deck      int
+	Engaged   bool
 }
 
 func NewEnemy(name CharacterName) (Enemy, error) {
@@ -64,10 +65,18 @@ func (e *Enemy) Speed(speed int) {
 	e.character.MoveSpeed = speed
 }
 
+func (e *Enemy) SetEngaged(v bool) {
+	e.Engaged = v
+}
+
 func (e *Enemy) Loc() image.Point {
 	return image.Point{X: e.character.X, Y: e.character.Y}
 }
 
 func (e *Enemy) Dims() Dimension {
 	return Dimension{Height: e.character.Height, Width: e.character.Width}
+}
+
+func (e *Enemy) Name() CharacterName {
+	return e.name
 }

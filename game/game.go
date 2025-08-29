@@ -97,8 +97,10 @@ func (g *Game) Update() error {
 		// try to take encounter from level
 		if lvl, ok := g.screenMap[screenui.WorldScr].(*world.Level); ok {
 			if lvl.EncounterPending() {
-				if e, ok := lvl.TakeEncounter(); ok {
-					g.screenMap[name] = screens.NewDuelAnteScreenWithEnemy(e)
+				if e, idx, ok := lvl.TakeEncounter(); ok {
+					g.screenMap[name] = screens.NewDuelAnteScreenWithEnemy(lvl, idx)
+					// mark the enemy engaged so it is ignored until resolved
+					e.SetEngaged(true)
 				}
 			}
 		}
