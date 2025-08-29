@@ -1,4 +1,4 @@
-package entities
+package domain
 
 import (
 	"strings"
@@ -77,15 +77,12 @@ const (
 )
 
 var Enemies = []CharacterName{
-	// White enemies
 	WhiteArchmage,
 	WhiteFemaleWiz,
 	WhiteKnight,
 	WhiteLord,
 	WhiteMaleWiz,
 	WhiteAngel,
-
-	// Black enemies
 	BlackArchmage,
 	BlackDjinn,
 	BlackFemaleWiz,
@@ -93,8 +90,6 @@ var Enemies = []CharacterName{
 	BlackLord,
 	BlackMaleWiz,
 	BlackWingedguy,
-
-	// Blue enemies
 	BlueArchmage,
 	BlueDjinn,
 	BlueFemaleWiz,
@@ -102,8 +97,6 @@ var Enemies = []CharacterName{
 	BlueMaleWiz,
 	BlueWurm,
 	BlueShifter,
-
-	// Red enemies
 	RedArchmage,
 	RedDjinn,
 	RedFemaleWiz,
@@ -111,8 +104,6 @@ var Enemies = []CharacterName{
 	RedMaleWiz,
 	RedWurm,
 	Troll,
-
-	// Green enemies
 	GreenArchmage,
 	GreenDjinn,
 	GreenFemaleWiz,
@@ -120,15 +111,11 @@ var Enemies = []CharacterName{
 	GreenLord,
 	GreenMaleWiz,
 	GreenWurm,
-
-	// Dragon enemies
 	DragonBRU,
 	DragonGWR,
 	DragonRBG,
 	DragonUWB,
 	DragonWUG,
-
-	// Multi enemies
 	MultiApe,
 	MultiCentaur,
 	MultiCentaur2,
@@ -143,7 +130,6 @@ var Enemies = []CharacterName{
 
 // ShadowName returns the corresponding shadow sprite name for a character
 func ShadowName(name CharacterName) string {
-	// Special cases first
 	xref := map[string]string{
 		"Kht":   "Skht",
 		"Djn":   "Sdjn",
@@ -162,9 +148,6 @@ func ShadowName(name CharacterName) string {
 		}
 	}
 
-	// fmt.Println(name)
-
-	// Get the prefix and base name
 	str := string(name)
 	if len(str) < 4 {
 		return "S" + str
@@ -175,9 +158,6 @@ func ShadowName(name CharacterName) string {
 	prefix := parts[0]
 	base := parts[1]
 
-	// fmt.Println(prefix, base)
-
-	// Map prefixes to shadow prefixes
 	shadowPrefix := "S"
 	switch prefix {
 	case "W":

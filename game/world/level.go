@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/entities"
+	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -27,8 +27,8 @@ type Level struct {
 	roadSprites    [][]*ebiten.Image // Sprites for roads
 	roadSpriteInfo [][]string        // Maps sprite index to direction string (e.g., "N", "NE")
 
-	Player  *entities.Player
-	enemies []entities.Enemy
+	Player  *domain.Player
+	enemies []domain.Enemy
 	// encounterIndex holds the index of an enemy that triggered an encounter
 	// encounterPending indicates whether an encounter is waiting to be consumed
 	encounterIndex   int
@@ -40,7 +40,7 @@ func NewLevel() (*Level, error) {
 	startTime := time.Now()
 	fmt.Println("NewLevel start")
 
-	c, err := entities.NewPlayer(entities.EgoFemale)
+	c, err := domain.NewPlayer(domain.EgoFemale)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load player sprite: %s", err)
 	}
@@ -50,7 +50,7 @@ func NewLevel() (*Level, error) {
 		h:              63,
 		tileWidth:      206,
 		tileHeight:     102,
-		enemies:        make([]entities.Enemy, 0),
+		enemies:        make([]domain.Enemy, 0),
 		Player:         c,
 		encounterIndex: -1,
 	}
@@ -149,7 +149,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 		// Draw enemy
 		enemyOp := &ebiten.DrawImageOptions{}
 		enemyOp.GeoM.Scale(scale, scale)
-		enemyOp.GeoM.Translate(-float64(entities.SpriteWidth/2)*scale, -float64(entities.SpriteHeight/2)*scale)
+		enemyOp.GeoM.Translate(-float64(domain.SpriteWidth/2)*scale, -float64(domain.SpriteHeight/2)*scale)
 		enemyOp.GeoM.Translate(float64(screenX), float64(screenY))
 		e.Draw(screen, enemyOp)
 	}
@@ -158,7 +158,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
 	options.GeoM.Translate(float64(screenW)/2, float64(screenH)/2)
-	options.GeoM.Translate(-float64(entities.SpriteWidth/2)*scale, -float64(entities.SpriteHeight/2)*scale)
+	options.GeoM.Translate(-float64(domain.SpriteWidth/2)*scale, -float64(domain.SpriteHeight/2)*scale)
 	l.Player.Draw(screen, options)
 }
 
@@ -184,9 +184,10 @@ func (l *Level) Update(screenW, screenH int, scale float64) (screenui.ScreenName
 		}
 	}
 
-	// Update enemies to move towards character
-	for _, e := range l.enemies {
-		e.Update(l.Player.Loc())
+	// Update enemies to move towards character (operate on slice elements so updates persist)
+	for i := range l.enemies {
+		// update the enemy in place
+		_ = l.enemies[i].Update(l.Player.Loc())
 	}
 
 	// Check for proximity between player and any enemy (center-to-center)
@@ -256,7 +257,7 @@ func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 // spawnEnemies creates a specified number of enemies at random positions
 func (l *Level) spawnEnemies(count int) error {
 	// Enemy character types to choose from
-	enemyTypes := entities.Enemies
+	enemyTypes := domain.Enemies
 
 	pLoc := l.Player.Loc()
 
@@ -265,7 +266,7 @@ func (l *Level) spawnEnemies(count int) error {
 		enemyType := enemyTypes[rand.Intn(len(enemyTypes))]
 
 		// Load the enemy sprite
-		enemy, err := entities.NewEnemy(enemyType)
+		enemy, err := domain.NewEnemy(enemyType)
 		if err != nil {
 			return fmt.Errorf("failed to create enemy %s: %w", enemyType, err)
 		}
@@ -394,13 +395,12 @@ func (l *Level) EncounterPending() bool {
 // The second return value is false if no pending encounter exists.
 // TakeEncounter returns the enemy that triggered the encounter and its index, and clears the pending flag.
 // The second return value is false if no pending encounter exists.
-func (l *Level) TakeEncounter() (entities.Enemy, int, bool) {
+func (l *Level) TakeEncounter() (domain.Enemy, int, bool) {
 	if !l.EncounterPending() {
-		return entities.Enemy{}, -1, false
+		return domain.Enemy{}, -1, false
 	}
 	idx := l.encounterIndex
 	e := l.enemies[idx]
-	// clear encounter
 	l.encounterPending = false
 	l.encounterIndex = -1
 	return e, idx, true

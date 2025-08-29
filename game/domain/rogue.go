@@ -39,6 +39,9 @@ type Rogue struct {
 
 var Rogues map[string]*Rogue
 
+// RoguesBySprite maps walking sprite filename -> Rogue for quick lookup
+var RoguesBySprite map[string]*Rogue
+
 func (e *Rogue) LoadImages() error {
 	if e.Visage == nil {
 		data, err := assets.RogueVisageFS.ReadFile("art/sprites/rogues/" + e.VisageFn)
@@ -116,6 +119,14 @@ func LoadRogues() (map[string]*Rogue, error) {
 		}
 
 		rogues[r.Name] = &r
+	}
+
+	// Build RoguesBySprite for reverse lookup by walking sprite filename
+	RoguesBySprite = make(map[string]*Rogue)
+	for _, r := range rogues {
+		if r.WalkingSpriteFn != "" {
+			RoguesBySprite[r.WalkingSpriteFn] = r
+		}
 	}
 
 	return rogues, nil

@@ -1,4 +1,4 @@
-package entities
+package domain
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	// Sprite sheet dimensions
 	SpriteRows   = 8
 	SpriteCols   = 5
 	SpriteWidth  = 206
@@ -35,8 +34,8 @@ const (
 
 // contains the common character traits between players and enemies
 type Character struct {
-	Animations [][]*ebiten.Image // [direction][frame]
-	Shadows    [][]*ebiten.Image // [direction][frame]
+	Animations [][]*ebiten.Image
+	Shadows    [][]*ebiten.Image
 	Direction  int
 	Frame      int
 	IsMoving   bool
@@ -48,13 +47,12 @@ type Character struct {
 }
 
 type Sprites struct {
-	Animations [][]*ebiten.Image // [direction][frame]
-	Shadows    [][]*ebiten.Image // [direction][frame]
+	Animations [][]*ebiten.Image
+	Shadows    [][]*ebiten.Image
 }
 
 var Characters map[CharacterName]Sprites = make(map[CharacterName]Sprites, 0)
 
-// NewCharacter creates a new character sprite with animations and shadows
 func NewCharacter(name CharacterName) (*Character, error) {
 	charSprite, ok := Characters[name]
 
@@ -75,26 +73,18 @@ func NewCharacter(name CharacterName) (*Character, error) {
 	}, nil
 }
 
-// Draw renders the character and its shadow at the center of the screen
 func (c *Character) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	// Draw shadow first
 	screen.DrawImage(c.Shadows[c.Direction][c.Frame], options)
-	// Draw character
 	screen.DrawImage(c.Animations[c.Direction][c.Frame], options)
 }
 
-// Update characters location
 func (c *Character) Update(dirBits int) {
 	if dirBits == 0 {
 		c.IsMoving = false
 		return
-	} else {
-		c.IsMoving = true
 	}
-	// Update sprite direction based on movement direction
+	c.IsMoving = true
 	c.Direction = DirectionToSpriteIndex(dirBits)
-
-	// Apply movement based on direction bits
 	if dirBits&DirLeft != 0 {
 		c.X -= c.MoveSpeed
 	}
@@ -107,39 +97,32 @@ func (c *Character) Update(dirBits int) {
 	if dirBits&DirUp != 0 {
 		c.Y -= c.MoveSpeed
 	}
-
-	// Update animation frame if moving
 	if c.IsMoving {
 		c.Frame = (c.Frame + 1) % SpriteCols
-	} else if !c.IsMoving {
+	} else {
 		c.Frame = 0
 	}
 }
 
 func LoadCharacterSprite(name CharacterName) Sprites {
-	// Get the shadow name for this character
 	charFileName := string(name) + ".spr.png"
 	shadowFileName := ShadowName(name) + ".spr.png"
-	// fmt.Printf("char %s shad %s\n", charFileName, shadowFileName)
 
 	charFile := getEmbeddedFile(charFileName)
 	charSheet, err := sprites.LoadSpriteSheet(5, 8, charFile)
 	if err != nil {
-		panic(fmt.Sprintf("failed to load character sprite: %s file: %s", err, charFile))
+		panic(fmt.Sprintf("failed to load character sprite: %s file: %s", err, charFileName))
 	}
 
 	shadowFile := getEmbeddedFile(shadowFileName)
 	shadowSheet, err := sprites.LoadSpriteSheet(5, 8, shadowFile)
 	if err != nil {
-		panic(fmt.Sprintf("failed to load shadow sprite: %s file: %s", err, shadowFile))
+		panic(fmt.Sprintf("failed to load shadow sprite: %s file: %s", err, shadowFileName))
 	}
 
-	return Sprites{
-		Animations: charSheet, Shadows: shadowSheet,
-	}
+	return Sprites{Animations: charSheet, Shadows: shadowSheet}
 }
 
-// DirectionToSpriteIndex converts bit-based direction to sprite index
 func DirectionToSpriteIndex(dirBits int) int {
 	switch dirBits {
 	case DirUp:
@@ -159,36 +142,25 @@ func DirectionToSpriteIndex(dirBits int) int {
 	case DirDown | DirRight:
 		return DirectionDownRight
 	default:
-		return DirectionDown // Default direction
+		return DirectionDown
 	}
 }
 
-// Helper function to get embedded file bytes
 func getEmbeddedFile(filename string) []byte {
-	// Access character sprites from the embedded filesystem
 	data, err := assets.CharacterFS.ReadFile("art/sprites/world/characters/" + filename)
 	if err != nil {
-		// Log the error but don't crash
 		fmt.Printf("Error loading sprite file %s: %v\n", filename, err)
 		return nil
 	}
 	return data
 }
 
-// SetPosition sets the character's position on the map
-func (c *Character) SetPosition(x, y int) {
-	c.X = x
-	c.Y = y
-}
-
-// SetDirection changes the character's facing direction
+func (c *Character) SetPosition(x, y int) { c.X = x; c.Y = y }
 func (c *Character) SetDirection(direction int) {
 	if direction >= 0 && direction < SpriteRows {
 		c.Direction = direction
 	}
 }
-
-// SetMoving updates the character's movement state
 func (c *Character) SetMoving(moving bool) {
 	c.IsMoving = moving
 	if !moving {

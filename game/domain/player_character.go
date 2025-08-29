@@ -1,4 +1,4 @@
-package entities
+package domain
 
 import (
 	"image"
@@ -7,47 +7,57 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// the player character
+// Player is a game character with player-specific fields.
 type Player struct {
-	character *Character
-	name      CharacterName
+	Character
+	Name    string
+	Gold    int
+	Food    int
+	Life    int
+	CardMap map[int]int
 }
 
 func NewPlayer(name CharacterName) (*Player, error) {
 	c, err := NewCharacter(name)
+	if err != nil {
+		return nil, err
+	}
 	return &Player{
-		character: c,
-		name:      name,
-	}, err
+		Character: *c,
+		Name:      string(name),
+		Gold:      1200,
+		Food:      30,
+		Life:      8,
+		CardMap:   make(map[int]int),
+	}, nil
 }
 
 func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	p.character.Draw(screen, options)
+	p.Character.Draw(screen, options)
 }
 
 func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
 	dirBits := p.Move(screenW, screenH)
-	p.character.Update(dirBits)
+	p.Character.Update(dirBits)
 
-	// Clamp player position to world boundaries
-	if p.character.X < screenW/2 {
-		p.character.X = screenW / 2
+	if p.X < screenW/2 {
+		p.X = screenW / 2
 	}
-	if p.character.X > levelW-screenW/2 {
-		p.character.X = levelW - screenW/2
+	if p.X > levelW-screenW/2 {
+		p.X = levelW - screenW/2
 	}
-	if p.character.Y < screenH/2 {
-		p.character.Y = screenH / 2
-	} else if p.character.Y > levelH-screenH/2 {
-		p.character.Y = levelH - screenH/2
+	if p.Y < screenH/2 {
+		p.Y = screenH / 2
+	} else if p.Y > levelH-screenH/2 {
+		p.Y = levelH - screenH/2
 	}
 
 	return nil
 }
 
 func (p *Player) SetLoc(loc image.Point) {
-	p.character.X = loc.X
-	p.character.Y = loc.Y
+	p.X = loc.X
+	p.Y = loc.Y
 }
 
 func (p *Player) Move(screenW, screenH int) (dirBits int) {
@@ -96,5 +106,5 @@ func (p *Player) Move(screenW, screenH int) (dirBits int) {
 }
 
 func (p *Player) Loc() image.Point {
-	return image.Point{X: p.character.X, Y: p.character.Y}
+	return image.Point{X: p.X, Y: p.Y}
 }

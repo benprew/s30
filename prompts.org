@@ -1,3 +1,29 @@
+* Enemy/Character/Player refactor
+Let's do some refactoring:
+
+What we have now:
+
+- game/entities/character.go
+- game/entities/character_types.go
+- game/entities/enemy.go
+- game/entities/player.go
+- game/domain/rogue.go
+- game/domain/player.go
+
+We want to move everything into domain and get rid of the entities.
+
+There are really only 2 types of characters in the game, the player and the enemies.
+
+Common attributes should go on character.go (The combined fields in the Character struct and the Rogue struct)
+
+Rogues are a type of character and an enemy is an instantiation of a Rogue (the same enemy can be on the screen at the same time)
+
+The Player is a type of character, but has additional specialized attributes (name, gold, etc).
+
+We should combine:
+- game/entities/player.go and game/domain/player.go into game/domain/player.go
+- game/entities/enemy.go and game/entities/rogue.go into game/domain/enemy.go
+- game/entities/character_type.go and LoadRogues() into game/domain/enemy_types.go
 * General
 I'm building a 2d isometric game based on the collectible card game Magic: The Gathering.
 

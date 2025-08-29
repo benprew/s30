@@ -47,7 +47,10 @@ func NewGame() (*Game, error) {
 
 	m := minimap.NewMiniMap(l)
 
-	player := domain.NewPlayer("Bob")
+	player, err := domain.NewPlayer(domain.EgoFemale)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create player: %s", err)
+	}
 
 	wf, err := screens.NewWorldFrame(player)
 	if err != nil {
