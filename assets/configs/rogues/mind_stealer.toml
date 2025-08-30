@@ -25,3 +25,6 @@ sideboard_cards = [
 ["1",	"Volcanic Eruption"],
 ["1",	"Gloom"],
 ]
+walking_sprite = "M_Lrd.spr.png"
+walking_shadow_sprite = "Sm_Lrd.spr.png"
+face = "MPS_Mind_Stealer.png"

@@ -19,3 +19,6 @@ sideboard_cards = [
 ["1",	"Immolation"],
 ["2",	"Hurr Jackal"],
 ]
+walking_sprite = "M_Trl.spr.png"
+walking_shadow_sprite = "Strl.spr.png"
+face = "MPS_Sedge_Beast.png"

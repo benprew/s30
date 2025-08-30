@@ -20,3 +20,6 @@ sideboard_cards = [
 ["1",	"Karma"],
 ["1",	"Conversion"],
 ]
+walking_sprite = "W_Mwz.spr.png"
+walking_shadow_sprite = "Smwz.spr.png"
+face = "MPS_Cleric.png"

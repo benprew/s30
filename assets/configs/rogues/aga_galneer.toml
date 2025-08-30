@@ -28,3 +28,6 @@ sideboard_cards = [
 ["2",	"Deathgrip"],
 ["3",	"Disenchant"],
 ]
+walking_sprite = "Bk_Djn.spr.png"
+walking_shadow_sprite = "Sdjn.spr.png"
+face = "MPS_Aga_Galneer.png"

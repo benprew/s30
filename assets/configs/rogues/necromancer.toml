@@ -21,3 +21,6 @@ sideboard_cards = [
 ["2",	"Paralyze"],
 ["1",	"Throne of Bone"],
 ]
+walking_sprite = "Bk_Amg.spr.png"
+walking_shadow_sprite = "Sb_Amg.spr.png"
+face = "MPS_Necromancer.png"

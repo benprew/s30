@@ -26,3 +26,6 @@ sideboard_cards = [
 ["1",	"Celestial Prism"],
 ["1",	"Colossus of Sardia"],
 ]
+walking_sprite = "Troll.spr.png"
+walking_shadow_sprite = "Strl.spr.png"
+face = "MPS_Troll_Shaman.png"

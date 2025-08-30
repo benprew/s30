@@ -20,3 +20,6 @@ sideboard_cards = [
 ["1",	"Tsunami"],
 ["1",	"Tranquility"],
 ]
+walking_sprite = "G_Kht.spr.png"
+walking_shadow_sprite = "Skht.spr.png"
+face = "MPS_Beast_Master.png"

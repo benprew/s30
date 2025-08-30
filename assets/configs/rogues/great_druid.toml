@@ -20,3 +20,4 @@ sideboard_cards = [
 ["2",	"Tsunami"],
 ["2",	"Shanodin Dryads"],
 ]
+face = "MPS_Great_Druid.png"

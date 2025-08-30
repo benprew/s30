@@ -22,3 +22,6 @@ sideboard_cards = [
 ["1",	"Swords to Plowshares"],
 ["2",	"Divine Transformation"],
 ]
+walking_sprite = "W_Lrd.spr.png"
+walking_shadow_sprite = "Sw_Lrd.spr.png"
+face = "MPS_Paladin.png"

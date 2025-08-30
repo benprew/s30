@@ -20,3 +20,6 @@ sideboard_cards = [
 ["2",	"Living Lands"],
 ["2",	"Stream of Life"],
 ]
+walking_sprite = "G_Wrm.spr.png"
+walking_shadow_sprite = "Swrm.spr.png"
+face = "MPS_Forest_Dragon.png"

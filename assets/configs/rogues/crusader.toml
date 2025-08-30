@@ -22,3 +22,6 @@ sideboard_cards = [
 ["2",	"Red Ward"],
 ["2",	"White Ward"],
 ]
+walking_sprite = "W_Kht.spr.png"
+walking_shadow_sprite = "Skht.spr.png"
+face = "MPS_Crusader.png"

@@ -21,3 +21,4 @@ sideboard_cards = [
 ["2",	"Lifetap"],
 ["2",	"Blue Elemental Blast"],
 ]
+face = "MPS_Astral_Visionary.png"

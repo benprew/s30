@@ -15,3 +15,6 @@ main_cards = [
 ]
 sideboard_cards = [
 ]
+walking_sprite = "Bu_Lrd.spr.png"
+walking_shadow_sprite = "Su_Lrd.spr.png"
+face = "MPS_Merfolk_Shaman.png"

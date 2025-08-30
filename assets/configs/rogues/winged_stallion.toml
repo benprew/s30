@@ -21,3 +21,6 @@ sideboard_cards = [
 ["2",	"Conversion"],
 ["3",	"Counterspell"],
 ]
+walking_sprite = "M_Wg.spr.png"
+walking_shadow_sprite = "Sm_Wg.spr.png"
+face = "MPS_Winged_Stallion.png"

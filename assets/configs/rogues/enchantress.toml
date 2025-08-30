@@ -23,3 +23,6 @@ sideboard_cards = [
 ["2",	"Living Lands"],
 ["2",	"Primal Clay"],
 ]
+walking_sprite = "G_Fwz.spr.png"
+walking_shadow_sprite = "Sfwz.spr.png"
+face = "MPS_Enchantress.png"

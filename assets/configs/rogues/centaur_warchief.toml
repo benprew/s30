@@ -22,3 +22,6 @@ sideboard_cards = [
 ["2",	"Kormus Bell"],
 ["2",	"Magnetic Mountain"],
 ]
+walking_sprite = "M_Cen.spr.png"
+walking_shadow_sprite = "Sm_Cen.spr.png"
+face = "MPS_Centaur_Warchief.png"

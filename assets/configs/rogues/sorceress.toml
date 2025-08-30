@@ -19,3 +19,6 @@ sideboard_cards = [
 ["1",	"Red Elemental Blast"],
 ["1",	"Sunglasses of Urza"],
 ]
+walking_sprite = "R_Fwz.spr.png"
+walking_shadow_sprite = "Sfwz.spr.png"
+face = "MPS_Sorceress.png"

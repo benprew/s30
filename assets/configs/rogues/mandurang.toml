@@ -29,3 +29,6 @@ sideboard_cards = [
 ["1",	"Gloom"],
 ["2",	"Flashfires"],
 ]
+walking_sprite = "Dg_Bru.spr.png"
+walking_shadow_sprite = "S_Dg.spr.png"
+face = "MPS_Mandurang.png"

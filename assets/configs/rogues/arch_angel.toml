@@ -17,3 +17,6 @@ sideboard_cards = [
 ["3",	"Reverse Damage"],
 ["3",	"Disenchant"],
 ]
+walking_sprite = "W_Wg.spr.png"
+walking_shadow_sprite = "Sw_Wg.spr.png"
+face = "MPS_Arch_Angel.png"

@@ -27,3 +27,6 @@ main_cards = [
 ]
 sideboard_cards = [
 ]
+walking_sprite = "Dg_Uwb.spr.png"
+walking_shadow_sprite = "S_Dg.spr.png"
+face = "MPS_Whim.png"

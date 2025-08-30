@@ -18,3 +18,6 @@ sideboard_cards = [
 ["3",	"Weakness"],
 ["1",	"Gloom"],
 ]
+walking_sprite = "Bk_Fwz.spr.png"
+walking_shadow_sprite = "Sfwz.spr.png"
+face = "MPS_Witch.png"

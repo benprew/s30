@@ -30,3 +30,4 @@ sideboard_cards = [
 ["1",	"Conversion"],
 ["3",	"Circle of Protection White"],
 ]
+face = "MPS_Sainted_One.png"

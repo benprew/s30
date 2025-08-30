@@ -19,3 +19,6 @@ sideboard_cards = [
 ["2",	"Goblin Rock Sled"],
 ["1",	"Sunglasses of Urza"],
 ]
+walking_sprite = "R_Lrd.spr.png"
+walking_shadow_sprite = "Sr_Lrd.spr.png"
+face = "MPS_Goblin_Warlord.png"

@@ -19,3 +19,6 @@ sideboard_cards = [
 ["1",	"Conservator"],
 ["1",	"Gloom"],
 ]
+walking_sprite = "Bk_Mwz.spr.png"
+walking_shadow_sprite = "Smwz.spr.png"
+face = "MPS_Warlock.png"

@@ -20,3 +20,6 @@ sideboard_cards = [
 ["1",	"Living Artifact"],
 ["1",	"Tranquility"],
 ]
+walking_sprite = "G_Lrd.spr.png"
+walking_shadow_sprite = "Sg_Lrd.spr.png"
+face = "MPS_Elvish_Magi.png"

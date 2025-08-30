@@ -25,3 +25,6 @@ sideboard_cards = [
 ["1",	"Circle of Protection Red"],
 ["1",	"Circle of Protection White"],
 ]
+walking_sprite = "W_Fwz.spr.png"
+walking_shadow_sprite = "Sfwz.spr.png"
+face = "MPS_Priestess.png"

@@ -17,3 +17,6 @@ sideboard_cards = [
 ["3",	"Black Knight"],
 ["3",	"Winter Orb"],
 ]
+walking_sprite = "Bk_Lrd.spr.png"
+walking_shadow_sprite = "Sb_Lrd.spr.png"
+face = "MPS_Vampire_Lord.png"

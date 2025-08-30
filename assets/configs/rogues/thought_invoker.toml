@@ -19,3 +19,6 @@ sideboard_cards = [
 ["1",	"Lifetap"],
 ["1",	"Volcanic Eruption"],
 ]
+walking_sprite = "Bu_Amg.spr.png"
+walking_shadow_sprite = "Su_Amg.spr.png"
+face = "MPS_Thought_Invoker.png"

@@ -20,3 +20,6 @@ sideboard_cards = [
 ["2",	"Kormus Bell"],
 ["2",	"Living Lands"],
 ]
+walking_sprite = "M_Fng.spr.png"
+walking_shadow_sprite = "Sm_Fng.spr.png"
+face = "MPS_Fungus_Master.png"

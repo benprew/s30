@@ -21,3 +21,6 @@ sideboard_cards = [
 ["3",	"Grizzly Bears"],
 ["3",	"Shanodin Dryads"],
 ]
+walking_sprite = "G_Mwz.spr.png"
+walking_shadow_sprite = "Smwz.spr.png"
+face = "MPS_Druid.png"

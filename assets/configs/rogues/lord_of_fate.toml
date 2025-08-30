@@ -24,3 +24,4 @@ sideboard_cards = [
 ["3",	"Animate Dead"],
 ["3",	"Amulet of Kroog"],
 ]
+face = "MPS_Lord_of_Fate.png"

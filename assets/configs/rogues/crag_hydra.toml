@@ -17,3 +17,6 @@ sideboard_cards = [
 ["3",	"The Hive"],
 ["1",	"Red Elemental Blast"],
 ]
+walking_sprite = "R_Wrm.spr.png"
+walking_shadow_sprite = "Swrm.spr.png"
+face = "MPS_Crag_Hydra.png"

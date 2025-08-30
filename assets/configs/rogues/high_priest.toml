@@ -17,3 +17,6 @@ main_cards = [
 ]
 sideboard_cards = [
 ]
+walking_sprite = "W_Amg.spr.png"
+walking_shadow_sprite = "Sw_Amg.spr.png"
+face = "MPS_High_Priest.png"

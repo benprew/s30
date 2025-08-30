@@ -21,3 +21,6 @@ sideboard_cards = [
 ["2",	"Lifeforce"],
 ["2",	"Deathgrip"],
 ]
+walking_sprite = "M_Cen2.spr.png"
+walking_shadow_sprite = "Sm_Cen2.spr.png"
+face = "MPS_Centaur_Shaman.png"

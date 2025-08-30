@@ -18,3 +18,6 @@ main_cards = [
 ]
 sideboard_cards = [
 ]
+walking_sprite = "Bu_Sft.spr.png"
+walking_shadow_sprite = "Su_Sft.spr.png"
+face = "MPS_Shapeshifter.png"

@@ -25,3 +25,6 @@ sideboard_cards = [
 ["3",	"Red Elemental Blast"],
 ["3",	"Blue Elemental Blast"],
 ]
+walking_sprite = "M_Fwz.spr.png"
+walking_shadow_sprite = "Sfwz.spr.png"
+face = "MPS_Elementalist.png"

@@ -18,3 +18,6 @@ main_cards = [
 ]
 sideboard_cards = [
 ]
+walking_sprite = "M_Ape.spr.png"
+walking_shadow_sprite = "Sm_Ape.spr.png"
+face = "MPS_Ape_Lord.png"
