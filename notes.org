@@ -1,13 +1,26 @@
-* Storing Large files?
+* TODO Duel/Ante Screen
+- Clean up Rogue/Enemy refactor
+- Add enemy "level" to .toml files (determines life and bribe cost) [[https://mtg.wiki/page/Magic%3A_The_Gathering_%28MicroProse%29_Preconstructed_Decks?utm_source=chatgpt.com][wiki-src]]
+  - [[how much ][list of characters]]
+- Add color for each enemy (to choose background)
+  - or do it at runtime by counting cards/mana symbols
+
+
+* Storing Large files/images?
 Should I store card art in the repo?
+- No, this bloats the repo. Instead have tools to download images from scryfall as needed.
 
-Store card art on throwingbones.com in the format and compression I want. Also store full zip files.
-
-These files can be distributed with the game, like .wad files for quake/doom
-
-Don't store card art on throwingbones.com because then I'm responsible for keeping carddart up on throwingbones.com or the game breaks.
-
-Building the web version of the game will eventually involve uploading indivdual card images to a server somewhere and making http requests when loading them. For now the card images are embedded in the binary. This makes for a slow download, but easy distribution.
+Options:
+- Store individual card art on a server in the format and compression I want. Make http requests when loading art.
+  - Con: Now I'm responsible for keeping carddart up or the game breaks.
+  - Con: Could make calls to scryfall directly, but again it requires some server to stay running and a way to get card URLs
+- Store full zip files.
+  - Could be in embed.FS
+    - Con: 2GB file limit for binaries
+    - Con: large filesize makes download slow
+  - Could be distributed with game, like .WAD files for doom/quake
+    - Pro: people can distribute their own .zip files with their mods for custom card lists
+    - Con: Doesn't work with web version, there is no .zip file to reference
 
 * Card Art
 Image art should be 190x150
