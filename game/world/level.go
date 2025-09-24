@@ -36,14 +36,9 @@ type Level struct {
 }
 
 // NewLevel returns a new randomly generated Level.
-func NewLevel() (*Level, error) {
+func NewLevel(c *domain.Player) (*Level, error) {
 	startTime := time.Now()
 	fmt.Println("NewLevel start")
-
-	c, err := domain.NewPlayer(domain.EgoFemale)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load player sprite: %s", err)
-	}
 
 	l := &Level{
 		w:              47,
@@ -141,7 +136,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	for _, e := range l.enemies {
 		eLoc := e.Loc()
 		eDim := e.Dims()
-		if !l.isVisible(eLoc.X, eLoc.Y, eDim.Width, eDim.Height, screenW, screenH) {
+		if !l.isVisible(eLoc.X, eLoc.Y, eDim.Dx(), eDim.Dy(), screenW, screenH) {
 			continue // Skip if not visible
 		}
 
@@ -257,13 +252,19 @@ func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 // spawnEnemies creates a specified number of enemies at random positions
 func (l *Level) spawnEnemies(count int) error {
 	// Enemy character types to choose from
-	enemyTypes := domain.Enemies
+	enemyTypes := domain.Rogues
+
+	// Get the keys (rogue names) from the map
+	var rogueNames []string
+	for name := range enemyTypes {
+		rogueNames = append(rogueNames, name)
+	}
 
 	pLoc := l.Player.Loc()
 
 	for i := 0; i < count; i++ {
 		// Choose a random enemy type
-		enemyType := enemyTypes[rand.Intn(len(enemyTypes))]
+		enemyType := rogueNames[rand.Intn(len(rogueNames))]
 
 		// Load the enemy sprite
 		enemy, err := domain.NewEnemy(enemyType)
@@ -273,7 +274,7 @@ func (l *Level) spawnEnemies(count int) error {
 		var x, y int
 
 		// Set random position (avoiding player's immediate area)
-		minDistance := 5000.0 // Minimum distance from player
+		minDistance := 500.0 // Minimum distance from player
 		for {
 			// Random position within world bounds
 			x = rand.Intn(l.LevelW())
@@ -290,7 +291,7 @@ func (l *Level) spawnEnemies(count int) error {
 		}
 
 		enemy.SetLoc(image.Point{X: x, Y: y})
-		enemy.Speed(5 + rand.Intn(7))
+		enemy.MoveSpeed = 5 + rand.Intn(7)
 
 		l.enemies = append(l.enemies, enemy)
 	}

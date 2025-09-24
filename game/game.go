@@ -40,17 +40,17 @@ func NewGame() (*Game, error) {
 	startTime := time.Now()
 	fmt.Println("NewGame start")
 
-	l, err := world.NewLevel()
+	player, err := domain.NewPlayer("Player", nil, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load player sprite: %s", err)
+	}
+
+	l, err := world.NewLevel(player)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new level: %s", err)
 	}
 
 	m := minimap.NewMiniMap(l)
-
-	player, err := domain.NewPlayer(domain.EgoFemale)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create player: %s", err)
-	}
 
 	wf, err := screens.NewWorldFrame(player)
 	if err != nil {
@@ -84,7 +84,7 @@ func NewGame() (*Game, error) {
 
 func (g *Game) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		l, err := world.NewLevel()
+		l, err := world.NewLevel(g.player)
 		if err != nil {
 			return fmt.Errorf("failed to create new level: %s", err)
 		}

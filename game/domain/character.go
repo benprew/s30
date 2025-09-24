@@ -5,7 +5,6 @@ import (
 	_ "image/png"
 
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/sprites"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -32,59 +31,41 @@ const (
 	DirectionDownRight = 7
 )
 
-// contains the common character traits between players and enemies
 type Character struct {
-	Animations [][]*ebiten.Image
-	Shadows    [][]*ebiten.Image
-	Direction  int
-	Frame      int
-	IsMoving   bool
-	X          int
-	Y          int
-	MoveSpeed  int
-	Width      int
-	Height     int
+	Name                  string            `toml:"name"`
+	Visage                *ebiten.Image     // rogues headshot, seen at start of duel
+	VisageFn              string            `toml:"face"` // filename only, lazy-loaded later
+	WalkingSprite         [][]*ebiten.Image // sprites for walking animation
+	ShadowSprite          [][]*ebiten.Image // sprites for shadow animation
+	WalkingSpriteFn       string            `toml:"walking_sprite"`        // filename only, lazy-loaded later
+	WalkingShadowSpriteFn string            `toml:"walking_shadow_sprite"` // filename only, lazy-loaded later
+	Life                  int               `toml:"life"`
+	Catchphrases          []string          `toml:"catchphrases"`
+	DeckRaw               [][]string        `toml:"main_cards"`
+	Deck                  []DeckEntry       // TODO: make this card indexes or similar
+	SideboardRaw          [][]string        `toml:"sideboard_cards"`
+	Sideboard             []DeckEntry
 }
 
-type Sprites struct {
-	Animations [][]*ebiten.Image
-	Shadows    [][]*ebiten.Image
+// contains the common character traits between players and enemies
+type CharacterInstance struct {
+	Direction int
+	Frame     int
+	IsMoving  bool
+	X         int
+	Y         int
+	MoveSpeed int
+	Width     int
+	Height    int
 }
 
-var Characters map[CharacterName]Sprites = make(map[CharacterName]Sprites, 0)
-
-func NewCharacter(name CharacterName) (*Character, error) {
-	charSprite, ok := Characters[name]
-
-	if !ok {
-		charSprite = LoadCharacterSprite(name)
-		Characters[name] = charSprite
-	}
-
-	return &Character{
-		Animations: charSprite.Animations,
-		Shadows:    charSprite.Shadows,
-		Direction:  DirectionDown,
-		Frame:      0,
-		IsMoving:   false,
-		MoveSpeed:  10,
-		Width:      charSprite.Animations[0][0].Bounds().Dx(),
-		Height:     charSprite.Animations[0][0].Bounds().Dy(),
-	}, nil
-}
-
-func (c *Character) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	screen.DrawImage(c.Shadows[c.Direction][c.Frame], options)
-	screen.DrawImage(c.Animations[c.Direction][c.Frame], options)
-}
-
-func (c *Character) Update(dirBits int) {
+func (c *CharacterInstance) Update(dirBits int) {
 	if dirBits == 0 {
 		c.IsMoving = false
 		return
 	}
 	c.IsMoving = true
-	c.Direction = DirectionToSpriteIndex(dirBits)
+	c.Direction = directionToSpriteIndex(dirBits)
 	if dirBits&DirLeft != 0 {
 		c.X -= c.MoveSpeed
 	}
@@ -104,26 +85,7 @@ func (c *Character) Update(dirBits int) {
 	}
 }
 
-func LoadCharacterSprite(name CharacterName) Sprites {
-	charFileName := string(name) + ".spr.png"
-	shadowFileName := ShadowName(name) + ".spr.png"
-
-	charFile := getEmbeddedFile(charFileName)
-	charSheet, err := sprites.LoadSpriteSheet(5, 8, charFile)
-	if err != nil {
-		panic(fmt.Sprintf("failed to load character sprite: %s file: %s", err, charFileName))
-	}
-
-	shadowFile := getEmbeddedFile(shadowFileName)
-	shadowSheet, err := sprites.LoadSpriteSheet(5, 8, shadowFile)
-	if err != nil {
-		panic(fmt.Sprintf("failed to load shadow sprite: %s file: %s", err, shadowFileName))
-	}
-
-	return Sprites{Animations: charSheet, Shadows: shadowSheet}
-}
-
-func DirectionToSpriteIndex(dirBits int) int {
+func directionToSpriteIndex(dirBits int) int {
 	switch dirBits {
 	case DirUp:
 		return DirectionUp
@@ -153,17 +115,4 @@ func getEmbeddedFile(filename string) []byte {
 		return nil
 	}
 	return data
-}
-
-func (c *Character) SetPosition(x, y int) { c.X = x; c.Y = y }
-func (c *Character) SetDirection(direction int) {
-	if direction >= 0 && direction < SpriteRows {
-		c.Direction = direction
-	}
-}
-func (c *Character) SetMoving(moving bool) {
-	c.IsMoving = moving
-	if !moving {
-		c.Frame = 0
-	}
 }

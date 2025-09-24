@@ -13,41 +13,33 @@ type Dimension struct {
 
 // Enemy is a game opponent, an instantiation of a Rogue and Character.
 type Enemy struct {
-	Character
-	Name    CharacterName
-	DeckIdx int
+	Character *Character
+	CharacterInstance
 	Engaged bool
-	Rogue   *Rogue
 }
 
-func NewEnemy(name CharacterName) (Enemy, error) {
-	c, err := NewCharacter(name)
-	if err != nil {
-		return Enemy{}, err
+func NewEnemy(name string) (Enemy, error) {
+	c := Rogues[name]
+	if err := c.LoadImages(); err != nil {
+		panic(err)
 	}
-	e := Enemy{Character: *c, Name: name}
-	// Try to attach rogue data by sprite filename
-	spriteFn := string(name) + ".spr.png"
-	if RoguesBySprite != nil {
-		if r, ok := RoguesBySprite[spriteFn]; ok {
-			e.Rogue = r
-		}
-	}
+	e := Enemy{Character: c}
 	return e, nil
 }
 
-func (e *Enemy) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	e.Character.Draw(screen, options)
+func (c *Enemy) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	screen.DrawImage(c.Character.ShadowSprite[c.Direction][c.Frame], options)
+	screen.DrawImage(c.Character.WalkingSprite[c.Direction][c.Frame], options)
 }
 
 func (e *Enemy) Update(pLoc image.Point) error {
-	dirBits := e.Move(pLoc.X, pLoc.Y)
-	e.Character.Update(dirBits)
+	dirBits := e.move(pLoc.X, pLoc.Y)
+	e.CharacterInstance.Update(dirBits)
 	return nil
 }
 
-// Move returns direction bits towards player
-func (e *Enemy) Move(playerX, playerY int) int {
+// move returns direction bits towards player
+func (e *Enemy) move(playerX, playerY int) int {
 	dirbits := 0
 	buffer := 10
 	if playerX > e.X+buffer {
@@ -70,10 +62,6 @@ func (e *Enemy) SetLoc(loc image.Point) {
 	e.Y = loc.Y
 }
 
-func (e *Enemy) Speed(speed int) {
-	e.MoveSpeed = speed
-}
-
 func (e *Enemy) SetEngaged(v bool) {
 	e.Engaged = v
 }
@@ -82,10 +70,6 @@ func (e *Enemy) Loc() image.Point {
 	return image.Point{X: e.X, Y: e.Y}
 }
 
-func (e *Enemy) Dims() Dimension {
-	return Dimension{Height: e.Height, Width: e.Width}
-}
-
-func (e *Enemy) NameVal() CharacterName {
-	return e.Name
+func (e *Enemy) Dims() image.Rectangle {
+	return e.Character.WalkingSprite[0][0].Bounds()
 }

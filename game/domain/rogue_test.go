@@ -7,16 +7,11 @@ import (
 // TestLoadRogues loads the TOML rogues from the repository and performs
 // basic sanity checks to ensure they parsed correctly.
 func TestLoadRogues(t *testing.T) {
-	rogues, err := LoadRogues()
-	if err != nil {
-		t.Fatalf("embedded rogues not available: %v", err)
-	}
-
-	if len(rogues) == 0 {
+	if len(Rogues) == 0 {
 		t.Fatal("no rogues were loaded from configs/rogues")
 	}
 
-	for key, r := range rogues {
+	for key, r := range Rogues {
 		if r == nil {
 			t.Fatalf("rogue %s is nil", key)
 		}
@@ -43,12 +38,7 @@ func TestLoadRogues(t *testing.T) {
 }
 
 func TestLoadImages(t *testing.T) {
-	rogues, err := LoadRogues()
-	if err != nil {
-		t.Fatalf("LoadRogues failed: %v", err)
-	}
-
-	r, ok := rogues["Lord of Fate"]
+	r, ok := Rogues["Lord of Fate"]
 	if !ok || r == nil {
 		t.Fatalf("rogue 'Lord of Fate' not found in loaded rogues")
 	}

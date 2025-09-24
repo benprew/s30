@@ -14,6 +14,21 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+const (
+	Weak            = "weak"
+	Aggro           = "aggro"
+	Typical         = "typical"
+	TwoColorLesser  = "two color lesser"
+	Intermediate    = "intermediate"
+	Genie           = "genie"
+	TwoColorGreater = "two color greater"
+	Strong          = "strong"
+	Dragon          = "dragon"
+	Henchman        = "henchman"
+	Guildlord       = "guildlord"
+	Arzakon         = "arzakon"
+)
+
 // details for the "rogues" in the game (aka your enemies)
 
 type DeckEntry struct {
@@ -21,73 +36,55 @@ type DeckEntry struct {
 	Name  string
 }
 
-type Rogue struct {
-	Name                  string            `toml:"name"`
-	Visage                *ebiten.Image     // rogues headshot, seen at start of duel
-	VisageFn              string            `toml:"image"` // filename only, lazy-loaded later
-	WalkingSprite         [][]*ebiten.Image // sprites for walking animation
-	ShadowSprite          [][]*ebiten.Image // sprites for shadow animation
-	WalkingSpriteFn       string            `toml:"walking_sprite"`        // filename only, lazy-loaded later
-	WalkingShadowSpriteFn string            `toml:"walking_shadow_sprite"` // filename only, lazy-loaded later
-	Life                  int               `toml:"life"`
-	Catchphrases          []string          `toml:"catchphrases"`
-	DeckRaw               [][]string        `toml:"main_cards"`
-	Deck                  []DeckEntry
-	SideboardRaw          [][]string `toml:"sideboard_cards"`
-	Sideboard             []DeckEntry
-}
+var Rogues = loadRogues()
 
-var Rogues map[string]*Rogue
-
-// RoguesBySprite maps walking sprite filename -> Rogue for quick lookup
-var RoguesBySprite map[string]*Rogue
-
-func (e *Rogue) LoadImages() error {
-	if e.Visage == nil {
-		data, err := assets.RogueVisageFS.ReadFile("art/sprites/rogues/" + e.VisageFn)
+func (c *Character) LoadImages() error {
+	if c.Visage == nil {
+		data, err := assets.RogueVisageFS.ReadFile("art/sprites/rogues/" + c.VisageFn)
 		if err != nil {
-			return err
+			fmt.Printf("ERROR: Loading Visage: %v", err)
 		}
 
 		img, _, err := image.Decode(bytes.NewReader(data))
 		if err != nil {
-			return err
+			fmt.Printf("ERROR: Loading Visage: %v", err)
 		}
-		e.Visage = ebiten.NewImageFromImage(img)
-		return nil
+		if err == nil {
+			c.Visage = ebiten.NewImageFromImage(img)
+		}
 	}
-	if e.WalkingSprite == nil {
-		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + e.WalkingSpriteFn)
+	if c.WalkingSprite == nil {
+		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + c.WalkingSpriteFn)
 		if err != nil {
-			return err
+			fmt.Printf("ERROR: Loading Walking for %s: %v", c.Name, err)
 		}
 		spr, err := sprites.LoadSpriteSheet(5, 8, data)
 		if err != nil {
-			return err
+			fmt.Printf("ERROR: Loading Walking for %s: %v", c.Name, err)
 		}
-		e.WalkingSprite = spr
+		c.WalkingSprite = spr
 	}
-	if e.ShadowSprite == nil {
-		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + e.WalkingShadowSpriteFn)
+	if c.ShadowSprite == nil {
+		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + c.WalkingShadowSpriteFn)
 		if err != nil {
-			return err
+			fmt.Printf("ERROR: Loading Shadow: %v", err)
 		}
 		spr, err := sprites.LoadSpriteSheet(5, 8, data)
 		if err != nil {
-			return err
+			fmt.Printf("ERROR: Loading Shadow: %v", err)
 		}
-		e.ShadowSprite = spr
+		c.ShadowSprite = spr
 	}
 	return nil
 }
 
-func LoadRogues() (map[string]*Rogue, error) {
-	rogues := make(map[string]*Rogue)
+func loadRogues() map[string]*Character {
+	rogues := make(map[string]*Character)
 	configDir := "configs/rogues"
 
 	files, err := assets.RogueCfgFS.ReadDir(configDir)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	for _, f := range files {
@@ -97,37 +94,28 @@ func LoadRogues() (map[string]*Rogue, error) {
 
 		data, err := assets.RogueCfgFS.ReadFile(filepath.Join("configs/rogues", f.Name()))
 		if err != nil {
-			return nil, fmt.Errorf("error reading embedded %s: %w", f.Name(), err)
+			panic(fmt.Errorf("error reading embedded %s: %w", f.Name(), err))
 		}
-		var r Rogue
+		var r Character
 		if _, err := toml.Decode(string(data), &r); err != nil {
-			return nil, fmt.Errorf("error decoding embedded %s: %w", f.Name(), err)
+			panic(fmt.Errorf("error decoding embedded %s: %w", f.Name(), err))
 		}
 
 		// Convert deckRaw into DeckEntries
 		for _, entry := range r.DeckRaw {
 			if len(entry) != 2 {
-				return nil, fmt.Errorf("invalid deck entry format: %v", entry)
+				panic(fmt.Errorf("invalid deck entry format: %v", entry))
 			}
 			count, err := strconv.Atoi(entry[0])
 			if err != nil {
-				return nil, fmt.Errorf("invalid deck entry count: %v", entry[0])
+				panic(fmt.Errorf("invalid deck entry count: %v", entry[0]))
 			}
 			name := entry[1]
-			fmt.Println(count, name)
 			r.Deck = append(r.Deck, DeckEntry{Count: count, Name: name})
 		}
 
 		rogues[r.Name] = &r
 	}
 
-	// Build RoguesBySprite for reverse lookup by walking sprite filename
-	RoguesBySprite = make(map[string]*Rogue)
-	for _, r := range rogues {
-		if r.WalkingSpriteFn != "" {
-			RoguesBySprite[r.WalkingSpriteFn] = r
-		}
-	}
-
-	return rogues, nil
+	return rogues
 }

@@ -3,6 +3,7 @@ package domain
 import (
 	"image"
 
+	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -10,35 +11,59 @@ import (
 // Player is a game character with player-specific fields.
 type Player struct {
 	Character
+	CharacterInstance
 	Name    string
 	Gold    int
 	Food    int
-	Life    int
 	CardMap map[int]int
 }
 
-func NewPlayer(name CharacterName) (*Player, error) {
-	c, err := NewCharacter(name)
+func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
+	sprite, err := sprites.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
 	if err != nil {
 		return nil, err
 	}
+	shadow, err := sprites.LoadSpriteSheet(5, 8, getEmbeddedFile("Sego_F.spr.png"))
+	if err != nil {
+		return nil, err
+	}
+
+	if isM {
+		sprite, err = sprites.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_M.spr.png"))
+		if err != nil {
+			return nil, err
+		}
+		shadow, err = sprites.LoadSpriteSheet(5, 8, getEmbeddedFile("Sego_M.spr.png"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	c := Character{
+		Visage:        visage,
+		WalkingSprite: sprite,
+		ShadowSprite:  shadow,
+		Life:          8,
+	}
 	return &Player{
-		Character: *c,
-		Name:      string(name),
-		Gold:      1200,
-		Food:      30,
-		Life:      8,
-		CardMap:   make(map[int]int),
+		Character: c,
+		CharacterInstance: CharacterInstance{
+			MoveSpeed: 10, // Adjust this value as needed
+		},
+		Name:    string(name),
+		Gold:    1200,
+		Food:    30,
+		CardMap: make(map[int]int),
 	}, nil
 }
 
 func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	p.Character.Draw(screen, options)
+	screen.DrawImage(p.ShadowSprite[p.Direction][p.Frame], options)
+	screen.DrawImage(p.WalkingSprite[p.Direction][p.Frame], options)
 }
 
 func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
 	dirBits := p.Move(screenW, screenH)
-	p.Character.Update(dirBits)
+	p.CharacterInstance.Update(dirBits)
 
 	if p.X < screenW/2 {
 		p.X = screenW / 2
