@@ -263,13 +263,30 @@ func (l *Level) spawnEnemies(count int) error {
 	pLoc := l.Player.Loc()
 
 	for i := 0; i < count; i++ {
-		// Choose a random enemy type
-		enemyType := rogueNames[rand.Intn(len(rogueNames))]
+		var enemy domain.Enemy
+		var err error
 
-		// Load the enemy sprite
-		enemy, err := domain.NewEnemy(enemyType)
-		if err != nil {
-			return fmt.Errorf("failed to create enemy %s: %w", enemyType, err)
+		// Try to find an enemy with a valid walking sprite
+		maxAttempts := len(rogueNames)
+		for attempt := 0; attempt < maxAttempts; attempt++ {
+			// Choose a random enemy type
+			enemyType := rogueNames[rand.Intn(len(rogueNames))]
+
+			// Load the enemy sprite
+			enemy, err = domain.NewEnemy(enemyType)
+			if err != nil {
+				continue // Try another enemy type
+			}
+
+			// Check if the enemy has a valid walking sprite
+			if enemy.Character.WalkingSprite != nil {
+				break // Found a valid enemy
+			}
+		}
+
+		// If we couldn't find any enemy with a walking sprite after trying all types
+		if enemy.Character.WalkingSprite == nil {
+			return fmt.Errorf("no enemies with valid walking sprites available")
 		}
 		var x, y int
 
