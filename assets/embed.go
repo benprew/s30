@@ -117,4 +117,19 @@ var (
 	RogueVisageFS embed.FS
 	//go:embed configs/rogues/*.toml
 	RogueCfgFS embed.FS
+
+	// Duel Ante backgrounds
+	//go:embed art/sprites/duel_ante/*.png
+	DuelAnteFS embed.FS
+
+	// Duel Ante UI sprites
+	//go:embed art/sprites/duel_ante/Prdfrmb.pic.png
+	DuelAnteBorder_png []byte
+	//go:embed art/sprites/duel_ante/Prdfrmb_map.json
+	DuelAnteBorderMap_json []byte
+
+	//go:embed art/sprites/duel_ante/Prdfrma.pic.png
+	DuelAnteStats_png []byte
+	//go:embed art/sprites/duel_ante/Prdfrma_map.json
+	DuelAnteStatsMap_json []byte
 )

@@ -194,10 +194,10 @@ func (s *BuyCardsScreen) buyCard() {
 	if s.Player.Gold >= card.Price {
 		fmt.Println("Buying card:", s.PreviewIdx, "name:", card.Name(), "for", card.Price, "gold")
 		s.Player.Gold -= card.Price
-		if s.Player.CardMap == nil {
-			s.Player.CardMap = make(map[int]int)
+		if s.Player.CardCollection == nil {
+			s.Player.CardCollection = make(map[int]int)
 		}
-		s.Player.CardMap[cardIdx]++
+		s.Player.CardCollection[cardIdx]++
 		s.City.CardsForSale[s.PreviewIdx] = -1
 		s.CardImgs[s.PreviewIdx] = nil
 		s.Buttons = mkCardButtons(SCALE, s.City, s.CardImgs)

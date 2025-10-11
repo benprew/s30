@@ -105,7 +105,7 @@ func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {
 
 func mkWfText(p *domain.Player) []*elements.Text {
 	numCards := 0
-	for _, v := range p.CardMap {
+	for _, v := range p.CardCollection {
 		numCards += v
 	}
 

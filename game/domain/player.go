@@ -12,10 +12,11 @@ import (
 type Player struct {
 	Character
 	CharacterInstance
-	Name    string
-	Gold    int
-	Food    int
-	CardMap map[int]int
+	Name           string
+	Gold           int
+	Food           int
+	CardCollection map[int]int
+	Deck           int // list of cardids, ids can be repeated
 }
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
@@ -47,12 +48,12 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 	return &Player{
 		Character: c,
 		CharacterInstance: CharacterInstance{
-			MoveSpeed: 10, // Adjust this value as needed
+			MoveSpeed: 10,
 		},
-		Name:    string(name),
-		Gold:    1200,
-		Food:    30,
-		CardMap: make(map[int]int),
+		Name:           string(name),
+		Gold:           1200,
+		Food:           30,
+		CardCollection: make(map[int]int),
 	}, nil
 }
 

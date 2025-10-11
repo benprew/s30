@@ -1,3 +1,48 @@
+* Duel Screen
+Given the image in duel_screen.png update game/screens/duel_ante.go to display that screen.
+
+The ante card on the left is chosen from the players deck (exlcuding basic land) and the card on the right is chosen from the enemy's deck (excluding basic land).
+
+The image in the center is the enemy's Visage (from enemy.go and character.go)
+
+The backgrounds are in art/sprites/duel_ante (use assets/embed.go for embedded filesystem) and backgrounds are chosen randomly.
+
+In the middle is the duel text and the player's options:
+1. duel the enemy
+2. bribe the enemy
+
+In the lower let is the player's stats (life, gold, etc)
+
+To start with, whatever option the player chooses, we will remove the enemy and return to the world screen.
+
+If anything is unclear, ask for clarification before coding.
+
+1. random
+2. just text
+3. Duel text should be: "Those who enter the stronghold of the Mighty Wizard will be met with the firmest resistance.  You must... "
+4. mouse clicks
+5. yes, both "duel" and "bribe" should remove the enemy and return to the world
+
+Continuing the work on the duel_ante screen. We built an initial version, but there are some problems.
+
+Compare the current version (duel_ant_bbeta.png) vs expected (duel_ante.png)
+
+The problems I see are:
+1. background doesn't fill the screen - needs to be scaled (screen is 1024x768)
+2. rogue visage needs to scale (same as background)
+3. Use assets/art/sprites/duel_ante/Prdfrmb.pic.png to draw the border around the rogue visage (you can load it as a sprite button map, ex:      sprite := loadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
+)
+4. Player data (gold, food, cards, health) not in lower-left. You can use assets/art/sprites/duel_ante/Prdfrma.pic.png file to show the player stats
+
+What other problems do you see?
+
+1. Yes, scale the cards down
+2. Rogue visage is a little large
+3. debug the border, it's not loading correctly
+4. load the assets/art/sprites/duel_ante/Prdfrma.pic.png and display the user stats within that image
+5. proportions don't have to match exactly, but should be close
+
+
 * Enemy/Character/Player refactor
 Let's do some refactoring:
 
