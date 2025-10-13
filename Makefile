@@ -21,5 +21,8 @@ webbuild:
 builddeps:
 	sudo apt-get install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libxxf86vm-dev
 
+fedorabuilddeps:
+	sudo dnf install libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel
+
 devdeps:
 	sudo apt install imagemagick pngquant
