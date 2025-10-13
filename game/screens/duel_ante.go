@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/color"
 	"math/rand"
 
 	"github.com/benprew/s30/assets"
@@ -22,15 +23,8 @@ type DuelAnteScreen struct {
 	enemyName      string
 	lvl            *world.Level
 	idx            int
-	duelBtnX       int
-	duelBtnY       int
-	duelBtnW       int
-	duelBtnH       int
-	bribeBtnX      int
-	bribeBtnY      int
-	bribeBtnW      int
-	bribeBtnH      int
-	clicked        bool
+	duelBtn        image.Rectangle
+	bribeBtn       image.Rectangle
 	visageBorder   []*ebiten.Image
 	playerStatsUI  []*ebiten.Image
 }
@@ -39,18 +33,19 @@ func NewDuelAnteScreen() *DuelAnteScreen {
 	return &DuelAnteScreen{}
 }
 
+// horizontally center src on dest
+func hCenter(dest, src *ebiten.Image) float64 {
+	dw := dest.Bounds().Dx()
+	sw := src.Bounds().Dx()
+	return float64((dw / 2) - (sw / 2))
+}
+
 func NewDuelAnteScreenWithEnemy(l *world.Level, idx int, enemy domain.Enemy) *DuelAnteScreen {
 	s := &DuelAnteScreen{
-		lvl:       l,
-		idx:       idx,
-		duelBtnX:  400,
-		duelBtnY:  500,
-		duelBtnW:  300,
-		duelBtnH:  40,
-		bribeBtnX: 400,
-		bribeBtnY: 550,
-		bribeBtnW: 300,
-		bribeBtnH: 40,
+		lvl:      l,
+		idx:      idx,
+		duelBtn:  image.Rectangle{image.Point{400, 500}, image.Point{700, 540}},
+		bribeBtn: image.Rectangle{image.Point{400, 550}, image.Point{700, 590}},
 	}
 
 	s.background = loadRandomBackground()
@@ -64,30 +59,40 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int, enemy domain.Enemy) *Du
 	return s
 }
 
+func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
+	s.lvl.RemoveEnemyAt(s.idx)
+	return screenui.WorldScr, nil
+}
+
+func (s *DuelAnteScreen) bribe() (screenui.ScreenName, error) {
+	s.lvl.RemoveEnemyAt(s.idx)
+	return screenui.WorldScr, nil
+}
+
+func within(point image.Point, btn image.Rectangle) bool {
+	click := image.Rectangle{point, point}
+	return click.In(btn)
+}
+
 func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
 	mx, my := ebiten.CursorPosition()
+	mousePoint := image.Point{mx, my}
+
+	if ebiten.IsKeyPressed(ebiten.Key1) {
+		return s.startDuel()
+	}
+
+	if ebiten.IsKeyPressed(ebiten.Key2) {
+		return s.bribe()
+	}
 
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		if !s.clicked {
-			if mx >= s.duelBtnX && mx <= s.duelBtnX+s.duelBtnW &&
-				my >= s.duelBtnY && my <= s.duelBtnY+s.duelBtnH {
-				s.clicked = true
-				if s.lvl != nil {
-					s.lvl.RemoveEnemyAt(s.idx)
-				}
-				return screenui.WorldScr, nil
-			}
-			if mx >= s.bribeBtnX && mx <= s.bribeBtnX+s.bribeBtnW &&
-				my >= s.bribeBtnY && my <= s.bribeBtnY+s.bribeBtnH {
-				s.clicked = true
-				if s.lvl != nil {
-					s.lvl.RemoveEnemyAt(s.idx)
-				}
-				return screenui.WorldScr, nil
-			}
+		if within(mousePoint, s.duelBtn) {
+			return s.startDuel()
 		}
-	} else {
-		s.clicked = false
+		if within(mousePoint, s.bribeBtn) {
+			return s.bribe()
+		}
 	}
 
 	return screenui.DuelAnteScr, nil
@@ -125,43 +130,39 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		screen.DrawImage(s.enemyAnteCard, opts)
 	}
 
-	// Draw border frame first (behind visage)
-	if len(s.visageBorder) > 0 && s.visageBorder[0] != nil {
-		borderOpts := &ebiten.DrawImageOptions{}
-		borderBounds := s.visageBorder[0].Bounds()
-		borderScale := 0.8 // Scale border appropriately
-		borderOpts.GeoM.Scale(borderScale, borderScale)
-		scaledBorderW := float64(borderBounds.Dx()) * borderScale
-		borderXPos := (float64(W) - scaledBorderW) / 2
-		borderYPos := 80.0
-		borderOpts.GeoM.Translate(borderXPos, borderYPos)
-		screen.DrawImage(s.visageBorder[0], borderOpts)
-	}
+	// Enemy Name
+	nameImg := elements.ScaleImage(s.visageBorder[21], 2.0)
+	nameTxt := elements.NewText(36, s.enemyName, 30, 20)
+	nameTxt.Color = color.Black
+	nameTxt.Draw(nameImg, &ebiten.DrawImageOptions{})
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(hCenter(screen, nameImg), 10)
+	screen.DrawImage(nameImg, opts)
 
-	// Enemy visage - center, scaled smaller
-	if s.enemyVisage != nil {
+	// Draw enemy visage with border
+	if len(s.visageBorder) > 0 && s.visageBorder[0] != nil {
+		borderedVisageImg := ebiten.NewImageFromImage(s.visageBorder[20])
 		opts := &ebiten.DrawImageOptions{}
-		visageBounds := s.enemyVisage.Bounds()
-		visageScale := 2.0 // Reduced scale for visage
-		opts.GeoM.Scale(visageScale, visageScale)
-		// Center the scaled visage
-		scaledW := float64(visageBounds.Dx()) * visageScale
-		xPos := (float64(W) - scaledW) / 2
-		yPos := 140.0 // Position visage within the border frame
-		opts.GeoM.Translate(xPos, yPos)
-		screen.DrawImage(s.enemyVisage, opts)
+		x := hCenter(borderedVisageImg, s.enemyVisage)
+		opts.GeoM.Translate(x, 5)
+		borderedVisageImg.DrawImage(s.enemyVisage, opts)
+		borderedVisageImg = elements.ScaleImage(borderedVisageImg, 2.0)
+		YPos := 80.0
+		borderOpts := &ebiten.DrawImageOptions{}
+		borderOpts.GeoM.Translate(hCenter(screen, borderedVisageImg), YPos)
+		screen.DrawImage(borderedVisageImg, borderOpts)
 	}
 
 	// Main description text - centered, positioned better
-	duelText := "Those who enter the stronghold of the Mighty Wizard will be met with the firmest resistance. You must..."
-	textElement := elements.NewText(16, duelText, W/2-250, 450)
+	duelText := "Those who enter the stronghold of the Mighty Wizard\n will be met with the firmest resistance. You must..."
+	textElement := elements.NewText(26, duelText, W/2-250, 450)
 	textElement.Draw(screen, &ebiten.DrawImageOptions{})
 
 	// Action buttons - centered, positioned better
-	duelBtnText := elements.NewText(18, "1. Duel the Enemy", s.duelBtnX, s.duelBtnY)
+	duelBtnText := elements.NewText(28, "1. Duel the Enemy", s.duelBtn.Min.X, s.duelBtn.Min.Y)
 	duelBtnText.Draw(screen, &ebiten.DrawImageOptions{})
 
-	bribeBtnText := elements.NewText(18, "2. Bribe the Enemy", s.bribeBtnX, s.bribeBtnY)
+	bribeBtnText := elements.NewText(28, "2. Bribe the Enemy", s.bribeBtn.Min.X, s.bribeBtn.Min.Y)
 	bribeBtnText.Draw(screen, &ebiten.DrawImageOptions{})
 
 	// Player stats UI background in lower-left
@@ -264,8 +265,6 @@ func loadVisageBorder() []*ebiten.Image {
 	return loadButtonMap(assets.DuelAnteBorder_png, assets.DuelAnteBorderMap_json)
 }
 
-
 func loadPlayerStatsUI() []*ebiten.Image {
 	return loadButtonMap(assets.DuelAnteStats_png, assets.DuelAnteStatsMap_json)
 }
-
