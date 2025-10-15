@@ -432,6 +432,10 @@ func (l *Level) RemoveEnemyAt(idx int) {
 	l.enemies = append(l.enemies[:idx], l.enemies[idx+1:]...)
 }
 
+func (l *Level) GetEnemyAt(idx int) *domain.Enemy {
+	return &l.enemies[idx]
+}
+
 // SetEnemyEngaged marks the enemy at index as engaged or not.
 func (l *Level) SetEnemyEngaged(idx int, v bool) {
 	if idx < 0 || idx >= len(l.enemies) {

@@ -18,6 +18,7 @@ import (
 type DuelAnteScreen struct {
 	background     *ebiten.Image
 	playerAnteCard *ebiten.Image
+	enemy          *domain.Enemy
 	enemyAnteCard  *ebiten.Image
 	enemyVisage    *ebiten.Image
 	enemyName      string
@@ -27,6 +28,7 @@ type DuelAnteScreen struct {
 	bribeBtn       image.Rectangle
 	visageBorder   []*ebiten.Image
 	playerStatsUI  []*ebiten.Image
+	player         *domain.Player
 }
 
 func NewDuelAnteScreen() *DuelAnteScreen {
@@ -40,8 +42,11 @@ func hCenter(dest, src *ebiten.Image) float64 {
 	return float64((dw / 2) - (sw / 2))
 }
 
-func NewDuelAnteScreenWithEnemy(l *world.Level, idx int, enemy domain.Enemy) *DuelAnteScreen {
+func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
+	enemy := l.GetEnemyAt(idx)
 	s := &DuelAnteScreen{
+		player:   l.Player,
+		enemy:    enemy,
 		lvl:      l,
 		idx:      idx,
 		duelBtn:  image.Rectangle{image.Point{400, 500}, image.Point{700, 540}},
@@ -66,6 +71,7 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 
 func (s *DuelAnteScreen) bribe() (screenui.ScreenName, error) {
 	s.lvl.RemoveEnemyAt(s.idx)
+	s.player.Gold -= s.enemy.BribeAmount()
 	return screenui.WorldScr, nil
 }
 
@@ -162,7 +168,7 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	duelBtnText := elements.NewText(28, "1. Duel the Enemy", s.duelBtn.Min.X, s.duelBtn.Min.Y)
 	duelBtnText.Draw(screen, &ebiten.DrawImageOptions{})
 
-	bribeBtnText := elements.NewText(28, "2. Bribe the Enemy", s.bribeBtn.Min.X, s.bribeBtn.Min.Y)
+	bribeBtnText := elements.NewText(28, fmt.Sprintf("2. Bribe for %d gold", s.enemy.BribeAmount()), s.bribeBtn.Min.X, s.bribeBtn.Min.Y)
 	bribeBtnText.Draw(screen, &ebiten.DrawImageOptions{})
 
 	// Player stats UI background in lower-left

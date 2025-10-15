@@ -73,3 +73,7 @@ func (e *Enemy) Loc() image.Point {
 func (e *Enemy) Dims() image.Rectangle {
 	return e.Character.WalkingSprite[0][0].Bounds()
 }
+
+func (e *Enemy) BribeAmount() int {
+	return 20
+}
