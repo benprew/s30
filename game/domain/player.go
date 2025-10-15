@@ -1,14 +1,15 @@
 package domain
 
 import (
+	"fmt"
 	"image"
+	"time"
 
 	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// Player is a game character with player-specific fields.
 type Player struct {
 	Character
 	CharacterInstance
@@ -16,7 +17,7 @@ type Player struct {
 	Gold           int
 	Food           int
 	CardCollection map[int]int
-	Deck           int // list of cardids, ids can be repeated
+	Deck           []*Card
 }
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
@@ -45,6 +46,19 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		ShadowSprite:  shadow,
 		Life:          8,
 	}
+
+	deckGen := NewDeckGenerator(DifficultyEasy, ColorRed, time.Now().UnixNano())
+	deck := deckGen.GenerateStartingDeck()
+	fmt.Println(deck)
+
+	cardCollection := make(map[int]int)
+	for _, card := range deck {
+		cardID := getCardID(card)
+		cardCollection[cardID]++
+	}
+
+	fmt.Println("Deck length:", len(deck))
+
 	return &Player{
 		Character: c,
 		CharacterInstance: CharacterInstance{
@@ -53,7 +67,8 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		Name:           string(name),
 		Gold:           1200,
 		Food:           30,
-		CardCollection: make(map[int]int),
+		CardCollection: cardCollection,
+		Deck:           deck,
 	}, nil
 }
 

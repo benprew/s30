@@ -114,3 +114,12 @@ func sanitizeFilename(name string) string {
 
 	return strings.Trim(name, "-")
 }
+
+func getCardID(card *Card) int {
+	for i, c := range CARDS {
+		if c == card {
+			return i
+		}
+	}
+	return -1
+}
