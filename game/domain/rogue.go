@@ -14,28 +14,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const (
-	Weak            = "weak"
-	Aggro           = "aggro"
-	Typical         = "typical"
-	TwoColorLesser  = "two color lesser"
-	Intermediate    = "intermediate"
-	Genie           = "genie"
-	TwoColorGreater = "two color greater"
-	Strong          = "strong"
-	Dragon          = "dragon"
-	Henchman        = "henchman"
-	Guildlord       = "guildlord"
-	Arzakon         = "arzakon"
-)
-
 // details for the "rogues" in the game (aka your enemies)
-
-type DeckEntry struct {
-	Count int
-	Name  string
-}
-
 var Rogues = loadRogues()
 
 func (c *Character) LoadImages() error {

@@ -149,3 +149,17 @@ func (p *Player) Move(screenW, screenH int) (dirBits int) {
 func (p *Player) Loc() image.Point {
 	return image.Point{X: p.X, Y: p.Y}
 }
+
+func (p *Player) RemoveCard(c *Card) error {
+	cnt := p.CardCollection[c]
+	if cnt < 1 {
+		return fmt.Errorf("Card not in collection: %s", c.Name())
+	}
+	for i := range p.Decks {
+		cnt := p.Decks[i][c]
+		if cnt > 0 {
+			p.Decks[i][c]--
+		}
+	}
+	return nil
+}

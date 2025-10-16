@@ -14,18 +14,18 @@ type City struct {
 	Y               int
 	Population      int
 	BackgroundImage *ebiten.Image
-	CardsForSale    []int
+	CardsForSale    []*Card
 }
 
 func (c *City) FoodCost() int {
 	return c.Tier * 10
 }
 
-func MkCards() []int {
+func MkCards() []*Card {
 	// Pick 5 random indexes from CARDS
-	cards := make([]int, 0, 5)
+	cards := make([]*Card, 0, 5)
 	for i := 0; i < 5; i++ {
-		cards = append(cards, rand.Intn(len(CARDS)))
+		cards = append(cards, CARDS[rand.Intn(len(CARDS))])
 	}
 	return cards
 }
