@@ -1,12 +1,10 @@
 package screens
 
 import (
-	"archive/zip"
 	"bytes"
 	"fmt"
 	"image"
 	"image/color"
-	"io"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -189,16 +187,15 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 
 func (s *BuyCardsScreen) buyCard() {
 	s.ErrorMsg = ""
-	cardIdx := s.City.CardsForSale[s.PreviewIdx]
-	card := domain.CARDS[cardIdx]
+	card := s.City.CardsForSale[s.PreviewIdx]
 	if s.Player.Gold >= card.Price {
 		fmt.Println("Buying card:", s.PreviewIdx, "name:", card.Name(), "for", card.Price, "gold")
 		s.Player.Gold -= card.Price
 		if s.Player.CardCollection == nil {
-			s.Player.CardCollection = make(map[int]int)
+			s.Player.CardCollection = make(map[*domain.Card]int)
 		}
-		s.Player.CardCollection[cardIdx]++
-		s.City.CardsForSale[s.PreviewIdx] = -1
+		s.Player.CardCollection[card]++
+		s.City.CardsForSale[s.PreviewIdx] = nil
 		s.CardImgs[s.PreviewIdx] = nil
 		s.Buttons = mkCardButtons(SCALE, s.City, s.CardImgs)
 		s.PreviewIdx = -1
@@ -229,12 +226,11 @@ func mkCardButtons(scale float64, city *domain.City, cardImgs []*ebiten.Image) [
 
 	// make card buttons
 	cards := make([]*elements.Button, 0)
-	for i, cardIdx := range city.CardsForSale {
-		if cardIdx == -1 {
+	for i, card := range city.CardsForSale {
+		if card == nil {
 			continue
 		}
 		cardImg := cardImgs[i]
-		card := domain.CARDS[cardIdx]
 		cardUpperImg := ebiten.NewImage(300, 220)
 		cardUpperImg.DrawImage(cardImg, &ebiten.DrawImageOptions{})
 
@@ -313,41 +309,12 @@ func loadButtonMap(spriteFile []byte, mapFile []byte) []*ebiten.Image {
 }
 
 // Load image for this card
-func loadCardImages(cards []int) (images []*ebiten.Image) {
-	for _, idx := range cards {
-		card := domain.CARDS[idx]
-		filename := card.Filename()
-		data, err := readFromEmbeddedZip(assets.CardImages_zip, "carddata/"+filename)
-		if err == nil {
-			cardPng, _, err := image.Decode(bytes.NewReader(data))
-			if err == nil {
-				images = append(images, ebiten.NewImageFromImage(cardPng))
-			}
+func loadCardImages(cards []*domain.Card) (images []*ebiten.Image) {
+	for _, card := range cards {
+		cardPng, err := card.CardImage()
+		if err != nil {
+			images = append(images, cardPng)
 		}
 	}
-
 	return images
-}
-
-// Helper to load card images from embedded zip (copied from screens)
-func readFromEmbeddedZip(zipData []byte, filename string) ([]byte, error) {
-	r, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
-	if err != nil {
-		return nil, err
-	}
-	for _, f := range r.File {
-		if f.Name == filename {
-			rc, err := f.Open()
-			if err != nil {
-				return nil, err
-			}
-			defer rc.Close()
-			data, err := io.ReadAll(rc)
-			if err != nil {
-				return nil, err
-			}
-			return data, nil
-		}
-	}
-	return nil, io.EOF
 }

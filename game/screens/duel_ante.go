@@ -16,30 +16,26 @@ import (
 )
 
 type DuelAnteScreen struct {
-	background     *ebiten.Image
-	playerAnteCard *ebiten.Image
-	enemy          *domain.Enemy
-	enemyAnteCard  *ebiten.Image
-	enemyVisage    *ebiten.Image
-	enemyName      string
-	lvl            *world.Level
-	idx            int
-	duelBtn        image.Rectangle
-	bribeBtn       image.Rectangle
-	visageBorder   []*ebiten.Image
-	playerStatsUI  []*ebiten.Image
-	player         *domain.Player
+	background        *ebiten.Image
+	playerAnteCardImg *ebiten.Image
+	playerAnteCard    *domain.Card
+	enemy             *domain.Enemy
+	enemyAnteCardImg  *ebiten.Image
+	enemyVisage       *ebiten.Image
+	enemyName         string
+	lvl               *world.Level
+	idx               int
+	duelBtn           image.Rectangle
+	bribeBtn          image.Rectangle
+	visageBorder      []*ebiten.Image
+	playerStatsUI     []*ebiten.Image
+	player            *domain.Player
 }
+
+func (s *DuelAnteScreen) IsFramed() bool { return false }
 
 func NewDuelAnteScreen() *DuelAnteScreen {
 	return &DuelAnteScreen{}
-}
-
-// horizontally center src on dest
-func hCenter(dest, src *ebiten.Image) float64 {
-	dw := dest.Bounds().Dx()
-	sw := src.Bounds().Dx()
-	return float64((dw / 2) - (sw / 2))
 }
 
 func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
@@ -54,30 +50,20 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	}
 
 	s.background = loadRandomBackground()
+
 	s.playerAnteCard = selectAnteCard(l.Player.Character.Deck, true)
-	s.enemyAnteCard = selectAnteCard(enemy.Character.Deck, false)
+	card, _ := s.playerAnteCard.CardImage()
+	s.playerAnteCardImg = card
+
+	enemyCard := selectAnteCard(enemy.Character.Deck, false)
+	card, _ = enemyCard.CardImage()
+	s.enemyAnteCardImg = card
 	s.enemyVisage = enemy.Character.Visage
 	s.enemyName = enemy.Character.Name
 	s.visageBorder = loadVisageBorder()
 	s.playerStatsUI = loadPlayerStatsUI()
 
 	return s
-}
-
-func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
-	s.lvl.RemoveEnemyAt(s.idx)
-	return screenui.WorldScr, nil
-}
-
-func (s *DuelAnteScreen) bribe() (screenui.ScreenName, error) {
-	s.lvl.RemoveEnemyAt(s.idx)
-	s.player.Gold -= s.enemy.BribeAmount()
-	return screenui.WorldScr, nil
-}
-
-func within(point image.Point, btn image.Rectangle) bool {
-	click := image.Rectangle{point, point}
-	return click.In(btn)
 }
 
 func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
@@ -116,29 +102,29 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 
 	// Player ante card - left side, scaled down
-	if s.playerAnteCard != nil {
+	if s.playerAnteCardImg != nil {
 		opts := &ebiten.DrawImageOptions{}
 		cardScale := 0.35 // Scale cards down to 35%
 		opts.GeoM.Scale(cardScale, cardScale)
 		opts.GeoM.Translate(50, 50)
-		screen.DrawImage(s.playerAnteCard, opts)
+		screen.DrawImage(s.playerAnteCardImg, opts)
 	}
 
 	// Enemy ante card - right side, scaled down
-	if s.enemyAnteCard != nil {
+	if s.enemyAnteCardImg != nil {
 		opts := &ebiten.DrawImageOptions{}
 		cardScale := 0.35 // Scale cards down to 35%
 		opts.GeoM.Scale(cardScale, cardScale)
-		cardBounds := s.enemyAnteCard.Bounds()
+		cardBounds := s.enemyAnteCardImg.Bounds()
 		scaledWidth := float64(cardBounds.Dx()) * cardScale
 		xPos := float64(W) - scaledWidth - 50
 		opts.GeoM.Translate(xPos, 50)
-		screen.DrawImage(s.enemyAnteCard, opts)
+		screen.DrawImage(s.enemyAnteCardImg, opts)
 	}
 
 	// Enemy Name
-	nameImg := elements.ScaleImage(s.visageBorder[21], 2.0)
-	nameTxt := elements.NewText(36, s.enemyName, 30, 20)
+	nameImg := elements.ScaleImage(s.visageBorder[21], 1.5)
+	nameTxt := elements.NewText(30, s.enemyName, 30, 15)
 	nameTxt.Color = color.Black
 	nameTxt.Draw(nameImg, &ebiten.DrawImageOptions{})
 	opts := &ebiten.DrawImageOptions{}
@@ -152,7 +138,7 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		x := hCenter(borderedVisageImg, s.enemyVisage)
 		opts.GeoM.Translate(x, 5)
 		borderedVisageImg.DrawImage(s.enemyVisage, opts)
-		borderedVisageImg = elements.ScaleImage(borderedVisageImg, 2.0)
+		borderedVisageImg = elements.ScaleImage(borderedVisageImg, 1.5)
 		YPos := 80.0
 		borderOpts := &ebiten.DrawImageOptions{}
 		borderOpts.GeoM.Translate(hCenter(screen, borderedVisageImg), YPos)
@@ -196,7 +182,65 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 }
 
-func (s *DuelAnteScreen) IsFramed() bool { return false }
+// horizontally center src on dest
+func hCenter(dest, src *ebiten.Image) float64 {
+	dw := dest.Bounds().Dx()
+	sw := src.Bounds().Dx()
+	return float64((dw / 2) - (sw / 2))
+}
+
+func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
+	outcome := rand.Float64()
+
+	if outcome > 0.25 {
+		var enemyDeck []*domain.Card
+		for k := range s.enemy.Character.Deck {
+			enemyDeck = append(enemyDeck, k)
+		}
+		cardsToWin := 3
+		if len(enemyDeck) < cardsToWin {
+			cardsToWin = len(enemyDeck)
+		}
+
+		rand.Shuffle(len(enemyDeck), func(i, j int) {
+			enemyDeck[i], enemyDeck[j] = enemyDeck[j], enemyDeck[i]
+		})
+
+		wonCards := enemyDeck[:3]
+
+		for _, card := range wonCards {
+			if card != nil {
+				s.player.CardCollection[card]++
+			}
+		}
+	} else {
+		s.player.RemoveCard(s.playerAnteCard)
+	}
+
+	s.lvl.RemoveEnemyAt(s.idx)
+
+	return screenui.WorldScr, nil
+}
+
+func getCardID(card *domain.Card) int {
+	for i, c := range domain.CARDS {
+		if c == card {
+			return i
+		}
+	}
+	return -1
+}
+
+func (s *DuelAnteScreen) bribe() (screenui.ScreenName, error) {
+	s.lvl.RemoveEnemyAt(s.idx)
+	s.player.Gold -= s.enemy.BribeAmount()
+	return screenui.WorldScr, nil
+}
+
+func within(point image.Point, btn image.Rectangle) bool {
+	click := image.Rectangle{point, point}
+	return click.In(btn)
+}
 
 func loadRandomBackground() *ebiten.Image {
 	backgrounds := []string{
@@ -225,46 +269,14 @@ func loadRandomBackground() *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
-func selectAnteCard(deck []domain.DeckEntry, excludeBasicLand bool) *ebiten.Image {
-	var validCards []domain.DeckEntry
-
-	for _, entry := range deck {
-		card := domain.FindCardByName(entry.Name)
-		if card == nil {
-			continue
-		}
-
-		if excludeBasicLand && card.CardType == domain.CardTypeLand {
-			continue
-		}
-
-		validCards = append(validCards, entry)
-	}
+func selectAnteCard(deck domain.Deck, excludeBasicLand bool) *domain.Card {
+	validCards := deck.ValidAnteCards(excludeBasicLand)
 
 	if len(validCards) == 0 {
-		return nil
+		panic("No valid ante cards!!")
 	}
 
-	chosen := validCards[rand.Intn(len(validCards))]
-	card := domain.FindCardByName(chosen.Name)
-	if card == nil {
-		return nil
-	}
-
-	filename := card.Filename()
-	data, err := readFromEmbeddedZip(assets.CardImages_zip, "carddata/"+filename)
-	if err != nil {
-		fmt.Printf("Error loading card %s: %v\n", filename, err)
-		return nil
-	}
-
-	img, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
-		fmt.Printf("Error decoding card %s: %v\n", filename, err)
-		return nil
-	}
-
-	return ebiten.NewImageFromImage(img)
+	return validCards[rand.Intn(len(validCards))]
 }
 
 func loadVisageBorder() []*ebiten.Image {

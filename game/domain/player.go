@@ -16,8 +16,9 @@ type Player struct {
 	Name           string
 	Gold           int
 	Food           int
-	CardCollection map[int]int
-	Deck           []*Card
+	CardCollection Deck
+	ActiveDeck     int
+	Decks          []Deck
 }
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
@@ -40,21 +41,21 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 			return nil, err
 		}
 	}
+
+	deckGen := NewDeckGenerator(DifficultyEasy, ColorRed, time.Now().UnixNano())
+	deck := deckGen.GenerateStartingDeck()
+
 	c := Character{
 		Visage:        visage,
 		WalkingSprite: sprite,
 		ShadowSprite:  shadow,
 		Life:          8,
+		Deck:          deck,
 	}
 
-	deckGen := NewDeckGenerator(DifficultyEasy, ColorRed, time.Now().UnixNano())
-	deck := deckGen.GenerateStartingDeck()
-	fmt.Println(deck)
-
-	cardCollection := make(map[int]int)
-	for _, card := range deck {
-		cardID := getCardID(card)
-		cardCollection[cardID]++
+	cardCollection := make(map[*Card]int)
+	for card := range deck {
+		cardCollection[card]++
 	}
 
 	fmt.Println("Deck length:", len(deck))
@@ -68,7 +69,6 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		Gold:           1200,
 		Food:           30,
 		CardCollection: cardCollection,
-		Deck:           deck,
 	}, nil
 }
 

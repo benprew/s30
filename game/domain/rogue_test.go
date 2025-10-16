@@ -26,12 +26,9 @@ func TestLoadRogues(t *testing.T) {
 		if len(r.Deck) == 0 {
 			t.Fatalf("rogue %s (%s) has empty Deck", key, r.Name)
 		}
-		for i, de := range r.Deck {
-			if de.Name == "" {
-				t.Fatalf("rogue %s deck entry %d has empty Name", key, i)
-			}
-			if de.Count <= 0 {
-				t.Fatalf("rogue %s deck entry %s has non-positive Count %d", key, de.Name, de.Count)
+		for card, cnt := range r.Deck {
+			if cnt <= 0 {
+				t.Fatalf("rogue %s deck entry %s has non-positive Count %d", key, card.Name(), cnt)
 			}
 		}
 	}

@@ -101,7 +101,8 @@ func loadRogues() map[string]*Character {
 			panic(fmt.Errorf("error decoding embedded %s: %w", f.Name(), err))
 		}
 
-		// Convert deckRaw into DeckEntries
+		r.Deck = make(Deck)
+
 		for _, entry := range r.DeckRaw {
 			if len(entry) != 2 {
 				panic(fmt.Errorf("invalid deck entry format: %v", entry))
@@ -111,7 +112,11 @@ func loadRogues() map[string]*Character {
 				panic(fmt.Errorf("invalid deck entry count: %v", entry[0]))
 			}
 			name := entry[1]
-			r.Deck = append(r.Deck, DeckEntry{Count: count, Name: name})
+			card := FindCardByName(name)
+			if card == nil {
+				fmt.Printf("Unable to find card: %s\n", name)
+			}
+			r.Deck[card] = count
 		}
 
 		rogues[r.Name] = &r

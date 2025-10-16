@@ -7,12 +7,12 @@ import (
 type ColorMask int
 
 const (
+	ColorColorless ColorMask = 0
 	ColorWhite     ColorMask = 1 << 0
 	ColorBlue      ColorMask = 1 << 1
 	ColorBlack     ColorMask = 1 << 2
 	ColorRed       ColorMask = 1 << 3
 	ColorGreen     ColorMask = 1 << 4
-	ColorColorless ColorMask = 1 << 5
 )
 
 var basicLands = map[string]ColorMask{
@@ -41,7 +41,7 @@ const (
 )
 
 type DeckGenerator struct {
-	deck        []*Card
+	deck        Deck
 	difficulty  Difficulty
 	playerColor ColorMask
 	rng         *rand.Rand
@@ -49,15 +49,15 @@ type DeckGenerator struct {
 
 func NewDeckGenerator(difficulty Difficulty, playerColor ColorMask, seed int64) *DeckGenerator {
 	return &DeckGenerator{
-		deck:        make([]*Card, 0, 150),
+		deck:        Deck{},
 		difficulty:  difficulty,
 		playerColor: playerColor,
 		rng:         rand.New(rand.NewSource(seed)),
 	}
 }
 
-func (dg *DeckGenerator) GenerateStartingDeck() []*Card {
-	dg.deck = make([]*Card, 0, 150)
+func (dg *DeckGenerator) GenerateStartingDeck() Deck {
+	dg.deck = Deck{}
 
 	primaryColor := dg.playerColor
 
@@ -342,5 +342,5 @@ func (dg *DeckGenerator) isViableCreature(card *Card) bool {
 }
 
 func (dg *DeckGenerator) addCardToDeck(card *Card) {
-	dg.deck = append(dg.deck, card)
+	dg.deck[card]++
 }

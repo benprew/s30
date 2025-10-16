@@ -8,12 +8,15 @@ import (
 )
 
 func TestBuyCard_PurchaseLogic(t *testing.T) {
-	city := &domain.City{}
-	city.CardsForSale = []int{0}
-	player := &domain.Player{Gold: 10, CardCollection: make(map[int]int)}
-	cardIdx := city.CardsForSale[0]
-	card := domain.CARDS[cardIdx]
+	card := domain.FindCardByName("Mountain")
 	card.Price = 5
+
+	city := &domain.City{}
+	city.CardsForSale = []*domain.Card{card}
+	player := &domain.Player{
+		Gold:           10,
+		CardCollection: domain.Deck{},
+	}
 
 	screen := &BuyCardsScreen{
 		City:        city,
@@ -29,11 +32,11 @@ func TestBuyCard_PurchaseLogic(t *testing.T) {
 	if player.Gold != 5 {
 		t.Errorf("Expected player gold to be 5, got %d", player.Gold)
 	}
-	if player.CardCollection[cardIdx] != 1 {
-		t.Errorf("Expected player to have 1 of card %d, got %d", cardIdx, player.CardCollection[cardIdx])
+	if player.CardCollection[card] != 1 {
+		t.Errorf("Expected player to have 1 of card %s, got %d", card.Name(), player.CardCollection[card])
 	}
-	if city.CardsForSale[0] != -1 {
-		t.Errorf("Expected card to be marked as sold (-1), got %d", city.CardsForSale[0])
+	if city.CardsForSale[0] != nil {
+		t.Errorf("Expected card to be marked as sold, got %v", city.CardsForSale[0])
 	}
 	if screen.PreviewIdx != -1 {
 		t.Errorf("Expected PreviewIdx to be reset to -1, got %d", screen.PreviewIdx)
@@ -44,12 +47,15 @@ func TestBuyCard_PurchaseLogic(t *testing.T) {
 }
 
 func TestBuyCard_NotEnoughGold(t *testing.T) {
-	city := &domain.City{}
-	city.CardsForSale = []int{0}
-	player := &domain.Player{Gold: 2, CardCollection: make(map[int]int)}
-	cardIdx := city.CardsForSale[0]
-	card := domain.CARDS[cardIdx]
+	card := domain.FindCardByName("Mountain")
 	card.Price = 5
+
+	city := &domain.City{}
+	city.CardsForSale = []*domain.Card{card}
+	player := &domain.Player{
+		Gold:           2,
+		CardCollection: domain.Deck{},
+	}
 
 	screen := &BuyCardsScreen{
 		City:        city,
@@ -65,11 +71,11 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 	if player.Gold != 2 {
 		t.Errorf("Expected player gold to remain 2, got %d", player.Gold)
 	}
-	if player.CardCollection[cardIdx] != 0 {
-		t.Errorf("Expected player to have 0 of card %d, got %d", cardIdx, player.CardCollection[cardIdx])
+	if player.CardCollection[card] != 0 {
+		t.Errorf("Expected player to have 0 of card %s, got %d", card.Name(), player.CardCollection[card])
 	}
-	if city.CardsForSale[0] != 0 {
-		t.Errorf("Expected card to remain for sale, got %d", city.CardsForSale[0])
+	if city.CardsForSale[0] == nil {
+		t.Errorf("Expected card to remain for sale, but it was nil")
 	}
 	if screen.PreviewIdx != 0 {
 		t.Errorf("Expected PreviewIdx to remain 0, got %d", screen.PreviewIdx)

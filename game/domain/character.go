@@ -33,6 +33,7 @@ const (
 
 type Character struct {
 	Name                  string            `toml:"name"`
+	Tier                  int               `tome:"tier"`
 	Visage                *ebiten.Image     // rogues headshot, seen at start of duel
 	VisageFn              string            `toml:"face"` // filename only, lazy-loaded later
 	WalkingSprite         [][]*ebiten.Image // sprites for walking animation
@@ -40,11 +41,11 @@ type Character struct {
 	WalkingSpriteFn       string            `toml:"walking_sprite"`        // filename only, lazy-loaded later
 	WalkingShadowSpriteFn string            `toml:"walking_shadow_sprite"` // filename only, lazy-loaded later
 	Life                  int               `toml:"life"`
-	Catchphrases          []string          `toml:"catchphrases"`
+	Catchphrases          []string          `toml:"catchphrases"` // rogues only
 	DeckRaw               [][]string        `toml:"main_cards"`
-	Deck                  []DeckEntry       // TODO: make this card indexes or similar
+	Deck                  Deck              // TODO: make this card indexes or similar
 	SideboardRaw          [][]string        `toml:"sideboard_cards"`
-	Sideboard             []DeckEntry
+	Sideboard             Deck
 }
 
 // contains the common character traits between players and enemies
