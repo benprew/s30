@@ -3,11 +3,14 @@ package domain
 import (
 	"bytes"
 	"fmt"
+	"image"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/utils"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type CardType string
@@ -58,7 +61,10 @@ type Card struct {
 	Price          int // in game price
 }
 
+// Cards sorted by name
 var CARDS = LoadCardDatabase(bytes.NewReader(assets.Cards_json))
+
+var CARD_IMAGES map[*Card]*ebiten.Image
 
 func (c *Card) Name() string {
 	return c.CardName
@@ -95,6 +101,28 @@ func FindAllCardsByName(name string) []*Card {
 	}
 
 	return result
+}
+
+func (card *Card) CardImage() (*ebiten.Image, error) {
+	if CARD_IMAGES == nil {
+		CARD_IMAGES = make(map[*Card]*ebiten.Image, 0)
+	}
+
+	img := CARD_IMAGES[card]
+	if img != nil {
+		return img, nil
+	}
+	filename := card.Filename()
+	data, err := utils.ReadFromEmbeddedZip(assets.CardImages_zip, "carddata/"+filename)
+	if err == nil {
+		cardPng, _, err := image.Decode(bytes.NewReader(data))
+		if err == nil {
+			img := ebiten.NewImageFromImage(cardPng)
+			CARD_IMAGES[card] = img
+			return img, err
+		}
+	}
+	return nil, err
 }
 
 func (c *Card) Filename() string {
