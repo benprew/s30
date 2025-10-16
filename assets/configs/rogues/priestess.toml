@@ -19,11 +19,11 @@ main_cards = [
 sideboard_cards = [
 ["2",	"Swords to Plowshares"],
 ["1",	"Disenchant"],
-["1",	"Circle of Protection Black"],
-["1",	"Circle of Protection Blue"],
-["1",	"Circle of Protection Green"],
-["1",	"Circle of Protection Red"],
-["1",	"Circle of Protection White"],
+["1",	"Circle of Protection: Black"],
+["1",	"Circle of Protection: Blue"],
+["1",	"Circle of Protection: Green"],
+["1",	"Circle of Protection: Red"],
+["1",	"Circle of Protection: White"],
 ]
 walking_sprite = "W_Fwz.spr.png"
 walking_shadow_sprite = "Sfwz.spr.png"

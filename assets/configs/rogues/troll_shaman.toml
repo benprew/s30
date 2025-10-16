@@ -1,7 +1,7 @@
 name = "Troll Shaman"
 main_cards = [
 ["22",	"Mountain"],
-["2",	"Stripmine"],
+["2",	"Strip Mine"],
 ["2",	"Lightning Bolt"],
 ["2",	"Conservator"],
 ["3",	"Fireball"],

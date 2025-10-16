@@ -93,7 +93,7 @@ func loadRogues() map[string]*Character {
 			name := entry[1]
 			card := FindCardByName(name)
 			if card == nil {
-				fmt.Printf("Unable to find card: %s\n", name)
+				panic(fmt.Sprintf("Unable to find card: %s\n", name))
 			}
 			r.Deck[card] = count
 		}

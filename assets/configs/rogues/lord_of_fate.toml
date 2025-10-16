@@ -10,11 +10,11 @@ main_cards = [
 ["3",	"Healing Salve"],
 ["3",	"Holy Strength"],
 ["3",	"Unholy Strength"],
-["4",	"Yotian Soldiers"],
+["4",	"Yotian Soldier"],
 ["4",	"Serra Angel"],
 ["3",	"Osai Vultures"],
 ["3",	"Pestilence"],
-["2",	"Necropolis of Azaar"],
+["2",	"Necropolis of Azar"],
 ["3",	"Drudge Skeletons"],
 ["2",	"Divine Transformation"],
 ]

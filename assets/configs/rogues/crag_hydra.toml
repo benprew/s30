@@ -1,7 +1,7 @@
 name = "Crag Hydra"
 main_cards = [
 ["22",	"Mountain"],
-["4",	"Manaflare"],
+["4",	"Mana Flare"],
 ["4",	"Power Surge"],
 ["4",	"Fireball"],
 ["2",	"Lightning Bolt"],

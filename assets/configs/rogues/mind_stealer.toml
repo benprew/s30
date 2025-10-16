@@ -4,7 +4,7 @@ main_cards = [
 ["11",	"Island"],
 ["3",	"Hypnotic Specter"],
 ["4",	"Sengir Vampire"],
-["3",	"Will-O-The-Wisp"],
+["3",	"Will-o'-the-Wisp"],
 ["4",	"Control Magic"],
 ["2",	"Steal Artifact"],
 ["4",	"Unholy Strength"],
@@ -14,7 +14,7 @@ main_cards = [
 ["2",	"Phantom Monster"],
 ["2",	"Drain Power"],
 ["2",	"Fellwar Stone"],
-["2",	"Junun Efreet"],
+["2",	"Junún Efreet"],
 ["2",	"Animate Dead"],
 ["2",	"Call from the Grave"],
 ]

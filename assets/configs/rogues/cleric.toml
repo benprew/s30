@@ -12,7 +12,7 @@ main_cards = [
 ["2",	"Savannah Lions"],
 ["4",	"Amrou Kithkin"],
 ["2",	"Pikemen"],
-["4",	"Tawnos' Weaponry"],
+["4",	"Tawnos's Weaponry"],
 ]
 sideboard_cards = [
 ["2",	"Swords to Plowshares"],

@@ -49,7 +49,7 @@ mkdir -p "$ASSETS_DIR"
 # Process with jq filter
 # Note: past is the Astral Cards Set
 echo "Processing cards with jq filter..."
-if ! jq 'map(select(.legalities.vintage != "not_legal" and (.set == "lea" or .set == "2ed" or .set == "arn" or .set == "leg" or .set == "atq" or .set == "drk" or .set == "past" or .set == "fem" or .set == "phpr"))) | map({
+if ! jq 'map(select((.set == "lea" or .set == "2ed" or .set == "arn" or .set == "leg" or .set == "atq" or .set == "drk" or .set == "past" or .set == "fem" or .set == "phpr"))) | map({
   ScryfallID: .id,
   OracleID: .oracle_id,
   CardName: .name,

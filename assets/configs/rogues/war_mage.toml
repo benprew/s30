@@ -9,7 +9,7 @@ main_cards = [
 ["2",	"Smoke"],
 ["4",	"Ball Lightning"],
 ["4",	"Disintegrate"],
-["4",	"Manaflare"],
+["4",	"Mana Flare"],
 ["2",	"Aladdin's Ring"],
 ]
 sideboard_cards = [
