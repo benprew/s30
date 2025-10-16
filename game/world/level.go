@@ -33,6 +33,9 @@ type Level struct {
 	// encounterPending indicates whether an encounter is waiting to be consumed
 	encounterIndex   int
 	encounterPending bool
+
+	ticksSinceLastInteraction int
+	totalTicks                int
 }
 
 // NewLevel returns a new randomly generated Level.
@@ -159,6 +162,9 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 
 // Update reads current user input and updates the Game state.
 func (l *Level) Update(screenW, screenH int, scale float64) (screenui.ScreenName, error) {
+	l.totalTicks++
+	l.ticksSinceLastInteraction++
+
 	// Store current player tile before moving
 	prevTile := l.CharacterTile()
 
@@ -208,7 +214,14 @@ func (l *Level) Update(screenW, screenH int, scale float64) (screenui.ScreenName
 			// record which enemy triggered encounter and mark pending
 			l.encounterIndex = i
 			l.encounterPending = true
+			l.ticksSinceLastInteraction = 0
 			return screenui.DuelAnteScr, nil
+		}
+	}
+
+	if l.totalTicks%20 == 0 && l.ticksSinceLastInteraction >= 70 {
+		if err := l.spawnEnemies(1); err != nil {
+			fmt.Printf("Warning: failed to spawn enemy: %s\n", err)
 		}
 	}
 

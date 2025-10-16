@@ -2,6 +2,8 @@ package domain
 
 import (
 	"image"
+	"math"
+	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -16,6 +18,13 @@ type Enemy struct {
 	Character *Character
 	CharacterInstance
 	Engaged bool
+
+	waitingTicks      int
+	maxWaitTicks      int
+	randomDirTicks    int
+	maxRandomDirTicks int
+	isWaiting         bool
+	randomDirBits     int
 }
 
 func NewEnemy(name string) (Enemy, error) {
@@ -38,23 +47,97 @@ func (e *Enemy) Update(pLoc image.Point) error {
 	return nil
 }
 
-// move returns direction bits towards player
+// move returns direction bits with random movement and wait behavior
 func (e *Enemy) move(playerX, playerY int) int {
-	dirbits := 0
-	buffer := 10
-	if playerX > e.X+buffer {
-		dirbits |= DirRight
+	dx := float64(playerX - e.X)
+	dy := float64(playerY - e.Y)
+	distToPlayer := math.Sqrt(dx*dx + dy*dy)
+
+	// If close, move directly toward player
+	if distToPlayer <= 150 {
+		dirbits := 0
+		buffer := 10
+		if playerX > e.X+buffer {
+			dirbits |= DirRight
+		}
+		if playerX < e.X-buffer {
+			dirbits |= DirLeft
+		}
+		if playerY > e.Y+buffer {
+			dirbits |= DirDown
+		}
+		if playerY < e.Y-buffer {
+			dirbits |= DirUp
+		}
+		return dirbits
 	}
-	if playerX < e.X-buffer {
-		dirbits |= DirLeft
+
+	// Check if enemy should start waiting
+	if !e.isWaiting && distToPlayer > 200 && rand.Float64() < 0.02 {
+		e.isWaiting = true
+		e.waitingTicks = 0
+		e.maxWaitTicks = 20 + rand.Intn(60)
+		return 0
 	}
-	if playerY > e.Y+buffer {
-		dirbits |= DirDown
+
+	// If waiting, check if player gets close or wait time expires
+	if e.isWaiting {
+		e.waitingTicks++
+		if distToPlayer < 150 || e.waitingTicks >= e.maxWaitTicks {
+			e.isWaiting = false
+		} else {
+			return 0
+		}
 	}
-	if playerY < e.Y-buffer {
-		dirbits |= DirUp
+
+	// Random movement with occasional direction changes
+	e.randomDirTicks++
+	if e.randomDirTicks >= e.maxRandomDirTicks || e.maxRandomDirTicks == 0 {
+		e.randomDirTicks = 0
+		e.maxRandomDirTicks = 30 + rand.Intn(60)
+
+		dirbits := 0
+		buffer := 10
+
+		// Add randomness to movement
+		if rand.Float64() < 0.7 {
+			if playerX > e.X+buffer {
+				dirbits |= DirRight
+			}
+			if playerX < e.X-buffer {
+				dirbits |= DirLeft
+			}
+			if playerY > e.Y+buffer {
+				dirbits |= DirDown
+			}
+			if playerY < e.Y-buffer {
+				dirbits |= DirUp
+			}
+		}
+
+		// Add random perpendicular movement
+		if rand.Float64() < 0.3 {
+			if rand.Float64() < 0.5 {
+				if math.Abs(dx) > math.Abs(dy) {
+					if rand.Float64() < 0.5 {
+						dirbits |= DirUp
+					} else {
+						dirbits |= DirDown
+					}
+				} else {
+					if rand.Float64() < 0.5 {
+						dirbits |= DirLeft
+					} else {
+						dirbits |= DirRight
+					}
+				}
+			}
+		}
+
+		e.randomDirBits = dirbits
 	}
-	return dirbits
+
+	return e.randomDirBits
 }
 
 func (e *Enemy) SetLoc(loc image.Point) {
