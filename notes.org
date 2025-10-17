@@ -1,9 +1,27 @@
 * TODO Duel/Ante Screen
-- Clean up Rogue/Enemy refactor
-- Add enemy "level" to .toml files (determines life and bribe cost) [[https://mtg.wiki/page/Magic%3A_The_Gathering_%28MicroProse%29_Preconstructed_Decks?utm_source=chatgpt.com][wiki-src]]
+- [X] Clean up Rogue/Enemy refactor
+- [X] Implement bribes (static 20 gold)
+- [X] Implement duel (75% chance of winning, win 3 cards or lose ante)
+- [ ] show winning screen
+- [ ] show losing screen
+- [X] Give player starting deck
+- [ ] Add enemy "level" to .toml files (determines life and bribe cost) [[https://mtg.wiki/page/Magic%3A_The_Gathering_%28MicroProse%29_Preconstructed_Decks?utm_source=chatgpt.com][wiki-src]]
   - [[how much ][list of characters]]
-- Add color for each enemy (to choose background)
+- [ ] Add color for each enemy (to choose background)
   - or do it at runtime by counting cards/mana symbols
+
+* TODO Edit deck screen
+- [ ] Show cards
+- [ ] Sell cards
+- [ ] Add Decks to player, including active deck
+* TODO player decks/card collections
+- [ ] constraints on a player's deck
+  - should only allow cards in a player's collection (can check when adding a card to a deck)
+  - selling a card/losing a card to ante should remove the card from the card collection and all player decks
+* [X] Make more enemies appear and move randomly
+Every 30 ticks if a player hasn't interacted with an enemy in the last 100 ticks spawn a new enemy.
+
+Also, make the enemies have a little movement jitter towards the player instead of running directly at the player. Also, make the enemies occasionally stop and wait until the player gets closer and then run towards them.
 
 
 * Storing Large files/images?
@@ -77,9 +95,10 @@ Can use MTG Oracle ID for card id, and keep updated with scryfall
 - cards.json: https://scryfall.com/docs/api/bulk-data
 
 * Adding transparency to an image
-Converted buttons that had black background to transparent background.
+Converted buttons that had black background to transparent background:
 
 convert assets/art/sprites/city/Smbuybttn.png -transparent black assets/art/sprites/city/Smbuybttn.png
+
 * Scaling the game screen
 Note: why does web version scale up?
 
