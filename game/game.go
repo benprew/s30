@@ -16,7 +16,7 @@ import (
 )
 
 type Game struct {
-	screenW, screenH     int
+	ScreenW, ScreenH     int
 	camScale             float64
 	camScaleTo           float64
 	mousePanX, mousePanY int
@@ -60,8 +60,8 @@ func NewGame() (*Game, error) {
 	scale := 1.0
 
 	g := &Game{
-		screenW:           int(1024 * scale),
-		screenH:           int(768 * scale),
+		ScreenW:           int(1024 * scale),
+		ScreenH:           int(768 * scale),
 		camScale:          scale,
 		camScaleTo:        1,
 		mousePanX:         math.MinInt32,
@@ -76,7 +76,7 @@ func NewGame() (*Game, error) {
 		player: player,
 	}
 
-	ebiten.SetWindowSize(g.screenW, g.screenH)
+	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
 
 	fmt.Printf("NewGame execution time: %s\n", time.Since(startTime))
 	return g, err
@@ -91,7 +91,7 @@ func (g *Game) Update() error {
 		g.screenMap[screenui.WorldScr] = l
 	}
 
-	name, err := g.CurrentScreen().Update(g.screenW, g.screenH, g.camScale)
+	name, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
 	if err != nil {
 		panic(fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err))
 	}
@@ -114,12 +114,12 @@ func (g *Game) Update() error {
 	}
 	if name == screenui.BuyCardsScr && g.currentScreenName != screenui.BuyCardsScr {
 		tile := g.Level().Tile(g.Level().CharacterTile())
-		g.screenMap[name] = screens.NewBuyCardsScreen(&tile.City, g.player)
+		g.screenMap[name] = screens.NewBuyCardsScreen(&tile.City, g.player, g.ScreenW, g.ScreenH)
 	}
 	g.currentScreenName = name
 
 	if g.CurrentScreen().IsFramed() {
-		name, err = g.worldFrame.Update(g.screenW, g.screenH, g.camScale)
+		name, err = g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
 		if err != nil {
 			panic(fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err))
 		}
@@ -132,7 +132,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.CurrentScreen().Draw(screen, g.screenW, g.screenH, g.camScale)
+	g.CurrentScreen().Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
 	if g.CurrentScreen().IsFramed() {
 		g.worldFrame.Draw(screen, g.camScale)
 	}
@@ -162,6 +162,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 // Layout is called when the Game's layout changes.
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	g.screenW, g.screenH = outsideWidth, outsideHeight
-	return g.screenW, g.screenH
+	g.ScreenW, g.ScreenH = outsideWidth, outsideHeight
+	return g.ScreenW, g.ScreenH
 }
