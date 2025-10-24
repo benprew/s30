@@ -42,7 +42,7 @@ func (s *BuyCardsScreen) IsFramed() bool {
 	return true
 }
 
-func NewBuyCardsScreen(city *domain.City, player *domain.Player) *BuyCardsScreen {
+func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyCardsScreen {
 	drawOpts := &ebiten.DrawImageOptions{}
 	drawOpts.GeoM.Scale(SCALE, SCALE)
 	img, _, err := image.Decode(bytes.NewReader(assets.BuyCards_png))
@@ -58,7 +58,7 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player) *BuyCardsScreen
 	txt := "Cards for Sale"
 	// Use Text element to draw the title onto the image
 	titleText := elements.NewText(16, txt, 0, 0)
-	titleText.Draw(title, &ebiten.DrawImageOptions{})
+	titleText.Draw(title, &ebiten.DrawImageOptions{}, 1.0)
 
 	// Use LoadSpriteSheet to extract the card frame from Buybuttons.spr.png (6x2 grid, frame at 0,0)
 	frames, err := sprites.LoadSpriteSheet(6, 2, assets.BuyButtons_png)
@@ -77,7 +77,7 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player) *BuyCardsScreen
 		ErrorMsg:    "",
 		CardImgs:    loadCardImages(city.CardsForSale),
 	}
-	screen.Buttons = mkCardButtons(SCALE, city, screen.CardImgs)
+	screen.Buttons = mkCardButtons(SCALE, city, screen.CardImgs, W, H)
 	return screen
 }
 
@@ -98,11 +98,6 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	frameOpts := &ebiten.DrawImageOptions{}
 	frameOpts.GeoM.Scale(scale, scale)
 	for _, b := range s.Buttons {
-		// Center the 'done' button horizontally
-		if b.ID == "done" {
-			btnWidth := float64(b.Normal.Bounds().Dx()) * b.Scale
-			b.X = int((float64(W) - btnWidth) / 2.0)
-		}
 		b.Draw(screen, frameOpts, scale)
 	}
 
@@ -125,13 +120,13 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		promptX := int(centerX + (fw / 2) - (len(prompt) * 8))
 		promptY := int(centerY + fh - 40)
 		promptText := elements.NewText(32, prompt, promptX, promptY)
-		promptText.Draw(screen, &ebiten.DrawImageOptions{})
+		promptText.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 		// Draw error message if present using Text element
 		if s.ErrorMsg != "" {
 			errX := int(centerX + (fw / 2) - (len(s.ErrorMsg) * 7))
 			errY := int(centerY + fh - 10)
 			errText := elements.NewText(24, s.ErrorMsg, errX, errY)
-			errText.Draw(screen, &ebiten.DrawImageOptions{})
+			errText.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 		}
 	}
 }
@@ -156,12 +151,12 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 
 	for i := range s.Buttons {
 		b := s.Buttons[i]
-		b.Update(options, scale)
-		if b.ID == "done" && b.State == elements.StateClicked {
+		b.Update(options, scale, W, H)
+		if b.ID == "done" && b.IsClicked() {
 			return screenui.CityScr, nil
 		}
 		// Detect card or price click
-		if b.State == elements.StateClicked {
+		if b.IsClicked() {
 			if len(b.ID) > 5 && b.ID[:5] == "card_" {
 				idx := -1
 				fmt.Sscanf(b.ID, "card_%d", &idx)
@@ -197,7 +192,7 @@ func (s *BuyCardsScreen) buyCard() {
 		s.Player.CardCollection[card]++
 		s.City.CardsForSale[s.PreviewIdx] = nil
 		s.CardImgs[s.PreviewIdx] = nil
-		s.Buttons = mkCardButtons(SCALE, s.City, s.CardImgs)
+		s.Buttons = mkCardButtons(SCALE, s.City, s.CardImgs, 1024, 768) // TODO remove hardcoded W/H
 		s.PreviewIdx = -1
 		s.PreviewType = ""
 	} else {
@@ -217,7 +212,7 @@ func idxInCardsForSale(city *domain.City, cardIdx int) int {
 	return -1
 }
 
-func mkCardButtons(scale float64, city *domain.City, cardImgs []*ebiten.Image) []*elements.Button {
+func mkCardButtons(scale float64, city *domain.City, cardImgs []*ebiten.Image, W, H int) []*elements.Button {
 	sprite := loadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
@@ -245,48 +240,30 @@ func mkCardButtons(scale float64, city *domain.City, cardImgs []*ebiten.Image) [
 		priceOptions.GeoM.Translate(textX, textY)
 		text.Draw(priceLabel, priceText, priceFontFace, &text.DrawOptions{DrawImageOptions: *priceOptions})
 
-		// if we want to show 5 cards, we need to shrink the image even more
-		// (/ 668 5) = 133px wide, assuming game frame is 100px
-		cards = append(cards, &elements.Button{
-			Normal:  cardUpperImg,
-			Hover:   cardUpperImg,
-			Pressed: cardUpperImg,
-			X:       120 + (i * 160),
-			Y:       200,
-			Scale:   0.45,
-			ID:      fmt.Sprintf("card_%d", i),
-		})
+		x := 120 + (i * 160)
+		cardBtn := elements.NewButton(cardUpperImg, cardUpperImg, cardUpperImg, x, 200, 0.45)
+		cardBtn.ID = fmt.Sprintf("card_%d", i)
+		cards = append(cards, cardBtn)
 
-		// Add price label button below the card
-		cards = append(cards, &elements.Button{
-			Normal:  priceLabel,
-			Hover:   priceLabel,
-			Pressed: priceLabel,
-			X:       120 + (i * 160), // Offset to center under card
-			Y:       320,             // Below the card
-			ID:      fmt.Sprintf("price_%d", i),
-		})
+		priceBtn := elements.NewButton(priceLabel, priceLabel, priceLabel, x, 320, 1.0)
+		priceBtn.ID = fmt.Sprintf("price_%d", i)
+		cards = append(cards, priceBtn)
 	}
 
-	buttons := []*elements.Button{
-		&elements.Button{
-			Normal:  sprite[0],
-			Hover:   sprite[1],
-			Pressed: sprite[2],
-			ButtonText: elements.ButtonText{
-				Text:      "Done",
-				Font:      fontFace,
-				TextColor: color.White,
-				HAlign:    elements.AlignCenter,
-				VAlign:    elements.AlignMiddle,
-			},
-			State: elements.StateNormal,
-			X:     0, // will be centered in Draw
-			Y:     420,
-			Scale: SCALE,
-			ID:    "done",
-		},
+	btnWidth := float64(sprite[0].Bounds().Dx())
+	x := int((float64(W) - (btnWidth * SCALE)) / 2.0)
+
+	doneBtn := elements.NewButton(sprite[0], sprite[1], sprite[2], x, 420, SCALE)
+	doneBtn.ButtonText = elements.ButtonText{
+		Text:      "Done",
+		Font:      fontFace,
+		TextColor: color.White,
+		HAlign:    elements.AlignCenter,
+		VAlign:    elements.AlignMiddle,
 	}
+	doneBtn.ID = "done"
+
+	buttons := []*elements.Button{doneBtn}
 	buttons = append(buttons, cards...)
 
 	fmt.Println("Buttons:", len(buttons))
@@ -312,8 +289,10 @@ func loadButtonMap(spriteFile []byte, mapFile []byte) []*ebiten.Image {
 func loadCardImages(cards []*domain.Card) (images []*ebiten.Image) {
 	for _, card := range cards {
 		cardPng, err := card.CardImage()
-		if err != nil {
+		if err == nil {
 			images = append(images, cardPng)
+		} else {
+			panic(fmt.Sprintf("unable to load card image: %s: %v", card.Filename(), err))
 		}
 	}
 	return images
