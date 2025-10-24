@@ -6,6 +6,7 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/game/ui"
+	"github.com/benprew/s30/game/ui/layout"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
@@ -39,89 +40,95 @@ type ButtonText struct {
 	Text       string
 	Font       text.Face
 	TextColor  color.Color
-	TextOffset image.Point // offset relative to button 0,0
+	TextOffset image.Point
 	HAlign     HorizontalAlignment
 	VAlign     VerticalAlignment
 }
 
-// TODO: button dimensions should be a rectangle, not an X/Y point
 type Button struct {
-	Hover        *ebiten.Image
 	Normal       *ebiten.Image
+	Hover        *ebiten.Image
 	Pressed      *ebiten.Image
 	ButtonText   ButtonText
-	HandlerFuncs []func() // handle click
+	HandlerFuncs []func()
 	State        ButtonState
-	X            int
-	Y            int
-	Scale        float64
+	Bounds       image.Rectangle
+	Position     *layout.Position
 	ID           string
 }
 
-// Draw renders the button onto the screen.
-// It draws the appropriate button image based on its state and overlays the text.
+func NewButton(normal, hover, pressed *ebiten.Image, x, y int, scale float64) *Button {
+	scaledNormal := normal
+	scaledHover := hover
+	scaledPressed := pressed
+
+	if scale != 0 && scale != 1.0 {
+		scaledNormal = ScaleImage(normal, scale)
+		scaledHover = ScaleImage(hover, scale)
+		scaledPressed = ScaleImage(pressed, scale)
+	}
+
+	w := scaledNormal.Bounds().Dx()
+	h := scaledNormal.Bounds().Dy()
+	bounds := image.Rect(x, y, x+w, y+h)
+
+	return &Button{
+		Normal:  scaledNormal,
+		Hover:   scaledHover,
+		Pressed: scaledPressed,
+		Bounds:  bounds,
+		State:   StateNormal,
+	}
+}
+
 func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale float64) {
 	var imgToDraw *ebiten.Image
 
+	x, y := b.getPosition(screen, scale)
+
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Concat(opts.GeoM)
-	options.GeoM.Translate(float64(b.X)*scale, float64(b.Y)*scale)
+	options.GeoM.Translate(float64(x)*scale, float64(y)*scale)
+
 	switch b.State {
 	case StateHover:
 		imgToDraw = b.Hover
-	case StateClicked:
-		fallthrough
-	case StatePressed:
+	case StateClicked, StatePressed:
 		imgToDraw = b.Pressed
-	case StateNormal:
-		fallthrough
 	default:
 		imgToDraw = b.Normal
 	}
 
-	if b.Scale != 0 {
-		imgToDraw = ScaleImage(imgToDraw, b.Scale)
-	}
 	screen.DrawImage(imgToDraw, options)
 
 	if b.ButtonText.Text != "" {
 		textX, textY := AlignText(imgToDraw, b.ButtonText.Text, b.ButtonText.Font, b.ButtonText.HAlign, b.ButtonText.VAlign)
-		options.GeoM.Translate(textX, textY)
+		textOpts := &ebiten.DrawImageOptions{}
+		textOpts.GeoM.Concat(options.GeoM)
+		textOpts.GeoM.Translate(textX, textY)
 		R, G, B, A := b.ButtonText.TextColor.RGBA()
-		options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
-		textOpts := text.DrawOptions{DrawImageOptions: *options}
-		text.Draw(screen, b.ButtonText.Text, b.ButtonText.Font, &textOpts)
+		textOpts.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
+		text.Draw(screen, b.ButtonText.Text, b.ButtonText.Font, &text.DrawOptions{DrawImageOptions: *textOpts})
 	}
 }
 
-// Update checks the button's state based on mouse interaction. Button box is button size + scale. Scale is passed in opts
-func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64) {
+func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, screenH int) {
 	mx, my := ui.TouchPosition()
 	isTouch := mx > 0
 	if mx == 0 {
 		mx, my = ebiten.CursorPosition()
 	}
 
-	bounds := b.Normal.Bounds()
-	buttonWidth := float64(bounds.Dx()) * scale
-	buttonHeight := float64(bounds.Dy()) * scale
+	x, y := b.getPositionWithDims(screenW, screenH, scale)
+
+	buttonWidth := float64(b.Bounds.Dx())
+	buttonHeight := float64(b.Bounds.Dy())
 	combinedGeoM := ebiten.GeoM{}
 	combinedGeoM.Concat(opts.GeoM)
-	if b.Scale != 0 {
-		combinedGeoM.Scale(b.Scale, b.Scale)
-	}
 
-	scaledWidth, scaledHeight := combinedGeoM.Apply(float64(buttonWidth), float64(buttonHeight))
+	scaledWidth, scaledHeight := combinedGeoM.Apply(buttonWidth*scale, buttonHeight*scale)
 
-	if mx >= b.X && mx < b.X+int(scaledWidth) && my >= b.Y && my < b.Y+int(scaledHeight) {
-		// if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		//  for _, handler := range b.HandlerFuncs {
-		//      if handler != nil {
-		//          handler()
-		//      }
-		//  }
-		// }
-
+	if mx >= x && mx < x+int(scaledWidth) && my >= y && my < y+int(scaledHeight) {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			fmt.Println("Pressed")
 			b.State = StatePressed
@@ -135,6 +142,10 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64) {
 	} else {
 		b.State = StateNormal
 	}
+}
+
+func (b *Button) IsClicked() bool {
+	return b.State == StateClicked
 }
 
 // CombineButton combines the 3 images into a single button image
@@ -185,4 +196,19 @@ func AlignText(imgToDraw *ebiten.Image, txt string, font text.Face, hAlign Horiz
 	}
 
 	return textX, textY
+}
+
+func (b *Button) getPosition(screen *ebiten.Image, scale float64) (int, int) {
+	if b.Position != nil {
+		w, h := layout.GetBounds(screen)
+		return b.Position.Resolve(int(float64(w)/scale), int(float64(h)/scale))
+	}
+	return b.Bounds.Min.X, b.Bounds.Min.Y
+}
+
+func (b *Button) getPositionWithDims(screenW, screenH int, scale float64) (int, int) {
+	if b.Position != nil {
+		return b.Position.Resolve(int(float64(screenW)/scale), int(float64(screenH)/scale))
+	}
+	return b.Bounds.Min.X, b.Bounds.Min.Y
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
+	"github.com/benprew/s30/game/ui/layout"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -27,11 +28,10 @@ type CityScreen struct {
 }
 
 type ButtonConfig struct {
-	ID    string
-	Text  string
-	Index int
-	X     int
-	Y     int
+	ID       string
+	Text     string
+	Index    int
+	Position *layout.Position
 }
 
 func NewCityScreen(city *domain.City, player *domain.Player) *CityScreen {
@@ -66,18 +66,18 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, error
 	options := &ebiten.DrawImageOptions{}
 	for i := range c.Buttons {
 		b := c.Buttons[i]
-		b.Update(options, scale)
+		b.Update(options, scale, W, H)
 		switch b.ID {
 		case "leave":
-			if b.State == elements.StateClicked {
+			if b.IsClicked() {
 				return screenui.WorldScr, nil
 			}
 		case "buycards":
-			if b.State == elements.StateClicked {
+			if b.IsClicked() {
 				return screenui.BuyCardsScr, nil
 			}
 		case "buyfood":
-			if b.State == elements.StateClicked {
+			if b.IsClicked() {
 				cost := c.City.FoodCost()
 				if c.Player.Gold >= cost {
 					c.Player.Gold -= cost
@@ -138,11 +138,11 @@ func mkButtons(scale float64, city *domain.City) []*elements.Button {
 	}
 
 	buttonConfigs := []ButtonConfig{
-		{ID: "buycards", Text: "Buy Cards", Index: 3, X: 200, Y: 125},
-		{ID: "quest", Text: "Begin Quest", Index: 2, X: 450, Y: 250},
-		{ID: "buyfood", Text: fmt.Sprintf("%d gold = 10 food", city.FoodCost()), Index: 0, X: 200, Y: 400},
-		{ID: "leave", Text: "Leave Village", Index: 1, X: 700, Y: 400},
-		{ID: "editdeck", Text: "Edit Deck", Index: 4, X: 700, Y: 125},
+		{ID: "buycards", Text: "Buy Cards", Index: 3, Position: &layout.Position{Anchor: layout.TopLeft, OffsetX: 200, OffsetY: 125}},
+		{ID: "quest", Text: "Begin Quest", Index: 2, Position: &layout.Position{Anchor: layout.Center, OffsetX: -50, OffsetY: 0}},
+		{ID: "buyfood", Text: fmt.Sprintf("%d gold = 10 food", city.FoodCost()), Index: 0, Position: &layout.Position{Anchor: layout.BottomLeft, OffsetX: 200, OffsetY: -200}},
+		{ID: "leave", Text: "Leave Village", Index: 1, Position: &layout.Position{Anchor: layout.BottomRight, OffsetX: -250, OffsetY: -200}},
+		{ID: "editdeck", Text: "Edit Deck", Index: 4, Position: &layout.Position{Anchor: layout.TopRight, OffsetX: -250, OffsetY: 125}},
 	}
 
 	buttons := make([]*elements.Button, len(buttonConfigs))
@@ -160,19 +160,15 @@ func mkButton(config ButtonConfig, fontFace *text.GoTextFace, Icons, Iconb [][]*
 	hover := elements.CombineButton(Iconb[0][2], Icons[0][config.Index], Iconb[0][3], scale)
 	pressed := elements.CombineButton(Iconb[0][0], Icons[0][config.Index], Iconb[0][1], scale)
 
-	return elements.Button{
-		Normal:  norm,
-		Hover:   hover,
-		Pressed: pressed,
-		ButtonText: elements.ButtonText{
-			Text:       config.Text,
-			Font:       fontFace,
-			TextColor:  color.White,
-			TextOffset: image.Point{X: int(10 * scale), Y: int(60 * scale)},
-			VAlign:     elements.AlignBottom,
-		},
-		State: elements.StateNormal,
-		X:     config.X,
-		Y:     config.Y,
+	btn := elements.NewButton(norm, hover, pressed, 0, 0, 1.0)
+	btn.ButtonText = elements.ButtonText{
+		Text:       config.Text,
+		Font:       fontFace,
+		TextColor:  color.White,
+		TextOffset: image.Point{X: int(10 * scale), Y: int(60 * scale)},
+		VAlign:     elements.AlignBottom,
 	}
+	btn.Position = config.Position
+
+	return *btn
 }

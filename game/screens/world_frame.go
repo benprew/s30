@@ -62,7 +62,7 @@ func (f *WorldFrame) Draw(screen *ebiten.Image, scale float64) {
 	}
 
 	for _, t := range f.Text {
-		t.Draw(screen, frameOpts)
+		t.Draw(screen, frameOpts, scale)
 	}
 
 }
@@ -71,8 +71,8 @@ func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, error
 	options := &ebiten.DrawImageOptions{}
 	for i := range f.Buttons {
 		b := f.Buttons[i]
-		b.Update(options, scale)
-		if b.ID == "minimap" && b.State == elements.StateClicked {
+		b.Update(options, scale, W, H)
+		if b.ID == "minimap" && b.IsClicked() {
 			return screenui.MiniMapScr, nil
 		}
 	}
@@ -87,18 +87,11 @@ func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {
 	buttons := []*elements.Button{}
 	for i, n := range sidebar {
 		offset := i * 90
-		buttons = append(buttons,
-			&elements.Button{
-				Hover:   worldSprs[4][i*2+1],
-				Normal:  worldSprs[4][i*2],
-				Pressed: worldSprs[4][i*2],
-				X:       8,
-				Y:       110 + offset,
-				Scale:   1.7,
-				ID:      n,
-			},
-		)
-
+		y := 110 + offset
+		normalImg := worldSprs[4][i*2]
+		btn := elements.NewButton(normalImg, worldSprs[4][i*2+1], normalImg, 8, y, 1.7)
+		btn.ID = n
+		buttons = append(buttons, btn)
 	}
 	return buttons
 }

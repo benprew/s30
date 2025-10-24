@@ -126,7 +126,7 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	nameImg := elements.ScaleImage(s.visageBorder[21], 1.5)
 	nameTxt := elements.NewText(30, s.enemyName, 30, 15)
 	nameTxt.Color = color.Black
-	nameTxt.Draw(nameImg, &ebiten.DrawImageOptions{})
+	nameTxt.Draw(nameImg, &ebiten.DrawImageOptions{}, 1.0)
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(hCenter(screen, nameImg), 10)
 	screen.DrawImage(nameImg, opts)
@@ -148,14 +148,14 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	// Main description text - centered, positioned better
 	duelText := "Those who enter the stronghold of the Mighty Wizard\n will be met with the firmest resistance. You must..."
 	textElement := elements.NewText(26, duelText, W/2-250, 450)
-	textElement.Draw(screen, &ebiten.DrawImageOptions{})
+	textElement.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	// Action buttons - centered, positioned better
 	duelBtnText := elements.NewText(28, "1. Duel the Enemy", s.duelBtn.Min.X, s.duelBtn.Min.Y)
-	duelBtnText.Draw(screen, &ebiten.DrawImageOptions{})
+	duelBtnText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	bribeBtnText := elements.NewText(28, fmt.Sprintf("2. Bribe for %d gold", s.enemy.BribeAmount()), s.bribeBtn.Min.X, s.bribeBtn.Min.Y)
-	bribeBtnText.Draw(screen, &ebiten.DrawImageOptions{})
+	bribeBtnText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	// Player stats UI background in lower-left
 	if len(s.playerStatsUI) > 0 && s.playerStatsUI[0] != nil {
@@ -175,10 +175,10 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 		// Position text within the scaled stats UI
 		statsY := float64(H) - scaledStatsH
-		elements.NewText(12, lifeText, 60, int(statsY-5)).Draw(screen, &ebiten.DrawImageOptions{})
-		elements.NewText(12, goldText, 110, int(statsY-5)).Draw(screen, &ebiten.DrawImageOptions{})
-		elements.NewText(12, foodText, 160, int(statsY-5)).Draw(screen, &ebiten.DrawImageOptions{})
-		elements.NewText(12, cardsText, 210, int(statsY-5)).Draw(screen, &ebiten.DrawImageOptions{})
+		elements.NewText(12, lifeText, 60, int(statsY-5)).Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		elements.NewText(12, goldText, 110, int(statsY-5)).Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		elements.NewText(12, foodText, 160, int(statsY-5)).Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		elements.NewText(12, cardsText, 210, int(statsY-5)).Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	}
 }
 
