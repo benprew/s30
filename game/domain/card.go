@@ -134,7 +134,7 @@ func (c *Card) Filename() string {
 func sanitizeFilename(name string) string {
 	name = strings.ToLower(name)
 
-	re1 := regexp.MustCompile(`[^\w\s-]`)
+	re1 := regexp.MustCompile(`[^\p{L}\p{N}\s-]`)
 	name = re1.ReplaceAllString(name, "")
 
 	re2 := regexp.MustCompile(`[-\s]+`)
