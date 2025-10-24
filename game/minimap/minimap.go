@@ -60,67 +60,43 @@ func NewMiniMap(l *world.Level) *MiniMap {
 	}
 
 	buttons := []*elements.Button{
-		&elements.Button{
-			Normal:  frameSprite[0],
-			Hover:   frameSprite[1],
-			Pressed: frameSprite[2],
-			ButtonText: elements.ButtonText{
-				Text:       "World Map",
-				Font:       fontFace,
-				TextColor:  color.White,
-				TextOffset: image.Point{X: 25, Y: 14},
-				VAlign:     elements.AlignBottom,
-			},
-			State: elements.StateNormal,
-			X:     85,
-			Y:     7,
-		},
-		&elements.Button{
-			Normal:  frameSprite[0],
-			Hover:   frameSprite[1],
-			Pressed: frameSprite[2],
-			ButtonText: elements.ButtonText{
-				Text:       "Info Map",
-				Font:       fontFace,
-				TextColor:  color.White,
-				TextOffset: image.Point{X: 25, Y: 14},
-				VAlign:     elements.AlignBottom,
-			},
-			State: elements.StateNormal,
-			X:     85 + 160,
-			Y:     7,
-		},
-		&elements.Button{
-			Normal:  frameSprite[0],
-			Hover:   frameSprite[1],
-			Pressed: frameSprite[2],
-			ButtonText: elements.ButtonText{
-				Text:       "City Map",
-				Font:       fontFace,
-				TextColor:  color.White,
-				TextOffset: image.Point{X: 40, Y: 14},
-				VAlign:     elements.AlignBottom,
-			},
-			State: elements.StateNormal,
-			X:     635,
-			Y:     7,
-		},
-		&elements.Button{
-			Normal:  frameSprite[0],
-			Hover:   frameSprite[1],
-			Pressed: frameSprite[2],
-			ButtonText: elements.ButtonText{
-				Text:       "Done",
-				Font:       fontFace,
-				TextColor:  color.White,
-				TextOffset: image.Point{X: 60, Y: 14},
-				VAlign:     elements.AlignBottom,
-			},
-			State: elements.StateNormal,
-			X:     635 + 160,
-			Y:     7,
-		},
+		elements.NewButton(frameSprite[0], frameSprite[1], frameSprite[2], 85, 7, SCALE),
+		elements.NewButton(frameSprite[0], frameSprite[1], frameSprite[2], 85+160, 7, SCALE),
+		elements.NewButton(frameSprite[0], frameSprite[1], frameSprite[2], 635, 7, SCALE),
+		elements.NewButton(frameSprite[0], frameSprite[1], frameSprite[2], 635+160, 7, SCALE),
 	}
+
+	buttons[0].ButtonText = elements.ButtonText{
+		Text:      "World Map",
+		Font:      fontFace,
+		TextColor: color.White,
+		VAlign:    elements.AlignBottom,
+	}
+	buttons[0].ID = "World Map"
+
+	buttons[1].ButtonText = elements.ButtonText{
+		Text:      "Info Map",
+		Font:      fontFace,
+		TextColor: color.White,
+		VAlign:    elements.AlignBottom,
+	}
+	buttons[1].ID = "Info Map"
+
+	buttons[2].ButtonText = elements.ButtonText{
+		Text:      "City Map",
+		Font:      fontFace,
+		TextColor: color.White,
+		VAlign:    elements.AlignBottom,
+	}
+	buttons[2].ID = "City Map"
+
+	buttons[3].ButtonText = elements.ButtonText{
+		Text:      "Done",
+		Font:      fontFace,
+		TextColor: color.White,
+		VAlign:    elements.AlignBottom,
+	}
+	buttons[3].ID = "Done"
 	return &MiniMap{
 		terrainSprite: s,
 		frame:         ebiten.NewImageFromImage(img),
@@ -190,8 +166,8 @@ func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, error) {
 
 	for i := range m.buttons {
 		b := m.buttons[i]
-		b.Update(options, scale)
-		if b.ButtonText.Text == "Done" && b.State == elements.StateClicked {
+		b.Update(options, scale, W, H)
+		if b.ID == "Done" && b.IsClicked() {
 			return screenui.WorldScr, nil
 		}
 	}
