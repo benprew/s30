@@ -1,6 +1,15 @@
 package layout
 
-import "github.com/hajimehoshi/ebiten/v2"
+import (
+	"github.com/hajimehoshi/ebiten/v2"
+)
+
+const (
+	frameOffsetX = 100
+	frameOffsetY = 75
+	frameWidth   = 820
+	frameHeight  = 425
+)
 
 // Anchor represents a position on the screen relative to edges/corners/center
 type Anchor int
@@ -23,13 +32,20 @@ const (
 
 	// Absolute positioning (uses X, Y directly without anchoring)
 	Absolute
+
+	WFTopLeft
+	WFTopRight
+	WFBottomLeft
+	WFBottomRight
+	WFCenter
 )
 
-// Position represents an anchor point with offsets
 type Position struct {
-	Anchor  Anchor
-	OffsetX int // Pixels from anchor point
-	OffsetY int // Pixels from anchor point
+	Anchor   Anchor
+	OffsetX  int
+	OffsetY  int
+	PaddingX int
+	PaddingY int
 }
 
 // Resolve calculates the absolute X, Y coordinates based on anchor and screen dimensions
@@ -37,6 +53,16 @@ func (p Position) Resolve(screenWidth, screenHeight int) (int, int) {
 	var x, y int
 
 	switch p.Anchor {
+	case WFTopLeft:
+		x, y = frameOffsetX, frameOffsetY
+	case WFTopRight:
+		x, y = frameOffsetX+frameWidth, frameOffsetY
+	case WFBottomLeft:
+		x, y = frameOffsetX, frameOffsetY+frameHeight
+	case WFBottomRight:
+		x, y = frameOffsetX+frameWidth, frameOffsetY+frameHeight
+	case WFCenter:
+		x, y = frameOffsetX+(frameWidth/2), frameOffsetY+(frameHeight/2)
 	case TopLeft:
 		x, y = 0, 0
 	case TopRight:
@@ -56,11 +82,10 @@ func (p Position) Resolve(screenWidth, screenHeight int) (int, int) {
 	case Center:
 		x, y = screenWidth/2, screenHeight/2
 	case Absolute:
-		// For absolute positioning, offsets ARE the position
 		return p.OffsetX, p.OffsetY
 	}
 
-	return x + p.OffsetX, y + p.OffsetY
+	return x + p.OffsetX + p.PaddingX, y + p.OffsetY + p.PaddingY
 }
 
 // ResolveWithSize calculates position and optionally adjusts for element size

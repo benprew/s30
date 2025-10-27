@@ -30,6 +30,13 @@ import (
 // Prdfrma.pic.png - food/gold/life/cards quest icons - old?
 // Statbut1.pic.png - stat buttons - old?
 
+const (
+	FrameOffsetX = 100
+	FrameOffsetY = 75
+	FrameWidth   = 820
+	FrameHeight  = 425
+)
+
 type WorldFrame struct {
 	Buttons []*elements.Button
 	Text    []*elements.Text

@@ -50,13 +50,13 @@ func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	cityOpts := &ebiten.DrawImageOptions{}
 	cityOpts.GeoM.Scale(scale, scale)
 	cityOpts.GeoM.Scale(SCALE, SCALE)
-	cityOpts.GeoM.Translate(100.0*scale, 75.0*scale) // Offset the image
+	cityOpts.GeoM.Translate(FrameOffsetX*scale, FrameOffsetY*scale)
 	screen.DrawImage(c.City.BackgroundImage, cityOpts)
 
-	frameOpts := &ebiten.DrawImageOptions{}
-	frameOpts.GeoM.Scale(scale, scale)
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Scale(scale, scale)
 	for _, b := range c.Buttons {
-		b.Draw(screen, frameOpts, scale)
+		b.Draw(screen, opts, scale)
 	}
 
 	c.drawCityName(screen)
@@ -138,11 +138,11 @@ func mkButtons(scale float64, city *domain.City) []*elements.Button {
 	}
 
 	buttonConfigs := []ButtonConfig{
-		{ID: "buycards", Text: "Buy Cards", Index: 3, Position: &layout.Position{Anchor: layout.TopLeft, OffsetX: 200, OffsetY: 125}},
-		{ID: "quest", Text: "Begin Quest", Index: 2, Position: &layout.Position{Anchor: layout.Center, OffsetX: -50, OffsetY: 0}},
-		{ID: "buyfood", Text: fmt.Sprintf("%d gold = 10 food", city.FoodCost()), Index: 0, Position: &layout.Position{Anchor: layout.BottomLeft, OffsetX: 200, OffsetY: -200}},
-		{ID: "leave", Text: "Leave Village", Index: 1, Position: &layout.Position{Anchor: layout.BottomRight, OffsetX: -250, OffsetY: -200}},
-		{ID: "editdeck", Text: "Edit Deck", Index: 4, Position: &layout.Position{Anchor: layout.TopRight, OffsetX: -250, OffsetY: 125}},
+		{ID: "buycards", Text: "Buy Cards", Index: 3, Position: &layout.Position{Anchor: layout.WFTopLeft, OffsetX: 100, OffsetY: 50}},
+		{ID: "quest", Text: "Begin Quest", Index: 2, Position: &layout.Position{Anchor: layout.WFCenter, OffsetX: -50, OffsetY: 0}},
+		{ID: "buyfood", Text: fmt.Sprintf("%d gold = 10 food", city.FoodCost()), Index: 0, Position: &layout.Position{Anchor: layout.WFBottomLeft, OffsetX: 100, OffsetY: -125}},
+		{ID: "leave", Text: "Leave Village", Index: 1, Position: &layout.Position{Anchor: layout.WFBottomRight, OffsetX: -250, OffsetY: -125}},
+		{ID: "editdeck", Text: "Edit Deck", Index: 4, Position: &layout.Position{Anchor: layout.WFTopRight, OffsetX: -250, OffsetY: 50}},
 	}
 
 	buttons := make([]*elements.Button, len(buttonConfigs))
