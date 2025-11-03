@@ -30,6 +30,7 @@ type DuelAnteScreen struct {
 	visageBorder      []*ebiten.Image
 	playerStatsUI     []*ebiten.Image
 	player            *domain.Player
+	wonCards          []*domain.Card
 }
 
 func (s *DuelAnteScreen) IsFramed() bool { return false }
@@ -52,18 +53,34 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	s.background = loadRandomBackground()
 
 	s.playerAnteCard = selectAnteCard(l.Player.Character.Deck, true)
-	card, _ := s.playerAnteCard.CardImage()
-	s.playerAnteCardImg = card
+	card, err := s.playerAnteCard.CardImage()
+	if err != nil {
+		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
+	}
+	s.playerAnteCardImg = elements.ScaleImage(card, 0.75)
 
 	enemyCard := selectAnteCard(enemy.Character.Deck, false)
-	card, _ = enemyCard.CardImage()
-	s.enemyAnteCardImg = card
-	s.enemyVisage = enemy.Character.Visage
-	s.enemyName = enemy.Character.Name
+	card, err = enemyCard.CardImage()
+	if err != nil {
+		panic(fmt.Sprintf("No card image for %s\n", enemyCard.Name()))
+	}
+	s.enemyAnteCardImg = elements.ScaleImage(card, 0.75)
 	s.visageBorder = loadVisageBorder()
 	s.playerStatsUI = loadPlayerStatsUI()
 
+	s.enemyVisage = borderedVisage(enemy.Character.Visage, s.visageBorder[20])
+	s.enemyName = enemy.Character.Name
+
 	return s
+}
+
+func borderedVisage(visage, border *ebiten.Image) *ebiten.Image {
+	borderedVisageImg := ebiten.NewImageFromImage(border)
+	opts := &ebiten.DrawImageOptions{}
+	x := hCenter(borderedVisageImg, visage)
+	opts.GeoM.Translate(x, 5)
+	borderedVisageImg.DrawImage(visage, opts)
+	return elements.ScaleImage(borderedVisageImg, 1.5)
 }
 
 func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
@@ -101,24 +118,19 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		screen.DrawImage(s.background, opts)
 	}
 
-	// Player ante card - left side, scaled down
+	// Player ante card - left side
 	if s.playerAnteCardImg != nil {
 		opts := &ebiten.DrawImageOptions{}
-		cardScale := 0.35 // Scale cards down to 35%
-		opts.GeoM.Scale(cardScale, cardScale)
 		opts.GeoM.Translate(50, 50)
 		screen.DrawImage(s.playerAnteCardImg, opts)
 	}
 
-	// Enemy ante card - right side, scaled down
+	// Enemy ante card - right side
 	if s.enemyAnteCardImg != nil {
 		opts := &ebiten.DrawImageOptions{}
-		cardScale := 0.35 // Scale cards down to 35%
-		opts.GeoM.Scale(cardScale, cardScale)
 		cardBounds := s.enemyAnteCardImg.Bounds()
-		scaledWidth := float64(cardBounds.Dx()) * cardScale
-		xPos := float64(W) - scaledWidth - 50
-		opts.GeoM.Translate(xPos, 50)
+		xPos := W - cardBounds.Dx() - 50
+		opts.GeoM.Translate(float64(xPos), 50)
 		screen.DrawImage(s.enemyAnteCardImg, opts)
 	}
 
@@ -131,19 +143,10 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	opts.GeoM.Translate(hCenter(screen, nameImg), 10)
 	screen.DrawImage(nameImg, opts)
 
-	// Draw enemy visage with border
-	if len(s.visageBorder) > 0 && s.visageBorder[0] != nil {
-		borderedVisageImg := ebiten.NewImageFromImage(s.visageBorder[20])
-		opts := &ebiten.DrawImageOptions{}
-		x := hCenter(borderedVisageImg, s.enemyVisage)
-		opts.GeoM.Translate(x, 5)
-		borderedVisageImg.DrawImage(s.enemyVisage, opts)
-		borderedVisageImg = elements.ScaleImage(borderedVisageImg, 1.5)
-		YPos := 80.0
-		borderOpts := &ebiten.DrawImageOptions{}
-		borderOpts.GeoM.Translate(hCenter(screen, borderedVisageImg), YPos)
-		screen.DrawImage(borderedVisageImg, borderOpts)
-	}
+	YPos := 80.0
+	borderOpts := &ebiten.DrawImageOptions{}
+	borderOpts.GeoM.Translate(hCenter(screen, s.enemyVisage), YPos)
+	screen.DrawImage(s.enemyVisage, borderOpts)
 
 	// Main description text - centered, positioned better
 	duelText := "Those who enter the stronghold of the Mighty Wizard\n will be met with the firmest resistance. You must..."
@@ -192,6 +195,7 @@ func hCenter(dest, src *ebiten.Image) float64 {
 func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 	outcome := rand.Float64()
 
+	s.lvl.RemoveEnemyAt(s.idx)
 	if outcome > 0.25 {
 		var enemyDeck []*domain.Card
 		for k := range s.enemy.Character.Deck {
@@ -213,13 +217,12 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 				s.player.CardCollection[card]++
 			}
 		}
+		s.wonCards = wonCards
+		return screenui.DuelWinScr, nil
 	} else {
 		s.player.RemoveCard(s.playerAnteCard)
+		return screenui.WorldScr, nil
 	}
-
-	s.lvl.RemoveEnemyAt(s.idx)
-
-	return screenui.WorldScr, nil
 }
 
 func getCardID(card *domain.Card) int {
@@ -285,4 +288,8 @@ func loadVisageBorder() []*ebiten.Image {
 
 func loadPlayerStatsUI() []*ebiten.Image {
 	return loadButtonMap(assets.DuelAnteStats_png, assets.DuelAnteStatsMap_json)
+}
+
+func (s *DuelAnteScreen) WonCards() []*domain.Card {
+	return s.wonCards
 }

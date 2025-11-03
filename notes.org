@@ -1,4 +1,6 @@
 * TODO Duel/Ante Screen
+Initial version will allow player to bride or "play game". If play game is chosen, randomly determine winner and give wins/losses.
+
 - [X] Clean up Rogue/Enemy refactor
 - [X] Implement bribes (static 20 gold)
 - [X] Implement duel (75% chance of winning, win 3 cards or lose ante)
@@ -9,7 +11,6 @@
   - [[how much ][list of characters]]
 - [ ] Add color for each enemy (to choose background)
   - or do it at runtime by counting cards/mana symbols
-
 * TODO Edit deck screen
 - [ ] Show cards
 - [ ] Sell cards
@@ -24,6 +25,8 @@ Every 30 ticks if a player hasn't interacted with an enemy in the last 100 ticks
 Also, make the enemies have a little movement jitter towards the player instead of running directly at the player. Also, make the enemies occasionally stop and wait until the player gets closer and then run towards them.
 
 
+=======
+>>>>>>> Stashed changes
 * Storing Large files/images?
 Should I store card art in the repo?
 - No, this bloats the repo. Instead have tools to download images from scryfall as needed.

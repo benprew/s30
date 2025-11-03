@@ -11,6 +11,7 @@ const (
 	CityScr
 	BuyCardsScr
 	DuelAnteScr
+	DuelWinScr
 )
 
 type Screen interface {

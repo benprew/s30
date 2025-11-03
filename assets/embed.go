@@ -118,7 +118,9 @@ var (
 	//go:embed configs/rogues/*.toml
 	RogueCfgFS embed.FS
 
+	////////////////////////
 	// Duel Ante backgrounds
+	////////////////////////
 	//go:embed art/sprites/duel_ante/*.png
 	DuelAnteFS embed.FS
 
@@ -132,4 +134,9 @@ var (
 	DuelAnteStats_png []byte
 	//go:embed art/sprites/duel_ante/Prdfrma_map.json
 	DuelAnteStatsMap_json []byte
+
+	//go:embed art/sprites/duel_win/Winbak01.pic.png
+	DuelWinBg_png []byte
+	//go:embed art/sprites/duel_win/Endplak.pic.png
+	DuelWinTextBox_png []byte
 )

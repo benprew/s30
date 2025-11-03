@@ -103,6 +103,7 @@ func FindAllCardsByName(name string) []*Card {
 	return result
 }
 
+// TODO: return a "blank card" image on error
 func (card *Card) CardImage() (*ebiten.Image, error) {
 	if CARD_IMAGES == nil {
 		CARD_IMAGES = make(map[*Card]*ebiten.Image, 0)
