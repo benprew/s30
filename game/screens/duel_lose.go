@@ -18,22 +18,24 @@ import (
 // Adding cards to players collection is handled in DuelAnte.
 // This screen is only responsible for showing the cards to the player.
 
-type DuelWinScreen struct {
+type DuelLoseScreen struct {
 	cards      []*domain.Card
 	textbox    *elements.Button
 	Background *ebiten.Image
 }
 
-func (s *DuelWinScreen) IsFramed() bool { return false }
+func (s *DuelLoseScreen) IsFramed() bool { return false }
 
-func NewWinDuelScreen(cards []*domain.Card) *DuelWinScreen {
+func NewDuelLoseScreen(cards []*domain.Card) *DuelLoseScreen {
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
 		Size:   40,
 	}
 
-	textContent := "Won these cards!"
-
+	textContent := "Lost these cards!"
+	if len(cards) == 1 {
+		textContent = "Lost this card!"
+	}
 	textWidth, textHeight := text.Measure(textContent, fontFace, 0)
 
 	paddingX := 180.0
@@ -59,14 +61,14 @@ func NewWinDuelScreen(cards []*domain.Card) *DuelWinScreen {
 	}
 	tb.Position = &layout.Position{Anchor: layout.BottomLeft, OffsetX: 40, OffsetY: -200}
 
-	return &DuelWinScreen{
+	return &DuelLoseScreen{
 		cards:      cards,
-		Background: elements.LoadImage(assets.DuelWinBg_png, 1.6),
+		Background: elements.LoadImage(assets.DuelLoseBg_png, 1.6),
 		textbox:    tb,
 	}
 }
 
-func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
+func (s *DuelLoseScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.DrawImage(s.Background, &ebiten.DrawImageOptions{})
 
 	s.textbox.Draw(screen, &ebiten.DrawImageOptions{}, scale)
@@ -85,9 +87,9 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 }
 
-func (s *DuelWinScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (s *DuelLoseScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		return screenui.WorldScr, nil
 	}
-	return screenui.DuelWinScr, nil
+	return screenui.DuelLoseScr, nil
 }

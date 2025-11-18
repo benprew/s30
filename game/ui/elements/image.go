@@ -1,6 +1,12 @@
 package elements
 
-import "github.com/hajimehoshi/ebiten/v2"
+import (
+	"bytes"
+	"fmt"
+	"image"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 func ScaleImage(img *ebiten.Image, scale float64) *ebiten.Image {
 	X := img.Bounds().Dx()
@@ -24,4 +30,19 @@ func ScaleImageInd(img *ebiten.Image, scaleX, scaleY float64) *ebiten.Image {
 	opts.GeoM.Scale(scaleX, scaleY)
 	newImg.DrawImage(img, opts)
 	return newImg
+}
+
+// Helper to load an image (byte array) to *ebiten.Image
+// Can pre-scale image by passing scale value
+func LoadImage(asset []byte, scale float64) *ebiten.Image {
+	img, _, err := image.Decode(bytes.NewReader(asset))
+	if err != nil {
+		panic(fmt.Sprintf("Unable to load image: %s", err))
+	}
+
+	eimg := ebiten.NewImageFromImage(img)
+	if scale != 1.0 {
+		return ScaleImage(eimg, scale)
+	}
+	return eimg
 }

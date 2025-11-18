@@ -121,6 +121,11 @@ func (g *Game) Update() error {
 			g.screenMap[name] = screens.NewWinDuelScreen(anteScreen.WonCards())
 		}
 	}
+	if name == screenui.DuelLoseScr && g.currentScreenName != screenui.DuelLoseScr {
+		if anteScreen, ok := g.screenMap[screenui.DuelAnteScr].(*screens.DuelAnteScreen); ok {
+			g.screenMap[name] = screens.NewDuelLoseScreen(anteScreen.LostCards())
+		}
+	}
 	g.currentScreenName = name
 
 	if g.CurrentScreen().IsFramed() {

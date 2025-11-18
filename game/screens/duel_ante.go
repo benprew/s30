@@ -54,7 +54,7 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 
 	s.playerAnteCard = selectAnteCard(l.Player.Character.Deck, true)
 	card, err := s.playerAnteCard.CardImage()
-	if err != nil {
+	if err != nil || card == nil {
 		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
 	}
 	s.playerAnteCardImg = elements.ScaleImage(card, 0.75)
@@ -220,8 +220,8 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 		s.wonCards = wonCards
 		return screenui.DuelWinScr, nil
 	} else {
-		s.player.RemoveCard(s.playerAnteCard)
-		return screenui.WorldScr, nil
+		err := s.player.RemoveCard(s.playerAnteCard)
+		return screenui.DuelLoseScr, err
 	}
 }
 
@@ -292,4 +292,8 @@ func loadPlayerStatsUI() []*ebiten.Image {
 
 func (s *DuelAnteScreen) WonCards() []*domain.Card {
 	return s.wonCards
+}
+
+func (s *DuelAnteScreen) LostCards() []*domain.Card {
+	return []*domain.Card{s.playerAnteCard}
 }

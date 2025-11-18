@@ -134,6 +134,8 @@ var (
 	DuelAnteStats_png []byte
 	//go:embed art/sprites/duel_ante/Prdfrma_map.json
 	DuelAnteStatsMap_json []byte
+	//go:embed art/sprites/duel_ante/Losedul2.pic.png
+	DuelLoseBg_png []byte
 
 	//go:embed art/sprites/duel_win/Winbak01.pic.png
 	DuelWinBg_png []byte

@@ -12,6 +12,7 @@ const (
 	BuyCardsScr
 	DuelAnteScr
 	DuelWinScr
+	DuelLoseScr
 )
 
 type Screen interface {
