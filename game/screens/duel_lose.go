@@ -43,7 +43,7 @@ func NewDuelLoseScreen(cards []*domain.Card) *DuelLoseScreen {
 	requiredWidth := textWidth + paddingX
 	requiredHeight := textHeight + paddingY
 
-	textBg := elements.LoadImage(assets.DuelWinTextBox_png, 1.0)
+	textBg, _ := elements.LoadImage(assets.DuelWinTextBox_png)
 	bgBounds := textBg.Bounds()
 	fmt.Println("BgBounds ", bgBounds.Dx(), bgBounds.Dy())
 	fmt.Println("TextBounds ", requiredWidth, requiredHeight)
@@ -61,9 +61,12 @@ func NewDuelLoseScreen(cards []*domain.Card) *DuelLoseScreen {
 	}
 	tb.Position = &layout.Position{Anchor: layout.BottomLeft, OffsetX: 40, OffsetY: -200}
 
+	bgImg, _ := elements.LoadImage(assets.DuelLoseBg_png)
+	bgImg = elements.ScaleImage(bgImg, 1.6)
+
 	return &DuelLoseScreen{
 		cards:      cards,
-		Background: elements.LoadImage(assets.DuelLoseBg_png, 1.6),
+		Background: bgImg,
 		textbox:    tb,
 	}
 }

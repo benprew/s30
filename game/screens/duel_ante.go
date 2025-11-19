@@ -1,7 +1,6 @@
 package screens
 
 import (
-	"bytes"
 	"fmt"
 	"image"
 	"image/color"
@@ -263,13 +262,11 @@ func loadRandomBackground() *ebiten.Image {
 		return nil
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(data))
+	img, err := elements.LoadImage(data)
 	if err != nil {
 		fmt.Printf("Error decoding background %s: %v\n", chosen, err)
-		return nil
 	}
-
-	return ebiten.NewImageFromImage(img)
+	return img
 }
 
 func selectAnteCard(deck domain.Deck, excludeBasicLand bool) *domain.Card {

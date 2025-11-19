@@ -1,9 +1,7 @@
 package screens
 
 import (
-	"bytes"
 	"fmt"
-	"image"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -45,15 +43,17 @@ type WorldFrame struct {
 }
 
 func NewWorldFrame(p *domain.Player) (*WorldFrame, error) {
-	img, _, err := image.Decode(bytes.NewReader(assets.WorldFrame_png))
+	img, err := elements.LoadImage(assets.WorldFrame_png)
+	if err != nil {
+		return nil, err
+	}
+	worldSprs, err := sprites.LoadSpriteSheet(12, 5, assets.WorldSpr_png)
 	if err != nil {
 		return nil, err
 	}
 
-	worldSprs, err := sprites.LoadSpriteSheet(12, 5, assets.WorldSpr_png)
-
 	return &WorldFrame{
-		img:     ebiten.NewImageFromImage(img),
+		img:     img,
 		Buttons: mkWfButtons(worldSprs),
 		player:  p,
 	}, nil

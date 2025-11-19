@@ -1,9 +1,7 @@
 package screens
 
 import (
-	"bytes"
 	"fmt"
-	"image"
 	"image/color"
 
 	"github.com/benprew/s30/assets"
@@ -43,9 +41,7 @@ func (s *BuyCardsScreen) IsFramed() bool {
 }
 
 func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyCardsScreen {
-	drawOpts := &ebiten.DrawImageOptions{}
-	drawOpts.GeoM.Scale(SCALE, SCALE)
-	img, _, err := image.Decode(bytes.NewReader(assets.BuyCards_png))
+	bgImg, err := elements.LoadImage(assets.BuyCards_png)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to load BuyCards.png: %s", err))
 	}
@@ -53,10 +49,8 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 	city.CardsForSale = domain.MkCards()
 
 	sprite := loadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
-	// fontFace no longer needed, handled by Text element
 	title := ebiten.NewImageFromImage(sprite[4])
 	txt := "Cards for Sale"
-	// Use Text element to draw the title onto the image
 	titleText := elements.NewText(16, txt, 0, 0)
 	titleText.Draw(title, &ebiten.DrawImageOptions{}, 1.0)
 
@@ -69,7 +63,7 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 	screen := &BuyCardsScreen{
 		City:        city,
 		Player:      player,
-		BgImage:     ebiten.NewImageFromImage(img),
+		BgImage:     bgImg,
 		ScreenTitle: title,
 		CardFrame:   frameImg,
 		PreviewIdx:  -1,

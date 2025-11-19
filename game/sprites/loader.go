@@ -1,12 +1,12 @@
 package sprites
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"image"
 	_ "image/png" // Import for PNG decoding side effects
 
+	"github.com/benprew/s30/game/ui/elements"
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -25,19 +25,17 @@ type SubimageInfo struct {
 // sprHeight is the number of images vertically in the sheet
 // pixel size of a single sprite iamge is deteremined by the image width divided by sprWidth
 func LoadSpriteSheet(sprWidth, sprHeight int, file []byte) ([][]*ebiten.Image, error) {
-	img, _, err := image.Decode(bytes.NewReader(file))
+	sheet, err := elements.LoadImage(file)
 	if err != nil {
 		return nil, err
 	}
 
-	bounds := img.Bounds()
+	bounds := sheet.Bounds()
 	width := bounds.Max.X - bounds.Min.X
 	height := bounds.Max.Y - bounds.Min.Y
 
 	tileWidth := width / sprWidth
 	tileHeight := height / sprHeight
-
-	sheet := ebiten.NewImageFromImage(img)
 
 	// spriteAt returns a sprite at the provided coordinates.
 	spriteAt := func(x, y int) *ebiten.Image {
@@ -71,12 +69,11 @@ func LoadSubimages(fileBytes []byte, sprMap *[]SprInfo) ([]*ebiten.Image, error)
 		return []*ebiten.Image{}, nil // Return empty slice if no info provided
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(fileBytes))
+	sheet, err := elements.LoadImage(fileBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode image: %w", err)
 	}
 
-	sheet := ebiten.NewImageFromImage(img)
 	subimages := make([]*ebiten.Image, 0, len(*sprMap))
 
 	for _, info := range *sprMap {

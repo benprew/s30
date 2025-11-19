@@ -2,24 +2,23 @@ package elements
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+//
+// # Image Utility Functions
+//
+// Various image utility functions to load and modify images.
+//
+
 func ScaleImage(img *ebiten.Image, scale float64) *ebiten.Image {
-	X := img.Bounds().Dx()
-	Y := img.Bounds().Dy()
-
-	newImg := ebiten.NewImage(int(float64(X)*scale), int(float64(Y)*scale))
-
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Scale(scale, scale)
-	newImg.DrawImage(img, opts)
-	return newImg
+	return ScaleImageInd(img, scale, scale)
 }
 
+// Scale image X and Y independently. Used to scale text boxes to fit text (among
+// other things).
 func ScaleImageInd(img *ebiten.Image, scaleX, scaleY float64) *ebiten.Image {
 	X := img.Bounds().Dx()
 	Y := img.Bounds().Dy()
@@ -32,17 +31,12 @@ func ScaleImageInd(img *ebiten.Image, scaleX, scaleY float64) *ebiten.Image {
 	return newImg
 }
 
-// Helper to load an image (byte array) to *ebiten.Image
-// Can pre-scale image by passing scale value
-func LoadImage(asset []byte, scale float64) *ebiten.Image {
+// Make loading images from the embedded file system easier.
+func LoadImage(asset []byte) (*ebiten.Image, error) {
 	img, _, err := image.Decode(bytes.NewReader(asset))
 	if err != nil {
-		panic(fmt.Sprintf("Unable to load image: %s", err))
+		return nil, err
 	}
 
-	eimg := ebiten.NewImageFromImage(img)
-	if scale != 1.0 {
-		return ScaleImage(eimg, scale)
-	}
-	return eimg
+	return ebiten.NewImageFromImage(img), nil
 }

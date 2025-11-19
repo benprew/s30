@@ -1,9 +1,7 @@
 package domain
 
 import (
-	"bytes"
 	"fmt"
-	"image"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -11,7 +9,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/sprites"
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/benprew/s30/game/ui/elements"
 )
 
 // details for the "rogues" in the game (aka your enemies)
@@ -23,14 +21,11 @@ func (c *Character) LoadImages() error {
 		if err != nil {
 			fmt.Printf("ERROR: Loading Visage: %v", err)
 		}
-
-		img, _, err := image.Decode(bytes.NewReader(data))
+		img, err := elements.LoadImage(data)
 		if err != nil {
 			fmt.Printf("ERROR: Loading Visage: %v", err)
 		}
-		if err == nil {
-			c.Visage = ebiten.NewImageFromImage(img)
-		}
+		c.Visage = img
 	}
 	if c.WalkingSprite == nil {
 		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + c.WalkingSpriteFn)

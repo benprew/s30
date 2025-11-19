@@ -3,12 +3,12 @@ package domain
 import (
 	"bytes"
 	"fmt"
-	"image"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/utils"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -115,15 +115,12 @@ func (card *Card) CardImage() (*ebiten.Image, error) {
 	}
 	filename := card.Filename()
 	data, err := utils.ReadFromEmbeddedZip(assets.CardImages_zip, "carddata/"+filename)
-	if err == nil {
-		cardPng, _, err := image.Decode(bytes.NewReader(data))
-		if err == nil {
-			img := ebiten.NewImageFromImage(cardPng)
-			CARD_IMAGES[card] = img
-			return img, err
-		}
+	if err != nil {
+		panic(fmt.Sprintf("Unable to load card image for: %s", filename))
 	}
-	return nil, err
+	img, err = elements.LoadImage(data)
+	CARD_IMAGES[card] = img
+	return img, err
 }
 
 func (c *Card) Filename() string {

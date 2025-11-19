@@ -3,7 +3,6 @@ package minimap
 import (
 	"bytes"
 	"fmt"
-	"image"
 	"image/color"
 
 	"github.com/benprew/s30/assets"
@@ -44,7 +43,7 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		panic(fmt.Errorf("failed to load terrain sprite sheet: %w", err))
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(assets.MiniMapFrame_png))
+	frameImg, err := elements.LoadImage(assets.MiniMapFrame_png)
 	if err != nil {
 		panic(err)
 	}
@@ -99,7 +98,7 @@ func NewMiniMap(l *world.Level) *MiniMap {
 	buttons[3].ID = "Done"
 	return &MiniMap{
 		terrainSprite: s,
-		frame:         ebiten.NewImageFromImage(img),
+		frame:         frameImg,
 		frameSprite:   frameSprite,
 		buttons:       buttons,
 		level:         l,
