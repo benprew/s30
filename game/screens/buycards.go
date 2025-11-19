@@ -30,10 +30,9 @@ type BuyCardsScreen struct {
 	BgImage     *ebiten.Image
 	ScreenTitle *ebiten.Image
 	CardFrame   *ebiten.Image
-	PreviewIdx  int             // -1 if not previewing, else index into CardsForSale
-	PreviewType string          // "" (none), "card", or "price"
-	ErrorMsg    string          // error message to display (e.g. not enough money)
-	CardImgs    []*ebiten.Image // images for the cards, indexed by CardKeys
+	PreviewIdx  int    // -1 if not previewing, else index into CardsForSale
+	PreviewType string // "" (none), "card", or "price"
+	ErrorMsg    string // error message to display (e.g. not enough money)
 }
 
 func (s *BuyCardsScreen) IsFramed() bool {
@@ -69,9 +68,8 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 		PreviewIdx:  -1,
 		PreviewType: "",
 		ErrorMsg:    "",
-		CardImgs:    loadCardImages(city.CardsForSale),
 	}
-	screen.Buttons = mkCardButtons(SCALE, city, screen.CardImgs, W, H)
+	screen.Buttons = mkCardButtons(SCALE, city, W, H)
 	return screen
 }
 
@@ -96,8 +94,15 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 
 	// Draw card preview if active
-	if s.PreviewIdx >= 0 && s.PreviewIdx < len(s.CardImgs) {
-		cardImg := s.CardImgs[s.PreviewIdx]
+	if s.PreviewIdx >= 0 && s.PreviewIdx < len(s.City.CardsForSale) {
+		card := s.City.CardsForSale[s.PreviewIdx]
+		if card == nil {
+			return
+		}
+		cardImg, err := card.CardImage(domain.CardViewFull)
+		if err != nil {
+			return
+		}
 		fw, fh := s.CardFrame.Bounds().Dx(), s.CardFrame.Bounds().Dy()
 		cw, ch := cardImg.Bounds().Dx(), cardImg.Bounds().Dy()
 		centerX := (W - fw) / 2
@@ -130,7 +135,7 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 
 	// If previewing, handle Y/N
 	if s.PreviewIdx >= 0 {
-		if inpututil.IsKeyJustPressed(ebiten.KeyY) && s.Player != nil && s.PreviewIdx < len(s.CardImgs) {
+		if inpututil.IsKeyJustPressed(ebiten.KeyY) && s.Player != nil && s.PreviewIdx < len(s.City.CardsForSale) {
 			s.buyCard()
 			return screenui.BuyCardsScr, nil
 		}
@@ -154,14 +159,14 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 			if len(b.ID) > 5 && b.ID[:5] == "card_" {
 				idx := -1
 				fmt.Sscanf(b.ID, "card_%d", &idx)
-				s.PreviewIdx = idxInCardsForSale(s.City, idx)
+				s.PreviewIdx = idx
 				s.PreviewType = "card"
 				return screenui.BuyCardsScr, nil
 			}
 			if len(b.ID) > 6 && b.ID[:6] == "price_" {
 				idx := -1
 				fmt.Sscanf(b.ID, "price_%d", &idx)
-				s.PreviewIdx = idxInCardsForSale(s.City, idx)
+				s.PreviewIdx = idx
 				s.PreviewType = "price"
 				return screenui.BuyCardsScr, nil
 			}
@@ -184,9 +189,8 @@ func (s *BuyCardsScreen) buyCard() {
 			s.Player.CardCollection = make(map[*domain.Card]int)
 		}
 		s.Player.CardCollection[card]++
-		s.City.CardsForSale[s.PreviewIdx] = nil
-		s.CardImgs[s.PreviewIdx] = nil
-		s.Buttons = mkCardButtons(SCALE, s.City, s.CardImgs, 1024, 768) // TODO remove hardcoded W/H
+		s.City.CardsForSale = append(s.City.CardsForSale[:s.PreviewIdx], s.City.CardsForSale[s.PreviewIdx+1:]...)
+		s.Buttons = mkCardButtons(SCALE, s.City, 1024, 768) // TODO remove hardcoded W/H
 		s.PreviewIdx = -1
 		s.PreviewType = ""
 	} else {
@@ -194,34 +198,20 @@ func (s *BuyCardsScreen) buyCard() {
 	}
 }
 
-// Helper to find index in CardsForSale slice
-func idxInCardsForSale(city *domain.City, cardIdx int) int {
-	i := 0
-	for idx := range city.CardsForSale {
-		if idx == cardIdx {
-			return i
-		}
-		i++
-	}
-	return -1
-}
-
-func mkCardButtons(scale float64, city *domain.City, cardImgs []*ebiten.Image, W, H int) []*elements.Button {
+func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Button {
 	sprite := loadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
 		Size:   32,
 	}
 
-	// make card buttons
 	cards := make([]*elements.Button, 0)
 	for i, card := range city.CardsForSale {
-		if card == nil {
+		cardUpperImg, err := card.CardImage(domain.CardViewArtOnly)
+		if err != nil {
+			fmt.Printf("WARN: Unable to load card image for %s: %v\n", card.Name(), err)
 			continue
 		}
-		cardImg := cardImgs[i]
-		cardUpperImg := ebiten.NewImage(300, 220)
-		cardUpperImg.DrawImage(cardImg, &ebiten.DrawImageOptions{})
 
 		priceLabel := ebiten.NewImageFromImage(sprite[4])
 		priceText := fmt.Sprintf("%d", card.Price)
@@ -277,17 +267,4 @@ func loadButtonMap(spriteFile []byte, mapFile []byte) []*ebiten.Image {
 	}
 
 	return frameSprite
-}
-
-// Load image for this card
-func loadCardImages(cards []*domain.Card) (images []*ebiten.Image) {
-	for _, card := range cards {
-		cardPng, err := card.CardImage()
-		if err == nil {
-			images = append(images, cardPng)
-		} else {
-			panic(fmt.Sprintf("unable to load card image: %s: %v", card.Filename(), err))
-		}
-	}
-	return images
 }

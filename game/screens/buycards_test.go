@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
-	"github.com/hajimehoshi/ebiten/v2"
 )
 
 func TestBuyCard_PurchaseLogic(t *testing.T) {
@@ -24,8 +23,6 @@ func TestBuyCard_PurchaseLogic(t *testing.T) {
 		PreviewIdx:  0,
 		PreviewType: "card",
 	}
-	// Ensure CardImgs slice exists to avoid index out of range in buyCard
-	screen.CardImgs = make([]*ebiten.Image, len(city.CardsForSale))
 
 	screen.buyCard()
 
@@ -35,8 +32,8 @@ func TestBuyCard_PurchaseLogic(t *testing.T) {
 	if player.CardCollection[card] != 1 {
 		t.Errorf("Expected player to have 1 of card %s, got %d", card.Name(), player.CardCollection[card])
 	}
-	if city.CardsForSale[0] != nil {
-		t.Errorf("Expected card to be marked as sold, got %v", city.CardsForSale[0])
+	if len(city.CardsForSale) != 0 {
+		t.Errorf("Expected card to be removed from sale, got %d cards remaining", len(city.CardsForSale))
 	}
 	if screen.PreviewIdx != -1 {
 		t.Errorf("Expected PreviewIdx to be reset to -1, got %d", screen.PreviewIdx)
@@ -63,8 +60,6 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 		PreviewIdx:  0,
 		PreviewType: "card",
 	}
-	// Ensure CardImgs slice exists to avoid index out of range in buyCard
-	screen.CardImgs = make([]*ebiten.Image, len(city.CardsForSale))
 
 	screen.buyCard()
 
@@ -74,8 +69,8 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 	if player.CardCollection[card] != 0 {
 		t.Errorf("Expected player to have 0 of card %s, got %d", card.Name(), player.CardCollection[card])
 	}
-	if city.CardsForSale[0] == nil {
-		t.Errorf("Expected card to remain for sale, but it was nil")
+	if len(city.CardsForSale) != 1 || city.CardsForSale[0] != card {
+		t.Errorf("Expected card to remain for sale")
 	}
 	if screen.PreviewIdx != 0 {
 		t.Errorf("Expected PreviewIdx to remain 0, got %d", screen.PreviewIdx)

@@ -52,14 +52,14 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	s.background = loadRandomBackground()
 
 	s.playerAnteCard = selectAnteCard(l.Player.Character.Deck, true)
-	card, err := s.playerAnteCard.CardImage()
+	card, err := s.playerAnteCard.CardImage(domain.CardViewFull)
 	if err != nil || card == nil {
 		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
 	}
 	s.playerAnteCardImg = elements.ScaleImage(card, 0.75)
 
 	enemyCard := selectAnteCard(enemy.Character.Deck, false)
-	card, err = enemyCard.CardImage()
+	card, err = enemyCard.CardImage(domain.CardViewFull)
 	if err != nil {
 		panic(fmt.Sprintf("No card image for %s\n", enemyCard.Name()))
 	}

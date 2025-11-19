@@ -141,4 +141,8 @@ var (
 	DuelWinBg_png []byte
 	//go:embed art/sprites/duel_win/Endplak.pic.png
 	DuelWinTextBox_png []byte
+
+	// Card images
+	//go:embed art/blank-card.png
+	CardBlank_png []byte
 )

@@ -3,6 +3,7 @@ package domain
 import (
 	"bytes"
 	"fmt"
+	"image"
 	"regexp"
 	"sort"
 	"strings"
@@ -23,6 +24,15 @@ const (
 	CardTypeInstant     CardType = "Instant"
 	CardTypeSorcery     CardType = "Sorcery"
 )
+
+type CardView int
+
+const (
+	CardViewFull CardView = iota
+	CardViewArtOnly
+)
+
+const CardArtHeight = 250
 
 type EntityID int
 
@@ -103,24 +113,34 @@ func FindAllCardsByName(name string) []*Card {
 	return result
 }
 
-// TODO: return a "blank card" image on error
-func (card *Card) CardImage() (*ebiten.Image, error) {
+func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 	if CARD_IMAGES == nil {
 		CARD_IMAGES = make(map[*Card]*ebiten.Image, 0)
 	}
 
-	img := CARD_IMAGES[card]
-	if img != nil {
-		return img, nil
+	fullImg := CARD_IMAGES[card]
+	if fullImg == nil {
+		filename := card.Filename()
+		data, err := utils.ReadFromEmbeddedZip(assets.CardImages_zip, filename)
+		if err != nil {
+			data = assets.CardBlank_png
+			fmt.Sprintf("WARN: Unable to load card image for: %s, using blank", filename)
+		}
+		fullImg, err = elements.LoadImage(data)
+		if err != nil {
+			return nil, err
+		}
+		CARD_IMAGES[card] = fullImg
 	}
-	filename := card.Filename()
-	data, err := utils.ReadFromEmbeddedZip(assets.CardImages_zip, filename)
-	if err != nil {
-		panic(fmt.Sprintf("Unable to load card image for: %s", filename))
+
+	if view == CardViewArtOnly {
+		bounds := fullImg.Bounds()
+		width := bounds.Dx()
+		artRect := image.Rect(0, 0, width, CardArtHeight)
+		return fullImg.SubImage(artRect).(*ebiten.Image), nil
 	}
-	img, err = elements.LoadImage(data)
-	CARD_IMAGES[card] = img
-	return img, err
+
+	return fullImg, nil
 }
 
 func (c *Card) Filename() string {
