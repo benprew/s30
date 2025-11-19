@@ -114,7 +114,7 @@ func (card *Card) CardImage() (*ebiten.Image, error) {
 		return img, nil
 	}
 	filename := card.Filename()
-	data, err := utils.ReadFromEmbeddedZip(assets.CardImages_zip, "carddata/"+filename)
+	data, err := utils.ReadFromEmbeddedZip(assets.CardImages_zip, filename)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to load card image for: %s", filename))
 	}
