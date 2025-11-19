@@ -155,6 +155,7 @@ func (p *Player) RemoveCard(c *Card) error {
 	if cnt < 1 {
 		return fmt.Errorf("Card not in collection: %s", c.Name())
 	}
+	p.CardCollection[c]--
 	for i := range p.Decks {
 		cnt := p.Decks[i][c]
 		if cnt > 0 {
