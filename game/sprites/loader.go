@@ -113,6 +113,57 @@ func LoadSprInfoFromJSON(jsonData []byte) ([]SprInfo, error) {
 	return sprInfoList, nil
 }
 
+// LoadMappedSprite loads a mapped sprite sheet using names and dimensions in spriteMap.
+// Args:
+// - spriteData - image file
+// - spriteMap - a JSON file where the key is the name of the sprite and the value is the subimage details.
+//
+// Ex:
+//
+//	"btn1_norm": {
+//	  "x": 1,
+//	  "y": 1,
+//	  "width": 93,
+//	  "height": 27
+//	},
+//
+// btn1_norm is the name of the sprite, x,y are the starting locations in the image and width/height are the width and height of the sprite image.
+//
+// Return
+// - a map of strings to ebiten.images (subimages from the original image)
+func LoadMappedSprite(spriteData []byte, spriteMap []byte) (map[string]*ebiten.Image, error) {
+	var spriteInfoMap map[string]SubimageInfo
+	err := json.Unmarshal(spriteMap, &spriteInfoMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal sprite map JSON: %w", err)
+	}
+
+	sheet, err := elements.LoadImage(spriteData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load sprite sheet image: %w", err)
+	}
+
+	sprites := make(map[string]*ebiten.Image)
+
+	for name, info := range spriteInfoMap {
+		rect := image.Rect(info.X, info.Y, info.X+info.Width, info.Y+info.Height)
+
+		if !rect.In(sheet.Bounds()) {
+			fmt.Printf("Warning: Sprite '%s' rectangle %v is outside the sheet bounds %v. Skipping.\n", name, rect, sheet.Bounds())
+			continue
+		}
+		if rect.Empty() {
+			fmt.Printf("Warning: Sprite '%s' rectangle %v is empty. Skipping.\n", name, rect)
+			continue
+		}
+
+		subImg := sheet.SubImage(rect).(*ebiten.Image)
+		sprites[name] = subImg
+	}
+
+	return sprites, nil
+}
+
 // LoadTTFFont parses TTF font data and returns a standard font.Face.
 // fontBytes: A byte slice containing the TTF font file data.
 // Returns a font.Face and an error if parsing fails.

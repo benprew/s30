@@ -17,7 +17,6 @@ import (
 type MiniMap struct {
 	terrainSprite [][]*ebiten.Image
 	frame         *ebiten.Image
-	frameSprite   []*ebiten.Image
 	buttons       []*elements.Button
 	level         *world.Level
 }
@@ -48,21 +47,17 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		panic(err)
 	}
 
-	sprInfo, err := sprites.LoadSprInfoFromJSON(assets.MiniMapFrameSprite_json)
+	buttonsMap, err := sprites.LoadMappedSprite(assets.MiniMapFrameSprite_png, assets.MiniMapFrameSprite_json)
 	if err != nil {
 		panic(err)
 	}
 
-	frameSprite, err := sprites.LoadSubimages(assets.MiniMapFrameSprite_png, &sprInfo)
-	if err != nil {
-		panic(err)
-	}
-
+	scale := 1.0
 	buttons := []*elements.Button{
-		elements.NewButton(frameSprite[0], frameSprite[1], frameSprite[2], 85, 7, SCALE),
-		elements.NewButton(frameSprite[0], frameSprite[1], frameSprite[2], 85+160, 7, SCALE),
-		elements.NewButton(frameSprite[0], frameSprite[1], frameSprite[2], 635, 7, SCALE),
-		elements.NewButton(frameSprite[0], frameSprite[1], frameSprite[2], 635+160, 7, SCALE),
+		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 85, 7, scale),
+		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 85+160, 7, scale),
+		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 635, 7, scale),
+		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 635+160, 7, scale),
 	}
 
 	buttons[0].ButtonText = elements.ButtonText{
@@ -99,7 +94,6 @@ func NewMiniMap(l *world.Level) *MiniMap {
 	return &MiniMap{
 		terrainSprite: s,
 		frame:         frameImg,
-		frameSprite:   frameSprite,
 		buttons:       buttons,
 		level:         l,
 	}
