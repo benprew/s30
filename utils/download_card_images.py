@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script to download and process Magic: The Gathering card images from Scryfall JSON data.
-Downloads PNG images, resizes them to 200px width, and compresses them with pngquant.
+Downloads, resizes and optimizes PNG images.
 Supports both regular JSON and zstandard-compressed JSON (.zst) files.
 """
 
@@ -144,17 +144,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Download and process Magic: The Gathering card images from Scryfall JSON data."
     )
-    parser.add_argument("json_file", help="Path to JSON or JSON.zst file containing card data")
     parser.add_argument(
-        "-v", "--verbose",
+        "json_file", help="Path to JSON or JSON.zst file containing card data"
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
         action="store_true",
-        help="Enable verbose output (shows detailed progress)"
+        help="Enable verbose output (shows detailed progress)",
     )
     args = parser.parse_args()
 
     logging.basicConfig(
-        level=logging.INFO if args.verbose else logging.WARNING,
-        format="%(message)s"
+        level=logging.INFO if args.verbose else logging.WARNING, format="%(message)s"
     )
 
     zip_path = Path("assets/art/cardimages.zip")
@@ -163,7 +165,9 @@ def main() -> None:
     try:
         subprocess.run(["convert", "--version"], capture_output=True, check=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        logger.error("ImageMagick 'convert' command not found. Please install ImageMagick.")
+        logger.error(
+            "ImageMagick 'convert' command not found. Please install ImageMagick."
+        )
         sys.exit(1)
 
     try:
@@ -192,7 +196,9 @@ def main() -> None:
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_card = {
-                executor.submit(download_and_process_card, card, zip_path, output_dir): i
+                executor.submit(
+                    download_and_process_card, card, zip_path, output_dir
+                ): i
                 for i, card in enumerate(cards_data, 1)
             }
 
