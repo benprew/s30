@@ -9,6 +9,7 @@ import (
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -56,14 +57,14 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	if err != nil || card == nil {
 		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
 	}
-	s.playerAnteCardImg = elements.ScaleImage(card, 0.75)
+	s.playerAnteCardImg = imageutil.ScaleImage(card, 0.75)
 
 	enemyCard := selectAnteCard(enemy.Character.Deck, false)
 	card, err = enemyCard.CardImage(domain.CardViewFull)
 	if err != nil {
 		panic(fmt.Sprintf("No card image for %s\n", enemyCard.Name()))
 	}
-	s.enemyAnteCardImg = elements.ScaleImage(card, 0.75)
+	s.enemyAnteCardImg = imageutil.ScaleImage(card, 0.75)
 	s.visageBorder = loadVisageBorder()
 	s.playerStatsUI = loadPlayerStatsUI()
 
@@ -79,7 +80,7 @@ func borderedVisage(visage, border *ebiten.Image) *ebiten.Image {
 	x := hCenter(borderedVisageImg, visage)
 	opts.GeoM.Translate(x, 5)
 	borderedVisageImg.DrawImage(visage, opts)
-	return elements.ScaleImage(borderedVisageImg, 1.5)
+	return imageutil.ScaleImage(borderedVisageImg, 1.5)
 }
 
 func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
@@ -134,7 +135,7 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 
 	// Enemy Name
-	nameImg := elements.ScaleImage(s.visageBorder[21], 1.5)
+	nameImg := imageutil.ScaleImage(s.visageBorder[21], 1.5)
 	nameTxt := elements.NewText(30, s.enemyName, 30, 15)
 	nameTxt.Color = color.Black
 	nameTxt.Draw(nameImg, &ebiten.DrawImageOptions{}, 1.0)
@@ -262,7 +263,7 @@ func loadRandomBackground() *ebiten.Image {
 		return nil
 	}
 
-	img, err := elements.LoadImage(data)
+	img, err := imageutil.LoadImage(data)
 	if err != nil {
 		fmt.Printf("Error decoding background %s: %v\n", chosen, err)
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/layout"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -41,13 +42,13 @@ func NewWinDuelScreen(cards []*domain.Card) *DuelWinScreen {
 	requiredWidth := textWidth + paddingX
 	requiredHeight := textHeight + paddingY
 
-	textBg, _ := elements.LoadImage(assets.DuelWinTextBox_png)
+	textBg, _ := imageutil.LoadImage(assets.DuelWinTextBox_png)
 	bgBounds := textBg.Bounds()
 	fmt.Println("BgBounds ", bgBounds.Dx(), bgBounds.Dy())
 	fmt.Println("TextBounds ", requiredWidth, requiredHeight)
 	scaleX := requiredWidth / float64(bgBounds.Dx())
 	scaleY := requiredHeight / float64(bgBounds.Dy())
-	scaledBg := elements.ScaleImageInd(textBg, scaleX, scaleY)
+	scaledBg := imageutil.ScaleImageInd(textBg, scaleX, scaleY)
 
 	tb := elements.NewButton(scaledBg, scaledBg, scaledBg, 0, 0, 1.0)
 	tb.ButtonText = elements.ButtonText{
@@ -59,8 +60,8 @@ func NewWinDuelScreen(cards []*domain.Card) *DuelWinScreen {
 	}
 	tb.Position = &layout.Position{Anchor: layout.BottomLeft, OffsetX: 40, OffsetY: -200}
 
-	bgImg, _ := elements.LoadImage(assets.DuelWinBg_png)
-	bgImg = elements.ScaleImage(bgImg, 1.6)
+	bgImg, _ := imageutil.LoadImage(assets.DuelWinBg_png)
+	bgImg = imageutil.ScaleImage(bgImg, 1.6)
 
 	return &DuelWinScreen{
 		cards:      cards,
@@ -82,7 +83,7 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 			fmt.Sprintf("ERR: couldn't load image for %s\n", c.Name())
 			continue
 		}
-		img = elements.ScaleImage(img, 0.75)
+		img = imageutil.ScaleImage(img, 0.75)
 		screen.DrawImage(img, cardOpts)
 		cardOpts.GeoM.Translate(260, 0)
 	}

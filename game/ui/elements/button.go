@@ -6,6 +6,7 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/game/ui"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/layout"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -63,9 +64,9 @@ func NewButton(normal, hover, pressed *ebiten.Image, x, y int, scale float64) *B
 	scaledPressed := pressed
 
 	if scale != 0 && scale != 1.0 {
-		scaledNormal = ScaleImage(normal, scale)
-		scaledHover = ScaleImage(hover, scale)
-		scaledPressed = ScaleImage(pressed, scale)
+		scaledNormal = imageutil.ScaleImage(normal, scale)
+		scaledHover = imageutil.ScaleImage(hover, scale)
+		scaledPressed = imageutil.ScaleImage(pressed, scale)
 	}
 
 	w := scaledNormal.Bounds().Dx()

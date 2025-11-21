@@ -6,9 +6,9 @@ import (
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
-	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -40,7 +40,7 @@ func (s *BuyCardsScreen) IsFramed() bool {
 }
 
 func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyCardsScreen {
-	bgImg, err := elements.LoadImage(assets.BuyCards_png)
+	bgImg, err := imageutil.LoadImage(assets.BuyCards_png)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to load BuyCards.png: %s", err))
 	}
@@ -54,7 +54,7 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 	titleText.Draw(title, &ebiten.DrawImageOptions{}, 1.0)
 
 	// Use LoadSpriteSheet to extract the card frame from Buybuttons.spr.png (6x2 grid, frame at 0,0)
-	frames, err := sprites.LoadSpriteSheet(6, 2, assets.BuyButtons_png)
+	frames, err := imageutil.LoadSpriteSheet(6, 2, assets.BuyButtons_png)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to load Buybuttons.spr.png: %s", err))
 	}
@@ -256,12 +256,12 @@ func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Butto
 }
 
 func loadButtonMap(spriteFile []byte, mapFile []byte) []*ebiten.Image {
-	sprInfo, err := sprites.LoadSprInfoFromJSON(mapFile)
+	sprInfo, err := imageutil.LoadSprInfoFromJSON(mapFile)
 	if err != nil {
 		panic(err)
 	}
 
-	frameSprite, err := sprites.LoadSubimages(spriteFile, &sprInfo)
+	frameSprite, err := imageutil.LoadSubimages(spriteFile, &sprInfo)
 	if err != nil {
 		panic(err)
 	}

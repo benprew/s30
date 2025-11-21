@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -74,14 +74,14 @@ func cityBgImage(tier int) *ebiten.Image {
 	var err error
 	if loadedCityImage == nil {
 		// Load city image
-		loadedCityImage, err = elements.LoadImage(assets.City_png)
+		loadedCityImage, err = imageutil.LoadImage(assets.City_png)
 		if err != nil {
 			panic(fmt.Sprintf("Unable to load cityBgImage: %s", err))
 		}
 	}
 	if loadedVillageImage == nil {
 		// Load village image
-		loadedVillageImage, err = elements.LoadImage(assets.Village_png)
+		loadedVillageImage, err = imageutil.LoadImage(assets.Village_png)
 		if err != nil {
 			panic(fmt.Sprintf("Unable to load villageBgImage: %s", err))
 		}

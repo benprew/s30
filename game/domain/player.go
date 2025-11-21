@@ -5,8 +5,8 @@ import (
 	"image"
 	"time"
 
-	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -22,21 +22,21 @@ type Player struct {
 }
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
-	sprite, err := sprites.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
+	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
 	if err != nil {
 		return nil, err
 	}
-	shadow, err := sprites.LoadSpriteSheet(5, 8, getEmbeddedFile("Sego_F.spr.png"))
+	shadow, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Sego_F.spr.png"))
 	if err != nil {
 		return nil, err
 	}
 
 	if isM {
-		sprite, err = sprites.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_M.spr.png"))
+		sprite, err = imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_M.spr.png"))
 		if err != nil {
 			return nil, err
 		}
-		shadow, err = sprites.LoadSpriteSheet(5, 8, getEmbeddedFile("Sego_M.spr.png"))
+		shadow, err = imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Sego_M.spr.png"))
 		if err != nil {
 			return nil, err
 		}

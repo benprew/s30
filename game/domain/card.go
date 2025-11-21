@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/utils"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -126,7 +126,7 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 			data = assets.CardBlank_png
 			fmt.Sprintf("WARN: Unable to load card image for: %s, using blank", filename)
 		}
-		fullImg, err = elements.LoadImage(data)
+		fullImg, err = imageutil.LoadImage(data)
 		if err != nil {
 			return nil, err
 		}

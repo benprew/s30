@@ -1,4 +1,4 @@
-package sprites
+package imageutil
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 	"image"
 	_ "image/png" // Import for PNG decoding side effects
 
-	"github.com/benprew/s30/game/ui/elements"
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -25,7 +24,7 @@ type SubimageInfo struct {
 // sprHeight is the number of images vertically in the sheet
 // pixel size of a single sprite iamge is deteremined by the image width divided by sprWidth
 func LoadSpriteSheet(sprWidth, sprHeight int, file []byte) ([][]*ebiten.Image, error) {
-	sheet, err := elements.LoadImage(file)
+	sheet, err := LoadImage(file)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +68,7 @@ func LoadSubimages(fileBytes []byte, sprMap *[]SprInfo) ([]*ebiten.Image, error)
 		return []*ebiten.Image{}, nil // Return empty slice if no info provided
 	}
 
-	sheet, err := elements.LoadImage(fileBytes)
+	sheet, err := LoadImage(fileBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode image: %w", err)
 	}
@@ -138,7 +137,7 @@ func LoadMappedSprite(spriteData []byte, spriteMap []byte) (map[string]*ebiten.I
 		return nil, fmt.Errorf("failed to unmarshal sprite map JSON: %w", err)
 	}
 
-	sheet, err := elements.LoadImage(spriteData)
+	sheet, err := LoadImage(spriteData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load sprite sheet image: %w", err)
 	}

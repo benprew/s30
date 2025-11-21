@@ -2,7 +2,7 @@ package world
 
 import (
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/sprites"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -17,7 +17,7 @@ type SpriteSheet struct {
 
 // LoadWorldTileSheet loads the embedded SpriteSheet.
 func LoadWorldTileSheet(tileWidth, tileHeight int) (*SpriteSheet, error) {
-	sheet, err := sprites.LoadSpriteSheet(6, 1, assets.Landtile_png)
+	sheet, err := imageutil.LoadSpriteSheet(6, 1, assets.Landtile_png)
 	if err != nil {
 		return nil, err
 	}

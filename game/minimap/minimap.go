@@ -6,8 +6,8 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -37,17 +37,17 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		Size:   14,
 	}
 
-	s, err := sprites.LoadSpriteSheet(75, 1, assets.MiniMapTerrSpr_png)
+	s, err := imageutil.LoadSpriteSheet(75, 1, assets.MiniMapTerrSpr_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load terrain sprite sheet: %w", err))
 	}
 
-	frameImg, err := elements.LoadImage(assets.MiniMapFrame_png)
+	frameImg, err := imageutil.LoadImage(assets.MiniMapFrame_png)
 	if err != nil {
 		panic(err)
 	}
 
-	buttonsMap, err := sprites.LoadMappedSprite(assets.MiniMapFrameSprite_png, assets.MiniMapFrameSprite_json)
+	buttonsMap, err := imageutil.LoadMappedSprite(assets.MiniMapFrameSprite_png, assets.MiniMapFrameSprite_json)
 	if err != nil {
 		panic(err)
 	}

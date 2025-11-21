@@ -5,8 +5,8 @@ import (
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
-	"github.com/benprew/s30/game/sprites"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -43,11 +43,11 @@ type WorldFrame struct {
 }
 
 func NewWorldFrame(p *domain.Player) (*WorldFrame, error) {
-	img, err := elements.LoadImage(assets.WorldFrame_png)
+	img, err := imageutil.LoadImage(assets.WorldFrame_png)
 	if err != nil {
 		return nil, err
 	}
-	worldSprs, err := sprites.LoadSpriteSheet(12, 5, assets.WorldSpr_png)
+	worldSprs, err := imageutil.LoadSpriteSheet(12, 5, assets.WorldSpr_png)
 	if err != nil {
 		return nil, err
 	}

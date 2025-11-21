@@ -8,8 +8,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/sprites"
-	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/imageutil"
 )
 
 // details for the "rogues" in the game (aka your enemies)
@@ -21,7 +20,7 @@ func (c *Character) LoadImages() error {
 		if err != nil {
 			fmt.Printf("ERROR: Loading Visage: %v", err)
 		}
-		img, err := elements.LoadImage(data)
+		img, err := imageutil.LoadImage(data)
 		if err != nil {
 			fmt.Printf("ERROR: Loading Visage: %v", err)
 		}
@@ -32,7 +31,7 @@ func (c *Character) LoadImages() error {
 		if err != nil {
 			fmt.Printf("ERROR: Loading Walking for %s: %v", c.Name, err)
 		}
-		spr, err := sprites.LoadSpriteSheet(5, 8, data)
+		spr, err := imageutil.LoadSpriteSheet(5, 8, data)
 		if err != nil {
 			fmt.Printf("ERROR: Loading Walking for %s: %v", c.Name, err)
 		}
@@ -43,7 +42,7 @@ func (c *Character) LoadImages() error {
 		if err != nil {
 			fmt.Printf("ERROR: Loading Shadow: %v", err)
 		}
-		spr, err := sprites.LoadSpriteSheet(5, 8, data)
+		spr, err := imageutil.LoadSpriteSheet(5, 8, data)
 		if err != nil {
 			fmt.Printf("ERROR: Loading Shadow: %v", err)
 		}
