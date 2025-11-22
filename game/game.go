@@ -58,10 +58,16 @@ func NewGame() (*Game, error) {
 	}
 
 	scale := 1.0
+	screenW := int(1024 * scale)
+	screenH := int(768 * scale)
+	editDeckScreen, err := screens.NewEditDeckScreen(player, screenW, screenH)
+	if err != nil {
+		return nil, err
+	}
 
 	g := &Game{
-		ScreenW:           int(1024 * scale),
-		ScreenH:           int(768 * scale),
+		ScreenW:           screenW,
+		ScreenH:           screenH,
 		camScale:          scale,
 		camScaleTo:        1,
 		mousePanX:         math.MinInt32,
@@ -72,6 +78,7 @@ func NewGame() (*Game, error) {
 			screenui.WorldScr:    l,
 			screenui.MiniMapScr:  m,
 			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
+			screenui.EditDeckScr: editDeckScreen,
 		},
 		player: player,
 	}

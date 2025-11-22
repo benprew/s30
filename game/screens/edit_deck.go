@@ -1,0 +1,191 @@
+package screens
+
+import (
+	"fmt"
+
+	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/imageutil"
+	"github.com/benprew/s30/game/ui/layout"
+	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+)
+
+const (
+	COLLECTION_WIDTH  = 1024
+	COLLECTION_HEIGHT = 180
+)
+
+// EditDeckScreen allows players to edit their decks
+type EditDeckScreen struct {
+	Player         *domain.Player
+	CollectionList *elements.ScrollableList
+	Background     *ebiten.Image
+	DeckButtons    []*elements.Button // Buttons for cards currently in the deck
+	lastClickTime  map[int]int        // Track click times for double-click detection
+	clickFrame     int                // Current frame counter for double-click timing
+}
+
+func (s *EditDeckScreen) IsFramed() bool {
+	return false
+}
+
+// NewEditDeckScreen creates a new edit deck screen
+func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error) {
+	// Load the collection background
+	collectionBg, err := imageutil.LoadImage(assets.EditDeckBg_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load edit deck background: %w", err)
+	}
+
+	screen := &EditDeckScreen{
+		Player:        player,
+		Background:    collectionBg,
+		DeckButtons:   make([]*elements.Button, 0),
+		lastClickTime: make(map[int]int),
+		clickFrame:    0,
+	}
+
+	// Create the scrollable list for the card collection
+	collectionButtons, err := screen.createCollectionButtons()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create collection buttons: %w", err)
+	}
+
+	// Create ScrollableList at the bottom of the screen
+	// Use layout anchor to position it at the bottom center
+	listPos := &layout.Position{
+		Anchor:  layout.BottomCenter,
+		OffsetX: -COLLECTION_WIDTH / 2, // Center horizontally
+		OffsetY: -COLLECTION_HEIGHT,    // Position up from bottom
+	}
+
+	scrollList, err := elements.NewScrollableList(
+		collectionButtons,
+		collectionBg,
+		COLLECTION_WIDTH,
+		COLLECTION_HEIGHT,
+		elements.OrientationHorizontal,
+		listPos,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scrollable list: %w", err)
+	}
+
+	screen.CollectionList = scrollList
+
+	return screen, nil
+}
+
+// createCollectionButtons creates buttons from the player's card collection
+func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
+	buttons := make([]*elements.Button, 0)
+
+	// Convert map to slice for consistent ordering
+	type cardCount struct {
+		card  *domain.Card
+		count int
+	}
+
+	cardList := make([]cardCount, 0, len(s.Player.CardCollection))
+	for card, count := range s.Player.CardCollection {
+		if count > 0 {
+			cardList = append(cardList, cardCount{card: card, count: count})
+		}
+	}
+
+	// Create a button for each card in the collection
+	for i, cc := range cardList {
+		cardImg, err := cc.card.CardImage(domain.CardViewArtOnly)
+		if err != nil {
+			fmt.Printf("WARN: Unable to load card image for %s: %v\n", cc.card.Name(), err)
+			continue
+		}
+
+		// Scale card image to fit in the collection list
+		scaledCard := imageutil.ScaleImage(cardImg, 0.6)
+
+		// Create button at position 0,0 (ScrollableList will position it)
+		btn := elements.NewButton(scaledCard, scaledCard, scaledCard, 0, 0, 1.0)
+		btn.ID = fmt.Sprintf("collection_%d", i)
+
+		buttons = append(buttons, btn)
+	}
+
+	return buttons, nil
+}
+
+// Draw renders the edit deck screen
+func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
+	// Calculate position for collection list at bottom of screen
+	collectionY := H - COLLECTION_HEIGHT
+
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Scale(scale, scale)
+	opts.GeoM.Translate(0, float64(collectionY))
+
+	// Draw the scrollable collection list
+	s.CollectionList.Draw(screen, opts, scale)
+
+	// TODO: Draw deck area at top/middle of screen
+	// TODO: Draw deck buttons
+}
+
+// Update handles user interactions
+func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+	s.clickFrame++
+
+	// Calculate position for collection list
+	collectionY := H - COLLECTION_HEIGHT
+
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(0, float64(collectionY))
+
+	// Update the scrollable list
+	s.CollectionList.Update(opts, scale, W, H)
+
+	// Check for double-clicks on collection cards
+	for i, btn := range s.CollectionList.GetItems() {
+		if btn.IsClicked() {
+			// Check if this is a double-click
+			lastClick, exists := s.lastClickTime[i]
+			if exists && (s.clickFrame-lastClick) < 30 { // 30 frames = ~0.5 seconds at 60fps
+				// Double-click detected
+				s.handleCardDoubleClick(i)
+				delete(s.lastClickTime, i)
+			} else {
+				// Single click - record time
+				s.lastClickTime[i] = s.clickFrame
+			}
+			btn.State = elements.StateNormal
+		}
+	}
+
+	// Handle escape key to return to previous screen
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		return screenui.CityScr, nil // TODO: Return to appropriate screen
+	}
+
+	return screenui.EditDeckScr, nil
+}
+
+// handleCardDoubleClick adds a card from collection to the deck
+func (s *EditDeckScreen) handleCardDoubleClick(cardIdx int) {
+	fmt.Printf("Double-clicked card at index %d\n", cardIdx)
+	// TODO: Implement adding card to deck
+	// 1. Get the card from the collection
+	// 2. Add it to the active deck
+	// 3. Update deck buttons display
+	// 4. Potentially update collection display if count changes
+}
+
+// handleCardDrag handles dragging a card to the deck area
+func (s *EditDeckScreen) handleCardDrag(cardIdx int) {
+	// TODO: Implement drag-and-drop functionality
+	// 1. Track mouse position
+	// 2. Show card being dragged
+	// 3. Detect drop in deck area
+	// 4. Add card to deck if dropped in valid area
+}

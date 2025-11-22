@@ -155,7 +155,7 @@
     "width": 17,
     "height": 48
   },
-  "ff_hove": {
+  "ff_hover": {
     "x": 123,
     "y": 170,
     "width": 17,
@@ -209,7 +209,7 @@
     "width": 17,
     "height": 48
   },
-  "fwd_normal": {
+  "fwd_norm": {
     "x": 105,
     "y": 219,
     "width": 17,

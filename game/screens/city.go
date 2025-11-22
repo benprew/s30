@@ -85,6 +85,10 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, error
 				}
 				b.State = elements.StateNormal
 			}
+		case "editdeck":
+			if b.IsClicked() {
+				return screenui.EditDeckScr, nil
+			}
 		}
 	}
 

@@ -10,6 +10,7 @@ const (
 	MiniMapScr
 	CityScr
 	BuyCardsScr
+	EditDeckScr
 	DuelAnteScr
 	DuelWinScr
 	DuelLoseScr
@@ -32,8 +33,16 @@ func ScreenNameToString(sn ScreenName) string {
 		return "MiniMap"
 	case CityScr:
 		return "City"
+	case BuyCardsScr:
+		return "BuyCards"
+	case EditDeckScr:
+		return "EditDeck"
 	case DuelAnteScr:
 		return "DuelAnte"
+	case DuelWinScr:
+		return "DuelWin"
+	case DuelLoseScr:
+		return "DuelLose"
 	default:
 		return "Unknown"
 	}

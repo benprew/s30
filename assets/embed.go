@@ -142,6 +142,12 @@ var (
 	//go:embed art/sprites/duel_win/Endplak.pic.png
 	DuelWinTextBox_png []byte
 
+	////////////////////////
+	// Edit Deck Screen
+	////////////////////////
+	//go:embed art/sprites/edit_deck/Winbk_Spellchain.pic.png
+	EditDeckBg_png []byte
+
 	// Card images
 	//go:embed art/blank-card.png
 	CardBlank_png []byte
