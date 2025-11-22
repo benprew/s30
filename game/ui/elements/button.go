@@ -120,16 +120,15 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, s
 		mx, my = ebiten.CursorPosition()
 	}
 
-	x, y := b.getPositionWithDims(screenW, screenH, scale)
+	// TODO button position should be set by layout when created and stored in Bounds
+	bounds := b.getPositionWithDims(screenW, screenH, scale)
+	mp := image.Point{mx, my}
+	mPoint := image.Rectangle{mp, image.Point{mx + 1, my + 1}} // extra pixel needed for In to work
 
-	buttonWidth := float64(b.Bounds.Dx())
-	buttonHeight := float64(b.Bounds.Dy())
 	combinedGeoM := ebiten.GeoM{}
 	combinedGeoM.Concat(opts.GeoM)
 
-	scaledWidth, scaledHeight := combinedGeoM.Apply(buttonWidth*scale, buttonHeight*scale)
-
-	if mx >= x && mx < x+int(scaledWidth) && my >= y && my < y+int(scaledHeight) {
+	if mPoint.In(bounds) {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			fmt.Println("Pressed")
 			b.State = StatePressed
@@ -207,9 +206,24 @@ func (b *Button) getPosition(screen *ebiten.Image, scale float64) (int, int) {
 	return b.Bounds.Min.X, b.Bounds.Min.Y
 }
 
-func (b *Button) getPositionWithDims(screenW, screenH int, scale float64) (int, int) {
+func (b *Button) getPositionWithDims(screenW, screenH int, scale float64) image.Rectangle {
 	if b.Position != nil {
-		return b.Position.Resolve(int(float64(screenW)/scale), int(float64(screenH)/scale))
+		x, y := b.Position.Resolve(int(float64(screenW)/scale), int(float64(screenH)/scale))
+		w := b.Bounds.Dx()
+		h := b.Bounds.Dy()
+		return image.Rectangle{Min: image.Point{x, y}, Max: image.Point{x + w, y + h}}
 	}
-	return b.Bounds.Min.X, b.Bounds.Min.Y
+	return b.Bounds
 }
+
+func (b *Button) MoveTo(X, Y int) {
+	w := b.Normal.Bounds().Dx()
+	h := b.Normal.Bounds().Dy()
+	r := image.Rect(X, Y, X+w, Y+h)
+	// fmt.Println(r)
+	b.Bounds = r
+}
+
+// func (b *Button) Bounds() image.Rectangle {
+// 	return b.Normal.Bounds()
+// }
