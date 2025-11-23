@@ -2,6 +2,7 @@ package screens
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -96,6 +97,11 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 			cardList = append(cardList, cardCount{card: card, count: count})
 		}
 	}
+
+	// Sort the card list by name
+	sort.Slice(cardList, func(i, j int) bool {
+		return cardList[i].card.Name() < cardList[j].card.Name()
+	})
 
 	// Create a button for each card in the collection
 	for _, cc := range cardList {
