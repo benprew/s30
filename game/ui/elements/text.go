@@ -23,6 +23,8 @@ type Text struct {
 
 	// New anchor-based positioning
 	Position *layout.Position // If nil, falls back to X, Y
+
+	LineSpacing float64
 }
 
 // For drawing text, similar to buttons
@@ -44,7 +46,11 @@ func (t *Text) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale f
 	options.GeoM.Concat(opts.GeoM)
 	options.GeoM.Translate(float64(x), float64(y))
 	options.ColorScale.Scale(float32(R), float32(G), float32(B), float32(A))
-	options.LineSpacing = 32.0
+	if t.LineSpacing == 0 {
+		options.LineSpacing = 32.0
+	} else {
+		options.LineSpacing = t.LineSpacing
+	}
 
 	text.Draw(screen, t.text, t.font, options)
 }

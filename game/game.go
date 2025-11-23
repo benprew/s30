@@ -123,6 +123,9 @@ func (g *Game) Update() error {
 		tile := g.Level().Tile(g.Level().CharacterTile())
 		g.screenMap[name] = screens.NewBuyCardsScreen(&tile.City, g.player, g.ScreenW, g.ScreenH)
 	}
+	if name == screenui.WisemanScr && g.currentScreenName != screenui.WisemanScr {
+		g.screenMap[name] = screens.NewWisemanScreen()
+	}
 	if name == screenui.DuelWinScr && g.currentScreenName != screenui.DuelWinScr {
 		if anteScreen, ok := g.screenMap[screenui.DuelAnteScr].(*screens.DuelAnteScreen); ok {
 			g.screenMap[name] = screens.NewWinDuelScreen(anteScreen.WonCards())

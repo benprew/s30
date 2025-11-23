@@ -76,6 +76,10 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, error
 			if b.IsClicked() {
 				return screenui.BuyCardsScr, nil
 			}
+		case "quest":
+			if b.IsClicked() {
+				return screenui.WisemanScr, nil
+			}
 		case "buyfood":
 			if b.IsClicked() {
 				cost := c.City.FoodCost()
