@@ -40,3 +40,19 @@ func LoadImage(asset []byte) (*ebiten.Image, error) {
 
 	return ebiten.NewImageFromImage(img), nil
 }
+
+// TileImage creates a new image of size (width, height) by tiling the src image.
+func TileImage(src *ebiten.Image, width, height int) *ebiten.Image {
+	newImg := ebiten.NewImage(width, height)
+	srcW, srcH := src.Bounds().Dx(), src.Bounds().Dy()
+
+	op := &ebiten.DrawImageOptions{}
+	for y := 0; y < height; y += srcH {
+		for x := 0; x < width; x += srcW {
+			op.GeoM.Reset()
+			op.GeoM.Translate(float64(x), float64(y))
+			newImg.DrawImage(src, op)
+		}
+	}
+	return newImg
+}
