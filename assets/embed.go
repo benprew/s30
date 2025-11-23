@@ -150,7 +150,16 @@ var (
 	//go:embed art/sprites/edit_deck/Winbk_Spellchain.pic.png
 	EditDeckBg_png []byte
 
+	//go:embed art/ui/MapBttns.png
+	InfoBar_png []byte
+	//go:embed art/ui/MapBttns_map.json
+	InfoBarMap_json []byte
+
 	// Card images
 	//go:embed art/blank-card.png
 	CardBlank_png []byte
+
+	// Text
+	//go:embed text/Advblocks.txt
+	Advblocks_txt []byte
 )
