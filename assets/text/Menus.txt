@@ -1,0 +1,661 @@
+@GOLDTITLE
+1
+GOLD: %d
+
+@NEWDECK
+1
+New Deck
+
+@POWERTOUGHNESSCC
+3
+Casting Cost
+Power
+Toughness
+
+@FULLCARD
+1
+&Expand Text Box
+
+@LONGLIST
+3
+Enable Filter
+Select All
+Clear All
+
+@GROUPMOVE
+7
+Select Which Color(s) to Move
+&Black
+Bl&ue
+&Green
+&Red
+&White
+&Artifact
+
+@LOADDECKDIALOG
+2
+Load Deck
+Player deck:
+
+@EXTRACARDSDIALOG
+4
+Extra Cards
+There are too many of the following Cards in your deck.
+Remove Extra Cards
+Edit Deck
+
+@TITLEDIALOG
+9
+Deck Info
+Title
+Description
+Name
+E-Mail
+Date
+Face
+Comments
+Version
+
+@OKCANCEL
+2
+OK
+Cancel
+
+@FILTERDIALOGTITLE
+3
+Select Active Artist
+Select Active Creature
+Filter Dialog
+
+@NUMBERTOMOVE
+1
+How many to move?
+
+@NUMBERTOSELL
+1
+How many to Sell?
+
+@DECKFACES
+55
+Witch
+Undead Knight
+Warlock
+Vampirelord
+Nether Fiend
+Necromancer
+Greater Lich
+Cleric
+Priestess
+Crusader
+Paladin
+Arch Angel
+High Priest
+Sainted One
+Seer
+Merfolk Shaman
+Conjurer
+Sea Dragon
+Shapeshifter
+Thought Invoker
+Astral Visionary
+Druid
+Elvish Magi
+Enchantress
+Forest Dragon
+Beastmaster
+Summoner
+Great Druid
+Sorceress
+Sorcerer
+Troll Shaman
+Goblin Lord
+Hydra
+War Mage
+Dragon Lord
+Tusk Guardian
+Sedge Beast
+Ape Lord
+Centaur Shaman
+Winged Stallion
+Fungus Master
+Centaur Warchief
+Mind Stealer
+Lord of Fate
+Elementalist
+Aga Galneer
+Alt-A-Kesh
+Queltosh
+Saltrem Tor
+Mandurang
+Whim
+Prismat
+Dracur
+Kiska-Ra
+Uber Villain
+
+@STATSSCREEN
+17
+Card Type
+Black
+Blue
+Green
+Red
+White
+Colorless
+Total
+Mana Sources
+Creatures
+Enchantments
+Sorceries
+Instants
+Interrupts
+Land
+Non-Creature
+Artifacts
+
+@STATS
+1
+Stats (%d cards)
+
+@STATSDIALOG
+1
+Stats
+
+@DECKCLEAR_RESTORE
+2
+C&lear deck
+&Restore deck
+
+@DECKSURFACE_STANDALONE
+10
+&New deck
+&Load deck
+&Save deck
+&Consolidate duplicate cards
+C&lear deck
+S&ort deck
+M&inimize
+&Music
+Sound &Effects
+E&xit deck builder
+
+@DECKSURFACE_GAUNTLET
+9
+&New deck
+&Load deck
+&Save deck
+&Consolidate duplicate cards
+C&lear deck
+S&ort deck
+&Music
+Sound &Effects
+E&xit deck builder
+
+@DECKSURFACE_ADVENTURE
+7
+Move by color &into deck
+Move by color o&ut of deck
+&Consolidate duplicate cards
+S&ort deck
+&Music
+Sound &Effects
+&Done
+
+@DECKSURFACE_TRADE
+11
+Trade
+C&lear trade
+&Restore trade
+&New deck
+&Load deck
+&Save deck
+&Consolidate duplicate cards trade
+M&inimize
+&Music
+Sound &Effects
+E&xit deck builder
+
+@MAINMENU_STANDALONE
+9
+&New deck
+&Load deck
+&Save deck
+Show &full card text (big card)
+&Consolidate duplicate cards (deck surfaces)
+M&inimize
+&Music
+Sound &Effects
+E&xit deck builder
+
+@MAINMENU_GAUNTLET
+8
+&New deck
+&Load deck
+&Save deck
+Show &full card text (big card)
+&Consolidate duplicate cards (deck surfaces)
+&Music
+Sound &Effects
+E&xit deck builder
+
+@MAINMENU_ADVENTURE
+3
+Show &full card text (big card)
+&Consolidate duplicate cards (deck surfaces)
+&Done
+
+@EXIT
+2
+Done
+Exit
+
+@DECKINFO
+1
+Deck Info
+
+@DECKNUMBERS
+6
+Deck1
+Deck2
+Deck3
+* Deck1 *
+* Deck2 *
+* Deck3 *
+
+@SAVE
+1
+Do you wish to save %s?
+
+@SAVED
+1
+%s.dck has been saved.
+
+@DECKSAVEERROR
+1
+There was an error opening %s.dck. The deck has not been saved.
+
+@TOOFEWCARDS
+1
+Your deck must have at least 40 cards to be used in the duel.
+
+@TOOMANYCARDS
+1
+Your deck has too many cards.\nThe duel allows 200 unique cards - 500 total. The extra cards in the deck will not be used.
+
+@NAMEYOURDECK
+1
+You must name your deck before saving.
+
+@DECKBUILDER
+1
+Deck Builder
+
+@DECKEXISTS
+1
+%s.dck already exists. Do you wish to over write?
+
+@DECKLOADERROR
+1
+%s.dck is not a valid deck file.
+
+@SELLCARD
+1
+Sell Card for %d
+
+@PRICE
+1
+GOLD: %d
+
+@FILTERS
+2
+Main menu buttons &On
+Main menu buttons O&ff
+
+@GOLD
+3
+All &gold cards
+&Matching all selected color buttons
+Matching &any selected color button
+
+@LAND
+3
+&Land and Mana
+Land &only
+&Mana only
+
+@ARTIFACT
+2
+All &Creatures
+All &Non-Creatures
+
+@CREATURE
+4
+&Summon
+&Token
+&Artifact
+Summon from &list...
+
+@ENCHANTMENT
+6
+&Enchantments
+&World
+&Land
+&Creature
+&Artifact
+E&nchant
+
+@CASTCOST
+4
+&Greater than or equal to
+&Less than or equal to
+&Equal to
+&X cost
+
+@POWER
+3
+&Greater than or equal to
+&Less than or equal to
+&Equal to
+
+@TOUGHNESS
+3
+&Greater than or equal to
+&Less than or equal to
+&Equal to
+
+@ABILITY
+15
+&Native
+&Gives
+&Flying
+F&irst strike
+&Trample
+&Regeneration
+&Banding
+(&Color) Ward
+(&Land) Walk
+&Poison
+R&ampage
+&Web
+&Stoning
+Free &Action
+&Quick draw
+
+@RARITY
+5
+&Common
+&Uncommon
+&Rare
+R&estricted
+&Banned
+
+@ARTIST
+1
+&List...
+
+@ARTISTNAMES
+51
+Amy Weber
+Andi Rusu
+Anson Maddocks
+Anthony Waters
+Brian Snoddy
+Bryon Wackwitz
+Christopher Rush
+Cornelius Brudi
+Dameon Willich
+Dan Frazier
+Daniel Gelon
+Denise Detwiler
+Douglas Shuler
+Drew Tucker
+Edward Beard, Jr.
+Fay Jones
+Frank Frazier
+Harlod McNeill
+Heather Hudson
+Jeff A Menges
+Jesper Myrfors
+Julie Baroh
+Justin Hampton
+Kaja & Phil Foglio
+Kaja Foglio
+Ken Meyer Jr
+Kerstin Kaman
+Kev Brockschmidt
+Kristen Bishop
+Liz Danforth
+Margaret Organ-Keen
+Mark Poole
+Mark Tedin
+Melissa Benson
+Michael Whelan
+Mike Kimble
+Néné Thomas
+Nicola Leonard
+Pat Morrissey
+Pete Venters
+Phil Foglio
+Quinton Hoover
+Randy Asplund-Faith
+Richard Kane-Ferguson
+Richard Thomas
+Rob Alexander
+Ron Spencer
+Sandra Everingham
+Scott Kirschner
+Susan VanCamp
+Tom Wänerstrand
+
+@CREATURENAMES
+210
+Abomination
+Aladdin
+AliBaba
+Ali from Cairo
+Angel
+Ants
+Ape
+Apes
+Archaeologist
+Archer
+Artifact
+Asp
+Assassin
+Atog
+Avatar
+Avenger
+Avengers
+Badger
+Ball Lightning
+Bandits
+Banshee
+Basilisk
+Bats
+Bears
+Beasts
+Bees
+Being
+Berserker
+BirdMaiden
+Boars
+Bodyguard
+Brothers
+Bull
+Camel
+Caretaker
+Cat Warriors
+Cavalry
+Cave People
+Centaur
+Cleric
+Clone
+Cobra
+Cockatrice
+Creature
+Dandan
+Demon
+Dervish
+Devils
+Devouring Deep
+Djinn
+Doppelganger
+Dragon
+Dragonfly
+Drake
+Drill Sergent
+Druid
+Dwarves
+Eater
+Eel
+Effigy
+Efreet
+Egg
+El-hajjaj
+Elder Dragon
+Elemental
+Elephant
+Elves
+Enchant
+Enchantress
+Entity
+EvilEye
+Exorcist
+Faerie
+Faeries
+Falcon
+Fallen
+Flying Men
+Force
+Fungusaur
+Gaea's Liege
+Gargoyle
+Ghosts
+Ghoul
+Giant
+Gnomes
+Goblin
+Goblins
+Gremlins
+Guardian
+Guardians
+Gypsies
+Hag
+Hero
+Horror
+Horseman
+Hunter
+Hydra
+Imp
+Island Fish
+Jackal
+Jaguar
+Keepers
+King
+Kithkin
+Knight
+Knights
+Kobolds
+Land
+Leeches
+Legend
+Legendary
+Legionnaire
+Leper
+Leviathan
+Lions
+Lord
+LostSoul
+Lurker
+Lycanthrope
+Mammoth
+ManaBirds
+Manticore
+Master
+Medusa
+Merfolk
+Minotaur
+Miracle Worker
+Mob
+Mold Demon
+Monster
+Mummy
+Murk Dwellers
+Nameless
+Niall Silvain
+Nightmare
+Nomads
+Nymphs
+Ogre
+Old Man
+Ooze
+Orcs
+Paladin
+Pegasus
+People
+Phantasm
+Phoenix
+Pikemen
+Pixie
+Poltergeist
+Preacher
+Priest
+RagMan
+Raiders
+Rats
+Riders
+Robbers
+Roc
+Rock Sled
+Sage
+Satyr
+Scavengers
+Scorpion
+Serpent
+Shade
+Shadow
+Shark
+Ship
+Sindbad
+Singing Tree
+Sisters
+Skeletons
+Slug
+Smith
+Sorceress
+Spawn
+Specter
+Sphinx
+Spider
+Spirit
+Spuzzem
+Squire
+Stalker
+Taskmaster
+Tortoise
+Tracker
+Treefolk
+Troll
+Turtle
+Uncle Istvan
+Unicorn
+Vampire
+Veteran
+Villain
+Viper
+Vultures
+Walking Dead
+Wall
+Whippoorwill
+Will-O'-The-Wisp
+Witches
+Wizard
+Wolverines
+Wolves
+Wombat
+World
+Wraith
+Wretched
+Wurm
+Yeti
+Zombies

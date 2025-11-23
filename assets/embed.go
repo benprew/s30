@@ -86,6 +86,8 @@ var (
 	BuyCardsSprite_png []byte
 	//go:embed art/sprites/city/Smbuybttn_map.json
 	BuyCardsSpriteMap_json []byte
+	//go:embed art/sprites/city/Wiseman3.pic.png
+	Wiseman_png []byte
 
 	//go:embed art/sprites/Buybuttons.spr.png
 	BuyButtons_png []byte
