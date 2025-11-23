@@ -31,7 +31,6 @@ const (
 	CardViewFull CardView = iota
 	CardViewArtOnly
 )
-
 const CardArtHeight = 250
 
 type EntityID int
@@ -73,11 +72,21 @@ type Card struct {
 
 // Cards sorted by name
 var CARDS = LoadCardDatabase(bytes.NewReader(assets.Cards_json))
-
 var CARD_IMAGES map[*Card]*ebiten.Image
 
 func (c *Card) Name() string {
 	return c.CardName
+}
+
+// Returns a unique string for each card.
+// Used to identify cards when names are the same
+func (c *Card) CardID() string {
+	id := fmt.Sprintf(
+		"%s-%s-%s",
+		c.CardSet.ID,
+		c.CardSet.CollectorNo,
+		sanitizeFilename(c.CardName))
+	return id
 }
 
 // FindCardByName searches for a card by name using binary search
@@ -159,13 +168,4 @@ func sanitizeFilename(name string) string {
 	name = re2.ReplaceAllString(name, "-")
 
 	return strings.Trim(name, "-")
-}
-
-func getCardID(card *Card) int {
-	for i, c := range CARDS {
-		if c == card {
-			return i
-		}
-	}
-	return -1
 }
