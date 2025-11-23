@@ -24,9 +24,6 @@ Every 30 ticks if a player hasn't interacted with an enemy in the last 100 ticks
 
 Also, make the enemies have a little movement jitter towards the player instead of running directly at the player. Also, make the enemies occasionally stop and wait until the player gets closer and then run towards them.
 
-
-=======
->>>>>>> Stashed changes
 * Storing Large files/images?
 Should I store card art in the repo?
 - No, this bloats the repo. Instead have tools to download images from scryfall as needed.
