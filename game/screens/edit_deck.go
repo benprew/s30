@@ -26,6 +26,7 @@ type EditDeckScreen struct {
 	DeckButtons    []*elements.Button // Buttons for cards currently in the deck
 	lastClickTime  map[int]int        // Track click times for double-click detection
 	clickFrame     int                // Current frame counter for double-click timing
+	MagnifierImage *ebiten.Image      // Image to display in the magnifier
 }
 
 func (s *EditDeckScreen) IsFramed() bool {
@@ -97,7 +98,7 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 	}
 
 	// Create a button for each card in the collection
-	for i, cc := range cardList {
+	for _, cc := range cardList {
 		cardImg, err := cc.card.CardImage(domain.CardViewArtOnly)
 		if err != nil {
 			fmt.Printf("WARN: Unable to load card image for %s: %v\n", cc.card.Name(), err)
@@ -109,7 +110,7 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 
 		// Create button at position 0,0 (ScrollableList will position it)
 		btn := elements.NewButton(scaledCard, scaledCard, scaledCard, 0, 0, 1.0)
-		btn.ID = fmt.Sprintf("collection_%d", i)
+		btn.ID = cc.card.Name()
 
 		buttons = append(buttons, btn)
 	}
@@ -129,6 +130,22 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	// Draw the scrollable collection list
 	s.CollectionList.Draw(screen, opts, scale)
 
+	// Draw the magnifier image if it exists
+	if s.MagnifierImage != nil {
+		magOpts := &ebiten.DrawImageOptions{}
+		magOpts.GeoM.Scale(scale, scale)
+		// Position on the left side, vertically centered in the space above the collection list
+		// Available height is H - COLLECTION_HEIGHT
+		// Image is 300x419
+		magX := 50.0
+		magY := (float64(H-COLLECTION_HEIGHT) - 419.0) / 2.0
+		if magY < 10 {
+			magY = 10
+		}
+		magOpts.GeoM.Translate(magX*scale, magY*scale)
+		screen.DrawImage(s.MagnifierImage, magOpts)
+	}
+
 	// TODO: Draw deck area at top/middle of screen
 	// TODO: Draw deck buttons
 }
@@ -146,8 +163,19 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 	// Update the scrollable list
 	s.CollectionList.Update(opts, scale, W, H)
 
-	// Check for double-clicks on collection cards
+	// Check for hover and double-clicks on collection cards
 	for i, btn := range s.CollectionList.GetItems() {
+		// Handle hover for magnifier
+		if btn.State == elements.StateHover {
+			card := domain.FindCardByName(btn.ID)
+			if card != nil {
+				img, err := card.CardImage(domain.CardViewFull)
+				if err == nil {
+					s.MagnifierImage = img
+				}
+			}
+		}
+
 		if btn.IsClicked() {
 			// Check if this is a double-click
 			lastClick, exists := s.lastClickTime[i]
