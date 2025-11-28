@@ -2,10 +2,13 @@ package screens
 
 import (
 	"fmt"
+	"image"
+	"image/color"
 	"sort"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui/dragdrop"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/layout"
@@ -28,6 +31,9 @@ type EditDeckScreen struct {
 	lastClickTime  map[int]int        // Track click times for double-click detection
 	clickFrame     int                // Current frame counter for double-click timing
 	MagnifierImage *ebiten.Image      // Image to display in the magnifier
+	dragManager    *dragdrop.DragManager
+	deckDropArea   *dragdrop.DropArea
+	draggableItems []*dragdrop.DraggableButton
 }
 
 func (s *EditDeckScreen) IsFramed() bool {
@@ -48,6 +54,8 @@ func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error)
 		DeckButtons:   make([]*elements.Button, 0),
 		lastClickTime: make(map[int]int),
 		clickFrame:    0,
+		dragManager:   dragdrop.NewDragManager(),
+		draggableItems: make([]*dragdrop.DraggableButton, 0),
 	}
 
 	// Create the scrollable list for the card collection
@@ -77,6 +85,18 @@ func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error)
 	}
 
 	screen.CollectionList = scrollList
+
+	// Create deck drop area (center-top area of screen)
+	deckAreaBounds := image.Rect(W/4, 50, 3*W/4, H-COLLECTION_HEIGHT-50)
+	screen.deckDropArea = dragdrop.NewDropArea(
+		deckAreaBounds,
+		[]string{"*"}, // Accept any card
+		screen.handleCardDrop,
+	)
+	screen.dragManager.RegisterDroppable(screen.deckDropArea)
+
+	// Convert collection buttons to draggable items
+	screen.createDraggableItems(collectionButtons)
 
 	return screen, nil
 }
@@ -124,6 +144,17 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 	return buttons, nil
 }
 
+// createDraggableItems wraps collection buttons as draggable items
+func (s *EditDeckScreen) createDraggableItems(buttons []*elements.Button) {
+	for _, btn := range buttons {
+		card := domain.FindCardByName(btn.ID)
+		if card != nil {
+			draggableBtn := dragdrop.NewDraggableButton(btn, card)
+			s.draggableItems = append(s.draggableItems, draggableBtn)
+		}
+	}
+}
+
 // Draw renders the edit deck screen
 func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	// Calculate position for collection list at bottom of screen
@@ -135,6 +166,9 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	// Draw the scrollable collection list
 	s.CollectionList.Draw(screen, opts, scale)
+
+	// Draw the deck drop area highlight if hovering
+	s.deckDropArea.Draw(screen)
 
 	// Draw the magnifier image if it exists
 	if s.MagnifierImage != nil {
@@ -152,8 +186,23 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		screen.DrawImage(s.MagnifierImage, magOpts)
 	}
 
-	// TODO: Draw deck area at top/middle of screen
-	// TODO: Draw deck buttons
+	// Draw deck area outline
+	deckBounds := s.deckDropArea.GetDropBounds()
+	deckOutline := ebiten.NewImage(deckBounds.Dx(), deckBounds.Dy())
+	for y := 0; y < deckBounds.Dy(); y++ {
+		for x := 0; x < deckBounds.Dx(); x++ {
+			if x < 3 || x >= deckBounds.Dx()-3 || y < 3 || y >= deckBounds.Dy()-3 {
+				deckOutline.Set(x, y, color.RGBA{100, 100, 100, 128})
+			}
+		}
+	}
+	deckOpts := &ebiten.DrawImageOptions{}
+	deckOpts.GeoM.Scale(scale, scale)
+	deckOpts.GeoM.Translate(float64(deckBounds.Min.X)*scale, float64(deckBounds.Min.Y)*scale)
+	screen.DrawImage(deckOutline, deckOpts)
+
+	// Draw drag image if dragging
+	s.dragManager.Draw(screen)
 }
 
 // Update handles user interactions
@@ -168,6 +217,19 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 
 	// Update the scrollable list
 	s.CollectionList.Update(opts, scale, W, H)
+
+	// Update drag and drop system
+	mx, my := ebiten.CursorPosition()
+	leftPressed := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	leftJustReleased := inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft)
+
+	// Convert draggable buttons to interface slice for drag manager
+	draggables := make([]dragdrop.Draggable, len(s.draggableItems))
+	for i, item := range s.draggableItems {
+		draggables[i] = item
+	}
+
+	s.dragManager.Update(mx, my, leftPressed, leftJustReleased, draggables)
 
 	// Check for hover and double-clicks on collection cards
 	for i, btn := range s.CollectionList.GetItems() {
@@ -215,11 +277,24 @@ func (s *EditDeckScreen) handleCardDoubleClick(cardIdx int) {
 	// 4. Potentially update collection display if count changes
 }
 
-// handleCardDrag handles dragging a card to the deck area
-func (s *EditDeckScreen) handleCardDrag(cardIdx int) {
-	// TODO: Implement drag-and-drop functionality
-	// 1. Track mouse position
-	// 2. Show card being dragged
-	// 3. Detect drop in deck area
-	// 4. Add card to deck if dropped in valid area
+// handleCardDrop handles when a card is dropped in the deck area
+func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
+	cardData, ok := data.(*dragdrop.CardDragData)
+	if !ok {
+		return false
+	}
+
+	card, ok := cardData.Card.(*domain.Card)
+	if !ok {
+		return false
+	}
+
+	fmt.Printf("Adding card to deck: %s\n", card.Name())
+	// TODO: Implement actual deck addition logic
+	// 1. Check if player has this card in collection
+	// 2. Check deck size limits
+	// 3. Add card to active deck
+	// 4. Update UI
+
+	return true
 }
