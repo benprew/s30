@@ -50,9 +50,9 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 		bribeBtn: image.Rectangle{image.Point{400, 550}, image.Point{700, 590}},
 	}
 
-	s.background = loadRandomBackground()
+	s.background = loadBackgroundForEnemy(enemy)
 
-	s.playerAnteCard = selectAnteCard(l.Player.Character.Deck, true)
+	s.playerAnteCard = selectAnteCard(l.Player.Deck, true)
 	card, err := s.playerAnteCard.CardImage(domain.CardViewFull)
 	if err != nil || card == nil {
 		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
@@ -174,7 +174,7 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		lifeText := fmt.Sprintf("%d", s.lvl.Player.Life)
 		goldText := fmt.Sprintf("%d", s.lvl.Player.Gold)
 		foodText := fmt.Sprintf("%d", s.lvl.Player.Food)
-		cardsText := fmt.Sprintf("%d", len(s.lvl.Player.Character.Deck))
+		cardsText := fmt.Sprintf("%d", s.lvl.Player.NumCards())
 
 		// Position text within the scaled stats UI
 		statsY := float64(H) - scaledStatsH
@@ -201,7 +201,8 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 		for k := range s.enemy.Character.Deck {
 			enemyDeck = append(enemyDeck, k)
 		}
-		cardsToWin := 3
+		var cardsToWin int
+		cardsToWin = 3
 		if len(enemyDeck) < cardsToWin {
 			cardsToWin = len(enemyDeck)
 		}
@@ -210,7 +211,7 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 			enemyDeck[i], enemyDeck[j] = enemyDeck[j], enemyDeck[i]
 		})
 
-		wonCards := enemyDeck[:3]
+		wonCards := enemyDeck[:cardsToWin]
 
 		for _, card := range wonCards {
 			if card != nil {
@@ -223,15 +224,6 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 		err := s.player.RemoveCard(s.playerAnteCard)
 		return screenui.DuelLoseScr, err
 	}
-}
-
-func getCardID(card *domain.Card) int {
-	for i, c := range domain.CARDS {
-		if c == card {
-			return i
-		}
-	}
-	return -1
 }
 
 func (s *DuelAnteScreen) bribe() (screenui.ScreenName, error) {

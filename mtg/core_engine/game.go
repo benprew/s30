@@ -105,7 +105,7 @@ func (g *GameState) Resolve(item *StackItem) error {
 			if tgt.IsDead() {
 				card := tgt
 				if !moveCard(card, &p.Battlefield, &p.Graveyard) {
-					return fmt.Errorf("Unable to move card from battlefield to graveyard")
+					return fmt.Errorf("unable to move card from battlefield to graveyard")
 				}
 			}
 		}

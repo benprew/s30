@@ -17,8 +17,8 @@ type Player struct {
 	Gold           int
 	Food           int
 	CardCollection Deck
-	ActiveDeck     int
-	Decks          []Deck
+	// ActiveDeck     int
+	// Decks          []Deck
 }
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
@@ -58,8 +58,6 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		cardCollection[card]++
 	}
 
-	fmt.Println("Deck length:", len(deck))
-
 	return &Player{
 		Character: c,
 		CharacterInstance: CharacterInstance{
@@ -75,6 +73,13 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 	screen.DrawImage(p.ShadowSprite[p.Direction][p.Frame], options)
 	screen.DrawImage(p.WalkingSprite[p.Direction][p.Frame], options)
+}
+
+func (p *Player) NumCards() (cnt int) {
+	for _, v := range p.CardCollection {
+		cnt += v
+	}
+	return cnt
 }
 
 func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
@@ -156,11 +161,6 @@ func (p *Player) RemoveCard(c *Card) error {
 		return fmt.Errorf("Card not in collection: %s", c.Name())
 	}
 	p.CardCollection[c]--
-	for i := range p.Decks {
-		cnt := p.Decks[i][c]
-		if cnt > 0 {
-			p.Decks[i][c]--
-		}
-	}
+	p.Deck[c]--
 	return nil
 }

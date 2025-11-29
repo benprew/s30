@@ -8,6 +8,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+const (
+	EnemyChaseDistance  = 150.0
+	EnemyRandomDistance = 200.0
+	EnemyMoveBuffer     = 10
+)
+
 type Dimension struct {
 	Height int
 	Width  int
@@ -54,9 +60,9 @@ func (e *Enemy) move(playerX, playerY int) int {
 	distToPlayer := math.Sqrt(dx*dx + dy*dy)
 
 	// If close, move directly toward player
-	if distToPlayer <= 150 {
+	if distToPlayer <= EnemyChaseDistance {
 		dirbits := 0
-		buffer := 10
+		buffer := EnemyMoveBuffer
 		if playerX > e.X+buffer {
 			dirbits |= DirRight
 		}
@@ -73,7 +79,7 @@ func (e *Enemy) move(playerX, playerY int) int {
 	}
 
 	// Check if enemy should start waiting
-	if !e.isWaiting && distToPlayer > 200 && rand.Float64() < 0.02 {
+	if !e.isWaiting && distToPlayer > EnemyRandomDistance && rand.Float64() < 0.02 {
 		e.isWaiting = true
 		e.waitingTicks = 0
 		e.maxWaitTicks = 20 + rand.Intn(60)
@@ -83,7 +89,7 @@ func (e *Enemy) move(playerX, playerY int) int {
 	// If waiting, check if player gets close or wait time expires
 	if e.isWaiting {
 		e.waitingTicks++
-		if distToPlayer < 150 || e.waitingTicks >= e.maxWaitTicks {
+		if distToPlayer < EnemyChaseDistance || e.waitingTicks >= e.maxWaitTicks {
 			e.isWaiting = false
 		} else {
 			return 0
@@ -158,5 +164,5 @@ func (e *Enemy) Dims() image.Rectangle {
 }
 
 func (e *Enemy) BribeAmount() int {
-	return 20
+	return e.Character.Level * 15
 }

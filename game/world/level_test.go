@@ -132,13 +132,6 @@ func TestConnectCityBFS(t *testing.T) {
 						}
 						// If expected path is nil and panic occurred as expected, test passes for this aspect.
 					}
-				} else {
-					// If no panic occurred, but we expected one (expectedPath == nil)
-					if tc.expectedPath == nil {
-						// It's possible BFS completed without finding a path and returned nil instead of panicking.
-						// We need to check the actual result in this case too.
-						// The DeepEqual check below will handle this.
-					}
 				}
 			}()
 
@@ -151,7 +144,7 @@ func TestConnectCityBFS(t *testing.T) {
 			}
 
 			// Additional check: If a path was found, ensure the end tile is actually a target
-			if actualPath != nil && len(actualPath) > 0 {
+			if len(actualPath) > 0 {
 				endPoint := actualPath[0]
 				endTile := level.Tile(endPoint)
 				if endTile == nil || endPoint == tc.start || !(endTile.IsCity || endTile.IsRoad()) {

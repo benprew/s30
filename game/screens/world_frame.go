@@ -104,15 +104,10 @@ func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {
 }
 
 func mkWfText(p *domain.Player) []*elements.Text {
-	numCards := 0
-	for _, v := range p.CardCollection {
-		numCards += v
-	}
-
 	return []*elements.Text{
 		elements.NewText(30, fmt.Sprintf("%d", p.Gold), 140, 560),
 		elements.NewText(30, fmt.Sprintf("%d", p.Food), 270, 560),
 		elements.NewText(30, fmt.Sprintf("%d", p.Life), 400, 560),
-		elements.NewText(30, fmt.Sprintf("%d", numCards), 530, 560),
+		elements.NewText(30, fmt.Sprintf("%d", p.NumCards()), 530, 560),
 	}
 }

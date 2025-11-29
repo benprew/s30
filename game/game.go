@@ -38,7 +38,6 @@ func (g *Game) Level() *world.Level {
 
 func NewGame() (*Game, error) {
 	startTime := time.Now()
-	fmt.Println("NewGame start")
 
 	player, err := domain.NewPlayer("Player", nil, false)
 	if err != nil {
@@ -100,7 +99,7 @@ func (g *Game) Update() error {
 
 	name, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
 	if err != nil {
-		panic(fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err))
+		return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err)
 	}
 	// If the world level signaled a duel ante, construct the duel screen with the encountered enemy
 	if name == screenui.DuelAnteScr && g.currentScreenName != screenui.DuelAnteScr {
@@ -141,7 +140,7 @@ func (g *Game) Update() error {
 	if g.CurrentScreen().IsFramed() {
 		name, err = g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
 		if err != nil {
-			panic(fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err))
+			return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err)
 		}
 		if name != -1 {
 			g.currentScreenName = name

@@ -38,9 +38,9 @@ type EntityID int
 // A struct representing the sets of magic
 // ex. Arabian Nights, Zendikar, etc
 type CardSet struct {
-	ID          string
-	Name        string
-	Type        string
+	SetID       string
+	SetName     string
+	SetType     string
 	CollectorNo string
 }
 
@@ -83,8 +83,8 @@ func (c *Card) Name() string {
 func (c *Card) CardID() string {
 	id := fmt.Sprintf(
 		"%s-%s-%s",
-		c.CardSet.ID,
-		c.CardSet.CollectorNo,
+		c.SetID,
+		c.CollectorNo,
 		sanitizeFilename(c.CardName))
 	return id
 }
@@ -133,7 +133,7 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 		data, err := utils.ReadFromEmbeddedZip(assets.CardImages_zip, filename)
 		if err != nil {
 			data = assets.CardBlank_png
-			fmt.Sprintf("WARN: Unable to load card image for: %s, using blank", filename)
+			fmt.Printf("WARN: Unable to load card image for: %s, using blank", filename)
 		}
 		fullImg, err = imageutil.LoadImage(data)
 		if err != nil {
@@ -153,8 +153,7 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 }
 
 func (c *Card) Filename() string {
-	fn := fmt.Sprintf("%s-%s-200-%s.png", c.CardSet.ID, c.CardSet.CollectorNo, sanitizeFilename(c.CardName))
-	fmt.Println(fn)
+	fn := fmt.Sprintf("%s-%s-200-%s.png", c.SetID, c.CollectorNo, sanitizeFilename(c.CardName))
 	return fn
 }
 
