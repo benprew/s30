@@ -1,4 +1,5 @@
 name = "Troll Shaman"
+level = 3
 main_cards = [
 ["22",	"Mountain"],
 ["2",	"Strip Mine"],

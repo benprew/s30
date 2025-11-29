@@ -21,3 +21,4 @@ sideboard_cards = [
 walking_sprite = "M_Tsk.spr.png"
 walking_shadow_sprite = "Sm_Tsk.spr.png"
 face = "MPS_Guardian_of_the_Tusk.png"
+level = 4

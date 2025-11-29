@@ -114,7 +114,34 @@ func directionToSpriteIndex(dirBits int) int {
 
 func (c *Character) CalculateLifeFromLevel() int {
 	if c.Level > 0 {
-		return c.Level * 20
+		switch c.Level {
+		case 1:
+			return 10
+		case 2:
+			return 15
+		case 3:
+			return 20
+		case 4:
+			return 25
+		case 5:
+			return 35
+		case 6:
+			return 50
+		case 7:
+			return 70
+		case 8:
+			return 100
+		case 9:
+			return 150
+		case 10:
+			return 200
+		case 11:
+			return 250
+		case 12:
+			return 300
+		default:
+			return c.Level * 20 // Fallback for any missing cases
+		}
 	}
 	return c.Life // fallback to TOML-defined life if no level set
 }

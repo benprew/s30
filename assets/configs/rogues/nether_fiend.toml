@@ -21,3 +21,4 @@ sideboard_cards = [
 walking_sprite = "Bk_Wg.spr.png"
 walking_shadow_sprite = "Sb_Wg.spr.png"
 face = "MPS_Nether_Fiend.png"
+level = 8

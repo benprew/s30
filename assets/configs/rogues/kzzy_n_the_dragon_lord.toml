@@ -23,3 +23,4 @@ main_cards = [
 sideboard_cards = [
 ]
 face = "MPS_Kzzy_n_the_Dragon_Lord.png"
+level = 11

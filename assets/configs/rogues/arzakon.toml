@@ -79,3 +79,4 @@ main_cards = [
 sideboard_cards = [
 ]
 face = "MPS_Arzakon.png"
+level = 12

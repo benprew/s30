@@ -59,3 +59,4 @@ sideboard_cards = [
 walking_sprite = "R_Djn.spr.png"
 walking_shadow_sprite = "Sdjn.spr.png"
 face = "MPS_Queltosh.png"
+level = 6

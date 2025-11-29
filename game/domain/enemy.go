@@ -164,5 +164,30 @@ func (e *Enemy) Dims() image.Rectangle {
 }
 
 func (e *Enemy) BribeAmount() int {
-	return e.Character.Level * 15
+	level := e.Character.Level
+
+	switch level {
+	case 1:
+		return 40
+	case 2:
+		return 50
+	case 3:
+		return 60
+	case 4:
+		return 70
+	case 5:
+		return 80
+	case 6:
+		return 90
+	case 7:
+		return 100
+	case 8:
+		return 120
+	case 9:
+		return 150
+	case 10, 11, 12:
+		return 0 // Unbribable enemies
+	default:
+		return e.Character.Level * 15 // Fallback for any missing cases
+	}
 }

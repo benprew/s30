@@ -22,3 +22,4 @@ sideboard_cards = [
 ["2",	"Blue Elemental Blast"],
 ]
 face = "MPS_Astral_Visionary.png"
+level = 11
