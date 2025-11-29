@@ -1,0 +1,39 @@
+version: "2"
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  misspell:
+    locale: US
+  lll:
+    line-length: 120
+
+linters:
+  enable:
+    - govet
+    - gocyclo
+    - misspell
+    - goconst
+    - ineffassign
+    - staticcheck
+    - unused
+  disable:
+    - errcheck # Disabled due to Ebiten game engine patterns
+
+issues:
+  exclude-use-default: false
+  exclude-rules:
+    - path: "_test\\.go"
+      linters:
+        - gocyclo
+        - dupl
