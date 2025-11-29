@@ -22,3 +22,4 @@ sideboard_cards = [
 walking_sprite = "Bu_Amg.spr.png"
 walking_shadow_sprite = "Su_Amg.spr.png"
 face = "MPS_Thought_Invoker.png"
+level = 10

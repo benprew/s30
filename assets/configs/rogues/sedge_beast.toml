@@ -1,4 +1,5 @@
 name = "Sedge Beast"
+level = 4
 main_cards = [
 ["10",	"Mountain"],
 ["10",	"Swamp"],

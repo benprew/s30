@@ -15,7 +15,6 @@ type Text struct {
 	text  string
 	font  text.Face
 	Color color.Color
-	color color.Color
 
 	// Legacy positioning (deprecated, use Position instead)
 	X int

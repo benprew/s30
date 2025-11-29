@@ -132,6 +132,10 @@ func (m ManaPool) CanPay(cost string) bool {
 			// Let's handle digit strings here.
 			digitValue := 0
 			isDigitString := true
+			// Multi-rune sources like ['B', 'W'] are not counted for specific colors
+			// in this simplified model. They could potentially contribute to generic,
+			// but the current structure makes this hard to model correctly without
+			// a combinatorial check. Let's ignore them for now in the counts.
 			for _, r := range manaType {
 				if r < '0' || r > '9' {
 					isDigitString = false
@@ -141,11 +145,6 @@ func (m ManaPool) CanPay(cost string) bool {
 			}
 			if isDigitString && len(manaType) > 0 {
 				availableColorlessFromSources += digitValue
-			} else {
-				// Multi-rune sources like ['B', 'W'] are not counted for specific colors
-				// in this simplified model. They could potentially contribute to generic,
-				// but the current structure makes this hard to model correctly without
-				// a combinatorial check. Let's ignore them for now in the counts.
 			}
 		}
 	}
@@ -216,7 +215,7 @@ func (m *ManaPool) Pay(cost string) error {
 		}
 		for i := 0; i < count; i++ {
 			if !m.RemoveMana(manaType) {
-				panic(fmt.Sprintf("Should have been able to remove mana (%c), but couldn't (%v)", manaType, *m))
+				return fmt.Errorf("should have been able to remove mana (%c), but couldn't (%v)", manaType, *m)
 			}
 		}
 	}
@@ -225,7 +224,7 @@ func (m *ManaPool) Pay(cost string) error {
 	colorlessRequired := requiredMana['C']
 	for i := 0; i < colorlessRequired; i++ {
 		if !m.RemoveMana('C') {
-			panic(fmt.Sprintf("Should have been able to remove colorless mana, but couldn't (%v)", *m))
+			return fmt.Errorf("should have been able to remove colorless mana, but couldn't (%v)", *m)
 		}
 	}
 

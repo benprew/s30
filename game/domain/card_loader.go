@@ -41,7 +41,6 @@ type CardJSON struct {
 }
 
 func LoadCardDatabase(reader io.Reader) []*Card {
-	fmt.Println("Loading cards from compressed data")
 
 	// Decompress the data
 	decompressedReader, err := decompress(reader)
@@ -92,8 +91,8 @@ func (cj *CardJSON) ToCard() *Card {
 
 	return &Card{
 		CardSet: CardSet{
-			ID:          cj.SetID,
-			Name:        cj.SetName,
+			SetID:       cj.SetID,
+			SetName:     cj.SetName,
 			CollectorNo: cj.CollectorNo,
 		},
 		ScryfallID:     cj.ScryfallID,
@@ -119,13 +118,6 @@ func (cj *CardJSON) ToCard() *Card {
 		Artist:         cj.Artist,
 		Price:          price,
 	}
-}
-
-func toInt(str string) int {
-	if intValue, err := strconv.Atoi(str); err == nil {
-		return intValue
-	}
-	return -1
 }
 
 func toFloat(str string) float64 {

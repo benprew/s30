@@ -1,4 +1,5 @@
 name = "Aga Galneer"
+level = 6
 main_cards = [
 ["8",	"Swamp"],
 ["6",	"Forest"],

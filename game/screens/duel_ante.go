@@ -50,9 +50,9 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 		bribeBtn: image.Rectangle{image.Point{400, 550}, image.Point{700, 590}},
 	}
 
-	s.background = loadRandomBackground()
+	s.background = loadBackgroundForEnemy(enemy)
 
-	s.playerAnteCard = selectAnteCard(l.Player.Character.Deck, true)
+	s.playerAnteCard = selectAnteCard(l.Player.Deck, true)
 	card, err := s.playerAnteCard.CardImage(domain.CardViewFull)
 	if err != nil || card == nil {
 		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
@@ -174,7 +174,7 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		lifeText := fmt.Sprintf("%d", s.lvl.Player.Life)
 		goldText := fmt.Sprintf("%d", s.lvl.Player.Gold)
 		foodText := fmt.Sprintf("%d", s.lvl.Player.Food)
-		cardsText := fmt.Sprintf("%d", len(s.lvl.Player.Character.Deck))
+		cardsText := fmt.Sprintf("%d", s.lvl.Player.NumCards())
 
 		// Position text within the scaled stats UI
 		statsY := float64(H) - scaledStatsH
@@ -201,7 +201,8 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 		for k := range s.enemy.Character.Deck {
 			enemyDeck = append(enemyDeck, k)
 		}
-		cardsToWin := 3
+		var cardsToWin int
+		cardsToWin = 3
 		if len(enemyDeck) < cardsToWin {
 			cardsToWin = len(enemyDeck)
 		}
@@ -210,7 +211,7 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 			enemyDeck[i], enemyDeck[j] = enemyDeck[j], enemyDeck[i]
 		})
 
-		wonCards := enemyDeck[:3]
+		wonCards := enemyDeck[:cardsToWin]
 
 		for _, card := range wonCards {
 			if card != nil {
@@ -225,15 +226,6 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 	}
 }
 
-func getCardID(card *domain.Card) int {
-	for i, c := range domain.CARDS {
-		if c == card {
-			return i
-		}
-	}
-	return -1
-}
-
 func (s *DuelAnteScreen) bribe() (screenui.ScreenName, error) {
 	s.lvl.RemoveEnemyAt(s.idx)
 	s.player.Gold -= s.enemy.BribeAmount()
@@ -245,27 +237,31 @@ func within(point image.Point, btn image.Rectangle) bool {
 	return click.In(btn)
 }
 
-func loadRandomBackground() *ebiten.Image {
-	backgrounds := []string{
-		"art/sprites/duel_ante/Prdblk.pic.png",
-		"art/sprites/duel_ante/Prdblu.pic.png",
-		"art/sprites/duel_ante/Prdgrn.pic.png",
-		"art/sprites/duel_ante/Prdrd.pic.png",
-		"art/sprites/duel_ante/Prdred.pic.png",
-		"art/sprites/duel_ante/Prdwht.pic.png",
-		"art/sprites/duel_ante/Prdwt.pic.png",
+func loadBackgroundForEnemy(enemy *domain.Enemy) *ebiten.Image {
+	var backgroundFile string
+	backgroundFile = "art/sprites/duel_ante/Prdwht.pic.png"
+
+	switch enemy.Character.PrimaryColor {
+	case "White":
+		backgroundFile = "art/sprites/duel_ante/Prdwht.pic.png"
+	case "Blue":
+		backgroundFile = "art/sprites/duel_ante/Prdblu.pic.png"
+	case "Black":
+		backgroundFile = "art/sprites/duel_ante/Prdblk.pic.png"
+	case "Red":
+		backgroundFile = "art/sprites/duel_ante/Prdred.pic.png"
+	case "Green":
+		backgroundFile = "art/sprites/duel_ante/Prdgrn.pic.png"
 	}
 
-	chosen := backgrounds[rand.Intn(len(backgrounds))]
-	data, err := assets.DuelAnteFS.ReadFile(chosen)
+	data, err := assets.DuelAnteFS.ReadFile(backgroundFile)
 	if err != nil {
-		fmt.Printf("Error loading background %s: %v\n", chosen, err)
-		return nil
+		fmt.Printf("Error loading background %s: %v\n", backgroundFile, err)
 	}
 
 	img, err := imageutil.LoadImage(data)
 	if err != nil {
-		fmt.Printf("Error decoding background %s: %v\n", chosen, err)
+		fmt.Printf("Error decoding background %s: %v\n", backgroundFile, err)
 	}
 	return img
 }

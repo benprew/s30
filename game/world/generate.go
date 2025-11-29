@@ -399,8 +399,6 @@ func (l *Level) drawRoadAlongPath(path []TilePoint) {
 			sprite := l.getRoadSprite(exitDirTowardsPrev)
 			if sprite != nil {
 				tile.AddRoadSprite(sprite)
-			} else if exitDirTowardsPrev != "" {
-				// fmt.Printf("Debug: No sprite found for exit direction %s at %v\n", exitDirTowardsPrev, currentPos)
 			}
 		}
 		// If there's a next tile, add the road segment pointing towards it.
@@ -409,8 +407,6 @@ func (l *Level) drawRoadAlongPath(path []TilePoint) {
 			sprite := l.getRoadSprite(outgoingDirToNext)
 			if sprite != nil {
 				tile.AddRoadSprite(sprite)
-			} else if outgoingDirToNext != "" {
-				// fmt.Printf("Debug: No sprite found for exit direction %s at %v\n", outgoingDirToNext, currentPos)
 			}
 		}
 	}

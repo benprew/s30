@@ -22,3 +22,4 @@ sideboard_cards = [
 walking_sprite = "R_Lrd.spr.png"
 walking_shadow_sprite = "Sr_Lrd.spr.png"
 face = "MPS_Goblin_Warlord.png"
+level = 5

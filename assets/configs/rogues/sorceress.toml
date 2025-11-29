@@ -22,3 +22,4 @@ sideboard_cards = [
 walking_sprite = "R_Fwz.spr.png"
 walking_shadow_sprite = "Sfwz.spr.png"
 face = "MPS_Sorceress.png"
+level = 1

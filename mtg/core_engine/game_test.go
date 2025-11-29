@@ -90,7 +90,7 @@ func TestCastLlanowarElves(t *testing.T) {
 	game.Players[0].Turn.Phase = PhaseMain1
 	var landCard *Card
 	for _, card := range player.Hand {
-		if card.CardType == "Land" {
+		if card.CardType == domain.CardTypeLand {
 			landCard = card
 			if err := game.PlayLand(player, card); err != nil {
 				t.Errorf("Failed to play land: %v", err)
