@@ -32,8 +32,11 @@ const (
 )
 
 type Character struct {
-	Name                  string            `toml:"name"`
-	Tier                  int               `tome:"tier"`
+	Name                  string `toml:"name"`
+	Tier                  int    `toml:"tier"`
+	Level                 int    `toml:"level"`
+	PrimaryColor          string
+	ColorIdentity         []string
 	Visage                *ebiten.Image     // rogues headshot, seen at start of duel
 	VisageFn              string            `toml:"face"` // filename only, lazy-loaded later
 	WalkingSprite         [][]*ebiten.Image // sprites for walking animation
@@ -107,6 +110,13 @@ func directionToSpriteIndex(dirBits int) int {
 	default:
 		return DirectionDown
 	}
+}
+
+func (c *Character) CalculateLifeFromLevel() int {
+	if c.Level > 0 {
+		return c.Level * 20
+	}
+	return c.Life // fallback to TOML-defined life if no level set
 }
 
 func getEmbeddedFile(filename string) []byte {

@@ -237,27 +237,31 @@ func within(point image.Point, btn image.Rectangle) bool {
 	return click.In(btn)
 }
 
-func loadRandomBackground() *ebiten.Image {
-	backgrounds := []string{
-		"art/sprites/duel_ante/Prdblk.pic.png",
-		"art/sprites/duel_ante/Prdblu.pic.png",
-		"art/sprites/duel_ante/Prdgrn.pic.png",
-		"art/sprites/duel_ante/Prdrd.pic.png",
-		"art/sprites/duel_ante/Prdred.pic.png",
-		"art/sprites/duel_ante/Prdwht.pic.png",
-		"art/sprites/duel_ante/Prdwt.pic.png",
+func loadBackgroundForEnemy(enemy *domain.Enemy) *ebiten.Image {
+	var backgroundFile string
+	backgroundFile = "art/sprites/duel_ante/Prdwht.pic.png"
+
+	switch enemy.Character.PrimaryColor {
+	case "White":
+		backgroundFile = "art/sprites/duel_ante/Prdwht.pic.png"
+	case "Blue":
+		backgroundFile = "art/sprites/duel_ante/Prdblu.pic.png"
+	case "Black":
+		backgroundFile = "art/sprites/duel_ante/Prdblk.pic.png"
+	case "Red":
+		backgroundFile = "art/sprites/duel_ante/Prdred.pic.png"
+	case "Green":
+		backgroundFile = "art/sprites/duel_ante/Prdgrn.pic.png"
 	}
 
-	chosen := backgrounds[rand.Intn(len(backgrounds))]
-	data, err := assets.DuelAnteFS.ReadFile(chosen)
+	data, err := assets.DuelAnteFS.ReadFile(backgroundFile)
 	if err != nil {
-		fmt.Printf("Error loading background %s: %v\n", chosen, err)
-		return nil
+		fmt.Printf("Error loading background %s: %v\n", backgroundFile, err)
 	}
 
 	img, err := imageutil.LoadImage(data)
 	if err != nil {
-		fmt.Printf("Error decoding background %s: %v\n", chosen, err)
+		fmt.Printf("Error decoding background %s: %v\n", backgroundFile, err)
 	}
 	return img
 }
