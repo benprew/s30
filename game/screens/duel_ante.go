@@ -218,6 +218,14 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 				s.player.CardCollection[card]++
 			}
 		}
+
+		if rand.Float64() < 0.1 {
+			availableColors := domain.GetAllAmuletColors()
+			randomColor := availableColors[rand.Intn(len(availableColors))]
+			amulet := domain.NewAmulet(randomColor)
+			s.player.AddAmulet(amulet)
+		}
+
 		s.wonCards = wonCards
 		return screenui.DuelWinScr, nil
 	} else {

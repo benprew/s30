@@ -242,12 +242,14 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 			tile.AddCitySprite(citySprites[cityY][cityX])
 			tile.AddCitySprite(citySprites[cityY+1][cityX])
 			tier := 2
+			amuletColor := assignAmuletColor(len(placedCities))
 			tile.City = domain.City{
 				Tier:            tier,
 				Name:            genCityName(),
 				X:               loc.X,
 				Y:               loc.Y,
 				BackgroundImage: cityBgImage(tier),
+				AmuletColor:     amuletColor,
 			}
 			placedCities = append(placedCities, loc)
 		}
@@ -419,4 +421,9 @@ func absInt(x int) int {
 		return -x
 	}
 	return x
+}
+
+func assignAmuletColor(cityIndex int) domain.ColorMask {
+	amuletColors := domain.GetAllAmuletColors()
+	return amuletColors[cityIndex%len(amuletColors)]
 }

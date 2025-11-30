@@ -15,6 +15,7 @@ type City struct {
 	Population      int
 	BackgroundImage *ebiten.Image
 	CardsForSale    []*Card
+	AmuletColor     ColorMask
 }
 
 func (c *City) FoodCost() int {

@@ -17,6 +17,7 @@ type Player struct {
 	Gold           int
 	Food           int
 	CardCollection Deck
+	Amulets        map[ColorMask]int
 	// ActiveDeck     int
 	// Decks          []Deck
 }
@@ -67,6 +68,7 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		Gold:           1200,
 		Food:           30,
 		CardCollection: cardCollection,
+		Amulets:        make(map[ColorMask]int),
 	}, nil
 }
 
@@ -162,5 +164,38 @@ func (p *Player) RemoveCard(c *Card) error {
 	}
 	p.CardCollection[c]--
 	p.Deck[c]--
+	return nil
+}
+
+func (p *Player) AddAmulet(amulet Amulet) {
+	p.Amulets[amulet.Color]++
+}
+
+func (p *Player) HasAmulet(color ColorMask) bool {
+	return p.Amulets[color] > 0
+}
+
+func (p *Player) GetAmuletCount() map[ColorMask]int {
+	return p.Amulets
+}
+
+func (p *Player) GetAmulets() []Amulet {
+	amulets := make([]Amulet, 0)
+	for color, count := range p.Amulets {
+		for i := 0; i < count; i++ {
+			amulets = append(amulets, NewAmulet(color))
+		}
+	}
+	return amulets
+}
+
+func (p *Player) RemoveAmulet(color ColorMask) error {
+	if p.Amulets[color] < 1 {
+		return fmt.Errorf("no amulet of color %s to remove", ColorMaskToString(color))
+	}
+	p.Amulets[color]--
+	if p.Amulets[color] == 0 {
+		delete(p.Amulets, color)
+	}
 	return nil
 }

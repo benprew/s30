@@ -104,10 +104,20 @@ func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {
 }
 
 func mkWfText(p *domain.Player) []*elements.Text {
+	amuletCounts := p.GetAmuletCount()
+	totalAmulets := len(p.GetAmulets())
+
 	return []*elements.Text{
 		elements.NewText(30, fmt.Sprintf("%d", p.Gold), 140, 560),
 		elements.NewText(30, fmt.Sprintf("%d", p.Food), 270, 560),
 		elements.NewText(30, fmt.Sprintf("%d", p.Life), 400, 560),
 		elements.NewText(30, fmt.Sprintf("%d", p.NumCards()), 530, 560),
+		elements.NewText(24, fmt.Sprintf("Amulets: %d", totalAmulets), 660, 560),
+		elements.NewText(20, fmt.Sprintf("W:%d U:%d B:%d R:%d G:%d",
+			amuletCounts[domain.ColorWhite],
+			amuletCounts[domain.ColorBlue],
+			amuletCounts[domain.ColorBlack],
+			amuletCounts[domain.ColorRed],
+			amuletCounts[domain.ColorGreen]), 140, 580),
 	}
 }
