@@ -44,7 +44,7 @@ func TestColorDistribution(t *testing.T) {
 			t.Errorf("Color %v was not assigned to any cities", color)
 		}
 		if colorCounts[color] != numCities/len(expectedColors) {
-			t.Errorf("Color %v was assigned %d times, expected %d times for balanced distribution", 
+			t.Errorf("Color %v was assigned %d times, expected %d times for balanced distribution",
 				color, colorCounts[color], numCities/len(expectedColors))
 		}
 	}

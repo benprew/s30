@@ -26,7 +26,7 @@ func (da *DropArea) CanAcceptDrop(data DragData) bool {
 	if len(da.acceptTypes) == 0 {
 		return true
 	}
-	
+
 	for _, acceptType := range da.acceptTypes {
 		if acceptType == data.GetID() || acceptType == "*" {
 			return true
@@ -58,7 +58,7 @@ func (da *DropArea) Draw(screen *ebiten.Image) {
 	if da.isHovered {
 		img := ebiten.NewImage(da.bounds.Dx(), da.bounds.Dy())
 		img.Fill(color.RGBA{0, 255, 0, 64})
-		
+
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(da.bounds.Min.X), float64(da.bounds.Min.Y))
 		screen.DrawImage(img, opts)
