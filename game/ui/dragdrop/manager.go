@@ -14,15 +14,15 @@ const (
 )
 
 type DragManager struct {
-	state       DragState
-	dragData    DragData
-	dragImage   *ebiten.Image
-	dragSource  Draggable
-	mouseX      int
-	mouseY      int
-	dragStartX  int
-	dragStartY  int
-	droppables  []Droppable
+	state        DragState
+	dragData     DragData
+	dragImage    *ebiten.Image
+	dragSource   Draggable
+	mouseX       int
+	mouseY       int
+	dragStartX   int
+	dragStartY   int
+	droppables   []Droppable
 	currentHover Droppable
 }
 

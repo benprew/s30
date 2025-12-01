@@ -10,13 +10,13 @@ type Amulet struct {
 
 func NewAmulet(color ColorMask) Amulet {
 	var name, description string
-	
+
 	switch color {
 	case ColorWhite:
 		name = "Amulet of Order"
 		description = "A brilliant white amulet that emanates pure light"
 	case ColorBlue:
-		name = "Amulet of Knowledge" 
+		name = "Amulet of Knowledge"
 		description = "A sapphire amulet that flows with arcane wisdom"
 	case ColorBlack:
 		name = "Amulet of Power"
@@ -31,7 +31,7 @@ func NewAmulet(color ColorMask) Amulet {
 		name = "Unknown Amulet"
 		description = "A mysterious amulet of unknown origin"
 	}
-	
+
 	return Amulet{
 		Color:       color,
 		Name:        name,

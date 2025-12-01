@@ -238,19 +238,24 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 				cityY = 2
 			}
 
+			tier := domain.TierCapital
+
 			tile.IsCity = true
 			tile.AddCitySprite(citySprites[cityY][cityX])
 			tile.AddCitySprite(citySprites[cityY+1][cityX])
-			tier := 2
 			amuletColor := assignAmuletColor(len(placedCities))
-			tile.City = domain.City{
+
+			// Create city
+			city := domain.City{
 				Tier:            tier,
 				Name:            genCityName(),
 				X:               loc.X,
 				Y:               loc.Y,
-				BackgroundImage: cityBgImage(tier),
+				BackgroundImage: cityBgImage(int(tier)),
 				AmuletColor:     amuletColor,
 			}
+
+			tile.City = city
 			placedCities = append(placedCities, loc)
 		}
 		// connect the city to the nearest road/city
@@ -263,6 +268,33 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 
 	if len(placedCities) < numCities {
 		fmt.Printf("Warning: Could only place %d out of %d requested cities with min distance %d.\n", len(placedCities), numCities, minDistance)
+	}
+
+	// Randomly assign world magics to cities
+	if len(placedCities) > 0 {
+		shuffledCities := make([]TilePoint, len(placedCities))
+		copy(shuffledCities, placedCities)
+		rand.Shuffle(len(shuffledCities), func(i, j int) {
+			shuffledCities[i], shuffledCities[j] = shuffledCities[j], shuffledCities[i]
+		})
+
+		availableWorldMagics := make([]*domain.WorldMagic, len(domain.AllWorldMagics))
+		copy(availableWorldMagics, domain.AllWorldMagics)
+		rand.Shuffle(len(availableWorldMagics), func(i, j int) {
+			availableWorldMagics[i], availableWorldMagics[j] = availableWorldMagics[j], availableWorldMagics[i]
+		})
+
+		// Assign each world magic to a random city
+		numToAssign := len(availableWorldMagics)
+		if numToAssign > len(shuffledCities) {
+			numToAssign = len(shuffledCities)
+		}
+		for i := 0; i < numToAssign; i++ {
+			tile := l.Tile(shuffledCities[i])
+			if tile != nil && tile.IsCity {
+				tile.City.AssignedWorldMagic = availableWorldMagics[i]
+			}
+		}
 	}
 }
 

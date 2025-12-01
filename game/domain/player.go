@@ -18,6 +18,7 @@ type Player struct {
 	Food           int
 	CardCollection Deck
 	Amulets        map[ColorMask]int
+	WorldMagics    []*WorldMagic
 	// ActiveDeck     int
 	// Decks          []Deck
 }
@@ -69,6 +70,7 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		Food:           30,
 		CardCollection: cardCollection,
 		Amulets:        make(map[ColorMask]int),
+		WorldMagics:    make([]*WorldMagic, 0),
 	}, nil
 }
 
@@ -198,4 +200,23 @@ func (p *Player) RemoveAmulet(color ColorMask) error {
 		delete(p.Amulets, color)
 	}
 	return nil
+}
+
+func (p *Player) HasWorldMagic(magic *WorldMagic) bool {
+	for _, m := range p.WorldMagics {
+		if m == magic {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Player) AddWorldMagic(magic *WorldMagic) {
+	if !p.HasWorldMagic(magic) {
+		p.WorldMagics = append(p.WorldMagics, magic)
+	}
+}
+
+func (p *Player) GetWorldMagics() []*WorldMagic {
+	return p.WorldMagics
 }

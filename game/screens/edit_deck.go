@@ -49,12 +49,12 @@ func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error)
 	}
 
 	screen := &EditDeckScreen{
-		Player:        player,
-		Background:    collectionBg,
-		DeckButtons:   make([]*elements.Button, 0),
-		lastClickTime: make(map[int]int),
-		clickFrame:    0,
-		dragManager:   dragdrop.NewDragManager(),
+		Player:         player,
+		Background:     collectionBg,
+		DeckButtons:    make([]*elements.Button, 0),
+		lastClickTime:  make(map[int]int),
+		clickFrame:     0,
+		dragManager:    dragdrop.NewDragManager(),
 		draggableItems: make([]*dragdrop.DraggableButton, 0),
 	}
 
