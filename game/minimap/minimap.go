@@ -37,7 +37,15 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		Size:   14,
 	}
 
-	s, err := imageutil.LoadSpriteSheet(75, 1, assets.MiniMapTerrSpr_png)
+	rowSpecs := []imageutil.RowSpec{
+		{Count: 48, Width: 13, Height: 13}, // Row 0: terrain
+		{Count: 6, Width: 13, Height: 20},  // Row 1: city/town/castle
+		{Count: 1, Width: 15, Height: 15},  // Row 2: colors
+		{Count: 10, Width: 16, Height: 16}, // Row 3: characters
+		{Count: 10, Width: 23, Height: 23}, // Row 4: mana symbols
+	}
+
+	s, err := imageutil.LoadVariableRowSpriteSheet(rowSpecs, assets.MiniMapTerrSpr_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load terrain sprite sheet: %w", err))
 	}
@@ -113,17 +121,17 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		b.Draw(screen, options, scale)
 	}
 
-	xref := map[int]int{
-		world.TerrainWater:     0,
-		world.TerrainForest:    2,
-		world.TerrainMarsh:     3,
-		world.TerrainMountains: 5,
-		world.TerrainSand:      6,
-		world.TerrainPlains:    18,
+	xref := map[int][2]int{
+		world.TerrainWater:     {0, 0},
+		world.TerrainForest:    {0, 2},
+		world.TerrainMarsh:     {0, 3},
+		world.TerrainMountains: {0, 5},
+		world.TerrainSand:      {0, 6},
+		world.TerrainPlains:    {0, 18},
 	}
-	city := m.terrainSprite[0][49]
+	city := m.terrainSprite[1][1]
 	pLoc := m.level.CharacterTile()
-	player := m.terrainSprite[0][54]
+	player := m.terrainSprite[3][0]
 	width := int(float64(m.terrainSprite[0][0].Bounds().Dx())*SCALE) - 1
 	height := int(float64(m.terrainSprite[0][0].Bounds().Dy())*SCALE) - 1
 	//Draw level from T
@@ -138,16 +146,23 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		opts.GeoM.Translate(50, 100)
 		opts.GeoM.Translate(float64(offset), float64(height*i)/2)
 		for j, col := range row {
-			sprite := m.terrainSprite[0][xref[col.TerrainType]]
+			spriteCoord := xref[col.TerrainType]
+			sprite := m.terrainSprite[spriteCoord[0]][spriteCoord[1]]
 			opts.GeoM.Translate(float64(width), 0)
 			screen.DrawImage(sprite, opts)
 
 			if col.IsCity {
-				screen.DrawImage(city, opts)
+				cOpts := &ebiten.DrawImageOptions{}
+				cOpts.GeoM.Concat(opts.GeoM)
+				cOpts.GeoM.Translate(0, -13)
+				screen.DrawImage(city, cOpts)
 			}
 			p := world.TilePoint{X: j, Y: i}
 			if pLoc == p {
-				screen.DrawImage(player, opts)
+				cOpts := &ebiten.DrawImageOptions{}
+				cOpts.GeoM.Concat(opts.GeoM)
+				cOpts.GeoM.Translate(0, -13)
+				screen.DrawImage(player, cOpts)
 			}
 		}
 	}
