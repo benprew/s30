@@ -163,6 +163,45 @@ func LoadMappedSprite(spriteData []byte, spriteMap []byte) (map[string]*ebiten.I
 	return sprites, nil
 }
 
+// RowSpec defines the structure of a single row in a variable row sprite sheet.
+type RowSpec struct {
+	Count  int // Number of sprites in this row
+	Width  int // Width of each sprite in this row
+	Height int // Height of each sprite in this row
+}
+
+// LoadVariableRowSpriteSheet loads a sprite sheet with variable row configurations.
+// Each row can have different sprite dimensions and counts.
+// rowSpecs defines the structure of each row (count, width, height).
+// Returns a 2D slice where each sub-slice represents a row of sprites.
+func LoadVariableRowSpriteSheet(rowSpecs []RowSpec, file []byte) ([][]*ebiten.Image, error) {
+	sheet, err := LoadImage(file)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([][]*ebiten.Image, len(rowSpecs))
+	yOffset := 0
+
+	for rowIndex, spec := range rowSpecs {
+		row := make([]*ebiten.Image, spec.Count)
+
+		for spriteIndex := 0; spriteIndex < spec.Count; spriteIndex++ {
+			x := spriteIndex * spec.Width
+			y := yOffset
+
+			rect := image.Rect(x, y, x+spec.Width, y+spec.Height)
+			sprite := sheet.SubImage(rect).(*ebiten.Image)
+			row[spriteIndex] = sprite
+		}
+
+		result[rowIndex] = row
+		yOffset += spec.Height
+	}
+
+	return result, nil
+}
+
 // LoadTTFFont parses TTF font data and returns a standard font.Face.
 // fontBytes: A byte slice containing the TTF font file data.
 // Returns a font.Face and an error if parsing fails.
