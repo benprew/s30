@@ -19,6 +19,7 @@ type MiniMap struct {
 	frame         *ebiten.Image
 	buttons       []*elements.Button
 	level         *world.Level
+	blinkCounter  int
 }
 
 const (
@@ -158,7 +159,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 				screen.DrawImage(city, cOpts)
 			}
 			p := world.TilePoint{X: j, Y: i}
-			if pLoc == p {
+			if pLoc == p && m.blinkCounter%10 < 7 {
 				cOpts := &ebiten.DrawImageOptions{}
 				cOpts.GeoM.Concat(opts.GeoM)
 				cOpts.GeoM.Translate(0, -13)
@@ -169,6 +170,8 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 }
 
 func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+	m.blinkCounter++
+
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(SCALE, SCALE) // scale up from 640x480
 
