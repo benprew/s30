@@ -1,12 +1,13 @@
 package minimap
 
 import (
-	"bytes"
 	"fmt"
 	"image/color"
+	"strings"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
@@ -20,6 +21,7 @@ type MiniMap struct {
 	buttons       []*elements.Button
 	level         *world.Level
 	blinkCounter  int
+	fontFace      *text.GoTextFace
 }
 
 const (
@@ -27,14 +29,8 @@ const (
 )
 
 func NewMiniMap(l *world.Level) *MiniMap {
-	// Create a font face using ebiten's text v2
-	fontSource, err := text.NewGoTextFaceSource(bytes.NewReader(assets.Magic_ttf))
-	if err != nil {
-		panic(fmt.Errorf("failed to create font source: %w", err))
-	}
-
 	fontFace := &text.GoTextFace{
-		Source: fontSource,
+		Source: fonts.MtgFont,
 		Size:   14,
 	}
 
@@ -105,6 +101,7 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		frame:         frameImg,
 		buttons:       buttons,
 		level:         l,
+		fontFace:      fontFace,
 	}
 }
 
@@ -164,6 +161,33 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 				cOpts.GeoM.Concat(opts.GeoM)
 				cOpts.GeoM.Translate(0, -13)
 				screen.DrawImage(player, cOpts)
+			}
+		}
+	}
+
+	for i, row := range m.level.Tiles {
+		offset := 0
+		if i%2 == 1 {
+			offset = width / 2
+		}
+
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Concat(options.GeoM)
+		opts.GeoM.Translate(50, 100)
+		opts.GeoM.Translate(float64(offset), float64(height*i)/2)
+		for _, col := range row {
+			opts.GeoM.Translate(float64(width), 0)
+
+			if col.IsCity && col.City.Name != "" {
+				cityNameLines := strings.Replace(col.City.Name, " ", "\n", -1)
+
+				textWidth, _ := text.Measure(cityNameLines, m.fontFace, 0)
+				textOp := &text.DrawOptions{}
+				textOp.GeoM.Concat(opts.GeoM)
+				textOp.GeoM.Translate(-float64(textWidth)/2, 8)
+				textOp.ColorScale.ScaleWithColor(color.White)
+				textOp.LineSpacing = m.fontFace.Size
+				text.Draw(screen, cityNameLines, m.fontFace, textOp)
 			}
 		}
 	}
