@@ -92,6 +92,9 @@ var (
 	//go:embed art/sprites/Buybuttons.spr.png
 	BuyButtons_png []byte
 
+	//go:embed art/sprites/Amsprite.spr.png
+	Amsprite_png []byte
+
 	//////////
 	// MiniMap
 	//////////

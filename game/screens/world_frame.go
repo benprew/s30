@@ -36,10 +36,11 @@ const (
 )
 
 type WorldFrame struct {
-	Buttons []*elements.Button
-	Text    []*elements.Text
-	img     *ebiten.Image
-	player  *domain.Player // handle to player so we can get player stats
+	Buttons       []*elements.Button
+	Text          []*elements.Text
+	img           *ebiten.Image
+	player        *domain.Player // handle to player so we can get player stats
+	amuletSprites []*ebiten.Image
 }
 
 func NewWorldFrame(p *domain.Player) (*WorldFrame, error) {
@@ -52,10 +53,16 @@ func NewWorldFrame(p *domain.Player) (*WorldFrame, error) {
 		return nil, err
 	}
 
+	amuletSprs, err := imageutil.LoadSpriteSheet(5, 1, assets.Amsprite_png)
+	if err != nil {
+		return nil, err
+	}
+
 	return &WorldFrame{
-		img:     img,
-		Buttons: mkWfButtons(worldSprs),
-		player:  p,
+		img:           img,
+		Buttons:       mkWfButtons(worldSprs),
+		player:        p,
+		amuletSprites: amuletSprs[0],
 	}, nil
 }
 
@@ -70,6 +77,17 @@ func (f *WorldFrame) Draw(screen *ebiten.Image, scale float64) {
 
 	for _, t := range f.Text {
 		t.Draw(screen, frameOpts, scale)
+	}
+
+	amuletPositions := []int{125, 250, 375, 500, 625}
+	amuletY := 628
+	for i, sprite := range f.amuletSprites {
+		if i < len(amuletPositions) {
+			amuletOpts := &ebiten.DrawImageOptions{}
+			amuletOpts.GeoM.Scale(scale, scale)
+			amuletOpts.GeoM.Translate(float64(amuletPositions[i])*scale, float64(amuletY)*scale)
+			screen.DrawImage(sprite, amuletOpts)
+		}
 	}
 
 }
@@ -105,19 +123,31 @@ func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {
 
 func mkWfText(p *domain.Player) []*elements.Text {
 	amuletCounts := p.GetAmuletCount()
-	totalAmulets := len(p.GetAmulets())
 
-	return []*elements.Text{
+	texts := []*elements.Text{
 		elements.NewText(30, fmt.Sprintf("%d", p.Gold), 140, 560),
 		elements.NewText(30, fmt.Sprintf("%d", p.Food), 270, 560),
 		elements.NewText(30, fmt.Sprintf("%d", p.Life), 400, 560),
 		elements.NewText(30, fmt.Sprintf("%d", p.NumCards()), 530, 560),
-		elements.NewText(24, fmt.Sprintf("Amulets: %d", totalAmulets), 660, 560),
-		elements.NewText(20, fmt.Sprintf("W:%d U:%d B:%d R:%d G:%d",
-			amuletCounts[domain.ColorWhite],
-			amuletCounts[domain.ColorBlue],
-			amuletCounts[domain.ColorBlack],
-			amuletCounts[domain.ColorRed],
-			amuletCounts[domain.ColorGreen]), 140, 580),
 	}
+
+	amuletColors := []domain.ColorMask{
+		domain.ColorWhite,
+		domain.ColorBlue,
+		domain.ColorBlack,
+		domain.ColorRed,
+		domain.ColorGreen,
+	}
+	amuletPositions := []int{125, 250, 375, 500, 625}
+	amuletY := 648
+
+	for i, color := range amuletColors {
+		if i < len(amuletPositions) {
+			count := amuletCounts[color]
+			x := amuletPositions[i] + 20
+			texts = append(texts, elements.NewText(18, fmt.Sprintf("%d", count), x, amuletY))
+		}
+	}
+
+	return texts
 }
