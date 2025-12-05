@@ -110,10 +110,6 @@ var (
 	//go:embed art/sprites/mini_map/Mapbttns_map.json
 	MiniMapFrameSprite_json []byte
 
-	// Card images
-	//go:embed art/cardimages.zip
-	CardImages_zip []byte
-
 	// Rogues
 	// Paths used to load rogue configs and images
 	//go:embed art/sprites/world/characters/*.png

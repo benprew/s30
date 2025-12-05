@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"net/http"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/utils"
+	"github.com/benprew/s30/game/utils/httpzip"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -73,6 +76,9 @@ type Card struct {
 // Cards sorted by name
 var CARDS = LoadCardDatabase(bytes.NewReader(assets.Cards_json))
 var CARD_IMAGES map[*Card]*ebiten.Image
+var remoteCardArchive *httpzip.Reader
+var initRemoteCardArchiveOnce sync.Once
+var remoteCardArchiveErr error
 
 func (c *Card) Name() string {
 	return c.CardName
@@ -129,8 +135,23 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 
 	fullImg := CARD_IMAGES[card]
 	if fullImg == nil {
+		fmt.Println("Loading uncached card")
 		filename := card.Filename()
-		data, err := utils.ReadFromEmbeddedZip(assets.CardImages_zip, filename)
+		var data []byte
+		var err error
+
+		if assets.CardImages_zip == nil {
+			initRemoteCardArchiveOnce.Do(func() {
+				remoteCardArchive, remoteCardArchiveErr = httpzip.NewReader("https://throwingbones.com/ben/s30/cardimages.zip", http.DefaultClient)
+			})
+			if remoteCardArchiveErr != nil {
+				return nil, remoteCardArchiveErr
+			}
+			data, err = remoteCardArchive.ReadFile(filename)
+		} else {
+			data, err = utils.ReadFromEmbeddedZip(assets.CardImages_zip, filename)
+		}
+
 		if err != nil {
 			data = assets.CardBlank_png
 			fmt.Printf("WARN: Unable to load card image for: %s, using blank", filename)
@@ -153,7 +174,10 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 }
 
 func (c *Card) Filename() string {
-	fn := fmt.Sprintf("%s-%s-200-%s.png", c.SetID, c.CollectorNo, sanitizeFilename(c.CardName))
+	res := "200"
+	// for art only images
+	// res := "236x"
+	fn := fmt.Sprintf("%s-%s-%s-%s.png", c.SetID, c.CollectorNo, res, sanitizeFilename(c.CardName))
 	return fn
 }
 
