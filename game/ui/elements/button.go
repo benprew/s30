@@ -123,12 +123,11 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, s
 	// TODO button position should be set by layout when created and stored in Bounds
 	bounds := b.getPositionWithDims(screenW, screenH, scale)
 	mp := image.Point{mx, my}
-	mPoint := image.Rectangle{mp, image.Point{mx + 1, my + 1}} // extra pixel needed for In to work
 
 	combinedGeoM := ebiten.GeoM{}
 	combinedGeoM.Concat(opts.GeoM)
 
-	if mPoint.In(bounds) {
+	if mp.In(bounds) {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			fmt.Println("Pressed")
 			b.State = StatePressed

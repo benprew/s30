@@ -241,8 +241,7 @@ func (s *DuelAnteScreen) bribe() (screenui.ScreenName, error) {
 }
 
 func within(point image.Point, btn image.Rectangle) bool {
-	click := image.Rectangle{point, image.Point{point.X + 1, point.Y + 1}}
-	return click.In(btn)
+	return point.In(btn)
 }
 
 func loadBackgroundForEnemy(enemy *domain.Enemy) *ebiten.Image {
