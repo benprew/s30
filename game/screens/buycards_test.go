@@ -13,8 +13,10 @@ func TestBuyCard_PurchaseLogic(t *testing.T) {
 	city := &domain.City{}
 	city.CardsForSale = []*domain.Card{card}
 	player := &domain.Player{
-		Gold:           10,
-		CardCollection: domain.Deck{},
+		Gold: 10,
+		Character: domain.Character{
+			CardCollection: domain.NewCardCollection(),
+		},
 	}
 
 	screen := &BuyCardsScreen{
@@ -29,8 +31,8 @@ func TestBuyCard_PurchaseLogic(t *testing.T) {
 	if player.Gold != 5 {
 		t.Errorf("Expected player gold to be 5, got %d", player.Gold)
 	}
-	if player.CardCollection[card] != 1 {
-		t.Errorf("Expected player to have 1 of card %s, got %d", card.Name(), player.CardCollection[card])
+	if player.CardCollection.GetTotalCount(card) != 1 {
+		t.Errorf("Expected player to have 1 of card %s, got %d", card.Name(), player.CardCollection.GetTotalCount(card))
 	}
 	if len(city.CardsForSale) != 0 {
 		t.Errorf("Expected card to be removed from sale, got %d cards remaining", len(city.CardsForSale))
@@ -50,8 +52,10 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 	city := &domain.City{}
 	city.CardsForSale = []*domain.Card{card}
 	player := &domain.Player{
-		Gold:           2,
-		CardCollection: domain.Deck{},
+		Gold: 2,
+		Character: domain.Character{
+			CardCollection: domain.NewCardCollection(),
+		},
 	}
 
 	screen := &BuyCardsScreen{
@@ -66,8 +70,8 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 	if player.Gold != 2 {
 		t.Errorf("Expected player gold to remain 2, got %d", player.Gold)
 	}
-	if player.CardCollection[card] != 0 {
-		t.Errorf("Expected player to have 0 of card %s, got %d", card.Name(), player.CardCollection[card])
+	if player.CardCollection.GetTotalCount(card) != 0 {
+		t.Errorf("Expected player to have 0 of card %s, got %d", card.Name(), player.CardCollection.GetTotalCount(card))
 	}
 	if len(city.CardsForSale) != 1 || city.CardsForSale[0] != card {
 		t.Errorf("Expected card to remain for sale")

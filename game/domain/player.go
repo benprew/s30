@@ -13,14 +13,12 @@ import (
 type Player struct {
 	Character
 	CharacterInstance
-	Name           string
-	Gold           int
-	Food           int
-	CardCollection Deck
-	Amulets        map[ColorMask]int
-	WorldMagics    []*WorldMagic
-	// ActiveDeck     int
-	// Decks          []Deck
+	Name        string
+	Gold        int
+	Food        int
+	Amulets     map[ColorMask]int
+	WorldMagics []*WorldMagic
+	ActiveDeck  int
 }
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
@@ -47,17 +45,17 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 	deckGen := NewDeckGenerator(DifficultyEasy, ColorRed, time.Now().UnixNano())
 	deck := deckGen.GenerateStartingDeck()
 
-	c := Character{
-		Visage:        visage,
-		WalkingSprite: sprite,
-		ShadowSprite:  shadow,
-		Life:          8,
-		Deck:          deck,
+	cardCollection := NewCardCollection()
+	for card, count := range deck {
+		cardCollection.AddCardToDeck(card, 0, count)
 	}
 
-	cardCollection := make(map[*Card]int)
-	for card := range deck {
-		cardCollection[card]++
+	c := Character{
+		Visage:         visage,
+		WalkingSprite:  sprite,
+		ShadowSprite:   shadow,
+		Life:           8,
+		CardCollection: cardCollection,
 	}
 
 	return &Player{
@@ -65,12 +63,12 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		CharacterInstance: CharacterInstance{
 			MoveSpeed: 10,
 		},
-		Name:           string(name),
-		Gold:           1200,
-		Food:           30,
-		CardCollection: cardCollection,
-		Amulets:        make(map[ColorMask]int),
-		WorldMagics:    make([]*WorldMagic, 0),
+		Name:        string(name),
+		Gold:        1200,
+		Food:        30,
+		Amulets:     make(map[ColorMask]int),
+		WorldMagics: make([]*WorldMagic, 0),
+		ActiveDeck:  0,
 	}, nil
 }
 
@@ -79,11 +77,8 @@ func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 	screen.DrawImage(p.WalkingSprite[p.Direction][p.Frame], options)
 }
 
-func (p *Player) NumCards() (cnt int) {
-	for _, v := range p.CardCollection {
-		cnt += v
-	}
-	return cnt
+func (p *Player) NumCards() int {
+	return p.CardCollection.NumCards()
 }
 
 func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
@@ -160,13 +155,7 @@ func (p *Player) Loc() image.Point {
 }
 
 func (p *Player) RemoveCard(c *Card) error {
-	cnt := p.CardCollection[c]
-	if cnt < 1 {
-		return fmt.Errorf("Card not in collection: %s", c.Name())
-	}
-	p.CardCollection[c]--
-	p.Deck[c]--
-	return nil
+	return p.CardCollection.DecrementCardCount(c)
 }
 
 func (p *Player) AddAmulet(amulet Amulet) {

@@ -185,10 +185,7 @@ func (s *BuyCardsScreen) buyCard() {
 	if s.Player.Gold >= card.Price {
 		fmt.Println("Buying card:", s.PreviewIdx, "name:", card.Name(), "for", card.Price, "gold")
 		s.Player.Gold -= card.Price
-		if s.Player.CardCollection == nil {
-			s.Player.CardCollection = make(map[*domain.Card]int)
-		}
-		s.Player.CardCollection[card]++
+		s.Player.CardCollection.AddCard(card, 1)
 		s.City.CardsForSale = append(s.City.CardsForSale[:s.PreviewIdx], s.City.CardsForSale[s.PreviewIdx+1:]...)
 		s.Buttons = mkCardButtons(SCALE, s.City, 1024, 768) // TODO remove hardcoded W/H
 		s.PreviewIdx = -1

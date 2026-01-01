@@ -52,14 +52,14 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 
 	s.background = loadBackgroundForEnemy(enemy)
 
-	s.playerAnteCard = selectAnteCard(l.Player.Deck, true)
+	s.playerAnteCard = selectAnteCard(l.Player.GetActiveDeck(), true)
 	card, err := s.playerAnteCard.CardImage(domain.CardViewFull)
 	if err != nil || card == nil {
 		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
 	}
 	s.playerAnteCardImg = imageutil.ScaleImage(card, 0.75)
 
-	enemyCard := selectAnteCard(enemy.Character.Deck, false)
+	enemyCard := selectAnteCard(enemy.Character.GetActiveDeck(), false)
 	card, err = enemyCard.CardImage(domain.CardViewFull)
 	if err != nil {
 		panic(fmt.Sprintf("No card image for %s\n", enemyCard.Name()))
@@ -198,7 +198,7 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, erro
 	s.lvl.RemoveEnemyAt(s.idx)
 	if outcome > 0.25 {
 		var enemyDeck []*domain.Card
-		for k := range s.enemy.Character.Deck {
+		for k := range s.enemy.Character.GetActiveDeck() {
 			enemyDeck = append(enemyDeck, k)
 		}
 		var cardsToWin int
@@ -215,7 +215,7 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, erro
 
 		for _, card := range wonCards {
 			if card != nil {
-				s.player.CardCollection[card]++
+				s.player.CardCollection.AddCard(card, 1)
 			}
 		}
 

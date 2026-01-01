@@ -46,9 +46,8 @@ type Character struct {
 	Life                  int               `toml:"life"`
 	Catchphrases          []string          `toml:"catchphrases"` // rogues only
 	DeckRaw               [][]string        `toml:"main_cards"`
-	Deck                  Deck              // TODO: make this card indexes or similar
 	SideboardRaw          [][]string        `toml:"sideboard_cards"`
-	Sideboard             Deck
+	CardCollection        CardCollection    // replaces Deck and Sideboard
 }
 
 // contains the common character traits between players and enemies
@@ -144,6 +143,24 @@ func (c *Character) CalculateLifeFromLevel() int {
 		}
 	}
 	return c.Life // fallback to TOML-defined life if no level set
+}
+
+func (c *Character) GetActiveDeck() Deck {
+	return c.CardCollection.GetDeck(0)
+}
+
+func (c *Character) GetDeck(index int) Deck {
+	return c.CardCollection.GetDeck(index)
+}
+
+func (c *Character) GetNumDecks() int {
+	maxDeck := 0
+	for _, item := range c.CardCollection {
+		if len(item.DeckCounts) > maxDeck {
+			maxDeck = len(item.DeckCounts)
+		}
+	}
+	return maxDeck
 }
 
 func getEmbeddedFile(filename string) []byte {

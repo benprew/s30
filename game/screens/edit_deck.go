@@ -135,19 +135,19 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 	buttons := make([]*elements.Button, 0)
 
 	// Group cards by name
-	for card, count := range s.Player.CardCollection {
-		if count > 0 {
+	for card, item := range s.Player.CardCollection {
+		if item.Count > 0 {
 			cardName := card.Name()
 			if group, exists := s.collectionGroups[cardName]; exists {
 				// Add to existing group
 				group.cards = append(group.cards, card)
-				group.totalCount += count
+				group.totalCount += item.Count
 			} else {
 				// Create new group
 				s.collectionGroups[cardName] = &cardGroup{
 					name:       cardName,
 					cards:      []*domain.Card{card},
-					totalCount: count,
+					totalCount: item.Count,
 				}
 			}
 		}
@@ -396,13 +396,13 @@ func (s *EditDeckScreen) handleCardDoubleClick(cardIdx int) {
 	// Find an available card from the group to add to deck
 	var cardToAdd *domain.Card
 	for _, card := range group.cards {
-		collectionCount, hasCard := s.Player.CardCollection[card]
-		if !hasCard || collectionCount <= 0 {
+		collectionCount := s.Player.CardCollection.GetTotalCount(card)
+		if collectionCount <= 0 {
 			continue
 		}
 
 		// Check how many of this specific printing are already in deck
-		deckCount := s.Player.Character.Deck[card]
+		deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
 		if deckCount < collectionCount {
 			cardToAdd = card
 			break
@@ -415,8 +415,9 @@ func (s *EditDeckScreen) handleCardDoubleClick(cardIdx int) {
 	}
 
 	// Add card to deck
-	s.Player.Character.Deck[cardToAdd]++
-	fmt.Printf("Added %s to deck (now %d copies)\n", cardToAdd.Name(), s.Player.Character.Deck[cardToAdd])
+	s.Player.CardCollection.AddCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
+	newCount := s.Player.CardCollection.GetDeckCount(cardToAdd, s.Player.ActiveDeck)
+	fmt.Printf("Added %s to deck (now %d copies)\n", cardToAdd.Name(), newCount)
 
 	// Reload deck display
 	err := s.loadDeckCards()
@@ -431,7 +432,7 @@ func (s *EditDeckScreen) loadDeckCards() error {
 
 	// Group deck cards by name
 	deckGroups := make(map[string]*cardGroup)
-	for card, count := range s.Player.Character.Deck {
+	for card, count := range s.Player.Character.GetDeck(s.Player.ActiveDeck) {
 		if count > 0 {
 			cardName := card.Name()
 			if group, exists := deckGroups[cardName]; exists {
@@ -551,13 +552,13 @@ func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
 	// Find an available card from the group to add to deck
 	var cardToAdd *domain.Card
 	for _, card := range group.cards {
-		collectionCount, hasCard := s.Player.CardCollection[card]
-		if !hasCard || collectionCount <= 0 {
+		collectionCount := s.Player.CardCollection.GetTotalCount(card)
+		if collectionCount <= 0 {
 			continue
 		}
 
 		// Check how many of this specific printing are already in deck
-		deckCount := s.Player.Character.Deck[card]
+		deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
 		if deckCount < collectionCount {
 			cardToAdd = card
 			break
@@ -570,8 +571,9 @@ func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
 	}
 
 	// Add card to deck
-	s.Player.Character.Deck[cardToAdd]++
-	fmt.Printf("Added %s to deck via drag (now %d copies)\n", cardToAdd.Name(), s.Player.Character.Deck[cardToAdd])
+	s.Player.CardCollection.AddCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
+	newCount := s.Player.CardCollection.GetDeckCount(cardToAdd, s.Player.ActiveDeck)
+	fmt.Printf("Added %s to deck via drag (now %d copies)\n", cardToAdd.Name(), newCount)
 
 	// Reload deck display
 	err := s.loadDeckCards()

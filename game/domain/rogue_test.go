@@ -23,10 +23,11 @@ func TestLoadRogues(t *testing.T) {
 			t.Logf("warning: map key %q does not match Rogue.Name %q", key, r.Name)
 		}
 
-		if len(r.Deck) == 0 {
+		deck := r.GetActiveDeck()
+		if len(deck) == 0 {
 			t.Fatalf("rogue %s (%s) has empty Deck", key, r.Name)
 		}
-		for card, cnt := range r.Deck {
+		for card, cnt := range deck {
 			if cnt <= 0 {
 				t.Fatalf("rogue %s deck entry %s has non-positive Count %d", key, card.Name(), cnt)
 			}

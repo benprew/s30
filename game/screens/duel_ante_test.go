@@ -18,11 +18,15 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 	playerDeck[mountain] = 4
 	playerDeck[lightningBolt] = 4
 
+	playerCollection := domain.NewCardCollection()
+	for card, count := range playerDeck {
+		playerCollection.AddCardToDeck(card, 0, count)
+	}
+
 	player := &domain.Player{
 		Character: domain.Character{
-			Deck: playerDeck,
+			CardCollection: playerCollection,
 		},
-		CardCollection: make(domain.Deck),
 	}
 
 	forest := domain.FindCardByName("Forest")
@@ -38,8 +42,13 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 	enemyDeck[thicketBasilisk] = 1
 	enemyDeck[crawWurm] = 2
 
+	enemyCollection := domain.NewCardCollection()
+	for card, count := range enemyDeck {
+		enemyCollection.AddCardToDeck(card, 0, count)
+	}
+
 	enemyCharacter := &domain.Character{
-		Deck: enemyDeck,
+		CardCollection: enemyCollection,
 	}
 
 	enemy := &domain.Enemy{
@@ -60,8 +69,8 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 	screen.startDuel()
 
 	playerCollectionSize := 0
-	for _, count := range player.CardCollection {
-		playerCollectionSize += count
+	for _, item := range player.CardCollection {
+		playerCollectionSize += item.Count
 	}
 
 	if playerCollectionSize == 0 {
