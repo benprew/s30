@@ -54,17 +54,17 @@ func NewWisemanScreen() *WisemanScreen {
 	}
 }
 
-func (s *WisemanScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (s *WisemanScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
 		inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
 		len(inpututil.AppendJustPressedTouchIDs(nil)) > 0 {
 
 		s.Page++
 		if s.Page >= len(s.CurrentStory) {
-			return screenui.CityScr, nil
+			return screenui.CityScr, nil, nil
 		}
 	}
-	return screenui.WisemanScr, nil
+	return screenui.WisemanScr, nil, nil
 }
 
 func (s *WisemanScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {

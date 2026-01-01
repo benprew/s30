@@ -92,19 +92,19 @@ func (f *WorldFrame) Draw(screen *ebiten.Image, scale float64) {
 
 }
 
-func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	options := &ebiten.DrawImageOptions{}
 	for i := range f.Buttons {
 		b := f.Buttons[i]
 		b.Update(options, scale, W, H)
 		if b.ID == "minimap" && b.IsClicked() {
-			return screenui.MiniMapScr, nil
+			return screenui.MiniMapScr, nil, nil
 		}
 	}
 
 	f.Text = mkWfText(f.player)
 
-	return -1, nil
+	return -1, nil, nil
 }
 
 func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {

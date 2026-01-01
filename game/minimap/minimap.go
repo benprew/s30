@@ -193,7 +193,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 }
 
-func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	m.blinkCounter++
 
 	options := &ebiten.DrawImageOptions{}
@@ -203,12 +203,12 @@ func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, error) {
 		b := m.buttons[i]
 		b.Update(options, scale, W, H)
 		if b.ID == "Done" && b.IsClicked() {
-			return screenui.WorldScr, nil
+			return screenui.WorldScr, nil, nil
 		}
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		return screenui.WorldScr, nil
+		return screenui.WorldScr, nil, nil
 	}
-	return screenui.MiniMapScr, nil
+	return screenui.MiniMapScr, nil, nil
 }

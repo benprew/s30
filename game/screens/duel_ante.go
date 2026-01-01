@@ -83,7 +83,7 @@ func borderedVisage(visage, border *ebiten.Image) *ebiten.Image {
 	return imageutil.ScaleImage(borderedVisageImg, 1.5)
 }
 
-func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	mx, my := ebiten.CursorPosition()
 	mousePoint := image.Point{mx, my}
 
@@ -104,7 +104,7 @@ func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 		}
 	}
 
-	return screenui.DuelAnteScr, nil
+	return screenui.DuelAnteScr, nil, nil
 }
 
 func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
@@ -192,7 +192,7 @@ func hCenter(dest, src *ebiten.Image) float64 {
 	return float64((dw / 2) - (sw / 2))
 }
 
-func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
+func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, error) {
 	outcome := rand.Float64()
 
 	s.lvl.RemoveEnemyAt(s.idx)
@@ -227,17 +227,17 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, error) {
 		}
 
 		s.wonCards = wonCards
-		return screenui.DuelWinScr, nil
+		return screenui.DuelWinScr, NewWinDuelScreen(s.WonCards()), nil
 	} else {
 		err := s.player.RemoveCard(s.playerAnteCard)
-		return screenui.DuelLoseScr, err
+		return screenui.DuelLoseScr, NewDuelLoseScreen(s.LostCards()), err
 	}
 }
 
-func (s *DuelAnteScreen) bribe() (screenui.ScreenName, error) {
+func (s *DuelAnteScreen) bribe() (screenui.ScreenName, screenui.Screen, error) {
 	s.lvl.RemoveEnemyAt(s.idx)
 	s.player.Gold -= s.enemy.BribeAmount()
-	return screenui.WorldScr, nil
+	return screenui.WorldScr, nil, nil
 }
 
 func within(point image.Point, btn image.Rectangle) bool {

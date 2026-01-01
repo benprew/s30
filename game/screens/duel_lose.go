@@ -90,9 +90,9 @@ func (s *DuelLoseScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 }
 
-func (s *DuelLoseScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (s *DuelLoseScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		return screenui.WorldScr, nil
+		return screenui.WorldScr, nil, nil
 	}
-	return screenui.DuelLoseScr, nil
+	return screenui.DuelLoseScr, nil, nil
 }

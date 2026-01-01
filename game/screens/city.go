@@ -62,7 +62,7 @@ func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	c.drawCityName(screen)
 }
 
-func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	options := &ebiten.DrawImageOptions{}
 	for i := range c.Buttons {
 		b := c.Buttons[i]
@@ -70,15 +70,15 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, error
 		switch b.ID {
 		case "leave":
 			if b.IsClicked() {
-				return screenui.WorldScr, nil
+				return screenui.WorldScr, nil, nil
 			}
 		case "buycards":
 			if b.IsClicked() {
-				return screenui.BuyCardsScr, nil
+				return screenui.BuyCardsScr, NewBuyCardsScreen(c.City, c.Player, W, H), nil
 			}
 		case "quest":
 			if b.IsClicked() {
-				return screenui.WisemanScr, nil
+				return screenui.WisemanScr, NewWisemanScreen(), nil
 			}
 		case "buyfood":
 			if b.IsClicked() {
@@ -91,15 +91,16 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, error
 			}
 		case "editdeck":
 			if b.IsClicked() {
-				return screenui.EditDeckScr, nil
+				s, err := NewEditDeckScreen(c.Player, W, H)
+				return screenui.EditDeckScr, s, err
 			}
 		}
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		return screenui.WorldScr, nil
+		return screenui.WorldScr, nil, nil
 	}
-	return screenui.CityScr, nil
+	return screenui.CityScr, nil, nil
 }
 
 func (c *CityScreen) drawCityName(screen *ebiten.Image) {

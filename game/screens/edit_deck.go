@@ -206,7 +206,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 }
 
 // Update handles user interactions
-func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	s.clickFrame++
 
 	// Calculate position for collection list
@@ -261,10 +261,10 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 
 	// Handle escape key to return to previous screen
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		return screenui.CityScr, nil // TODO: Return to appropriate screen
+		return screenui.CityScr, nil, nil
 	}
 
-	return screenui.EditDeckScr, nil
+	return screenui.EditDeckScr, nil, nil
 }
 
 // handleCardDoubleClick adds a card from collection to the deck

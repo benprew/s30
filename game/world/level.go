@@ -10,12 +10,8 @@ import (
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/imageutil"
-	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
-
-// TODO this file should be separated into screen and world logic
 
 // Level represents a Game level.
 type Level struct {
@@ -116,16 +112,12 @@ func NewLevel(c *domain.Player) (*Level, error) {
 	fmt.Printf("Starting player at position: %d, %d\n", loc.X, loc.Y)
 
 	// Spawn initial enemies
-	if err := l.spawnEnemies(3); err != nil {
+	if err := l.SpawnEnemies(3); err != nil {
 		return nil, fmt.Errorf("failed to spawn enemies: %s", err)
 	}
 
 	fmt.Printf("NewLevel execution time: %s\n", time.Since(startTime))
 	return l, nil
-}
-
-func (l *Level) IsFramed() bool {
-	return true
 }
 
 func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) {
@@ -160,79 +152,35 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	l.Player.Draw(screen, options)
 }
 
-// Update reads current user input and updates the Game state.
-func (l *Level) Update(screenW, screenH int, scale float64) (screenui.ScreenName, error) {
+func (l *Level) UpdateWorld(screenW, screenH int) error {
 	l.totalTicks++
 	l.ticksSinceLastInteraction++
 
-	// Store current player tile before moving
-	prevTile := l.CharacterTile()
-
-	// Move player and update direction via keyboard using bit flags
 	if err := l.Player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
-		return screenui.WorldScr, err
+		return err
 	}
 
-	// Get player's new tile
-	currentTile := l.CharacterTile()
-
-	if currentTile != (TilePoint{-1, -1}) { // Ensure player is on a valid tile
-		tile := l.Tile(currentTile)
-		if tile != nil {
-			if tile.IsCity && prevTile != currentTile {
-				return screenui.CityScr, nil
-			}
-		}
-	}
-
-	// Update enemies to move towards character (operate on slice elements so updates persist)
 	for i := range l.enemies {
-		// update the enemy in place
 		_ = l.enemies[i].Update(l.Player.Loc())
 	}
 
-	// Check for proximity between player and any enemy (center-to-center)
-	pLoc := l.Player.Loc()
-	for i, e := range l.enemies {
-		// skip already engaged enemies
-		if e.Engaged {
-			continue
-		}
-		eLoc := e.Loc()
-
-		// compute center points
-		pCenterX := float64(pLoc.X)
-		pCenterY := float64(pLoc.Y)
-		eCenterX := float64(eLoc.X)
-		eCenterY := float64(eLoc.Y)
-
-		dx := pCenterX - eCenterX
-		dy := pCenterY - eCenterY
-		dist := math.Hypot(dx, dy)
-
-		if dist <= 20.0 {
-			// record which enemy triggered encounter and mark pending
-			l.encounterIndex = i
-			l.encounterPending = true
-			l.ticksSinceLastInteraction = 0
-			return screenui.DuelAnteScr, nil
-		}
-	}
-
 	if l.totalTicks%20 == 0 && l.ticksSinceLastInteraction >= 70 {
-		if err := l.spawnEnemies(1); err != nil {
+		if err := l.SpawnEnemies(1); err != nil {
 			fmt.Printf("Warning: failed to spawn enemy: %s\n", err)
 		}
 	}
 
-	// Add more enemies with the 'N' key
-	if inpututil.IsKeyJustPressed(ebiten.KeyN) {
-		if err := l.spawnEnemies(5); err != nil {
-			return screenui.WorldScr, fmt.Errorf("failed to spawn additional enemies: %s", err)
-		}
-	}
+	return nil
+}
 
-	return screenui.WorldScr, nil
+func (l *Level) Enemies() []domain.Enemy {
+	return l.enemies
+}
+
+func (l *Level) SetEncounter(idx int) {
+	l.encounterIndex = idx
+	l.encounterPending = true
+	l.ticksSinceLastInteraction = 0
 }
 
 // x,y is the position of the tile, width and height are the dimensions of the tile
@@ -262,8 +210,7 @@ func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 	return x - screenX, y - screenY
 }
 
-// spawnEnemies creates a specified number of enemies at random positions
-func (l *Level) spawnEnemies(count int) error {
+func (l *Level) SpawnEnemies(count int) error {
 	// Enemy character types to choose from
 	enemyTypes := domain.Rogues
 

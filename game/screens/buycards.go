@@ -130,29 +130,29 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 }
 
-func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, error) {
+func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	options := &ebiten.DrawImageOptions{}
 
 	// If previewing, handle Y/N
 	if s.PreviewIdx >= 0 {
 		if inpututil.IsKeyJustPressed(ebiten.KeyY) && s.Player != nil && s.PreviewIdx < len(s.City.CardsForSale) {
 			s.buyCard()
-			return screenui.BuyCardsScr, nil
+			return screenui.BuyCardsScr, nil, nil
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyN) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			s.ErrorMsg = ""
 			s.PreviewIdx = -1
 			s.PreviewType = ""
-			return screenui.BuyCardsScr, nil
+			return screenui.BuyCardsScr, nil, nil
 		}
-		return screenui.BuyCardsScr, nil
+		return screenui.BuyCardsScr, nil, nil
 	}
 
 	for i := range s.Buttons {
 		b := s.Buttons[i]
 		b.Update(options, scale, W, H)
 		if b.ID == "done" && b.IsClicked() {
-			return screenui.CityScr, nil
+			return screenui.CityScr, nil, nil
 		}
 		// Detect card or price click
 		if b.IsClicked() {
@@ -161,22 +161,22 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, e
 				fmt.Sscanf(b.ID, "card_%d", &idx)
 				s.PreviewIdx = idx
 				s.PreviewType = "card"
-				return screenui.BuyCardsScr, nil
+				return screenui.BuyCardsScr, nil, nil
 			}
 			if len(b.ID) > 6 && b.ID[:6] == "price_" {
 				idx := -1
 				fmt.Sscanf(b.ID, "price_%d", &idx)
 				s.PreviewIdx = idx
 				s.PreviewType = "price"
-				return screenui.BuyCardsScr, nil
+				return screenui.BuyCardsScr, nil, nil
 			}
 		}
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		return screenui.CityScr, nil
+		return screenui.CityScr, nil, nil
 	}
-	return screenui.BuyCardsScr, nil
+	return screenui.BuyCardsScr, nil, nil
 }
 
 func (s *BuyCardsScreen) buyCard() {

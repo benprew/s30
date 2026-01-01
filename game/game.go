@@ -30,10 +30,9 @@ func (g *Game) CurrentScreen() screenui.Screen {
 	return g.screenMap[g.currentScreenName]
 }
 
-// helper function to run the level
 func (g *Game) Level() *world.Level {
-	l := g.screenMap[screenui.WorldScr]
-	return l.(*world.Level)
+	ls := g.screenMap[screenui.WorldScr].(*screens.LevelScreen)
+	return ls.Level
 }
 
 func NewGame() (*Game, error) {
@@ -59,10 +58,6 @@ func NewGame() (*Game, error) {
 	scale := 1.0
 	screenW := int(1024 * scale)
 	screenH := int(768 * scale)
-	editDeckScreen, err := screens.NewEditDeckScreen(player, screenW, screenH)
-	if err != nil {
-		return nil, err
-	}
 
 	g := &Game{
 		ScreenW:           screenW,
@@ -74,10 +69,9 @@ func NewGame() (*Game, error) {
 		worldFrame:        wf,
 		currentScreenName: screenui.WorldScr,
 		screenMap: map[screenui.ScreenName]screenui.Screen{
-			screenui.WorldScr:    l,
+			screenui.WorldScr:    screens.NewLevelScreen(l),
 			screenui.MiniMapScr:  m,
 			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
-			screenui.EditDeckScr: editDeckScreen,
 		},
 		player: player,
 	}
@@ -94,53 +88,39 @@ func (g *Game) Update() error {
 		if err != nil {
 			return fmt.Errorf("failed to create new level: %s", err)
 		}
-		g.screenMap[screenui.WorldScr] = l
+		g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(l)
 	}
 
-	name, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
+	name, screen, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
 	if err != nil {
 		return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err)
 	}
+
+	// If the screen returned a new screen instance, use it
+	if screen != nil {
+		g.screenMap[name] = screen
+	}
+
 	// If the world level signaled a duel ante, construct the duel screen with the encountered enemy
-	if name == screenui.DuelAnteScr && g.currentScreenName != screenui.DuelAnteScr {
-		// try to take encounter from level
-		if lvl, ok := g.screenMap[screenui.WorldScr].(*world.Level); ok {
-			if lvl.EncounterPending() {
-				if e, idx, ok := lvl.TakeEncounter(); ok {
-					g.screenMap[name] = screens.NewDuelAnteScreenWithEnemy(lvl, idx)
-					// mark the enemy engaged so it is ignored until resolved
-					e.SetEngaged(true)
-				}
+	if name == screenui.DuelAnteScr && g.currentScreenName != screenui.DuelAnteScr && screen == nil {
+		lvl := g.Level()
+		if lvl.EncounterPending() {
+			if e, idx, ok := lvl.TakeEncounter(); ok {
+				g.screenMap[name] = screens.NewDuelAnteScreenWithEnemy(lvl, idx)
+				e.SetEngaged(true)
 			}
-		}
-	}
-	if name == screenui.CityScr && g.currentScreenName != screenui.CityScr {
-		tile := g.Level().Tile(g.Level().CharacterTile())
-		g.screenMap[name] = screens.NewCityScreen(&tile.City, g.player)
-	}
-	if name == screenui.BuyCardsScr && g.currentScreenName != screenui.BuyCardsScr {
-		tile := g.Level().Tile(g.Level().CharacterTile())
-		g.screenMap[name] = screens.NewBuyCardsScreen(&tile.City, g.player, g.ScreenW, g.ScreenH)
-	}
-	if name == screenui.WisemanScr && g.currentScreenName != screenui.WisemanScr {
-		g.screenMap[name] = screens.NewWisemanScreen()
-	}
-	if name == screenui.DuelWinScr && g.currentScreenName != screenui.DuelWinScr {
-		if anteScreen, ok := g.screenMap[screenui.DuelAnteScr].(*screens.DuelAnteScreen); ok {
-			g.screenMap[name] = screens.NewWinDuelScreen(anteScreen.WonCards())
-		}
-	}
-	if name == screenui.DuelLoseScr && g.currentScreenName != screenui.DuelLoseScr {
-		if anteScreen, ok := g.screenMap[screenui.DuelAnteScr].(*screens.DuelAnteScreen); ok {
-			g.screenMap[name] = screens.NewDuelLoseScreen(anteScreen.LostCards())
 		}
 	}
 	g.currentScreenName = name
 
 	if g.CurrentScreen().IsFramed() {
-		name, err = g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
+		var wfScreen screenui.Screen
+		name, wfScreen, err = g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
 		if err != nil {
 			return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err)
+		}
+		if wfScreen != nil {
+			g.screenMap[name] = wfScreen
 		}
 		if name != -1 {
 			g.currentScreenName = name
