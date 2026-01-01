@@ -225,7 +225,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		// Position on the left side, vertically centered in the space above the collection list
 		// Available height is H - COLLECTION_HEIGHT
 		// Image is 300x419
-		magX := 10.0
+		magX := 1.0
 		magY := (float64(H-COLLECTION_HEIGHT) - 419.0) / 2.0
 		if magY < 10 {
 			magY = 10
