@@ -406,3 +406,13 @@ func (sl *ScrollableList) drawHorizontal(screen *ebiten.Image, opts *ebiten.Draw
 func (sl *ScrollableList) GetItems() []*Button {
 	return sl.items
 }
+
+// GetCurrentOffset returns the current scroll offset
+func (sl *ScrollableList) GetCurrentOffset() int {
+	return sl.currentOffset
+}
+
+// GetVisibleCount returns the number of visible items
+func (sl *ScrollableList) GetVisibleCount() int {
+	return sl.visibleCount
+}
