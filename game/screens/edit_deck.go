@@ -33,19 +33,23 @@ type cardGroup struct {
 
 // EditDeckScreen allows players to edit their decks
 type EditDeckScreen struct {
-	Player           *domain.Player
-	CollectionList   *elements.ScrollableList
-	Background       *ebiten.Image
-	DeckButtons      []*elements.Button // Buttons for cards currently in the deck
-	lastClickTime    map[int]int        // Track click times for double-click detection
-	clickFrame       int                // Current frame counter for double-click timing
-	MagnifierImage   *ebiten.Image      // Image to display in the magnifier
-	dragManager      *dragdrop.DragManager
-	deckDropArea     *dragdrop.DropArea
-	draggableItems   []*dragdrop.DraggableButton
-	deckCardDisplays []DeckCardDisplay        // Cards currently in the deck with counts
-	deckCardImages   map[string]*ebiten.Image // Cached resized card images for deck display
-	collectionGroups map[string]*cardGroup    // Map card name to group
+	Player               *domain.Player
+	CollectionList       *elements.ScrollableList
+	Background           *ebiten.Image
+	DeckButtons          []*elements.Button // Buttons for cards currently in the deck
+	lastClickTime        map[int]int        // Track click times for collection card double-click detection
+	clickFrame           int                // Current frame counter for double-click timing
+	MagnifierImage       *ebiten.Image      // Image to display in the magnifier
+	dragManager          *dragdrop.DragManager
+	deckDropArea         *dragdrop.DropArea
+	collectionDropArea   *dragdrop.DropArea
+	draggableItems       []*dragdrop.DraggableButton
+	deckDraggableItems   []*dragdrop.DraggableButton
+	deckCardDisplays     []DeckCardDisplay        // Cards currently in the deck with counts
+	deckCardImages       map[string]*ebiten.Image // Cached resized card images for deck display
+	collectionGroups     map[string]*cardGroup    // Map card name to group
+	hoveredCollectionIdx int                      // Index of hovered collection card (-1 if none)
+	hoveredDeckIdx       int                      // Index of hovered deck card (-1 if none)
 }
 
 type DeckCardDisplay struct {
@@ -69,16 +73,19 @@ func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error)
 	}
 
 	screen := &EditDeckScreen{
-		Player:           player,
-		Background:       collectionBg,
-		DeckButtons:      make([]*elements.Button, 0),
-		lastClickTime:    make(map[int]int),
-		clickFrame:       0,
-		dragManager:      dragdrop.NewDragManager(),
-		draggableItems:   make([]*dragdrop.DraggableButton, 0),
-		deckCardDisplays: make([]DeckCardDisplay, 0),
-		deckCardImages:   make(map[string]*ebiten.Image),
-		collectionGroups: make(map[string]*cardGroup),
+		Player:               player,
+		Background:           collectionBg,
+		DeckButtons:          make([]*elements.Button, 0),
+		lastClickTime:        make(map[int]int),
+		clickFrame:           0,
+		dragManager:          dragdrop.NewDragManager(),
+		draggableItems:       make([]*dragdrop.DraggableButton, 0),
+		deckDraggableItems:   make([]*dragdrop.DraggableButton, 0),
+		deckCardDisplays:     make([]DeckCardDisplay, 0),
+		deckCardImages:       make(map[string]*ebiten.Image),
+		collectionGroups:     make(map[string]*cardGroup),
+		hoveredCollectionIdx: -1,
+		hoveredDeckIdx:       -1,
 	}
 
 	// Create the scrollable list for the card collection
@@ -118,6 +125,16 @@ func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error)
 	)
 	screen.dragManager.RegisterDroppable(screen.deckDropArea)
 
+	// Create collection area drop zone
+	collectionY := H - COLLECTION_HEIGHT
+	collectionAreaBounds := image.Rect(0, collectionY, COLLECTION_WIDTH, H)
+	screen.collectionDropArea = dragdrop.NewDropArea(
+		collectionAreaBounds,
+		[]string{"*"}, // Accept any card
+		screen.handleCardDropToCollection,
+	)
+	screen.dragManager.RegisterDroppable(screen.collectionDropArea)
+
 	// Convert collection buttons to draggable items
 	screen.createDraggableItems(collectionButtons)
 
@@ -133,21 +150,25 @@ func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error)
 // createCollectionButtons creates buttons from the player's card collection
 func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 	buttons := make([]*elements.Button, 0)
+	s.collectionGroups = make(map[string]*cardGroup)
 
-	// Group cards by name
+	// Group cards by name and calculate available count
 	for card, item := range s.Player.CardCollection {
 		if item.Count > 0 {
 			cardName := card.Name()
-			if group, exists := s.collectionGroups[cardName]; exists {
-				// Add to existing group
-				group.cards = append(group.cards, card)
-				group.totalCount += item.Count
-			} else {
-				// Create new group
-				s.collectionGroups[cardName] = &cardGroup{
-					name:       cardName,
-					cards:      []*domain.Card{card},
-					totalCount: item.Count,
+			deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
+			availableCount := item.Count - deckCount
+
+			if availableCount > 0 {
+				if group, exists := s.collectionGroups[cardName]; exists {
+					group.cards = append(group.cards, card)
+					group.totalCount += availableCount
+				} else {
+					s.collectionGroups[cardName] = &cardGroup{
+						name:       cardName,
+						cards:      []*domain.Card{card},
+						totalCount: availableCount,
+					}
 				}
 			}
 		}
@@ -166,7 +187,6 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 
 	// Create a button for each card group
 	for _, group := range groupList {
-		// Use first card in group for image
 		representativeCard := group.cards[0]
 		cardImg, err := representativeCard.CardImage(domain.CardViewArtOnly)
 		if err != nil {
@@ -174,10 +194,7 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 			continue
 		}
 
-		// Scale card image to fit in the collection list
 		scaledCard := imageutil.ScaleImage(cardImg, 0.6)
-
-		// Create button at position 0,0 (ScrollableList will position it)
 		btn := elements.NewButton(scaledCard, scaledCard, scaledCard, 0, 0, 1.0)
 		btn.ID = group.name
 
@@ -190,14 +207,27 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 // createDraggableItems wraps collection buttons as draggable items
 func (s *EditDeckScreen) createDraggableItems(buttons []*elements.Button) {
 	for _, btn := range buttons {
-		// Get the card group for this button
 		group, exists := s.collectionGroups[btn.ID]
 		if exists && len(group.cards) > 0 {
-			// Use first available card from the group as representative
 			draggableBtn := dragdrop.NewDraggableButton(btn, group.cards[0])
 			s.draggableItems = append(s.draggableItems, draggableBtn)
 		}
 	}
+}
+
+// reloadCollectionList rebuilds the collection list after deck changes
+func (s *EditDeckScreen) reloadCollectionList() error {
+	collectionButtons, err := s.createCollectionButtons()
+	if err != nil {
+		return fmt.Errorf("failed to create collection buttons: %w", err)
+	}
+
+	s.CollectionList.SetItems(collectionButtons)
+
+	s.draggableItems = make([]*dragdrop.DraggableButton, 0)
+	s.createDraggableItems(collectionButtons)
+
+	return nil
 }
 
 // Draw renders the edit deck screen
@@ -296,19 +326,29 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	leftPressed := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	leftJustReleased := inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft)
 
-	// Convert draggable buttons to interface slice for drag manager
-	draggables := make([]dragdrop.Draggable, len(s.draggableItems))
-	for i, item := range s.draggableItems {
-		draggables[i] = item
+	// Combine collection and deck draggable items
+	allDraggables := make([]dragdrop.Draggable, 0, len(s.draggableItems)+len(s.deckDraggableItems))
+	for _, item := range s.draggableItems {
+		allDraggables = append(allDraggables, item)
+	}
+	for _, item := range s.deckDraggableItems {
+		allDraggables = append(allDraggables, item)
 	}
 
-	s.dragManager.Update(mx, my, leftPressed, leftJustReleased, draggables)
+	s.dragManager.Update(mx, my, leftPressed, leftJustReleased, allDraggables)
 
-	// Check for hover and double-clicks on collection cards
+	// Reset hover states
+	s.hoveredCollectionIdx = -1
+	s.hoveredDeckIdx = -1
+
+	// Check for hover on collection cards
 	for i, btn := range s.CollectionList.GetItems() {
-		// Handle hover for magnifier
 		if btn.State == elements.StateHover {
+			s.hoveredCollectionIdx = i
 			card := domain.FindCardByName(btn.ID)
+			if card == nil {
+				fmt.Println("Error finding card for Button:", btn.ID)
+			}
 			if card != nil {
 				img, err := card.CardImage(domain.CardViewFull)
 				if err == nil {
@@ -316,20 +356,34 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 				}
 			}
 		}
+	}
 
-		if btn.IsClicked() {
-			// Check if this is a double-click
-			lastClick, exists := s.lastClickTime[i]
-			if exists && (s.clickFrame-lastClick) < 30 { // 30 frames = ~0.5 seconds at 60fps
-				// Double-click detected
-				s.handleCardDoubleClick(i)
-				delete(s.lastClickTime, i)
-			} else {
-				// Single click - record time
-				s.lastClickTime[i] = s.clickFrame
-			}
-			btn.State = elements.StateNormal
+	// Check for hover on deck cards
+	scaledMX := int(float64(mx) / scale)
+	scaledMY := int(float64(my) / scale)
+	for i, display := range s.deckCardDisplays {
+		if display.Image == nil {
+			continue
 		}
+		cardWidth := display.Image.Bounds().Dx()
+		cardHeight := display.Image.Bounds().Dy()
+		if scaledMX >= display.X && scaledMX < display.X+cardWidth &&
+			scaledMY >= display.Y && scaledMY < display.Y+cardHeight {
+			s.hoveredDeckIdx = i
+			img, err := display.Card.CardImage(domain.CardViewFull)
+			if err == nil {
+				s.MagnifierImage = img
+			}
+			break
+		}
+	}
+
+	// Handle keyboard shortcuts
+	if inpututil.IsKeyJustPressed(ebiten.KeyA) && s.hoveredCollectionIdx >= 0 {
+		s.handleDeckCardAdd(s.hoveredCollectionIdx)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyD) && s.hoveredDeckIdx >= 0 {
+		s.handleDeckCardRemove(s.hoveredDeckIdx)
 	}
 
 	// Handle escape key to return to previous screen
@@ -340,8 +394,20 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	return screenui.EditDeckScr, nil, nil
 }
 
-// handleCardDoubleClick adds a card from collection to the deck
-func (s *EditDeckScreen) handleCardDoubleClick(cardIdx int) {
+// Reload deck display and collection list
+func (s *EditDeckScreen) updateState() {
+	err := s.loadDeckCards()
+	if err != nil {
+		fmt.Printf("Error reloading deck cards: %v\n", err)
+	}
+	err = s.reloadCollectionList()
+	if err != nil {
+		fmt.Printf("Error reloading collection list: %v\n", err)
+	}
+}
+
+// handleDeckCardAdd adds a card from collection to the deck
+func (s *EditDeckScreen) handleDeckCardAdd(cardIdx int) {
 	items := s.CollectionList.GetItems()
 	if cardIdx >= len(items) {
 		return
@@ -376,16 +442,34 @@ func (s *EditDeckScreen) handleCardDoubleClick(cardIdx int) {
 		return
 	}
 
-	// Add card to deck
-	s.Player.CardCollection.AddCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
+	// Move card to deck
+	err := s.Player.CardCollection.MoveCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
+	if err != nil {
+		fmt.Printf("Error moving card to deck: %v\n", err)
+		return
+	}
 	newCount := s.Player.CardCollection.GetDeckCount(cardToAdd, s.Player.ActiveDeck)
 	fmt.Printf("Added %s to deck (now %d copies)\n", cardToAdd.Name(), newCount)
+	s.updateState()
+}
 
-	// Reload deck display
-	err := s.loadDeckCards()
-	if err != nil {
-		fmt.Printf("Error reloading deck cards: %v\n", err)
+// handleDeckCardRemove removes a card from deck back to collection
+func (s *EditDeckScreen) handleDeckCardRemove(deckIdx int) {
+	if deckIdx >= len(s.deckCardDisplays) {
+		return
 	}
+
+	display := s.deckCardDisplays[deckIdx]
+	cardToRemove := display.Card
+
+	err := s.Player.CardCollection.MoveCardFromDeck(cardToRemove, s.Player.ActiveDeck, 1)
+	if err != nil {
+		fmt.Printf("Error moving card from deck: %v\n", err)
+		return
+	}
+	newCount := s.Player.CardCollection.GetDeckCount(cardToRemove, s.Player.ActiveDeck)
+	fmt.Printf("Removed %s from deck (now %d copies)\n", cardToRemove.Name(), newCount)
+	s.updateState()
 }
 
 // loadDeckCards loads the player's deck cards for display
@@ -455,6 +539,9 @@ func (s *EditDeckScreen) loadDeckCards() error {
 	// Calculate positions for deck cards
 	s.calculateDeckCardPositions()
 
+	// Create draggable items for deck cards
+	s.createDeckDraggableItems()
+
 	return nil
 }
 
@@ -489,6 +576,23 @@ func (s *EditDeckScreen) calculateDeckCardPositions() {
 
 		s.deckCardDisplays[i].X = x
 		s.deckCardDisplays[i].Y = y
+	}
+}
+
+// createDeckDraggableItems creates draggable buttons for deck cards
+func (s *EditDeckScreen) createDeckDraggableItems() {
+	s.deckDraggableItems = make([]*dragdrop.DraggableButton, 0)
+
+	for _, display := range s.deckCardDisplays {
+		if display.Image == nil {
+			continue
+		}
+
+		btn := elements.NewButton(display.Image, display.Image, display.Image, display.X, display.Y, 1.0)
+		btn.ID = display.Card.Name()
+
+		draggableBtn := dragdrop.NewDraggableButton(btn, display.Card)
+		s.deckDraggableItems = append(s.deckDraggableItems, draggableBtn)
 	}
 }
 
@@ -532,15 +636,55 @@ func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
 		return false
 	}
 
-	// Add card to deck
-	s.Player.CardCollection.AddCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
+	// Move card to deck
+	err := s.Player.CardCollection.MoveCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
+	if err != nil {
+		fmt.Printf("Error moving card to deck: %v\n", err)
+		return false
+	}
 	newCount := s.Player.CardCollection.GetDeckCount(cardToAdd, s.Player.ActiveDeck)
 	fmt.Printf("Added %s to deck via drag (now %d copies)\n", cardToAdd.Name(), newCount)
 
-	// Reload deck display
-	err := s.loadDeckCards()
+	// Reload deck display and collection list
+	err = s.loadDeckCards()
 	if err != nil {
 		fmt.Printf("Error reloading deck cards: %v\n", err)
+	}
+	err = s.reloadCollectionList()
+	if err != nil {
+		fmt.Printf("Error reloading collection list: %v\n", err)
+	}
+
+	return true
+}
+
+// handleCardDropToCollection handles when a card is dropped in the collection area
+func (s *EditDeckScreen) handleCardDropToCollection(data dragdrop.DragData) bool {
+	cardData, ok := data.(*dragdrop.CardDragData)
+	if !ok {
+		return false
+	}
+
+	droppedCard, ok := cardData.Card.(*domain.Card)
+	if !ok {
+		return false
+	}
+
+	err := s.Player.CardCollection.MoveCardFromDeck(droppedCard, s.Player.ActiveDeck, 1)
+	if err != nil {
+		fmt.Printf("Error moving card from deck: %v\n", err)
+		return false
+	}
+	newCount := s.Player.CardCollection.GetDeckCount(droppedCard, s.Player.ActiveDeck)
+	fmt.Printf("Removed %s from deck via drag (now %d copies)\n", droppedCard.Name(), newCount)
+
+	err = s.loadDeckCards()
+	if err != nil {
+		fmt.Printf("Error reloading deck cards: %v\n", err)
+	}
+	err = s.reloadCollectionList()
+	if err != nil {
+		fmt.Printf("Error reloading collection list: %v\n", err)
 	}
 
 	return true
