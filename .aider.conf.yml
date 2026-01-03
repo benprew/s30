@@ -10,7 +10,7 @@ lint-cmd: go fmt
 
 auto-commits: false
 
-read: AGENT.md
+read: AGENTS.md
 # model: gemini/gemini-2.5-flash-lite-preview-06-17
 # weak_model: gemini/gemini-2.5-flash-lite-preview-06-17
 # editor_model: openai/gpt-5
