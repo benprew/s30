@@ -271,50 +271,9 @@ func (s *EditDeckScreen) drawDeckCards(screen *ebiten.Image, scale float64) {
 
 		// Draw count if more than 1
 		if display.Count > 1 {
-			countStr := strconv.Itoa(display.Count)
-
-			// Create font face
-			face := &text.GoTextFace{
-				Source: fonts.MtgFont,
-				Size:   24,
-			}
-
-			// Calculate position for count (lower right corner of card)
 			cardWidth := display.Image.Bounds().Dx()
 			cardHeight := display.Image.Bounds().Dy()
-
-			// Create background for count
-			countBgSize := 30
-			countBg := ebiten.NewImage(countBgSize, countBgSize)
-
-			// Draw semi-transparent black circle background
-			for y := 0; y < countBgSize; y++ {
-				for x := 0; x < countBgSize; x++ {
-					dx := x - countBgSize/2
-					dy := y - countBgSize/2
-					if dx*dx+dy*dy <= (countBgSize/2)*(countBgSize/2) {
-						countBg.Set(x, y, color.RGBA{0, 0, 0, 200})
-					}
-				}
-			}
-
-			// Draw count background
-			bgOpts := &ebiten.DrawImageOptions{}
-			bgOpts.GeoM.Scale(scale, scale)
-			countX := float64(display.X + cardWidth - countBgSize - 5)
-			countY := float64(display.Y + cardHeight - countBgSize - 5)
-			bgOpts.GeoM.Translate(countX*scale, countY*scale)
-			screen.DrawImage(countBg, bgOpts)
-
-			// Draw count text
-			textOpts := &ebiten.DrawImageOptions{}
-			textOpts.GeoM.Scale(scale, scale)
-			// Center text in the circle
-			textX := countX + float64(countBgSize/2) - 8
-			textY := countY + float64(countBgSize/2) + 8
-			textOpts.GeoM.Translate(textX*scale, textY*scale)
-			textOpts.ColorScale.Scale(1, 1, 1, 1) // White text
-			fonts.DrawText(screen, countStr, face, textOpts)
+			s.drawCountOverlay(screen, scale, display.X, display.Y, cardWidth, cardHeight, display.Count)
 		}
 	}
 }
@@ -435,7 +394,7 @@ func (s *EditDeckScreen) loadDeckCards() error {
 
 	// Group deck cards by name
 	deckGroups := make(map[string]*cardGroup)
-	for card, count := range s.Player.Character.GetDeck(s.Player.ActiveDeck) {
+	for card, count := range s.Player.GetDeck(s.Player.ActiveDeck) {
 		if count > 0 {
 			cardName := card.Name()
 			if group, exists := deckGroups[cardName]; exists {
@@ -687,8 +646,8 @@ func (s *EditDeckScreen) drawCountOverlay(screen *ebiten.Image, scale float64, x
 	textOpts := &ebiten.DrawImageOptions{}
 	textOpts.GeoM.Scale(scale, scale)
 	// Center text in the circle
-	textX := countX + float64(countBgSize/2) - 8
-	textY := countY + float64(countBgSize/2) + 8
+	textX := countX + float64(countBgSize/2) - 7
+	textY := countY + float64(countBgSize/2) - 12
 	textOpts.GeoM.Translate(textX*scale, textY*scale)
 	textOpts.ColorScale.Scale(1, 1, 1, 1) // White text
 	fonts.DrawText(screen, countStr, face, textOpts)
