@@ -212,6 +212,9 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	// Draw the scrollable collection list
 	s.CollectionList.Draw(screen, opts, scale)
 
+	// Draw count overlays on collection cards
+	s.drawCollectionCounts(screen, scale, collectionY)
+
 	// Draw the deck drop area highlight if hovering
 	s.deckDropArea.Draw(screen)
 
@@ -582,4 +585,111 @@ func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
 	}
 
 	return true
+}
+
+// drawCollectionCounts draws count overlays on collection cards
+func (s *EditDeckScreen) drawCollectionCounts(screen *ebiten.Image, scale float64, collectionY int) {
+	visibleItems := s.getVisibleCollectionItems(collectionY)
+
+	for _, item := range visibleItems {
+		group, exists := s.collectionGroups[item.ButtonID]
+		if !exists || group.totalCount <= 1 {
+			continue
+		}
+
+		// Draw count overlay using same logic as deck cards
+		s.drawCountOverlay(screen, scale, item.X, item.Y, item.Width, item.Height, group.totalCount)
+	}
+}
+
+type CollectionItemDisplay struct {
+	ButtonID            string
+	X, Y, Width, Height int
+}
+
+// getVisibleCollectionItems calculates positions of visible collection buttons
+func (s *EditDeckScreen) getVisibleCollectionItems(collectionY int) []CollectionItemDisplay {
+	items := s.CollectionList.GetItems()
+	if len(items) == 0 {
+		return nil
+	}
+
+	visibleItems := make([]CollectionItemDisplay, 0)
+
+	// Get scroll state from collection list
+	currentOffset := s.CollectionList.GetCurrentOffset()
+	visibleCount := s.CollectionList.GetVisibleCount()
+
+	// Calculate end index for visible items
+	endIdx := currentOffset + visibleCount
+	if endIdx > len(items) {
+		endIdx = len(items)
+	}
+
+	// The items are positioned horizontally starting after left nav buttons
+	leftNavWidth := 128 // ffBackBtn + fwdBackBtn width
+	currentX := leftNavWidth
+
+	// Only process visible items
+	for i := currentOffset; i < endIdx; i++ {
+		item := items[i]
+		buttonWidth := item.Bounds.Dx()
+		buttonHeight := item.Bounds.Dy()
+
+		visibleItems = append(visibleItems, CollectionItemDisplay{
+			ButtonID: item.ID,
+			X:        currentX,
+			Y:        collectionY,
+			Width:    buttonWidth,
+			Height:   buttonHeight,
+		})
+
+		currentX += buttonWidth + 15 // 15 is itemPadding
+	}
+
+	return visibleItems
+}
+
+// drawCountOverlay draws a count overlay at the specified position
+func (s *EditDeckScreen) drawCountOverlay(screen *ebiten.Image, scale float64, x, y, width, height, count int) {
+	countStr := strconv.Itoa(count)
+
+	// Create font face
+	face := &text.GoTextFace{
+		Source: fonts.MtgFont,
+		Size:   24,
+	}
+
+	// Create background for count
+	countBgSize := 30
+	countBg := ebiten.NewImage(countBgSize, countBgSize)
+
+	// Draw semi-transparent black circle background
+	for bgY := 0; bgY < countBgSize; bgY++ {
+		for bgX := 0; bgX < countBgSize; bgX++ {
+			dx := bgX - countBgSize/2
+			dy := bgY - countBgSize/2
+			if dx*dx+dy*dy <= (countBgSize/2)*(countBgSize/2) {
+				countBg.Set(bgX, bgY, color.RGBA{0, 0, 0, 200})
+			}
+		}
+	}
+
+	// Draw count background
+	bgOpts := &ebiten.DrawImageOptions{}
+	bgOpts.GeoM.Scale(scale, scale)
+	countX := float64(x + width - countBgSize - 5)
+	countY := float64(y + height - countBgSize - 5)
+	bgOpts.GeoM.Translate(countX*scale, countY*scale)
+	screen.DrawImage(countBg, bgOpts)
+
+	// Draw count text
+	textOpts := &ebiten.DrawImageOptions{}
+	textOpts.GeoM.Scale(scale, scale)
+	// Center text in the circle
+	textX := countX + float64(countBgSize/2) - 8
+	textY := countY + float64(countBgSize/2) + 8
+	textOpts.GeoM.Translate(textX*scale, textY*scale)
+	textOpts.ColorScale.Scale(1, 1, 1, 1) // White text
+	fonts.DrawText(screen, countStr, face, textOpts)
 }
