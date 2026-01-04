@@ -1,7 +1,9 @@
 default:
+	touch assets/art/cardimages.zip
 	go run .
 
 test:
+	touch assets/art/cardimages.zip
 	go test ./...
 
 winbuild:
