@@ -407,6 +407,15 @@ func (sl *ScrollableList) GetItems() []*Button {
 	return sl.items
 }
 
+// SetItems sets the list of buttons and recalculates visible count
+func (sl *ScrollableList) SetItems(items []*Button) {
+	sl.items = items
+	sl.visibleCount = sl.calculateVisibleCount()
+	if sl.currentOffset >= len(items) {
+		sl.currentOffset = 0
+	}
+}
+
 // GetCurrentOffset returns the current scroll offset
 func (sl *ScrollableList) GetCurrentOffset() int {
 	return sl.currentOffset

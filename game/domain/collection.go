@@ -48,6 +48,54 @@ func (cc CardCollection) AddCardToDeck(card *Card, deckIndex int, count int) {
 	item.Count += count
 }
 
+func (cc CardCollection) MoveCardToDeck(card *Card, deckIndex int, count int) error {
+	item := cc[card]
+	if item == nil {
+		return fmt.Errorf("card %s not found in collection", card.Name())
+	}
+
+	totalInDecks := 0
+	for _, deckCount := range item.DeckCounts {
+		totalInDecks += deckCount
+	}
+
+	availableCount := item.Count - totalInDecks
+	if availableCount < count {
+		return fmt.Errorf("insufficient available cards for %s (have %d available, need %d)",
+			card.Name(), availableCount, count)
+	}
+
+	if deckIndex >= len(item.DeckCounts) {
+		newDeckCounts := make([]int, deckIndex+1)
+		copy(newDeckCounts, item.DeckCounts)
+		item.DeckCounts = newDeckCounts
+	}
+
+	item.DeckCounts[deckIndex] += count
+
+	return nil
+}
+
+func (cc CardCollection) MoveCardFromDeck(card *Card, deckIndex int, count int) error {
+	item := cc[card]
+	if item == nil {
+		return fmt.Errorf("card %s not found in collection", card.Name())
+	}
+
+	if deckIndex >= len(item.DeckCounts) {
+		return fmt.Errorf("deck %d does not exist for card %s", deckIndex, card.Name())
+	}
+
+	if item.DeckCounts[deckIndex] < count {
+		return fmt.Errorf("insufficient cards in deck %d for card %s (have %d, need %d)",
+			deckIndex, card.Name(), item.DeckCounts[deckIndex], count)
+	}
+
+	item.DeckCounts[deckIndex] -= count
+
+	return nil
+}
+
 func (cc CardCollection) RemoveCardFromDeck(card *Card, deckIndex int, count int) error {
 	item := cc[card]
 	if item == nil {

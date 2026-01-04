@@ -34,12 +34,14 @@ type cardGroup struct {
 // EditDeckScreen allows players to edit their decks
 type EditDeckScreen struct {
 	Player               *domain.Player
+	City                 *domain.City
 	CollectionList       *elements.ScrollableList
 	Background           *ebiten.Image
 	DeckButtons          []*elements.Button // Buttons for cards currently in the deck
 	lastClickTime        map[int]int        // Track click times for collection card double-click detection
 	clickFrame           int                // Current frame counter for double-click timing
 	MagnifierImage       *ebiten.Image      // Image to display in the magnifier
+	MagnifiedCard        *domain.Card       // Currently magnified card
 	dragManager          *dragdrop.DragManager
 	deckDropArea         *dragdrop.DropArea
 	collectionDropArea   *dragdrop.DropArea
@@ -65,7 +67,7 @@ func (s *EditDeckScreen) IsFramed() bool {
 }
 
 // NewEditDeckScreen creates a new edit deck screen
-func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error) {
+func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*EditDeckScreen, error) {
 	// Load the collection background
 	collectionBg, err := imageutil.LoadImage(assets.EditDeckBg_png)
 	if err != nil {
@@ -74,6 +76,7 @@ func NewEditDeckScreen(player *domain.Player, W, H int) (*EditDeckScreen, error)
 
 	screen := &EditDeckScreen{
 		Player:               player,
+		City:                 city,
 		Background:           collectionBg,
 		DeckButtons:          make([]*elements.Button, 0),
 		lastClickTime:        make(map[int]int),
@@ -255,9 +258,6 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	if s.MagnifierImage != nil {
 		magOpts := &ebiten.DrawImageOptions{}
 		magOpts.GeoM.Scale(scale, scale)
-		// Position on the left side, vertically centered in the space above the collection list
-		// Available height is H - COLLECTION_HEIGHT
-		// Image is 300x419
 		magX := 1.0
 		magY := (float64(H-COLLECTION_HEIGHT) - 419.0) / 2.0
 		if magY < 10 {
@@ -265,6 +265,27 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		}
 		magOpts.GeoM.Translate(magX*scale, magY*scale)
 		screen.DrawImage(s.MagnifierImage, magOpts)
+
+		if s.MagnifiedCard != nil {
+			salePrice := s.MagnifiedCard.SalePrice(s.City)
+			priceText := fmt.Sprintf("Sale Price: %d gold", salePrice)
+
+			fontFace := &text.GoTextFace{
+				Source: fonts.MtgFont,
+				Size:   20,
+			}
+
+			textOpts := &ebiten.DrawImageOptions{}
+			textOpts.GeoM.Scale(scale, scale)
+			textX := magX + 10
+			textY := magY - 25
+			if textY < 0 {
+				textY = magY + 430
+			}
+			textOpts.GeoM.Translate(textX*scale, textY*scale)
+			textOpts.ColorScale.Scale(1, 1, 1, 1)
+			fonts.DrawText(screen, priceText, fontFace, textOpts)
+		}
 	}
 
 	// Draw deck area outline
@@ -340,6 +361,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	// Reset hover states
 	s.hoveredCollectionIdx = -1
 	s.hoveredDeckIdx = -1
+	s.MagnifiedCard = nil
 
 	// Check for hover on collection cards
 	for i, btn := range s.CollectionList.GetItems() {
@@ -353,6 +375,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 				img, err := card.CardImage(domain.CardViewFull)
 				if err == nil {
 					s.MagnifierImage = img
+					s.MagnifiedCard = card
 				}
 			}
 		}
@@ -373,6 +396,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 			img, err := display.Card.CardImage(domain.CardViewFull)
 			if err == nil {
 				s.MagnifierImage = img
+				s.MagnifiedCard = display.Card
 			}
 			break
 		}
@@ -384,6 +408,13 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyD) && s.hoveredDeckIdx >= 0 {
 		s.handleDeckCardRemove(s.hoveredDeckIdx)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyS) {
+		if s.hoveredCollectionIdx >= 0 {
+			s.handleSellCard(s.hoveredCollectionIdx, true)
+		} else if s.hoveredDeckIdx >= 0 {
+			s.handleSellCard(s.hoveredDeckIdx, false)
+		}
 	}
 
 	// Handle escape key to return to previous screen
@@ -469,6 +500,48 @@ func (s *EditDeckScreen) handleDeckCardRemove(deckIdx int) {
 	}
 	newCount := s.Player.CardCollection.GetDeckCount(cardToRemove, s.Player.ActiveDeck)
 	fmt.Printf("Removed %s from deck (now %d copies)\n", cardToRemove.Name(), newCount)
+	s.updateState()
+}
+
+func (s *EditDeckScreen) handleSellCard(cardIdx int, isFromCollection bool) {
+	var cardToSell *domain.Card
+
+	if isFromCollection {
+		items := s.CollectionList.GetItems()
+		if cardIdx >= len(items) {
+			return
+		}
+		btn := items[cardIdx]
+		group, exists := s.collectionGroups[btn.ID]
+		if !exists || len(group.cards) == 0 {
+			fmt.Printf("No card group found for %s\n", btn.ID)
+			return
+		}
+		cardToSell = group.cards[0]
+	} else {
+		if cardIdx >= len(s.deckCardDisplays) {
+			return
+		}
+		display := s.deckCardDisplays[cardIdx]
+		cardToSell = display.Card
+		deckCount := s.Player.CardCollection.GetDeckCount(cardToSell, s.Player.ActiveDeck)
+		if deckCount > 0 {
+			err := s.Player.CardCollection.MoveCardFromDeck(cardToSell, s.Player.ActiveDeck, 1)
+			if err != nil {
+				fmt.Printf("Error moving card from deck before selling: %v\n", err)
+				return
+			}
+		}
+	}
+
+	salePrice := cardToSell.SalePrice(s.City)
+	s.Player.Gold += salePrice
+	err := s.Player.CardCollection.DecrementCardCount(cardToSell)
+	if err != nil {
+		fmt.Printf("Error selling card: %v\n", err)
+		return
+	}
+	fmt.Printf("Sold %s for %d gold\n", cardToSell.Name(), salePrice)
 	s.updateState()
 }
 

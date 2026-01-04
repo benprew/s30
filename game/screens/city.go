@@ -91,7 +91,7 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 			}
 		case "editdeck":
 			if b.IsClicked() {
-				s, err := NewEditDeckScreen(c.Player, W, H)
+				s, err := NewEditDeckScreen(c.Player, c.City, W, H)
 				return screenui.EditDeckScr, s, err
 			}
 		}

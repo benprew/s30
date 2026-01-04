@@ -181,6 +181,32 @@ func (c *Card) Filename() string {
 	return fn
 }
 
+func (c *Card) SalePrice(city *City) int {
+	basePercentage := 0.5
+	switch city.Tier {
+	case TierTown:
+		basePercentage = 0.6
+	case TierCapital:
+		basePercentage = 0.75
+	}
+
+	hasColorMatch := false
+	for _, colorStr := range c.ColorIdentity {
+		if colorMask, ok := colorStringToMask[colorStr]; ok {
+			if city.AmuletColor&colorMask != 0 {
+				hasColorMatch = true
+				break
+			}
+		}
+	}
+
+	if hasColorMatch {
+		basePercentage += 0.1
+	}
+
+	return int(float64(c.Price) * basePercentage)
+}
+
 func sanitizeFilename(name string) string {
 	name = strings.ToLower(name)
 
