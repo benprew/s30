@@ -1,20 +1,334 @@
-* TODO Duel/Ante Screen
+* DONE Deck/Collection Refactor
+I want to refactor how decks and card collections are managed. Currently a player has a card collection but all Characters have a deck. Characters consist of the player and rogues (enemies).
+
+Instead of player having a collection, characters should have a card collection, where each collection item has additional metadata showing which deck a card is part of. A player can have multiple decks, but enemies only have a single deck.
+
+type CollectionItem struct {
+ Card
+ Count int  // number of cards in the collection
+ DeckCounts []int // index of deck that has the count of the Card in the deck
+}
+
+To determine if a card is in a deck you have to iterate over the list of collectionitems. When a player loses a duel, it decrements the cards Count and iterates over DeckCounts and sets the value in each array to the min of Count and the value of DeckCounts.
+
+Instead of "Sideboard" cards, rogues will now have all their cards in their "collection". By default all cards (DeckRaw and SideboardRaw) and the Rogue will only have a single deck. It will contain all cards listed in DeckRaw, but not in SideboardRaw.
+
+
+
+
+* Card Art
+** Smaller card art
+Card art is 150px wide
+- drawing text onto card frame would make it clearer as it's scaled up
+
+- Magnified size is 250-300px wide
+- Using blank-card.png would make card art 236px wide
+
+Modify download_card_images.py to use the
+
+** DONE WASM card art
+CLOSED: [2025-12-05 Fri 17:03]
+Is there a way to tell if my game is running in wasm/browser vs on a regular OS? If so, I'd like to modify the CardImage() function to make https requests to https://throwingbones.com/ben/cardimages.zip instead of reading it from the embedded file system.
+
+Write a package that can read a zip file over http that uses the range operator to download the zip file directory and then download the individual file in the compressed .zip file using the range operator.
+
+Cache the directory in memory so it doesn't require re-requesting the zip file directory.
+
+The library zip reader will reread the directory when opening a file (see `findBodyOffset()`). Instead make a custom version of `findBodyOffset` and `Open()` that use a local copy of the zip file directory.
+
+See game/utils/httpzip/reader.go for a partial implementation
+
+
+
+
+
+* Starting screens
+* Saving the game
+* Adding terrain thresholds
+* DONE Antigravity CLI
+User provides prompt file and worktree name
+
+Write a script that will perform the same steps as the new Google AntiGravity editor.
+
+agcli.py
+--prompt -p   Prompt filename
+--worktree -w Name of git worktree to create
+
+The script itself should do the following steps:
+
+- Make git worktree
+- change to worktree directory
+- Write an implementation plan based on prompt [claude_yolo.sh]
+- Write code based on plan [claude_yolo.sh]
+- Run tests [claude_yolo.sh]
+- Do code review [claude_yolo.sh]
+- Make suggested changes [claude_yolo.sh]
+- Commit changes [claude_yolo?]
+
+For each step that requires claude_yolo.sh - write a prompt that will for the action. These prompts will be embedded into the script itself so the user can change them if needed.
+
+claude_yolo.sh - a version of claude code that runs in a container and doesn't prompt for user input.
+
+
+** DONE AGCLI notes
+- make test fails because it can't compile
+       /usr/local/go/pkg/tool/linux_amd64/link: running gcc failed: exit status 1
+     /usr/bin/gcc -m64 -s -o $WORK/b272/httpzip.test -rdynamic /tmp/go-link-3891896473/go.o
+     /tmp/go-link-3891896473/000000.o /tmp/go-link-3891896473/000001.o
+     /tmp/go-link-3891896473/000002.o /tmp/go-link-3891896473/000003.o
+     /tmp/go-link-3891896473/000004.o /tmp/go-link-3891896473/000005.o
+     /tmp/go-link-3891896473/000006.o /tmp/go-link-3891896473/000007.o
+     /tmp/go-link-3891896473/000008.o /tmp/go-link-3891896473/000009.o
+     /tmp/go-link-3891896473/000010.o /tmp/go-link-3891896473/000011.o
+     /tmp/go-link-3891896473/000012.o /tmp/go-link-3891896473/000013.o
+     /tmp/go-link-3891896473/000014.o /tmp/go-link-3891896473/000015.o
+     /tmp/go-link-3891896473/000016.o /tmp/go-link-3891896473/000017.o
+     /tmp/go-link-3891896473/000018.o /tmp/go-link-3891896473/000019.o -O2 -g -lresolv -O2 -g
+     -lpthread
+     /usr/bin/ld: cannot find /lib/x86_64-linux-gnu/libc.so.6: No such file or directory
+     collect2: error: ld returned 1 exit status
+
+- go build fails becuase cardimages.zip can't be found
+       assets/cardimages_native.go:9:13: pattern art/cardimages.zip: no matching files found
+
+- gofmt works
+
+- git command failure:
+
+  Bash(git add game/screens/edit_deck.go game/ui/elements/scrollable_list.go
+      .agcli/IMPLEMENTATION_PLAN.md)
+  -> Error: fatal: pathspec 'game/screens/edit_deck.go' did not match any files
+
+
+- failure message: Error: fatal: pathspec 'game/screens/edit_deck.go' did not match any files
+
+* Amulets
+** DONE Initial Framework
+Implement colored amulets. These are amulets the player can collect either by fighting enemies or completing quests in a town. There is one amulet for each color of magic (Red, White, Blue, Green and Black). Each city/town has an amulet color associated with it. This will affect other aspects of the game, so store the city color when creating a new city.
+** DONE Amulets on world_frame
+CLOSED: [2025-12-03 Wed 22:03]
+Display amulets on the world_frame screen. Add Amsprite.spr.png to assets/embed.go and use that to display the amulets. The colors in the sprite are (in order):
+- White
+- Blue
+- Black
+- Red
+- Green
+
+Display them in the world frame at 125,628 and 250,628 and 375,628 and 500,628 and 625,628. Immediately next to the image of the amulet display the player's count of that color of amulet, similar to how gold and food count are displayed.
+
+* UI
+** DONE UI click and drag
+How would I implement a click-and-drag function? In edit_deck.go I'd like to be able click and drag cards to/from the player's deck area.
+
+Seems like I need a "droppable areas" where draggable objects can be dropped?
+
+Also, need to be able to designate things as "draggable". Then when the left button is clicked and held the draggable item should follow the mouse cursor.
+
+Add a new UI effect that can designate an element as draggable and another effect that implements droppable. Maybe this can be done through an interface?
+
+Make the items in the scrollable list "draggable"
+
+* Minimap
+** DONE City names
+CLOSED: [2025-12-03 Wed 22:03]
+Display a text box below the city icon with the name of the city. This will mean going through the tiles a 2nd time and then displaying the name. Use game/ui/elements/text.go to draw text
+** DONE Minimap sprites
+In the MiniMap screen, assets.MiniMapTerrSpr_png (file assets/art/sprites/mini_map/Ttsprite.spr.png) contains 5 rows of images, each row has a different size.
+
+The rows are
+  - 13×13: 48 images (gems/diamonds in various colors)
+  - 13×20: 6 images (taller UI elements)
+  - 15×15: 1 image
+  - 16×16: 10 images (medium sprites)
+  - 23×23: 10 images (larger sprites)
+
+Update game/ui/imageutil/loader.go LoadSpriteSheet() to allows the caller to specify an image size for each row. Or write a new function that is like LoadSpriteSheet() but takes image sizes as arguments.
+
+Then update games/screens/minimap.go to use the new function to load assets.MiniMapTerrSpr_png and display the correct city
+
+* World magics
+** DONE Initial Framework
+Cities have 3 tiers:
+
+1. Hamlet
+2. Town
+3. Capital
+
+Update game/domain/city.go to use a enum for the tiers and update all calls to city tier to use the enum.
+
+World magics
+------------
+
+Each world magic is assigned to a random Capital (tier 3) city as the world is being generated. A player can buy the world magic at the city that has that world magic. Also, the world magics a player has purchased should be tracked on the player object.
+
+List of world magics and gold cost:
+
+- Sword of Resistance - 400
+- Quickening - 300
+- Leap of Fate - 300
+- Ring of the Guardian - 500
+- Haggler's Coin - 250
+- Tome of Enlightenment - 300
+- Sleight of Hand - 300
+- Staff of Thunder - 100
+- Conjurer's Will - 300
+- Dwarven Pick - 125
+- Amulet of Swampwalk - 125
+- Fruit of Sustenance - 50
+* TODO enemy difficulty scaling
+-   after completing a dungeon
+-   after buying a world magic
+-   after defeating a Planeswalker
+
+* TODO card wins/sales
+-   exclude reserved cards + other "powerful" cards
+
+* TODO dungeons
+-   make harder, fix life loss bug
+-   magic/chess puzzles? (Ex win this turn)
+
+* TODO challenges
+-   no reserved cards
+-   game loss is permadeath (hardcore mode)
+-   increased enemy strength (life, starting cards, etc)
+
+* TODO Quests
+- mana link
+- free card
+- amulet
+- quest timer
+- destination city
+
+* TODO Random Encounters
+
+* TODO Wiseman
+** [prompt] Wiseman Tales
+On the city screen a player can click on "Begin Quest" to talk to the sage of the city. Go to a new screen that with the Wiseman_png image (in embed.go) as the backgroud (no border, scale wiseman image to screen size (1024x768)). Use the assets/text/Advblocks.txt file to display the story the wiseman has to tell.
+
+Display the text in the rectangle {0,0} to {290, 768}. If the text is too large to fit in that rectangle add ellipses and use click/touch/spacebar to advance to the next block of text.
+
+At the final line, pressing click/touch/spacebar takes you back to the city screen.
+
+Use the Just functions (JustPressed, etc) to make sure it doesn't accidentally scroll 2 screens at once.
+
+* DONE Duel/Ante Screen
+CLOSED: [2026-01-02 Fri 20:52]
 Initial version will allow player to bride or "play game". If play game is chosen, randomly determine winner and give wins/losses.
 
 - [X] Clean up Rogue/Enemy refactor
 - [X] Implement bribes (static 20 gold)
 - [X] Implement duel (75% chance of winning, win 3 cards or lose ante)
-- [ ] show winning screen
-- [ ] show losing screen
+- [X] show winning screen
+- [X] show losing screen
 - [X] Give player starting deck
-- [ ] Add enemy "level" to .toml files (determines life and bribe cost) [[https://mtg.wiki/page/Magic%3A_The_Gathering_%28MicroProse%29_Preconstructed_Decks?utm_source=chatgpt.com][wiki-src]]
+- [X] Add enemy "level" to .toml files (determines life and bribe cost) [[https://mtg.wiki/page/Magic%3A_The_Gathering_%28MicroProse%29_Preconstructed_Decks?utm_source=chatgpt.com][wiki-src]]
   - [[how much ][list of characters]]
-- [ ] Add color for each enemy (to choose background)
+- [X] Add color for each enemy (to choose background)
   - or do it at runtime by counting cards/mana symbols
+
+| Tier              | Enemy Name            | Bribe |     Life |
+|-------------------+-----------------------+-------+----------|
+| Weak              | Cleric                |    40 |       10 |
+| Weak              | Seer                  |    40 |       10 |
+| Weak              | Witch                 |    40 |       10 |
+| Weak              | Sorceress             |    40 |       10 |
+| Weak              | Druid                 |    40 |       10 |
+| Aggro             | Priestess             |    40 |       12 |
+| Aggro             | Merfolk Shaman        |    40 |       12 |
+| Aggro             | Undead Knight         |    40 |       12 |
+| Aggro             | Sorcerer              |    40 |       12 |
+| Aggro             | Elvish Magi           |    40 |       12 |
+| Typical           | Crusader              |    60 |       14 |
+| Typical           | Conjurer              |    60 |       14 |
+| Typical           | Warlock               |    60 |       14 |
+| Typical           | Troll Shaman          |    60 |       14 |
+| Typical           | Enchantress           |    60 |       14 |
+| Two-color Lesser  | Tusk Guardian         |    70 |       16 |
+| Two-color Lesser  | Mind Stealer          |    70 |       16 |
+| Two-color Lesser  | Sedge Beast           |    70 |       16 |
+| Two-color Lesser  | Elementalist          |    70 |       16 |
+| Two-color Lesser  | Fungus Master         |    70 |       16 |
+| Intermediate      | Paladin               |    80 |       18 |
+| Intermediate      | Sea Dragon            |    80 |       18 |
+| Intermediate      | Vampire Lord          |    80 |       18 |
+| Intermediate      | Goblin Lord           |    80 |       18 |
+| Intermediate      | Forest Dragon         |    80 |       18 |
+| Genies            | Saltrem Tor           |    80 |       19 |
+| Genies            | Aga Galneer           |    80 |       19 |
+| Genies            | Queltosh              |    80 |       19 |
+| Genies            | Alt-a-Kesh            |    80 |       19 |
+| Two-color Greater | Lord of Fate          |   100 |       20 |
+| Two-color Greater | Winged Stallion       |   100 |       20 |
+| Two-color Greater | Centaur Shaman        |   100 |       20 |
+| Two-color Greater | Centaur Warchief      |   100 |       20 |
+| Two-color Greater | Ape Lord              |   100 |       20 |
+| Strong            | Archangel             |   100 |       22 |
+| Strong            | Shapeshifter          |   100 |       22 |
+| Strong            | Nether Fiend          |   100 |       22 |
+| Strong            | Hydra                 |   100 |       22 |
+| Strong            | Beastmaster           |   100 |       22 |
+| Dragons           | Kiska-Ra              |   110 |       24 |
+| Dragons           | Whim                  |   110 |       24 |
+| Dragons           | Mandurang             |   110 |       24 |
+| Dragons           | Dracur                |   110 |       24 |
+| Dragons           | Prismat               |   110 |       24 |
+| Henchmen          | High Priest           |     - | Up to 27 |
+| Henchmen          | Thought Invoker       |     - | Up to 27 |
+| Henchmen          | Necromancer           |     - | Up to 27 |
+| Henchmen          | War Mage              |     - | Up to 27 |
+| Henchmen          | Summoner              |     - | Up to 27 |
+| Guildlords        | Sainted One           |     - |    35-45 |
+| Guildlords        | Astral Visionary      |     - |    35-45 |
+| Guildlords        | Greater Lich (Azaar)  |     - |    35-45 |
+| Guildlords        | Dragon Lord (Kzzy'n)  |     - |    35-45 |
+| Guildlords        | Great Druid (Morgane) |     - |    35-45 |
+| Final Boss        | Arzakon               |     - |      400 |
+
 * TODO Edit deck screen
+Major UI elements needed:
+- [X] scrollable bottom section, always scroll by 1 full card?
+- [X] card hover
+- [X] deck layout
+- selecting buttons to filter library
+- search box for filtering library
+- drag-and-drop cards into/out of deck
+- right-click to sell? Or multi-select then sell button?
+- deck group by card
+
+- [X] card image for art/name only
+
+
 - [ ] Show cards
 - [ ] Sell cards
 - [ ] Add Decks to player, including active deck
+
+** DONE Card collections limits
+CLOSED: [2026-01-04 Sun 10:19]
+The list of cards in the card collection is affected by cards in the active deck. Cards in the active deck shouldn't show up in the collection list unless there are more cards in the collection than in the deck (ex. there are 13 mountains in the collection, but only 8 of them are in the deck. The mountain card should show up in the collection list, but with a count of 5 instead of 13 (13 - 8)).
+
+When the last card in a collection list is added to a deck, it should be removed from the collection list.
+** TODO Selling cards
+When you're in a town you can sell cards. Sale price is default 50% of the buy price. 60% at tier 2 cities and 75% at tier 3 cities (capitals). All cities have an amulet color and if the color identify of the card includes that amulet color it increases the price an additional 10%.
+
+Add a function in the Card object that accepts a City as an argument and returns the sale price.
+
+Then in the deck editor if you hover over a card, pressing the S key will sell the card. Also, when hovering over a card display the sales price above the card magnifier.
+
+
+** DONE Edit Deck card counts in collection screen
+CLOSED: [2026-01-02 Fri 20:37]
+In Deck Edit screen add card counts to the collection, similar to how it works in the deck edit area.
+** Magnify in deck list
+Hovering over a card in the deck area should trigger the magnifier.
+** Deck Layout
+In the draggable section of edit_deck.go I also want to display the player's deck. Use the card art images for the cards and display them in there. Also if there are multiples of the same cards only show a single card, but add teh count to the lower right hand corner of the card.
+
+Group the cards by name, even if they're different printings (ex. group all mountain cards together).
+
+Also the draggable area should be the rectangle (x,y) and should be call the deck area:
+ 300x0 - 1024x588
+
+
 * TODO player decks/card collections
 - [ ] constraints on a player's deck
   - should only allow cards in a player's collection (can check when adding a card to a deck)

@@ -1,3 +1,79 @@
+* Edit Deck Screen
+** Mapped Sprite Sheet
+Write this function in game/sprites/loader.go. including this function comment
+<Comment Start>
+Load a mapped sprite sheet using names and dimensions in spriteMap.
+Args:
+- spriteData - image file
+- spriteMap - a JSON file where the key is the name of the sprite and the value is the subimage details.
+
+Ex:
+
+  "btn1_norm": {
+    "x": 1,
+    "y": 1,
+    "width": 93,
+    "height": 27
+  },
+
+btn1_norm is the name of the sprite, x,y are the starting locations in the image and width/height are the width and height of the sprite image.
+
+
+Return
+- a map of strings to ebiten.images (subimages from the original image)
+</CommentEnd>
+
+
+Signature:
+LoadMappedSprite(spriteData []byte, spriteMap []byte) map[string]*ebiten.Image
+** Scrollable list UI
+Create a new UI element "ScrollableList".
+
+<CommentStart>
+ScrollableList is used to display a list of buttons.
+Buttons were used so that you can handle click events and also buttons contain text + and image.
+
+ScrollableList's by default show buttons on the both sides of the list based on orientation (vertical lists have vertical buttons)
+
+The buttons are "fwd" and "ff". Fwd buttons move the list one item at a time, and fwd moves the list a full page.
+
+- items - List of buttons to display
+- background - the background image to use, will be scaled to width/height
+- width - list width
+- height - list height
+- orientation - enum of vertical or horizontal
+
+</CommentEnd>
+NewScrollableList(
+  items []*elements.Button,
+  backGround *ebiten.Image,
+  width int,
+  height int,
+  orientation int (Horizontal or Vertical)
+)
+
+Scrolling is accomplished by clicking on buttons to either move 1 item or 1 screen at a time. The buttons are in the Sprite sheet assets/art/ui/MapBttns.png. You can load it with the sprite map LoadMappedSprite in game/ui/imageutil/loader.go
+
+See also assets/art/ui/MapBttns_map.json for the mapping
+
+Include the comment as a function comment
+
+** Collection cards
+Build an edit_deck screen. This screen is responsible for allowing players to edit their decks.
+
+Look at edit_deck.png to see what the screen should look like.
+- On the bottom is the list of cards the player owns. A player can add a card to their deck by double-clicking on it or clicking and dragging the card into the deck area.
+- Create a ScrollableList for this. Use assets/art/sprites/edit_deck/Winbk_Spellchain.pic.png for the background. Create an entry in assets/embed.go for this file.
+- The list contains the player's card collection
+- The dimensions of the collections portion of the screen is 1024x275 and is at the bottom of the screen.
+
+** Card Magnifier
+In the edit_deck screen, on the left-hand side of the screen is the card magnifier. It shows the full size card. Card images are 300x419. When a player hovers over a card it should show the full card in the magnifier. The card stays magnified until a player hovers over another card.
+
+For the scroll list the id of the button will be the name of the card, can use FindCardsByName() and c.CardID() to identify the specific card.
+
+
+
 * Duel Screen
 Given the image in duel_screen.png update game/screens/duel_ante.go to display that screen.
 
