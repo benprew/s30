@@ -4,3 +4,4 @@ s30.wasm
 assets/art/carddata/*
 .agcli
 .claude
+*.zip
