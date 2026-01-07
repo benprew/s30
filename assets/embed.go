@@ -39,9 +39,10 @@ var (
 	//go:embed art/sprites/world/land/Sland2.spr.png
 	Sland2_png []byte
 
+	//go:embed art/sprites/world/land/Cstline_map.txt
+	CstlineMap_txt []byte
 	//go:embed art/sprites/world/land/Cstline2.spr.png
 	Cstline2_png []byte
-
 	//go:embed art/sprites/world/land/Cstline1.spr.png
 	Cstline_png []byte
 
