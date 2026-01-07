@@ -7,6 +7,7 @@ import (
 
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/minimap"
+	"github.com/benprew/s30/game/save"
 	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
@@ -83,6 +84,14 @@ func NewGame() (*Game, error) {
 }
 
 func (g *Game) Update() error {
+	if inpututil.IsKeyJustPressed(ebiten.KeyF5) {
+		if err := g.SaveGame("quicksave"); err != nil {
+			fmt.Printf("Error saving game: %v\n", err)
+		} else {
+			fmt.Println("Game saved!")
+		}
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
 		l, err := world.NewLevel(g.player)
 		if err != nil {
@@ -163,4 +172,52 @@ func (g *Game) Draw(screen *ebiten.Image) {
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	g.ScreenW, g.ScreenH = outsideWidth, outsideHeight
 	return g.ScreenW, g.ScreenH
+}
+
+func (g *Game) SaveGame(saveName string) error {
+	level := g.Level()
+	savePath, err := save.SaveGame(g.player, level, saveName)
+	if err != nil {
+		return fmt.Errorf("failed to save game: %w", err)
+	}
+	fmt.Printf("Game saved to: %s\n", savePath)
+	return nil
+}
+
+func LoadSavedGame(savePath string) (*Game, error) {
+	player, level, err := save.LoadGame(savePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load game: %w", err)
+	}
+
+	m := minimap.NewMiniMap(level)
+	wf, err := screens.NewWorldFrame(player)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create world frame: %w", err)
+	}
+
+	scale := 1.0
+	screenW := int(1024 * scale)
+	screenH := int(768 * scale)
+
+	g := &Game{
+		ScreenW:           screenW,
+		ScreenH:           screenH,
+		camScale:          scale,
+		camScaleTo:        1,
+		mousePanX:         math.MinInt32,
+		mousePanY:         math.MinInt32,
+		worldFrame:        wf,
+		currentScreenName: screenui.WorldScr,
+		screenMap: map[screenui.ScreenName]screenui.Screen{
+			screenui.WorldScr:    screens.NewLevelScreen(level),
+			screenui.MiniMapScr:  m,
+			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
+		},
+		player: player,
+	}
+
+	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
+
+	return g, nil
 }

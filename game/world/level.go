@@ -177,6 +177,14 @@ func (l *Level) Enemies() []domain.Enemy {
 	return l.enemies
 }
 
+func (l *Level) SetEnemies(enemies []domain.Enemy) {
+	l.enemies = enemies
+}
+
+func (l *Level) ClearEnemies() {
+	l.enemies = make([]domain.Enemy, 0)
+}
+
 func (l *Level) SetEncounter(idx int) {
 	l.encounterIndex = idx
 	l.encounterPending = true
