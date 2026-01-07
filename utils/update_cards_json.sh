@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 set -euo pipefail  # Exit on error, undefined vars, and pipe failures
 
 # Get the directory where this script is located
@@ -28,14 +27,6 @@ echo "Assets directory: $ASSETS_DIR"
 # Ensure assets directory exists
 mkdir -p "$ASSETS_DIR"
 
-
-# Download the Oracle Cards file to temp location
-# echo "Downloading $ORACLE_CARDS_URL..."
-# if ! wget -O "$INPUT_FILE" "$ORACLE_CARDS_URL"; then
-#     echo "Error: Failed to download Oracle Cards file"
-#     exit 1
-# fi
-
 # The "Old school" block
 # lea - alpha
 # 2ed - unlimited
@@ -45,13 +36,12 @@ mkdir -p "$ASSETS_DIR"
 # drk - the dark
 # fem -fallen empires
 # phpr - arena & sewars of estark
+# past - Shandalar astral set
 
 # Process with jq filter
 # Note: past is the Astral Cards Set
 echo "Processing cards with jq filter..."
 if ! jq 'map(select((.set == "lea" or .set == "2ed" or .set == "arn" or .set == "leg" or .set == "atq" or .set == "drk" or .set == "past" or .set == "fem" or .set == "phpr"))) | map({
-  ScryfallID: .id,
-  OracleID: .oracle_id,
   CardName: .name,
   ManaCost: .mana_cost,
   Colors: .colors,
@@ -72,7 +62,9 @@ if ! jq 'map(select((.set == "lea" or .set == "2ed" or .set == "arn" or .set == 
   Artist: .artist,
   ManaProduction: .produced_mana,
   PriceUSD: (if .prices.usd then (.prices.usd) else .prices.eur end),
-  PngURL: .image_uris.png
+  VintageRestricted: (if .legalities.vintage == "restricted" then true else false end),
+  PngURL: .image_uris.png,
+  ArtURL: .image_uris.art_crop
 })' < "$INPUT_FILE" > "$OUTPUT_JSON"; then
     echo "Error: Failed to process cards with jq"
     exit 1

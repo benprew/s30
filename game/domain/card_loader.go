@@ -36,8 +36,9 @@ type CardJSON struct {
 	FlavorText     string
 	FrameEffects   []string
 	Watermark      string
-	Artist         string
-	PriceUSD       string
+	Artist            string
+	PriceUSD          string
+	VintageRestricted bool
 }
 
 func LoadCardDatabase(reader io.Reader) []*Card {
@@ -68,6 +69,8 @@ func LoadCardDatabase(reader io.Reader) []*Card {
 	sort.Slice(cards, func(i, j int) bool {
 		return cards[i].CardName < cards[j].CardName
 	})
+
+	fmt.Printf("Loaded %d cards\n", len(cards))
 
 	return cards
 }
@@ -114,9 +117,10 @@ func (cj *CardJSON) ToCard() *Card {
 		Frame:          cj.Frame,
 		FlavorText:     cj.FlavorText,
 		FrameEffects:   cj.FrameEffects,
-		Watermark:      cj.Watermark,
-		Artist:         cj.Artist,
-		Price:          price,
+		Watermark:         cj.Watermark,
+		Artist:            cj.Artist,
+		Price:             price,
+		VintageRestricted: cj.VintageRestricted,
 	}
 }
 

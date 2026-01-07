@@ -197,21 +197,11 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, erro
 
 	s.lvl.RemoveEnemyAt(s.idx)
 	if outcome > 0.25 {
-		var enemyDeck []*domain.Card
-		for k := range s.enemy.Character.GetActiveDeck() {
-			enemyDeck = append(enemyDeck, k)
-		}
-		var cardsToWin int
-		cardsToWin = 3
-		if len(enemyDeck) < cardsToWin {
-			cardsToWin = len(enemyDeck)
-		}
+		enemyLevel := s.enemy.Character.Level
+		cardCount := getRewardCardCount(enemyLevel)
+		enemyDeck := s.enemy.Character.GetActiveDeck()
 
-		rand.Shuffle(len(enemyDeck), func(i, j int) {
-			enemyDeck[i], enemyDeck[j] = enemyDeck[j], enemyDeck[i]
-		})
-
-		wonCards := enemyDeck[:cardsToWin]
+		wonCards := selectRewardCards(enemyDeck, cardCount)
 
 		for _, card := range wonCards {
 			if card != nil {
@@ -281,6 +271,74 @@ func selectAnteCard(deck domain.Deck, excludeBasicLand bool) *domain.Card {
 	}
 
 	return validCards[rand.Intn(len(validCards))]
+}
+
+func getRewardCardCount(enemyLevel int) int {
+	if enemyLevel <= 3 {
+		return 1
+	} else if enemyLevel <= 7 {
+		return 2
+	}
+	return 3
+}
+
+func selectFromFallbackPool(commonPool, uncommonPool, rarePool []*domain.Card) *domain.Card {
+	if len(commonPool) > 0 {
+		return commonPool[rand.Intn(len(commonPool))]
+	}
+	if len(uncommonPool) > 0 {
+		return uncommonPool[rand.Intn(len(uncommonPool))]
+	}
+	if len(rarePool) > 0 {
+		return rarePool[rand.Intn(len(rarePool))]
+	}
+	return nil
+}
+
+func selectRewardCards(enemyDeck domain.Deck, numCards int) []*domain.Card {
+	commonPool := []*domain.Card{}
+	uncommonPool := []*domain.Card{}
+	rarePool := []*domain.Card{}
+
+	for card := range enemyDeck {
+		if card.VintageRestricted {
+			continue
+		}
+
+		switch card.Rarity {
+		case "common":
+			commonPool = append(commonPool, card)
+		case "uncommon":
+			uncommonPool = append(uncommonPool, card)
+		case "rare", "mythic":
+			rarePool = append(rarePool, card)
+		}
+	}
+
+	selectedCards := []*domain.Card{}
+	for i := 0; i < numCards; i++ {
+		roll := rand.Float64()
+		var selectedCard *domain.Card
+
+		if roll < 0.70 && len(commonPool) > 0 {
+			idx := rand.Intn(len(commonPool))
+			selectedCard = commonPool[idx]
+		} else if roll < 0.95 && len(uncommonPool) > 0 {
+			idx := rand.Intn(len(uncommonPool))
+			selectedCard = uncommonPool[idx]
+		} else if len(rarePool) > 0 {
+			idx := rand.Intn(len(rarePool))
+			selectedCard = rarePool[idx]
+		} else {
+			selectedCard = selectFromFallbackPool(commonPool, uncommonPool, rarePool)
+		}
+
+		if selectedCard != nil {
+			selectedCards = append(selectedCards, selectedCard)
+		}
+	}
+
+	return selectedCards
 }
 
 func loadVisageBorder() []*ebiten.Image {

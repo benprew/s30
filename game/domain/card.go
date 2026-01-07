@@ -68,9 +68,10 @@ type Card struct {
 	Frame          string
 	FlavorText     string
 	FrameEffects   []string
-	Watermark      string
-	Artist         string
-	Price          int // in game price
+	Watermark         string
+	Artist            string
+	Price             int
+	VintageRestricted bool
 }
 
 // Cards sorted by name
