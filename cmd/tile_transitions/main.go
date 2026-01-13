@@ -67,7 +67,7 @@ func (g *Game) Update() error {
 	for _, seed := range seeds {
 		fmt.Printf("Generating layout with seed %d...\n", seed)
 		g.grid.createRandomPattern(seed)
-		g.grid.printGrid() 
+		g.grid.printGrid()
 		img := g.grid.renderWithTransitions(g.landtile, g.cstline1, g.cstline2, g.cstMap)
 		g.outputImgs = append(g.outputImgs, img)
 	}
@@ -144,7 +144,7 @@ func main() {
 			fmt.Printf("Error creating %s: %v\n", filename, err)
 			continue
 		}
-		
+
 		if err := png.Encode(f, img); err != nil {
 			fmt.Printf("Error encoding %s: %v\n", filename, err)
 			f.Close()
@@ -195,8 +195,8 @@ func parseCoastlineMap() (*CoastlineMap, error) {
 	}
 
 	type jsonSpriteData struct {
-		Full    []string            
-		Connect map[string][]string 
+		Full    []string
+		Connect map[string][]string
 	}
 
 	rawMap := make(map[string]jsonSpriteData)
@@ -227,6 +227,7 @@ func (g *TileGrid) renderWithTransitions(landtile *world.SpriteSheet, cstline1, 
 
 	outputImg := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
 
+	// Pass 1: Draw Base Tiles
 	for y := 0; y < g.height; y++ {
 		for x := 0; x < g.width; x++ {
 			pixelX := x * tileWidth
@@ -256,17 +257,31 @@ func (g *TileGrid) renderWithTransitions(landtile *world.SpriteSheet, cstline1, 
 				draw.Draw(outputImg, image.Rect(pixelX, pixelY, pixelX+bounds.Dx(), pixelY+bounds.Dy()),
 					baseSpriteImg, bounds.Min, draw.Over)
 			}
+		}
+	}
 
-			// Apply Transitions only on Plains (for this demo)
+	// Pass 2: Draw Transitions
+	for y := 0; y < g.height; y++ {
+		for x := 0; x < g.width; x++ {
 			if g.tiles[y][x] == Plains {
+				pixelX := x * tileWidth
+				pixelY := y * tileHeight / 2
+
+				if y%2 != 0 {
+					pixelX += tileWidth / 2
+				}
+
 				transitions := g.getEdgeTransitions(x, y, cstMap, cstline1)
 				for _, pt := range transitions {
 					if pt.sprite != nil {
+						if x == 0 && y == 1 {
+							fmt.Printf("DEBUG (0,1) Drawing Transition Sprite at Row %d Col %d Offset (%d,%d)\n", pt.row, pt.col, pt.offsetX, pt.offsetY)
+						}
 						bounds := pt.sprite.Bounds()
 						spriteImg := ebitenToImage(pt.sprite)
 						drawX := pixelX + pt.offsetX
-					drawY := pixelY + pt.offsetY
-					draw.Draw(outputImg, image.Rect(drawX, drawY, drawX+bounds.Dx(), drawY+bounds.Dy()),
+						drawY := pixelY + pt.offsetY
+						draw.Draw(outputImg, image.Rect(drawX, drawY, drawX+bounds.Dx(), drawY+bounds.Dy()),
 							spriteImg, bounds.Min, draw.Over)
 					}
 				}
@@ -304,12 +319,12 @@ type PositionedTransition struct {
 }
 
 type EdgeDef struct {
-	Name string
+	Name        string
 	NeighborIdx int
-	StartIdx int
-	EndIdx int
-	PrevEdge string
-	NextEdge string
+	StartIdx    int
+	EndIdx      int
+	PrevEdge    string
+	NextEdge    string
 }
 
 // getEdgeTransitions implements the Autotiling Algorithm using "Open/Closed" logic.
@@ -345,13 +360,13 @@ func (g *TileGrid) getEdgeTransitions(x, y int, cstMap *CoastlineMap, cstline1 [
 		openEnd := neighbors[e.EndIdx] == Water
 
 		if x == 0 && y == 1 {
-			fmt.Printf("DEBUG (0,1) Edge %s: Active (Neighbor %d is Water). Start(Idx %d)=%v, End(Idx %d)=%v\n", 
+			fmt.Printf("DEBUG (0,1) Edge %s: Active (Neighbor %d is Water). Start(Idx %d)=%v, End(Idx %d)=%v\n",
 				e.Name, e.NeighborIdx, e.StartIdx, openStart, e.EndIdx, openEnd)
 		}
 
 		// 3. Find Pair
 		transitionPair := g.findSmartTransitionPair(e.Name, openStart, openEnd, e.PrevEdge, e.NextEdge, cstMap)
-		
+
 		if x == 0 && y == 1 && len(transitionPair) > 0 {
 			fmt.Printf("DEBUG (0,1) Edge %s: Selected Pair %v\n", e.Name, transitionPair)
 		}
@@ -363,16 +378,16 @@ func (g *TileGrid) getEdgeTransitions(x, y int, cstMap *CoastlineMap, cstline1 [
 				c2, _ := strconv.Atoi(parts[1])
 
 				tileCorner1Pos := tileCornerPositions[c1]
-			tileCorner2Pos := tileCornerPositions[c2]
+				tileCorner2Pos := tileCornerPositions[c2]
 
 				midpointX := (tileCorner1Pos[0] + tileCorner2Pos[0]) / 2
 				midpointY := (tileCorner1Pos[1] + tileCorner2Pos[1]) / 2
 
 				t1OffsetX := tileCorner2Pos[0] - transitionCorner0[0]
-			t1OffsetY := tileCorner2Pos[1] - transitionCorner0[1]
+				t1OffsetY := tileCorner2Pos[1] - transitionCorner0[1]
 
 				t2OffsetX := midpointX - transitionCorner0[0]
-			t2OffsetY := midpointY - transitionCorner0[1]
+				t2OffsetY := midpointY - transitionCorner0[1]
 
 				offsets := [2][2]int{
 					{t1OffsetX, t1OffsetY},
@@ -433,6 +448,14 @@ func (g *TileGrid) findSmartTransitionPair(edge string, openStart, openEnd bool,
 		return nil
 	}
 
+	// Sort candidates for determinism
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].row != candidates[j].row {
+			return candidates[i].row < candidates[j].row
+		}
+		return candidates[i].col < candidates[j].col
+	})
+
 	possiblePairs := []CandidatePair{}
 
 	for _, c1 := range candidates {
@@ -445,7 +468,7 @@ func (g *TileGrid) findSmartTransitionPair(edge string, openStart, openEnd bool,
 					continue
 				}
 				spriteKey2 := fmt.Sprintf("%d,%d", c2.row, c2.col)
-				
+
 				isConnected := false
 				for _, connectedKey := range connectList {
 					if connectedKey == spriteKey2 {
@@ -459,39 +482,39 @@ func (g *TileGrid) findSmartTransitionPair(edge string, openStart, openEnd bool,
 					spriteData2 := cstMap.sprites[spriteKey2]
 
 					// Check Open End
-				c1ConnectsNext := hasConnection(spriteData1.connect, nextEdge)
-				if openEnd {
-					if c1ConnectsNext {
-						score += 2
+					c1ConnectsNext := hasConnection(spriteData1.connect, nextEdge)
+					if openEnd {
+						if c1ConnectsNext {
+							score += 2
+						} else {
+							score -= 2
+						}
 					} else {
-						score -= 2
+						if !c1ConnectsNext {
+							score += 2
+						} else {
+							score -= 2
+						}
 					}
-				} else {
-					if !c1ConnectsNext {
-						score += 2
-					} else {
-						score -= 2
-					}
-				}
 
-				// Check Open Start
-				c2ConnectsPrev := hasConnection(spriteData2.connect, prevEdge)
-				if openStart {
-					if c2ConnectsPrev {
-						score += 2
+					// Check Open Start
+					c2ConnectsPrev := hasConnection(spriteData2.connect, prevEdge)
+					if openStart {
+						if c2ConnectsPrev {
+							score += 2
+						} else {
+							score -= 2
+						}
 					} else {
-						score -= 2
+						if !c2ConnectsPrev {
+							score += 2
+						} else {
+							score -= 2
+						}
 					}
-				} else {
-					if !c2ConnectsPrev {
-						score += 2
-					} else {
-						score -= 2
-					}
-				}
-				
+
 					possiblePairs = append(possiblePairs, CandidatePair{
-						pair: []TransitionSprite{c1, c2},
+						pair:  []TransitionSprite{c1, c2},
 						score: score,
 					})
 				}
@@ -500,7 +523,8 @@ func (g *TileGrid) findSmartTransitionPair(edge string, openStart, openEnd bool,
 	}
 
 	if len(possiblePairs) > 0 {
-		sort.Slice(possiblePairs, func(i, j int) bool {
+		// Use SliceStable for deterministic output when scores are tied
+		sort.SliceStable(possiblePairs, func(i, j int) bool {
 			return possiblePairs[i].score > possiblePairs[j].score
 		})
 		return possiblePairs[0].pair
