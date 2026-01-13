@@ -1,3 +1,173 @@
+* Overland
+** Minimap
+*** DONE City names
+CLOSED: [2025-12-03 Wed 22:03]
+Display a text box below the city icon with the name of the city. This will mean going through the tiles a 2nd time and then displaying the name. Use game/ui/elements/text.go to draw text
+*** DONE Minimap sprites
+In the MiniMap screen, assets.MiniMapTerrSpr_png (file assets/art/sprites/mini_map/Ttsprite.spr.png) contains 5 rows of images, each row has a different size.
+
+The rows are
+  - 13×13: 48 images (gems/diamonds in various colors)
+  - 13×20: 6 images (taller UI elements)
+  - 15×15: 1 image
+  - 16×16: 10 images (medium sprites)
+  - 23×23: 10 images (larger sprites)
+
+Update game/ui/imageutil/loader.go LoadSpriteSheet() to allows the caller to specify an image size for each row. Or write a new function that is like LoadSpriteSheet() but takes image sizes as arguments.
+
+Then update games/screens/minimap.go to use the new function to load assets.MiniMapTerrSpr_png and display the correct city
+
+** TODO Coastlines (tile merge)
+*** Overlay algorithm
+I'm building a 2d isometric game that has a world you walk around in. That world can have different types of tiles (plains, forest, water, etc). These tiles are often grouped together in various shapes (ex. water tiles forming a lake or a river). I want you to describe an algorithm that could be used to detect transition points when the tiles change (ex. from a plains to a river tile) and suggest those connections.
+
+Here's what I'm thinking:
+
+For each tile, look at it's orthogonal neighbors and for each different type, note what type it is and what type of transition is needed. A transition could be required for a single edge or for multiple edges. Also, the type of transition may continue into the next neighbor so you would need to mark the transition as "open" vs "closed".
+
+Ex.
+
+W P1
+W P2
+
+Using P1 as the tile, you would need a W transition on the West side and because P2's West side is also W, the P2 transition South should be "open" so the transition can continue into P2.
+
+Ex.
+
+W P1
+P P
+
+In this example we P1 needs a W transition on the West side, but it should be closed to the South side.
+
+This means the algorithm will only need to look at a tiles neighbors and neighbor's neighbors to decide what transition to make.
+
+<><>
+ <><>
+*** Tile map
+Build a tile map that describes how to join the transition sprites together.
+
+Analyze the assets/art/sprites/world/land/Cstline1.spr.png file and look at the first 28 sprites (see cmd/tile_transitions). They should all be water sprites. Now find out which pieces connect together. You can do that by analyzing the lines of blue pixels on each of the corners. Ex. the first sprite has a blue edge that runs from 0,27 to 14,33 (could be off by a few pixels). That looks like it should match up with sprite in row 5 column 4, it has a blue edge that runs from 357,204 to 372,212.
+
+Write a script that will find these edges that are similar and print them out. These are the pieces that can connect to each other.
+
+Edges must be less that 50 (euclidean distance).
+
+Also corners can only connect in certain ways. ex. 3->2 means starts at corner 3, edge is heading towards 2
+
+| P1   | P2   |
+|------+------|
+| 3->2 | 0->1 |
+| 1->2 | 0->3 |
+| 2->1 | 3->0 |
+| 1->0 | 2->3 |
+
+Ok, lets simplify this. The tiles can only have an edge on a corner. The pixel points of each tile subimage corner are:
+
+| Corner | Point (X,Y) |
+|--------+-------------|
+|      0 | 51,0        |
+|      1 | 102,25      |
+|      2 | 51,51       |
+|      3 | 0,25        |
+
+Edges can only be on the line between 1 corner and it's preceding and next corner. Ex from corner 0, edges can only be 0->1 or 0->3 an edge is not from 0->2. This should simplify edge finding a lot. Now instead of counting blue pixels you can count the number of non-transparent pixels.
+
+For the tile at 0,0 in the sprite you should have 2 edges. 1 ~50 pixels long from 3->0 and 1 ~25 pixels long from 3->2.
+
+For the third tile in the row, you should have 3 edges 1 ~25pixels long from 0->1, 1 ~50pixels long from 0->3 and 1 ~25 pixels long from 3->2.
+
+*** Edge connections
+Build a tile map that describes how to join the transition sprites together.
+
+Analyze the assets/art/sprites/world/land/Cstline1.spr.png file and look at the first 28 sprites (see cmd/tile_transitions for sprite size). They should all be water sprites. Now find out which pieces connect together. You can do that by analyzing the lines of blue pixels on each of the corners. Ex. the first sprite has a blue edge that runs from 0,27 to 14,33 (could be off by a few pixels). That looks like it should match up with sprite in row 5 column 4, it has a blue edge that runs from 357,204 to 372,212.
+
+Write a script that will find these edges that are similar and print them out. These are the pieces that can connect to each other.
+*** Tile map with edge connections
+Build a tile map that describes how to join the transition sprites together.
+
+Cstline1.spr.png is a sprite image with 4 columns and 21 rows. For now we only care about the first 7 rows.
+
+Look at cmd/tile_transition/edge_connections.txt to see how the tiles connect to each other. We need to store that info as a tile map that can be used by the game to build tile transitions between land tiles in the game.
+
+We also need to identify the full-length edges. These will be used to place them correctly against the tile type (ex. the first 28 images are water transitions, so we want the long edge to be up against a water tile)
+
+See cmd/tile_transitions/analyze_edges.py for how to identiy edges. It currently is set to look for connection edges (ednges < 40). Now we want to find edges that are at least 40
+
+Suggest a tile map format that can be used to store this metadata about transition tiles.
+
+*** Overview
+Write a separate program that will generate a smaller world and overlay the transition tiles. I want to see some examples of tile transitions.
+
+Each tiles has four corners in a diamond shape, starting from the top 0-3 representing N,E,S,W directions. When different tile types meet (ex. Plains/Forest) there is an additional threshold tile added. These are the Cstline_png and Cstline2_png sprites.
+*** Cstline sprites
+CstlineMap_txt is 7 rows with 4 columns per row. Cstline1_png has 3 sets of tiles, 1 for Water, Marsh and Forest tiles. Cstline2_png has 2 sets of tiles: Sand and Ice.
+
+Each set of tiles is the same, just for different types of terrain.
+
+*** Cstline Map format
+The map file CstlineMap_txt describes what corners the threshold merges. There are 4 images per line and are separate by the '|' character in the map file.
+
+Ex:
+
+0,1|0,3 means there are 2 images, the first covers the 0,1 corners and the second covers the 0,3 corners.
+
+*** Overlay algorithm
+After placing tiles when generating the world, go back through the map and for each tile look at the surrounding tiles. If there is a change from one type to another, add a threshold tile overlay to visually transition the tiles.
+
+Ex:
+
+legend: (W = Water, P = Plains)
+
+Tiles are offset because they're diamond shaped
+
+W W P1
+ W P2
+
+Each tile requires 2 transition pieces to complete the length of the tile.
+
+P1 has 2 transition pieces T1 and T2. Both have only a single full edge from 0->3 or 3->0. T1 must have T2 in it's list of connect edges.
+
+T1's 0 corner starts at P1's 0 corner. T2's 0 corner starts halfway between P1 0 and 3 corner.
+
+P2 has 2 transition pieces T3 and T4. Both have a single full edge from 0->3 or 3->0. T2 must have T3 in it's list of connect edges and T3 must have T4 in it's list of connect edges. T3's 0 corner starts at P2's 0 corner. T4's 0 corner starts halfway between P2's 0 and 3 corner.
+
+Read Cstline_map.json to see the map of tiles. the map defines a set of transitions. Each tile type (Water, Forest, Marsh, Sand, Ice) has the same set of transitions, just styled to match the tile type. The full tileset is 28 tiles (7 rows, 4 cols). Cstline1.spr.png has (in order) Water, Marsh and Forest. Cstline2.spr.png has Sand and Ice.
+
+To start build a map of the above example tile layout and write a solution that only places the water transitions.
+
+Modify cmd/tile_transitions to do this.
+
+TRANSITION_CORNER_POSITIONS = {
+    0: (51, 0),  # Top
+    1: (101, 25),  # Right
+    2: (51, 51),  # Bottom
+    3: (0, 25),  # Left
+}
+
+TILE_CORNER_POSITIONS = {
+    0: (103,0),
+    1: (205,50),
+    2: (103,100),
+    3: (0, 50)
+}
+
+# Valid edge directions (corner -> adjacent corner, both directions)
+EDGE_DIRECTIONS = [
+    (0, 1),  # Top to Right
+    (1, 0),  # Right to Top
+    (1, 2),  # Right to Bottom
+    (2, 1),  # Bottom to Right
+    (2, 3),  # Bottom to Left
+    (3, 2),  # Left to Bottom
+    (3, 0),  # Left to Top
+    (0, 3),  # Top to Left
+]
+
+
+
+
+
+
 * DONE Deck/Collection Refactor
 I want to refactor how decks and card collections are managed. Currently a player has a card collection but all Characters have a deck. Characters consist of the player and rogues (enemies).
 
@@ -5,8 +175,8 @@ Instead of player having a collection, characters should have a card collection,
 
 type CollectionItem struct {
  Card
- Count int  // number of cards in the collection
- DeckCounts []int // index of deck that has the count of the Card in the deck
+ Count int  - number of cards in the collection
+ DeckCounts []int - index of deck that has the count of the Card in the deck
 }
 
 To determine if a card is in a deck you have to iterate over the list of collectionitems. When a player loses a duel, it decrements the cards Count and iterates over DeckCounts and sets the value in each array to the min of Count and the value of DeckCounts.
@@ -43,8 +213,8 @@ See game/utils/httpzip/reader.go for a partial implementation
 
 
 * Starting screens
-* Saving the game
-* Adding terrain thresholds
+* TODO Saving the game
+Come up with a way to save the game state. You'll want to save the generated world (tiles and cities), the location of all current enements and the player object. Then implement a save function and write some tests.
 * DONE Antigravity CLI
 User provides prompt file and worktree name
 
@@ -128,24 +298,6 @@ Add a new UI effect that can designate an element as draggable and another effec
 
 Make the items in the scrollable list "draggable"
 
-* Minimap
-** DONE City names
-CLOSED: [2025-12-03 Wed 22:03]
-Display a text box below the city icon with the name of the city. This will mean going through the tiles a 2nd time and then displaying the name. Use game/ui/elements/text.go to draw text
-** DONE Minimap sprites
-In the MiniMap screen, assets.MiniMapTerrSpr_png (file assets/art/sprites/mini_map/Ttsprite.spr.png) contains 5 rows of images, each row has a different size.
-
-The rows are
-  - 13×13: 48 images (gems/diamonds in various colors)
-  - 13×20: 6 images (taller UI elements)
-  - 15×15: 1 image
-  - 16×16: 10 images (medium sprites)
-  - 23×23: 10 images (larger sprites)
-
-Update game/ui/imageutil/loader.go LoadSpriteSheet() to allows the caller to specify an image size for each row. Or write a new function that is like LoadSpriteSheet() but takes image sizes as arguments.
-
-Then update games/screens/minimap.go to use the new function to load assets.MiniMapTerrSpr_png and display the correct city
-
 * World magics
 ** DONE Initial Framework
 Cities have 3 tiers:
@@ -181,7 +333,7 @@ List of world magics and gold cost:
 -   after defeating a Planeswalker
 
 * TODO card wins/sales
--   exclude reserved cards + other "powerful" cards
+- After defeating an enemy select cards based on rarity. Common and uncommon cards should be given as rewards more often and rare cards should be less frequent. Reserved cards (Black Lotus, Moxen, etc) should never be given as rewards.
 
 * TODO dungeons
 -   make harder, fix life loss bug
@@ -202,7 +354,7 @@ List of world magics and gold cost:
 * TODO Random Encounters
 
 * TODO Wiseman
-** [prompt] Wiseman Tales
+** DONE [prompt] Wiseman Tales
 On the city screen a player can click on "Begin Quest" to talk to the sage of the city. Go to a new screen that with the Wiseman_png image (in embed.go) as the backgroud (no border, scale wiseman image to screen size (1024x768)). Use the assets/text/Advblocks.txt file to display the story the wiseman has to tell.
 
 Display the text in the rectangle {0,0} to {290, 768}. If the text is too large to fit in that rectangle add ellipses and use click/touch/spacebar to advance to the next block of text.
@@ -222,7 +374,6 @@ Initial version will allow player to bride or "play game". If play game is chose
 - [X] show losing screen
 - [X] Give player starting deck
 - [X] Add enemy "level" to .toml files (determines life and bribe cost) [[https://mtg.wiki/page/Magic%3A_The_Gathering_%28MicroProse%29_Preconstructed_Decks?utm_source=chatgpt.com][wiki-src]]
-  - [[how much ][list of characters]]
 - [X] Add color for each enemy (to choose background)
   - or do it at runtime by counting cards/mana symbols
 
