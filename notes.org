@@ -1,3 +1,11 @@
+* TODO Publicity
+- Monthly status updates
+  - r/shandalar
+  - shandalar discord
+  - pig squad?
+  - blog
+- [[https://pigsquad.com/form-prge-2025][Retro Game Submission form]]
+- [[https://pigsquad.com/form-prge-2025][Ebiten splash logo]]
 * Overland
 ** Minimap
 *** DONE City names
