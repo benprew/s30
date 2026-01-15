@@ -3,6 +3,7 @@ package save
 import (
 	"encoding/json"
 	"fmt"
+	"image"
 	"os"
 	"path/filepath"
 	"time"
@@ -130,7 +131,7 @@ func serializeWorld(level *world.Level) (WorldData, error) {
 
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			tile := level.Tile(world.TilePoint{X: x, Y: y})
+			tile := level.Tile(image.Point{X: x, Y: y})
 			if tile != nil && tile.IsCity {
 				cityData := CityData{
 					X:           x,
@@ -225,7 +226,7 @@ func deserializeWorld(wd *WorldData, player *domain.Player) (*world.Level, error
 	w, h := level.Size()
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			tile := level.Tile(world.TilePoint{X: x, Y: y})
+			tile := level.Tile(image.Point{X: x, Y: y})
 			if tile != nil {
 				tile.IsCity = false
 			}
@@ -233,7 +234,7 @@ func deserializeWorld(wd *WorldData, player *domain.Player) (*world.Level, error
 	}
 
 	for _, cityData := range wd.Cities {
-		tile := level.Tile(world.TilePoint{X: cityData.X, Y: cityData.Y})
+		tile := level.Tile(image.Point{X: cityData.X, Y: cityData.Y})
 		if tile == nil {
 			return nil, fmt.Errorf("invalid city location: (%d, %d)", cityData.X, cityData.Y)
 		}

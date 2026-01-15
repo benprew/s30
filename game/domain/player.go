@@ -150,6 +150,7 @@ func (p *Player) Move(screenW, screenH int) (dirBits int) {
 	return dirBits
 }
 
+// Pixel X,Y location of player (not tile)
 func (p *Player) Loc() image.Point {
 	return image.Point{X: p.X, Y: p.Y}
 }

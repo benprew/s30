@@ -59,6 +59,10 @@ var (
 	//go:embed art/sprites/world/land/Locatn03.spr.png
 	Dungeons_png []byte
 
+	// Random Encounters
+	//go:embed art/sprites/world/land/Locatn07.spr.png
+	RandomEncounters_png []byte
+
 	// World frame
 	//go:embed art/sprites/world/Advinter1024.pic.png
 	WorldFrame_png []byte

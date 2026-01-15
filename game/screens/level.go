@@ -2,6 +2,7 @@ package screens
 
 import (
 	"fmt"
+	"image"
 	"math"
 
 	"github.com/benprew/s30/game/ui/screenui"
@@ -37,7 +38,7 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 
 	currentTile := s.Level.CharacterTile()
 
-	if currentTile != (world.TilePoint{X: -1, Y: -1}) {
+	if currentTile != (image.Point{X: -1, Y: -1}) {
 		tile := s.Level.Tile(currentTile)
 		if tile != nil {
 			if tile.IsCity && prevTile != currentTile {

@@ -120,6 +120,19 @@ func (g *Game) Update() error {
 			}
 		}
 	}
+
+	// Check for Random Encounter
+	if name == screenui.WorldScr {
+		lvl := g.Level()
+		if lvl.RandomEncounterPending() {
+			if spriteIdx, ok := lvl.TakeRandomEncounter(); ok {
+				sprite := lvl.GetEncounterSprite(spriteIdx)
+				g.screenMap[screenui.RandomEncounterScr] = screens.NewRandomEncounterScreen(sprite)
+				name = screenui.RandomEncounterScr
+			}
+		}
+	}
+
 	g.currentScreenName = name
 
 	if g.CurrentScreen().IsFramed() {
@@ -147,7 +160,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Print game info.
 	charT := g.Level().CharacterTile()
-	charP := g.Level().CharacterPos()
+	charP := g.Level().Player.Loc()
 	closestCityTile, closestCityDistance := g.Level().FindClosestCity()
 
 	// Get mouse cursor screen position

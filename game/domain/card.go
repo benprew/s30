@@ -50,24 +50,24 @@ type CardSet struct {
 type Card struct {
 	CardName string
 	CardSet
-	ScryfallID     string // Used to get images
-	OracleID       string
-	ManaCost       string   // ex. {3}{G}{R}
-	ManaProduction []string // This only has the possible colors of production
-	Colors         []string
-	ColorIdentity  []string
-	Keywords       []string
-	CardType       CardType
-	TypeLine       string
-	Subtypes       []string
-	Abilities      []string
-	Text           string
-	Power          int // -1 means variable
-	Toughness      int // -1 means variable
-	Rarity         string
-	Frame          string
-	FlavorText     string
-	FrameEffects   []string
+	ScryfallID        string // Used to get images
+	OracleID          string
+	ManaCost          string   // ex. {3}{G}{R}
+	ManaProduction    []string // This only has the possible colors of production
+	Colors            []string
+	ColorIdentity     []string
+	Keywords          []string
+	CardType          CardType
+	TypeLine          string
+	Subtypes          []string
+	Abilities         []string
+	Text              string
+	Power             int // -1 means variable
+	Toughness         int // -1 means variable
+	Rarity            string
+	Frame             string
+	FlavorText        string
+	FrameEffects      []string
 	Watermark         string
 	Artist            string
 	Price             int
@@ -155,7 +155,7 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 
 		if err != nil {
 			data = assets.CardBlank_png
-			fmt.Printf("WARN: Unable to load card image for: %s, using blank", filename)
+			fmt.Printf("WARN: Unable to load card image for: %s, using blank\n", filename)
 		}
 		fullImg, err = imageutil.LoadImage(data)
 		if err != nil {

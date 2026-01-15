@@ -1,6 +1,8 @@
 package world
 
 import (
+	"fmt"
+
 	"github.com/benprew/s30/game/domain"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -17,8 +19,9 @@ type PositionedSprite struct {
 type Tile struct {
 	sprites           []*ebiten.Image
 	positionedSprites []*PositionedSprite
-	roadSprites       []*ebiten.Image // Added for roads
-	IsCity            bool            // Indicates if this tile represents a city
+	roadSprites       []*ebiten.Image     // Added for roads
+	encounterSprites  []*PositionedSprite // Random encounters
+	IsCity            bool                // Indicates if this tile represents a city
 	City              domain.City
 	TerrainType       int // Added terrain type
 }
@@ -94,16 +97,29 @@ func (t *Tile) AddRoadSprite(s *ebiten.Image) {
 	t.roadSprites = append(t.roadSprites, s)
 }
 
-// Transition tile between terrain types (Cstline/Cstline2)
-//
-// sides:
-// 2,2,3,2 L,T,TL,R
-// 4,3,4,3 T,TR,T,RB
-// 2,3,2,4 B,BR,L,B
-// 3,4,3,2 BL,B,BL,L
-// 3,2,4,3 BL,T,L,TL
-// 4,3,2,3 L,TR,R,TR
-// 3,4,3,4 BR,R,BR,R
+func (t *Tile) AddRandomEncounter(s1, s2 *ebiten.Image) {
+	// xOffset := 10.0
+	yOffset := 2.0
+	t.encounterSprites = []*PositionedSprite{
+		&PositionedSprite{
+			Image:   s1,
+			OffsetX: 0,
+			OffsetY: -float64(s1.Bounds().Dy()) / yOffset,
+		},
+		&PositionedSprite{
+			Image:   s2,
+			OffsetX: 0,
+			OffsetY: -float64(s2.Bounds().Dy()) / yOffset,
+		},
+	}
+	fmt.Println("Added random ecounter sprite:")
+	fmt.Println(s1.Bounds())
+	fmt.Println(t.encounterSprites)
+}
+
+func (t *Tile) RemoveRandomEncounter() {
+	t.encounterSprites = []*PositionedSprite{}
+}
 
 // Draw draws the Tile on the screen using the provided options.
 func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
@@ -122,6 +138,15 @@ func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 
 	// Draw positioned sprites (foliage, cities) with their offsets
 	for _, ps := range t.positionedSprites {
+		// Create a copy of the options to avoid modifying the original
+		posOptions := &ebiten.DrawImageOptions{}
+		posOptions.GeoM.Translate(ps.OffsetX, ps.OffsetY)
+		posOptions.GeoM.Concat(options.GeoM)
+
+		screen.DrawImage(ps.Image, posOptions)
+	}
+	// Draw encounter sprites (if any)
+	for _, ps := range t.encounterSprites {
 		// Create a copy of the options to avoid modifying the original
 		posOptions := &ebiten.DrawImageOptions{}
 		posOptions.GeoM.Translate(ps.OffsetX, ps.OffsetY)

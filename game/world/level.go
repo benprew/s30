@@ -30,6 +30,11 @@ type Level struct {
 	encounterIndex   int
 	encounterPending bool
 
+	randomEncounters       []RandomEncounter
+	encounterSprites       [][]*ebiten.Image
+	randomEncounterPending bool
+	pendingEncounterSprite int
+
 	ticksSinceLastInteraction int
 	totalTicks                int
 }
@@ -116,6 +121,11 @@ func NewLevel(c *domain.Player) (*Level, error) {
 		return nil, fmt.Errorf("failed to spawn enemies: %s", err)
 	}
 
+	if err := l.LoadRandomEncounterSprites(); err != nil {
+		return nil, fmt.Errorf("failed to load random encounter sprites: %s", err)
+	}
+	l.SpawnEncounters(10)
+
 	fmt.Printf("NewLevel execution time: %s\n", time.Since(startTime))
 	return l, nil
 }
@@ -164,10 +174,16 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 		_ = l.enemies[i].Update(l.Player.Loc())
 	}
 
+	l.UpdateEncounters()
+
 	if l.totalTicks%20 == 0 && l.ticksSinceLastInteraction >= 70 {
 		if err := l.SpawnEnemies(1); err != nil {
 			fmt.Printf("Warning: failed to spawn enemy: %s\n", err)
 		}
+	}
+
+	if l.totalTicks%EncounterSpawnRate == 0 && len(l.randomEncounters) < MaxRandomEncounters {
+		l.SpawnEncounters(1)
 	}
 
 	return nil
@@ -191,7 +207,7 @@ func (l *Level) SetEncounter(idx int) {
 	l.ticksSinceLastInteraction = 0
 }
 
-// x,y is the position of the tile, width and height are the dimensions of the tile
+// x,y is the pixel position of the tile, width and height are the dimensions of the tile
 // Check if the tile is visible on the screen
 // return the position of the tile in the screen
 func (l *Level) isVisible(x, y, width, height, screenW, screenH int) bool {
@@ -206,6 +222,14 @@ func (l *Level) isVisible(x, y, width, height, screenW, screenH int) bool {
 	}
 
 	return true
+}
+
+// the X,Y pixels visible to the screen
+func (l *Level) screenRect(screenW, screenH int) image.Rectangle {
+	pLoc := l.Player.Loc()
+	min := image.Point{pLoc.X - screenW/2, pLoc.Y - screenH/2}
+	max := image.Point{pLoc.X + screenW/2, pLoc.Y + screenH/2}
+	return image.Rectangle{min, max}
 }
 
 func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
@@ -292,8 +316,20 @@ func (l *Level) LevelH() int {
 	return l.tileHeight / 2 * l.h
 }
 
+// TileToPixel returns the center pixel location of the tile at x, y.
+func (l *Level) TileToPixel(p image.Point) image.Point {
+	px := p.X * l.tileWidth
+	py := p.Y * l.tileHeight / 2
+	if p.Y%2 != 0 {
+		px += l.tileWidth / 2
+	}
+
+	// Add half width and height to get to the center of the diamond
+	return image.Point{px + l.tileWidth/2, py + l.tileHeight/2}
+}
+
 // Tile returns the tile at the provided coordinates, or nil.
-func (l *Level) Tile(p TilePoint) *Tile {
+func (l *Level) Tile(p image.Point) *Tile {
 	if p.X >= 0 && p.Y >= 0 && p.X < l.w && p.Y < l.h {
 		return l.Tiles[p.Y][p.X]
 	}
@@ -319,7 +355,7 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale
 
 	for y := 0; y < l.h; y++ {
 		for x := 0; x < l.w; x++ {
-			tile := l.Tile(TilePoint{x, y})
+			tile := l.Tile(image.Point{x, y})
 			if tile == nil {
 				continue
 			}
@@ -351,11 +387,7 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale
 	}
 }
 
-func (l *Level) CharacterPos() image.Point {
-	return l.Player.Loc()
-}
-
-func (l *Level) CharacterTile() TilePoint {
+func (l *Level) CharacterTile() image.Point {
 	pLoc := l.Player.Loc()
 	pixelX := pLoc.X
 	pixelY := pLoc.Y
@@ -366,10 +398,10 @@ func (l *Level) CharacterTile() TilePoint {
 
 	// Ensure the tile coordinates are within bounds
 	if pixelX < 0 || tileX >= l.w || pixelY < 0 || tileY >= l.h {
-		return TilePoint{-1, -1} // Return invalid coordinates if out of bounds
+		return image.Point{-1, -1} // Return invalid coordinates if out of bounds
 	}
 
-	return TilePoint{tileX, tileY}
+	return image.Point{tileX, tileY}
 }
 
 // EncounterPending returns true if an encounter was recorded and not yet taken.
@@ -416,25 +448,21 @@ func (l *Level) SetEnemyEngaged(idx int, v bool) {
 }
 
 // FindClosestCity returns the tile coordinates and distance of the closest city to the player
-func (l *Level) FindClosestCity() (TilePoint, float64) {
+func (l *Level) FindClosestCity() (image.Point, float64) {
 	pLoc := l.Player.Loc()
-	closestTile := TilePoint{-1, -1}
+	closestTile := image.Point{-1, -1}
 	minDistance := math.MaxFloat64
 
 	for y := 0; y < l.h; y++ {
 		for x := 0; x < l.w; x++ {
-			tile := l.Tile(TilePoint{x, y})
+			tile := l.Tile(image.Point{x, y})
 			if tile != nil && tile.IsCity {
 				// Calculate pixel position of this tile
-				pixelX := x * l.tileWidth
-				pixelY := y * l.tileHeight / 2
-				if y%2 != 0 {
-					pixelX += l.tileWidth / 2
-				}
+				pixel := l.TileToPixel(image.Point{x, y})
 
 				// Calculate distance from player
-				dx := float64(pixelX - pLoc.X)
-				dy := float64(pixelY - pLoc.Y)
+				dx := float64(pixel.X - pLoc.X)
+				dy := float64(pixel.Y - pLoc.Y)
 				distance := math.Sqrt(dx*dx + dy*dy)
 
 				// Apply camera scale to the distance
@@ -442,7 +470,7 @@ func (l *Level) FindClosestCity() (TilePoint, float64) {
 
 				if scaledDistance < minDistance {
 					minDistance = scaledDistance
-					closestTile = TilePoint{x, y}
+					closestTile = image.Point{x, y}
 				}
 			}
 		}

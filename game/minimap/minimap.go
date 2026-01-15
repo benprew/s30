@@ -2,6 +2,7 @@ package minimap
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"strings"
 
@@ -155,7 +156,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 				cOpts.GeoM.Translate(0, -13)
 				screen.DrawImage(city, cOpts)
 			}
-			p := world.TilePoint{X: j, Y: i}
+			p := image.Point{X: j, Y: i}
 			if pLoc == p && m.blinkCounter%10 < 7 {
 				cOpts := &ebiten.DrawImageOptions{}
 				cOpts.GeoM.Concat(opts.GeoM)

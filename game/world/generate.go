@@ -37,10 +37,8 @@ const (
 	TerrainSnow
 )
 
-type TilePoint image.Point
-
 // different directions based on which y row you're on, because it's a zigzag pattern
-var Directions = [2][8]TilePoint{
+var Directions = [2][8]image.Point{
 	{{0, 2}, {0, -2}, {1, 0}, {-1, 0}, {0, -1}, {-1, -1}, {0, 1}, {-1, 1}},
 	{{0, 2}, {0, -2}, {1, 0}, {-1, 0}, {1, -1}, {0, -1}, {1, 1}, {0, 1}},
 }
@@ -130,10 +128,10 @@ func generateTerrain(w, h int) [][]float64 {
 }
 
 // mapTerrainTypes assigns terrain based on noise values and returns potential city locations.
-func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites [][]*ebiten.Image) []TilePoint {
+func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites [][]*ebiten.Image) []image.Point {
 	// Fill each tile with one or more sprites randomly.
 	l.Tiles = make([][]*Tile, l.h)
-	validCityLocations := []TilePoint{} // Store potential city coordinates
+	validCityLocations := []image.Point{} // Store potential city coordinates
 
 	for y := range l.h {
 		l.Tiles[y] = make([]*Tile, l.w)
@@ -189,7 +187,7 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 
 			// If not water and not border, add to potential city locations
 			if !isWater && !isBorderSpace {
-				validCityLocations = append(validCityLocations, TilePoint{x, y})
+				validCityLocations = append(validCityLocations, image.Point{x, y})
 			}
 		}
 	}
@@ -197,12 +195,12 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 }
 
 // placeCities places cities and returns their locations.
-func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.Image, numCities, minDistance int) {
+func (l *Level) placeCities(validLocations []image.Point, citySprites [][]*ebiten.Image, numCities, minDistance int) {
 	if len(validLocations) == 0 || numCities <= 0 {
 		fmt.Println("Warning: No valid locations provided or numCities <= 0.")
 	}
 
-	placedCities := []TilePoint{}
+	placedCities := []image.Point{}
 
 	// Shuffle valid locations for random placement
 	rand.Shuffle(len(validLocations), func(i, j int) {
@@ -272,7 +270,7 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 
 	// Randomly assign world magics to cities
 	if len(placedCities) > 0 {
-		shuffledCities := make([]TilePoint, len(placedCities))
+		shuffledCities := make([]image.Point, len(placedCities))
 		copy(shuffledCities, placedCities)
 		rand.Shuffle(len(shuffledCities), func(i, j int) {
 			shuffledCities[i], shuffledCities[j] = shuffledCities[j], shuffledCities[i]
@@ -300,10 +298,10 @@ func (l *Level) placeCities(validLocations []TilePoint, citySprites [][]*ebiten.
 
 // connectCityBFS finds the shortest path from a new city to the nearest existing
 // road tile or another city using Breadth-First Search.
-func (l *Level) connectCityBFS(start TilePoint) []TilePoint {
-	queue := []TilePoint{start}
-	visited := make(map[TilePoint]TilePoint) // Stores visited node -> parent node for path reconstruction
-	visited[start] = start                   // Mark start as visited, parent is itself
+func (l *Level) connectCityBFS(start image.Point) []image.Point {
+	queue := []image.Point{start}
+	visited := make(map[image.Point]image.Point) // Stores visited node -> parent node for path reconstruction
+	visited[start] = start                       // Mark start as visited, parent is itself
 
 	for len(queue) > 0 {
 		current := queue[0]
@@ -316,7 +314,7 @@ func (l *Level) connectCityBFS(start TilePoint) []TilePoint {
 		tile := l.Tile(current)
 		if current != start && (tile.IsCity || tile.IsRoad()) {
 			// Target found, reconstruct path
-			path := []TilePoint{}
+			path := []image.Point{}
 			temp := current
 			for temp != start { // Backtrack until we reach the start node
 				path = append(path, temp)
@@ -339,7 +337,7 @@ func (l *Level) connectCityBFS(start TilePoint) []TilePoint {
 		dirs := Directions[current.Y%2]
 		// fmt.Println("current:", current, "dirs:", dirs)
 		for _, n := range dirs {
-			neighborPos := TilePoint{X: current.X + n.X, Y: current.Y + n.Y}
+			neighborPos := image.Point{X: current.X + n.X, Y: current.Y + n.Y}
 			// fmt.Println("current:", current, "neighborPos:", neighborPos)
 
 			// Check bounds
@@ -366,11 +364,11 @@ func (l *Level) connectCityBFS(start TilePoint) []TilePoint {
 
 // getDirection determines the compass direction from one tile to an adjacent tile.
 // because we render tiles in a zigzag pattern, it's not a simple X/Y grid
-func getDirection(from, to TilePoint) string {
+func getDirection(from, to image.Point) string {
 	dx := to.X - from.X
 	dy := to.Y - from.Y
 
-	dir := TilePoint{dx, dy}
+	dir := image.Point{dx, dy}
 
 	dirs := Directions[from.Y%2]
 	for i, d := range dirs {
@@ -398,7 +396,7 @@ func (l *Level) getRoadSprite(direction string) *ebiten.Image {
 }
 
 // drawRoadAlongPath adds road sprites to tiles along a given path.
-func (l *Level) drawRoadAlongPath(path []TilePoint) {
+func (l *Level) drawRoadAlongPath(path []image.Point) {
 	// fmt.Println("path:", path)
 	if len(path) < 2 {
 		return // Need at least two points for a path segment
