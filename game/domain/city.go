@@ -38,6 +38,8 @@ type City struct {
 	CardsForSale       []*Card
 	AmuletColor        ColorMask
 	AssignedWorldMagic *WorldMagic
+	QuestBanDays       int
+	IsManaLinked       bool
 }
 
 func (c *City) FoodCost() int {

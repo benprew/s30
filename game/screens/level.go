@@ -42,7 +42,7 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 		tile := s.Level.Tile(currentTile)
 		if tile != nil {
 			if tile.IsCity && prevTile != currentTile {
-				return screenui.CityScr, NewCityScreen(&tile.City, s.Level.Player), nil
+				return screenui.CityScr, NewCityScreen(&tile.City, s.Level.Player, s.Level), nil
 			}
 		}
 	}

@@ -166,8 +166,21 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 	l.totalTicks++
 	l.ticksSinceLastInteraction++
 
+	currentDay := l.Player.Days
 	if err := l.Player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
 		return err
+	}
+	if l.Player.Days > currentDay {
+		// New day, update city bans
+		for y := 0; y < l.h; y++ {
+			for x := 0; x < l.w; x++ {
+				if l.Tiles[y][x] != nil && l.Tiles[y][x].IsCity {
+					if l.Tiles[y][x].City.QuestBanDays > 0 {
+						l.Tiles[y][x].City.QuestBanDays--
+					}
+				}
+			}
+		}
 	}
 
 	for i := range l.enemies {

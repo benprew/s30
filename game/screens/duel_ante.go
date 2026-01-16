@@ -197,6 +197,12 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, erro
 
 	s.lvl.RemoveEnemyAt(s.idx)
 	if outcome > 0.25 {
+		if s.player.ActiveQuest != nil && 
+			s.player.ActiveQuest.Type == domain.QuestTypeDefeatEnemy && 
+			s.player.ActiveQuest.EnemyName == s.enemyName {
+			s.player.ActiveQuest.IsCompleted = true
+		}
+
 		enemyLevel := s.enemy.Character.Level
 		cardCount := getRewardCardCount(enemyLevel)
 		enemyDeck := s.enemy.Character.GetActiveDeck()

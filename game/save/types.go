@@ -21,6 +21,22 @@ type PlayerData struct {
 	Amulets        map[int]int         `json:"amulets"`
 	WorldMagics    []string            `json:"world_magics"`
 	CardCollection []CardCollectionItem `json:"card_collection"`
+	ActiveQuest    *QuestData          `json:"active_quest,omitempty"`
+	Days           int                 `json:"days"`
+}
+
+type QuestData struct {
+	Type           int    `json:"type"`
+	TargetCityName string `json:"target_city_name"`
+	TargetEnemyID  string `json:"target_enemy_id"`
+	EnemyName      string `json:"enemy_name"`
+	OriginCityName string `json:"origin_city_name"`
+	DaysRemaining  int    `json:"days_remaining"`
+	RewardType     int    `json:"reward_type"`
+	RewardCardID   string `json:"reward_card_id,omitempty"`
+	RewardAmulets  int    `json:"reward_amulets"`
+	AmuletColor    int    `json:"amulet_color"`
+	IsCompleted    bool   `json:"is_completed"`
 }
 
 type CardCollectionItem struct {
@@ -44,6 +60,8 @@ type CityData struct {
 	CardsForSale       []string `json:"cards_for_sale"`
 	AssignedWorldMagic string   `json:"assigned_world_magic,omitempty"`
 	TerrainType        int      `json:"terrain_type"`
+	QuestBanDays       int      `json:"quest_ban_days"`
+	IsManaLinked       bool     `json:"is_mana_linked"`
 }
 
 type EnemyData struct {
