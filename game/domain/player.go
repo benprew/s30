@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"image"
+	"math"
 	"time"
 
 	"github.com/benprew/s30/game/ui"
@@ -19,7 +20,12 @@ type Player struct {
 	Amulets     map[ColorMask]int
 	WorldMagics []*WorldMagic
 	ActiveDeck  int
+	ActiveQuest *Quest
+	Days        int
+	TimeAccumulator float64
 }
+
+const TicksPerDay = 5000.0
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
@@ -82,8 +88,22 @@ func (p *Player) NumCards() int {
 }
 
 func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
+	oldX, oldY := p.X, p.Y
 	dirBits := p.Move(screenW, screenH)
 	p.CharacterInstance.Update(dirBits)
+
+	if p.X != oldX || p.Y != oldY {
+		// Player moved
+		dist := math.Sqrt(math.Pow(float64(p.X-oldX), 2) + math.Pow(float64(p.Y-oldY), 2))
+		p.TimeAccumulator += dist
+		if p.TimeAccumulator >= TicksPerDay {
+			p.TimeAccumulator -= TicksPerDay
+			p.Days++
+			if p.ActiveQuest != nil {
+				p.ActiveQuest.DaysRemaining--
+			}
+		}
+	}
 
 	if p.X < screenW/2 {
 		p.X = screenW / 2

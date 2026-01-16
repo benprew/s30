@@ -12,6 +12,7 @@ import (
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/layout"
 	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -25,6 +26,7 @@ type CityScreen struct {
 	Buttons []*elements.Button
 	City    *domain.City
 	Player  *domain.Player
+	Level   *world.Level
 }
 
 type ButtonConfig struct {
@@ -34,11 +36,12 @@ type ButtonConfig struct {
 	Position *layout.Position
 }
 
-func NewCityScreen(city *domain.City, player *domain.Player) *CityScreen {
+func NewCityScreen(city *domain.City, player *domain.Player, level *world.Level) *CityScreen {
 	return &CityScreen{
 		Buttons: mkButtons(SCALE-0.4, city),
 		City:    city,
 		Player:  player,
+		Level:   level,
 	}
 }
 
@@ -78,7 +81,7 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 			}
 		case "quest":
 			if b.IsClicked() {
-				return screenui.WisemanScr, NewWisemanScreen(), nil
+				return screenui.WisemanScr, NewWisemanScreen(c.City, c.Player, c.Level), nil
 			}
 		case "buyfood":
 			if b.IsClicked() {

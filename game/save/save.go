@@ -97,6 +97,26 @@ func serializePlayer(player *domain.Player) (PlayerData, error) {
 		Life:       player.Life,
 		ActiveDeck: player.ActiveDeck,
 		Amulets:    make(map[int]int),
+		Days:       player.Days,
+	}
+
+	if player.ActiveQuest != nil {
+		q := player.ActiveQuest
+		pd.ActiveQuest = &QuestData{
+			Type:           int(q.Type),
+			TargetCityName: q.TargetCityName,
+			TargetEnemyID:  q.TargetEnemyID,
+			EnemyName:      q.EnemyName,
+			OriginCityName: q.OriginCityName,
+			DaysRemaining:  q.DaysRemaining,
+			RewardType:     int(q.RewardType),
+			RewardAmulets:  q.RewardAmulets,
+			AmuletColor:    int(q.AmuletColor),
+			IsCompleted:    q.IsCompleted,
+		}
+		if q.RewardCard != nil {
+			pd.ActiveQuest.RewardCardID = q.RewardCard.CardID()
+		}
 	}
 
 	for colorMask, count := range player.Amulets {
@@ -139,6 +159,8 @@ func serializeWorld(level *world.Level) (WorldData, error) {
 					Name:        tile.City.Name,
 					AmuletColor: int(tile.City.AmuletColor),
 					TerrainType: tile.TerrainType,
+					QuestBanDays: tile.City.QuestBanDays,
+					IsManaLinked: tile.City.IsManaLinked,
 				}
 
 				cityData.CardsForSale = make([]string, len(tile.City.CardsForSale))
@@ -184,6 +206,26 @@ func deserializePlayer(pd *PlayerData) (*domain.Player, error) {
 	player.Food = pd.Food
 	player.Life = pd.Life
 	player.ActiveDeck = pd.ActiveDeck
+	player.Days = pd.Days
+
+	if pd.ActiveQuest != nil {
+		q := pd.ActiveQuest
+		player.ActiveQuest = &domain.Quest{
+			Type:           domain.QuestType(q.Type),
+			TargetCityName: q.TargetCityName,
+			TargetEnemyID:  q.TargetEnemyID,
+			EnemyName:      q.EnemyName,
+			OriginCityName: q.OriginCityName,
+			DaysRemaining:  q.DaysRemaining,
+			RewardType:     domain.RewardType(q.RewardType),
+			RewardAmulets:  q.RewardAmulets,
+			AmuletColor:    domain.ColorMask(q.AmuletColor),
+			IsCompleted:    q.IsCompleted,
+		}
+		if q.RewardCardID != "" {
+			player.ActiveQuest.RewardCard = findCardByID(q.RewardCardID)
+		}
+	}
 
 	player.Amulets = make(map[domain.ColorMask]int)
 	for colorMaskInt, count := range pd.Amulets {
@@ -244,6 +286,8 @@ func deserializeWorld(wd *WorldData, player *domain.Player) (*world.Level, error
 			X:           cityData.X,
 			Y:           cityData.Y,
 			AmuletColor: domain.ColorMask(cityData.AmuletColor),
+			QuestBanDays: cityData.QuestBanDays,
+			IsManaLinked: cityData.IsManaLinked,
 		}
 
 		city.CardsForSale = make([]*domain.Card, len(cityData.CardsForSale))
