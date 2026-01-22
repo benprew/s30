@@ -36,27 +36,6 @@ type Player struct {
 	IsAI        bool
 }
 
-func (p *Player) DeepCopy() *Player {
-	newPlayer := &Player{
-		LifeTotal:   p.LifeTotal,
-		Hand:        slices.Clone(p.Hand),
-		Library:     slices.Clone(p.Library),
-		Battlefield: slices.Clone(p.Battlefield),
-		Graveyard:   slices.Clone(p.Graveyard),
-		Exile:       slices.Clone(p.Exile),
-		Turn:        p.Turn, // Assuming Turn doesn't need to be deep copied
-		HasLost:     p.HasLost,
-		InputChan:   p.InputChan,
-		IsAI:        p.IsAI,
-	}
-
-	newManaPool := make(ManaPool, len(p.ManaPool))
-	copy(newManaPool, p.ManaPool)
-	newPlayer.ManaPool = newManaPool
-
-	return newPlayer
-}
-
 func (p *Player) DrawCard() error {
 	if len(p.Library) == 0 {
 		return fmt.Errorf("no cards in library")
@@ -72,6 +51,18 @@ func (p *Player) DrawCard() error {
 
 func (p *Player) ReceiveDamage(amount int) {
 	p.LifeTotal -= amount
+}
+
+func (p *Player) Name() string {
+	return fmt.Sprintf("Player %d", p.ID)
+}
+
+func (p *Player) TargetType() TargetType {
+	return TargetTypePlayer
+}
+
+func (p *Player) IsDead() bool {
+	return p.LifeTotal <= 0
 }
 
 func (p *Player) Notify() {

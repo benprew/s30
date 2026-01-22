@@ -1,13 +1,8 @@
 package core_engine
 
-import (
-	"fmt"
-)
-
 type DirectDamage struct {
-	tgt     Targetable
-	Amount  int // Amount of damage dealt
-	tgtType string
+	tgt    Targetable
+	Amount int
 }
 
 func (c *DirectDamage) Name() string                { return "Direct Damage" }
@@ -18,6 +13,5 @@ func (c *DirectDamage) Cast() Event {
 	return c
 }
 func (c *DirectDamage) Resolve() {
-	fmt.Printf("Lightning Bolt deals 3 damage to %s\n", c.tgt.Name())
 	c.tgt.ReceiveDamage(c.Amount)
 }

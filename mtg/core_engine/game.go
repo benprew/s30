@@ -43,19 +43,14 @@ func (g *GameState) StartGame() {
 	for _, player := range g.Players {
 		for j := range player.Library {
 			player.Library[j].ID = eID
-			fmt.Println(player.Library[j])
 			g.CardMap[eID] = player.Library[j]
 			eID++
 		}
 	}
-	for i, player := range g.Players {
+	for _, player := range g.Players {
 		for range 7 {
 			player.DrawCard()
 		}
-
-		fmt.Println(i)
-		fmt.Println(player.Hand)
-		fmt.Println(player.Library)
 	}
 }
 
@@ -63,17 +58,12 @@ func (g *GameState) StartGame() {
 // it should receive that it's casting LB and have already chosen a target. No decisions should be
 // remaining to be made. The UI should handle all the decisions before it's passed off to the game
 func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
-	fmt.Printf("Waiting for player %d input on %s\n", player.ID, player.Turn.Phase)
-
 	AITurnTimeout := 5 * time.Second
 
-	// Wait for input from the specific player who has priority
 	if player.IsAI {
 		select {
 		case action = <-player.InputChan:
 		case <-time.After(AITurnTimeout):
-			// If AI times out, default to passing priority
-			fmt.Printf("AI player %d timed out, passing priority.\n", player.ID)
 			action = PlayerAction{Type: "PassPriority"}
 		}
 	} else {
@@ -94,9 +84,7 @@ func (g *GameState) Resolve(item *StackItem) error {
 	}
 	events := item.Events
 
-	fmt.Println("Resolve: Events", events)
 	for _, e := range events {
-		fmt.Println("Resolving event", e.Name())
 		e.Resolve()
 		if e.Target() != nil && e.Target().TargetType() == TargetTypeCard {
 			tgt := e.Target().(*Card)
@@ -130,7 +118,6 @@ func (g *GameState) FindCard(args FindArgs, zone []*Card) *Card {
 		return g.CardMap[args.ID]
 	}
 	for _, c := range zone {
-		fmt.Println(c)
 		if c.Name() == args.Name || c.ID == args.ID {
 			return c
 		}
@@ -149,8 +136,6 @@ func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackRes
 		g.PlayLand(player, action.Card)
 	case "PassPriority":
 		return g.Stack.Next(EventPlayerPassesPriority, nil)
-	default:
-		fmt.Println("Unknown action type:", action.Type)
 	}
 	return -1, nil
 }
@@ -164,19 +149,14 @@ func (g *GameState) RunStack() {
 		if cnt > 500 {
 			break
 		}
-		fmt.Println("Stack State: ", g.Stack.CurrentState)
 		switch result {
 		case ActPlayerPriority:
-			fmt.Println("Waiting for player1")
 			action := g.WaitForPlayerInput(player)
-			fmt.Println("Got Action", action)
 			result, _ = g.ProcessAction(player, action)
 		case NonActPlayerPriority:
-			fmt.Println("Waiting for player2")
 			action := g.WaitForPlayerInput(player2)
 			result, _ = g.ProcessAction(player2, action)
 		case Resolve:
-			// TODO: resolve cards
 			g.Resolve(item)
 			result, item = g.Stack.Next(-1, nil)
 		default:
@@ -184,16 +164,13 @@ func (g *GameState) RunStack() {
 		}
 		cnt++
 	}
-
 }
 
 func (g *GameState) NextTurn() {
 	player := g.Players[g.CurrentPlayer]
 	for player.Turn.Phase != PhaseEnd {
-		fmt.Println("Phase:", player.Turn.Phase)
 		cards, err := g.CardsWithActions(player)
 		if err != nil {
-			fmt.Println("Error getting cards with actions:", err)
 			return
 		}
 		switch player.Turn.Phase {
@@ -289,8 +266,6 @@ func (g *GameState) CanCast(player *Player, card *Card) bool {
 	copy(pPool, player.ManaPool)
 	pool := g.AvailableMana(player, pPool)
 
-	fmt.Println("CanCast: mana pool", pool)
-
 	return pool.CanPay(card.ManaCost) && g.hasTarget(card)
 }
 
@@ -319,14 +294,9 @@ func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
 	return true
 }
 
-// PlayGame simulates the game turn by turn until only one player remains who hasn't lost.
-// It returns the slice of players who have not lost when the game ends (ideally one winner).
 func PlayGame(g *GameState) []*Player {
-	fmt.Println("Starting game simulation...")
 	maxTurns := 500
 	for totalTurns := range maxTurns {
-		// Check win conditions at the start of the loop, in case the game
-		// state is already resolved before the first turn.
 		g.CheckWinConditions()
 
 		nonLosingPlayers := []*Player{}
@@ -336,27 +306,13 @@ func PlayGame(g *GameState) []*Player {
 			}
 		}
 
-		// If 1 or fewer players haven't lost, the game is over.
 		if len(nonLosingPlayers) <= 1 {
-			fmt.Println("Game Over.")
-			if len(nonLosingPlayers) == 1 {
-				// Assuming Player has a Name field for printing the winner
-				// If not, you might need to adjust this line.
-				// fmt.Printf("Winner: %s\n", nonLosingPlayers[0].Name)
-				fmt.Printf("Winner found.\n")
-			} else {
-				fmt.Println("Draw or no winner.")
-			}
 			return nonLosingPlayers
 		}
 
-		// Call the method to advance the turn for the current player.
 		g.NextTurn()
 
-		// Optional: Add a safety break for infinite loops in case win condition is never met
-		// For example, after a certain number of turns:
 		if totalTurns > maxTurns {
-			fmt.Println("Game ended due to turn limit.")
 			return nonLosingPlayers
 		}
 	}
