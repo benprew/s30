@@ -88,7 +88,6 @@ func (g *GameState) Resolve(item *StackItem) error {
 		return fmt.Errorf("Resolve: Item is nil")
 	}
 
-	p := item.Player
 	c := item.Card
 	if c == nil {
 		return fmt.Errorf("Resolve: nil card")
@@ -96,27 +95,27 @@ func (g *GameState) Resolve(item *StackItem) error {
 	events := item.Events
 
 	fmt.Println("Resolve: Events", events)
-	// events = append(events, c.Actions...)
 	for _, e := range events {
 		fmt.Println("Resolving event", e.Name())
 		e.Resolve()
-		if e.Target().TargetType() == TargetTypeCard {
+		if e.Target() != nil && e.Target().TargetType() == TargetTypeCard {
 			tgt := e.Target().(*Card)
 			if tgt.IsDead() {
-				card := tgt
-				if !moveCard(card, &p.Battlefield, &p.Graveyard) {
-					return fmt.Errorf("unable to move card from battlefield to graveyard")
+				if err := tgt.Owner.MoveTo(tgt, ZoneGraveyard); err != nil {
+					return fmt.Errorf("unable to move card to graveyard: %w", err)
 				}
 			}
 		}
 	}
-	// Move card from hand to correct zone
+
 	if c.CardType != domain.CardTypeInstant && c.CardType != domain.CardTypeSorcery {
-		p.RemoveFrom(c, p.Hand, "Hand")
-		p.AddTo(c, "Battlefield")
+		if err := c.Owner.MoveTo(c, ZoneBattlefield); err != nil {
+			return fmt.Errorf("unable to move card to battlefield: %w", err)
+		}
 	} else {
-		p.RemoveFrom(c, p.Hand, "Hand")
-		p.AddTo(c, "Graveyard")
+		if err := c.Owner.MoveTo(c, ZoneGraveyard); err != nil {
+			return fmt.Errorf("unable to move card to graveyard: %w", err)
+		}
 	}
 	return nil
 }
@@ -158,7 +157,7 @@ func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackRes
 
 func (g *GameState) RunStack() {
 	player := g.Players[g.CurrentPlayer]
-	player2 := g.Players[g.CurrentPlayer+1%2]
+	player2 := g.Players[(g.CurrentPlayer+1)%len(g.Players)]
 	cnt := 0
 	result, item := g.Stack.Next(-1, nil)
 	for g.Stack.CurrentState != StateEmpty {

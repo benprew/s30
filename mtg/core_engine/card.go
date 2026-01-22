@@ -11,6 +11,8 @@ type EntityID int
 type Card struct {
 	domain.Card
 	ID          EntityID // In a game, each card will have an entitiyID
+	Owner       *Player
+	CurrentZone Zone
 	Tapped      bool
 	Active      bool
 	DamageTaken int
@@ -72,10 +74,12 @@ func (c *Card) UnMarshalActions() {
 }
 
 // NewCardFromDomain creates a new core_engine Card from a domain Card
-func NewCardFromDomain(domainCard *domain.Card, id EntityID) *Card {
+func NewCardFromDomain(domainCard *domain.Card, id EntityID, owner *Player) *Card {
 	return &Card{
 		Card:        *domainCard,
 		ID:          id,
+		Owner:       owner,
+		CurrentZone: ZoneLibrary,
 		Tapped:      false,
 		Active:      true,
 		DamageTaken: 0,
@@ -87,10 +91,11 @@ func NewCardFromDomain(domainCard *domain.Card, id EntityID) *Card {
 
 // DeepCopy creates a deep copy of the Card struct.
 func (c *Card) DeepCopy() *Card {
-	// Create a new Card instance
 	newCard := &Card{
-		ID:          c.ID, // ID might need special handling depending on its use (e.g., unique per game instance)
+		ID:          c.ID,
 		Card:        c.Card,
+		Owner:       c.Owner,
+		CurrentZone: c.CurrentZone,
 		Tapped:      c.Tapped,
 		Active:      c.Active,
 		DamageTaken: c.DamageTaken,

@@ -184,8 +184,8 @@ func TestCastLightningBolt(t *testing.T) {
 
 	game.PlayLand(player, mtn)
 	elf := game.FindCard(FindArgs{Name: "Llanowar Elves"}, player.Hand)
-	if ok := moveCard(elf, &player.Hand, &player.Battlefield); !ok {
-		t.Errorf("Unable to move Elves")
+	if err := player.MoveTo(elf, ZoneBattlefield); err != nil {
+		t.Errorf("Unable to move Elves: %v", err)
 	}
 
 	bolt := game.FindCard(FindArgs{Name: "Lightning Bolt"}, player.Hand)

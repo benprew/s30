@@ -5,6 +5,17 @@ import (
 	"slices"
 )
 
+type Zone int
+
+const (
+	ZoneLibrary Zone = iota
+	ZoneHand
+	ZoneBattlefield
+	ZoneGraveyard
+	ZoneExile
+	ZoneStack
+)
+
 type PlayerAction struct {
 	Type string
 	Card *Card
@@ -54,6 +65,7 @@ func (p *Player) DrawCard() error {
 	card := p.Library[0]
 	p.Library = p.Library[1:]
 	p.Hand = append(p.Hand, card)
+	card.CurrentZone = ZoneHand
 
 	return nil
 }
@@ -66,47 +78,52 @@ func (p *Player) Notify() {
 	// TODO: Send notification to player
 }
 
-func (p *Player) RemoveFrom(c *Card, loc []*Card, locStr string) {
-	for i, n := range loc {
-		if n == c {
-			f := loc[0:i]
-			l := loc[i+1:]
-			loc = f
-			loc = append(loc, l...)
+func (p *Player) getZone(zone Zone) *[]*Card {
+	switch zone {
+	case ZoneHand:
+		return &p.Hand
+	case ZoneLibrary:
+		return &p.Library
+	case ZoneBattlefield:
+		return &p.Battlefield
+	case ZoneGraveyard:
+		return &p.Graveyard
+	case ZoneExile:
+		return &p.Exile
+	default:
+		return nil
+	}
+}
+
+func (p *Player) MoveTo(card *Card, destZone Zone) error {
+	if card.Owner != p {
+		return fmt.Errorf("card %s is not owned by this player", card.CardName)
+	}
+
+	srcZone := p.getZone(card.CurrentZone)
+	if srcZone == nil {
+		return fmt.Errorf("invalid source zone %d", card.CurrentZone)
+	}
+
+	destSlice := p.getZone(destZone)
+	if destSlice == nil {
+		return fmt.Errorf("invalid destination zone %d", destZone)
+	}
+
+	found := false
+	for i, c := range *srcZone {
+		if c == card {
+			*srcZone = slices.Delete(*srcZone, i, i+1)
+			found = true
 			break
 		}
 	}
 
-	switch locStr {
-	case "Hand":
-		p.Hand = loc
+	if !found {
+		return fmt.Errorf("card %s not found in zone %d", card.CardName, card.CurrentZone)
 	}
-}
 
-func (p *Player) AddTo(c *Card, loc string) {
-	switch loc {
-	case "Hand":
-		p.Hand = append(p.Hand, c)
-	case "Library":
-		p.Library = append(p.Library, c)
-	case "Battlefield":
-		p.Battlefield = append(p.Battlefield, c)
-	case "Graveyard":
-		p.Graveyard = append(p.Graveyard, c)
-	case "Exile":
-		p.Exile = append(p.Exile, c)
-	}
-}
-
-func moveCard(card *Card, source *[]*Card, dest *[]*Card) bool {
-	for i, c := range *source {
-		if c == card {
-			// Add to destination
-			*dest = append(*dest, c)
-			// Remove from source
-			*source = slices.Delete(*source, i, i+1)
-			return true
-		}
-	}
-	return false // card not found
+	*destSlice = append(*destSlice, card)
+	card.CurrentZone = destZone
+	return nil
 }

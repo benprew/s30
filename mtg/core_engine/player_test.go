@@ -9,82 +9,52 @@ import (
 
 func createTestPlayer(numPlayers int) []*Player {
 	players := []*Player{}
-	entityID := EntityID(1) // Start with ID 1 and increment for each card
+	entityID := EntityID(1)
 
 	for i := range numPlayers {
-		library := []*Card{}
-
-		// Add 2 Forest cards
-		for range 2 {
-			domainCard := domain.FindCardByName("Forest")
-			fmt.Println(domainCard)
-			if domainCard != nil {
-				coreCard := NewCardFromDomain(domainCard, entityID)
-				library = append(library, coreCard)
-				entityID++
-			}
-		}
-
-		// Add 2 Llanowar Elves cards
-		for range 2 {
-			domainCard := domain.FindCardByName("Llanowar Elves")
-			fmt.Println(domainCard)
-			if domainCard != nil {
-				coreCard := NewCardFromDomain(domainCard, entityID)
-				library = append(library, coreCard)
-				entityID++
-			}
-		}
-
-		// Add Lightning Bolt
-		domainCard := domain.FindCardByName("Lightning Bolt")
-		if domainCard != nil {
-			coreCard := NewCardFromDomain(domainCard, entityID)
-			library = append(library, coreCard)
-			entityID++
-		}
-
-		// Add Mountain
-		domainCard = domain.FindCardByName("Mountain")
-		if domainCard != nil {
-			coreCard := NewCardFromDomain(domainCard, entityID)
-			library = append(library, coreCard)
-			entityID++
-		}
-
-		// Add Sol Ring
-		domainCard = domain.FindCardByName("Sol Ring")
-		if domainCard != nil {
-			coreCard := NewCardFromDomain(domainCard, entityID)
-			library = append(library, coreCard)
-			entityID++
-		}
-
-		fmt.Println("Library")
-		for _, c := range library {
-			fmt.Println(c)
-		}
-
 		player := &Player{
 			ID:          EntityID(i),
 			LifeTotal:   20,
 			ManaPool:    ManaPool{},
 			Hand:        []*Card{},
-			Library:     library,
+			Library:     []*Card{},
 			Battlefield: []*Card{},
 			Graveyard:   []*Card{},
 			Exile:       []*Card{},
 			Turn:        &Turn{},
-			InputChan:   make(chan PlayerAction, 100), // Still need a channel even for AI, as WaitForPlayerInput uses it
-			IsAI:        true,                         // Make test players AI so WaitForPlayerInput doesn't block indefinitely
+			InputChan:   make(chan PlayerAction, 100),
+			IsAI:        true,
 		}
+
+		addCard := func(name string) {
+			domainCard := domain.FindCardByName(name)
+			if domainCard != nil {
+				coreCard := NewCardFromDomain(domainCard, entityID, player)
+				player.Library = append(player.Library, coreCard)
+				entityID++
+			}
+		}
+
+		addCard("Forest")
+		addCard("Forest")
+		addCard("Llanowar Elves")
+		addCard("Llanowar Elves")
+		addCard("Lightning Bolt")
+		addCard("Mountain")
+		addCard("Sol Ring")
+
+		fmt.Println("Library")
+		for _, c := range player.Library {
+			fmt.Println(c)
+		}
+
 		players = append(players, player)
 	}
 
 	return players
 }
 
-func TestRemoveFrom(t *testing.T) {
+func TestMoveTo(t *testing.T) {
 	player := createTestPlayer(1)[0]
 
 	for range 7 {
@@ -92,20 +62,34 @@ func TestRemoveFrom(t *testing.T) {
 	}
 
 	card := player.Hand[0]
-	player.RemoveFrom(card, player.Hand, "Hand")
+	err := player.MoveTo(card, ZoneGraveyard)
+	if err != nil {
+		t.Errorf("MoveTo failed: %v", err)
+	}
 
 	if len(player.Hand) != 6 {
-		t.Errorf("Card %v not removed from hand: %v", card, player.Hand)
+		t.Errorf("Card not removed from hand, expected 6 got %d", len(player.Hand))
+	}
+
+	if len(player.Graveyard) != 1 {
+		t.Errorf("Card not added to graveyard, expected 1 got %d", len(player.Graveyard))
+	}
+
+	if card.CurrentZone != ZoneGraveyard {
+		t.Errorf("Card zone not updated, expected %d got %d", ZoneGraveyard, card.CurrentZone)
 	}
 }
 
-func TestAddTo(t *testing.T) {
-	player := createTestPlayer(1)[0]
+func TestMoveToWrongOwner(t *testing.T) {
+	players := createTestPlayer(2)
+	player1 := players[0]
+	player2 := players[1]
 
-	card := player.Library[0]
-	player.AddTo(card, "Hand")
+	player1.DrawCard()
+	card := player1.Hand[0]
 
-	if len(player.Hand) != 1 {
-		t.Errorf("Card %v not added to hand: %v", card, player.Hand)
+	err := player2.MoveTo(card, ZoneGraveyard)
+	if err == nil {
+		t.Errorf("Expected error when moving card owned by different player")
 	}
 }
