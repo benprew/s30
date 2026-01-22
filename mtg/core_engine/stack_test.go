@@ -1,10 +1,116 @@
 package core_engine
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 )
+
+func TestStackEventPlayerAddsAction(t *testing.T) {
+	stack := NewStack()
+
+	if stack.CurrentState != StateStartStack {
+		t.Errorf("Expected initial state StateStartStack, got %d", stack.CurrentState)
+	}
+
+	result, _ := stack.Next(-1, nil)
+	if stack.CurrentState != StateWaitPlayer {
+		t.Errorf("Expected StateWaitPlayer after start, got %d", stack.CurrentState)
+	}
+	if result != ActPlayerPriority {
+		t.Errorf("Expected ActPlayerPriority, got %d", result)
+	}
+
+	item := &StackItem{Events: nil, Player: nil, Card: nil}
+	result, _ = stack.Next(EventPlayerAddsAction, item)
+
+	if stack.ConsecutivePasses != 0 {
+		t.Errorf("ConsecutivePasses should reset to 0 after action, got %d", stack.ConsecutivePasses)
+	}
+	if len(stack.Items) != 1 {
+		t.Errorf("Stack should have 1 item, got %d", len(stack.Items))
+	}
+	if result != ActPlayerPriority {
+		t.Errorf("Expected ActPlayerPriority after adding action, got %d", result)
+	}
+}
+
+func TestStackLIFOResolution(t *testing.T) {
+	stack := NewStack()
+
+	item1 := &StackItem{Card: &Card{}}
+	item1.Card.CardName = "First"
+	item2 := &StackItem{Card: &Card{}}
+	item2.Card.CardName = "Second"
+	item3 := &StackItem{Card: &Card{}}
+	item3.Card.CardName = "Third"
+
+	stack.Next(-1, nil)
+	stack.Next(EventPlayerAddsAction, item1)
+	stack.Next(EventPlayerAddsAction, item2)
+	stack.Next(EventPlayerAddsAction, item3)
+
+	stack.Next(EventPlayerPassesPriority, nil)
+	_, resolved := stack.Next(EventPlayerPassesPriority, nil)
+
+	if resolved.Card.CardName != "Third" {
+		t.Errorf("Expected Third to resolve first (LIFO), got %s", resolved.Card.CardName)
+	}
+
+	stack.Next(-1, nil)
+	stack.Next(EventPlayerPassesPriority, nil)
+	_, resolved = stack.Next(EventPlayerPassesPriority, nil)
+
+	if resolved.Card.CardName != "Second" {
+		t.Errorf("Expected Second to resolve second, got %s", resolved.Card.CardName)
+	}
+
+	stack.Next(-1, nil)
+	stack.Next(EventPlayerPassesPriority, nil)
+	_, resolved = stack.Next(EventPlayerPassesPriority, nil)
+
+	if resolved.Card.CardName != "First" {
+		t.Errorf("Expected First to resolve last, got %s", resolved.Card.CardName)
+	}
+}
+
+func TestStackResolveEmpty(t *testing.T) {
+	stack := NewStack()
+
+	stack.Next(-1, nil)
+	stack.Next(EventPlayerPassesPriority, nil)
+	result, item := stack.Next(EventPlayerPassesPriority, nil)
+
+	if result != Resolve {
+		t.Errorf("Expected Resolve result, got %d", result)
+	}
+	if item != nil {
+		t.Errorf("Expected nil item when resolving empty stack, got %v", item)
+	}
+
+	stack.Next(-1, nil)
+	if stack.CurrentState != StateEmpty {
+		t.Errorf("Expected StateEmpty after resolving empty stack, got %d", stack.CurrentState)
+	}
+}
+
+func TestStackConsecutivePassesTracking(t *testing.T) {
+	stack := NewStack()
+
+	stack.Next(-1, nil)
+
+	result, _ := stack.Next(EventPlayerPassesPriority, nil)
+	if stack.ConsecutivePasses != 1 {
+		t.Errorf("Expected ConsecutivePasses=1, got %d", stack.ConsecutivePasses)
+	}
+	if result != NonActPlayerPriority {
+		t.Errorf("Expected NonActPlayerPriority after first pass, got %d", result)
+	}
+
+	stack.Next(EventPlayerAddsAction, &StackItem{})
+	if stack.ConsecutivePasses != 0 {
+		t.Errorf("Expected ConsecutivePasses=0 after action, got %d", stack.ConsecutivePasses)
+	}
+}
 
 func TestRunStack(t *testing.T) {
 	// Test the next turn functionality with 1 player, make sure the player
@@ -26,20 +132,15 @@ func TestRunStack(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// Start a goroutine to simulate player responses
 	go func() {
 		defer wg.Done()
-		// For each expected phase, send a PassPriority action
 		for range expectedPhases {
-			fmt.Println("player2 Passing Priority")
 			player.InputChan <- PlayerAction{Type: "PassPriority"}
 			player2.InputChan <- PlayerAction{Type: "PassPriority"}
 		}
 	}()
 
-	// Start a turn
 	player.Turn.Phase = PhaseUntap
 	game.RunStack()
 	wg.Wait()
-	fmt.Println("waitgroup finished")
 }

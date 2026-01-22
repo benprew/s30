@@ -1,7 +1,6 @@
 package core_engine
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
@@ -198,21 +197,12 @@ func TestCastLightningBolt(t *testing.T) {
 		return
 	}
 
-	fmt.Println("Battlefield:")
-	for _, c := range player.Battlefield {
-		fmt.Println(c)
-	}
-
-	fmt.Println("Actions", bolt.Actions)
-
 	game.TapLandForMana(player, mtn)
 
 	err := game.CastSpell(player, bolt, elf)
 	if err != nil {
 		t.Errorf("Failed to cast spell: %v", err)
-
 	}
-	fmt.Println("Doing resolve")
 	if err := game.Resolve(game.Stack.Pop()); err != nil {
 		t.Errorf("Failed to do resolve: %v", err)
 	}
@@ -223,10 +213,6 @@ func TestCastLightningBolt(t *testing.T) {
 
 	if game.FindCard(FindArgs{ID: elf.ID}, player.Graveyard) == nil {
 		t.Errorf("Elves not in Graveyard")
-		fmt.Println("Graveyard:")
-		for _, c := range player.Graveyard {
-			fmt.Println(c)
-		}
 	}
 }
 
@@ -270,30 +256,16 @@ func TestCastArtifact(t *testing.T) {
 	initialHandSize := len(player.Hand)
 	initialBattlefieldSize := len(player.Battlefield)
 
-	fmt.Println("Battlefield:")
-	for _, c := range player.Battlefield {
-		fmt.Println(c)
-	}
-
-	// Check if the player can cast the artifact after tapping for mana
 	if !game.CanCast(player, artifactCard) {
 		t.Errorf("Player should be able to cast %s after tapping land, but cannot. Mana Pool: %+v", artifactCard.Name(), player.ManaPool)
 		return
 	}
 
-	// Cast the artifact
-	// Artifacts typically don't target, so nil is appropriate here.
 	if err := game.CastSpell(player, artifactCard, nil); err != nil {
 		t.Errorf("Failed to cast %s: %v", artifactCard.Name(), err)
 		return
 	}
 
-	// Resolve the stack (casting an artifact usually just puts it on the battlefield)
-	// The CastSpell function might push an event onto the stack.
-	// We need to run the stack until it's empty.
-	// Note: A full stack implementation would involve priority passing.
-	// For this simple test, we'll just resolve whatever was pushed.
-	fmt.Println("Doing resolve")
 	if err := game.Resolve(game.Stack.Pop()); err != nil {
 		t.Errorf("Failed to do resolve: %v", err)
 	}
@@ -314,5 +286,149 @@ func TestCastArtifact(t *testing.T) {
 	}
 	if len(player.Hand) != initialHandSize-1 {
 		t.Errorf("Player hand size should be %d, but is %d", initialHandSize-1, len(player.Hand))
+	}
+}
+
+func TestCheckWinConditions(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+
+	game.CheckWinConditions()
+	for _, p := range players {
+		if p.HasLost {
+			t.Errorf("Player should not have lost at 20 life")
+		}
+	}
+
+	players[0].LifeTotal = 0
+	game.CheckWinConditions()
+	if !players[0].HasLost {
+		t.Errorf("Player 0 should have lost at 0 life")
+	}
+	if players[1].HasLost {
+		t.Errorf("Player 1 should not have lost")
+	}
+}
+
+func TestCheckWinConditionsNegativeLife(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+
+	players[0].LifeTotal = -10
+	game.CheckWinConditions()
+	if !players[0].HasLost {
+		t.Errorf("Player should have lost at negative life")
+	}
+}
+
+func TestCheckWinConditionsMultipleLosers(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+
+	players[0].LifeTotal = 0
+	players[1].LifeTotal = -5
+	game.CheckWinConditions()
+
+	if !players[0].HasLost {
+		t.Errorf("Player 0 should have lost")
+	}
+	if !players[1].HasLost {
+		t.Errorf("Player 1 should have lost")
+	}
+}
+
+func TestNextPhase(t *testing.T) {
+	turn := &Turn{Phase: PhaseUntap}
+
+	expectedOrder := []Phase{
+		PhaseUpkeep,
+		PhaseDraw,
+		PhaseMain1,
+		PhaseCombat,
+		PhaseMain2,
+		PhaseEnd,
+		PhaseCleanup,
+		PhaseUntap,
+	}
+
+	for _, expected := range expectedOrder {
+		turn.NextPhase()
+		if turn.Phase != expected {
+			t.Errorf("Expected phase %s, got %s", expected, turn.Phase)
+		}
+	}
+}
+
+func TestTurnBasedPlayerSwitching(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+
+	if game.CurrentPlayer != 0 {
+		t.Errorf("Expected CurrentPlayer=0, got %d", game.CurrentPlayer)
+	}
+
+	players[0].Turn.Phase = PhaseEnd
+	game.CurrentPlayer = (game.CurrentPlayer + 1) % len(game.Players)
+
+	if game.CurrentPlayer != 1 {
+		t.Errorf("Expected CurrentPlayer=1 after switch, got %d", game.CurrentPlayer)
+	}
+
+	game.CurrentPlayer = (game.CurrentPlayer + 1) % len(game.Players)
+	if game.CurrentPlayer != 0 {
+		t.Errorf("Expected CurrentPlayer=0 after wraparound, got %d", game.CurrentPlayer)
+	}
+}
+
+func TestDrawFromEmptyLibraryLoses(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+
+	player.Library = []*Card{}
+	player.Turn.Phase = PhaseDraw
+
+	game.DrawPhase(player, nil)
+
+	if !player.HasLost {
+		t.Errorf("Player should have lost after drawing from empty library")
+	}
+}
+
+func TestPlayLandWhenLandPlayed(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+	game.StartGame()
+
+	player.Turn.Phase = PhaseMain1
+	player.Turn.LandPlayed = true
+
+	for _, card := range player.Hand {
+		if card.CardType == domain.CardTypeLand {
+			if game.CanPlayLand(player, card) {
+				t.Errorf("Should not be able to play land when LandPlayed=true")
+			}
+			break
+		}
+	}
+}
+
+func TestPlayLandWrongPhase(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+	game.StartGame()
+
+	player.Turn.Phase = PhaseCombat
+	player.Turn.LandPlayed = false
+
+	for _, card := range player.Hand {
+		if card.CardType == domain.CardTypeLand {
+			if game.CanPlayLand(player, card) {
+				t.Errorf("Should not be able to play land during combat phase")
+			}
+			break
+		}
 	}
 }

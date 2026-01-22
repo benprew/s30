@@ -1,7 +1,6 @@
 package core_engine
 
 import (
-	"fmt"
 	"slices"
 	"testing"
 )
@@ -112,13 +111,9 @@ func TestAvailableMana(t *testing.T) {
 	elvesCard.Active = true
 	forest.Tapped = false
 
-	// Check available mana
 	manaPool = game.AvailableMana(player, player.ManaPool)
 	expectedPool := ManaPool{[]rune{'G'}, []rune{'G'}}
 
-	fmt.Println(expectedPool)
-	fmt.Println(manaPool)
-	// Check that both mana are green
 	for i, mana := range expectedPool {
 		if !slices.Equal(mana, manaPool[i]) {
 			t.Errorf("Expected green mana, got %v", string(mana))
@@ -227,5 +222,101 @@ func TestCanPayCurlyBraceFormat(t *testing.T) {
 				t.Errorf("Expected CanPay(%s) to be %v, but got %v", test.cost, test.expected, result)
 			}
 		})
+	}
+}
+
+func TestRemoveManaColorlessNoSources(t *testing.T) {
+	pool := ManaPool{}
+
+	result := pool.RemoveMana('C')
+	if result {
+		t.Errorf("Should not be able to remove colorless from empty pool")
+	}
+}
+
+func TestRemoveManaColorlessFromColoredSource(t *testing.T) {
+	pool := ManaPool{{'R'}, {'G'}}
+
+	result := pool.RemoveMana('C')
+	if !result {
+		t.Errorf("Should be able to remove colorless using colored mana")
+	}
+	if len(pool) != 1 {
+		t.Errorf("Pool should have 1 mana left, has %d", len(pool))
+	}
+}
+
+func TestRemoveManaColorlessFromExplicitColorless(t *testing.T) {
+	pool := ManaPool{{'C'}, {'R'}}
+
+	result := pool.RemoveMana('C')
+	if !result {
+		t.Errorf("Should be able to remove explicit colorless")
+	}
+	if len(pool) != 1 {
+		t.Errorf("Pool should have 1 mana left, has %d", len(pool))
+	}
+	if pool[0][0] != 'R' {
+		t.Errorf("Red mana should remain, got %c", pool[0][0])
+	}
+}
+
+func TestRemoveManaDigitAsColorless(t *testing.T) {
+	pool := ManaPool{{'W'}, {'U'}}
+
+	result := pool.RemoveMana('1')
+	if !result {
+		t.Errorf("Digit should be treated as colorless request")
+	}
+}
+
+func TestPayErrorInsufficientMana(t *testing.T) {
+	pool := ManaPool{{'G'}}
+
+	err := pool.Pay("{G}{G}")
+	if err == nil {
+		t.Errorf("Expected error when paying with insufficient mana")
+	}
+}
+
+func TestPayErrorInsufficientColorless(t *testing.T) {
+	pool := ManaPool{{'G'}}
+
+	err := pool.Pay("{5}{G}")
+	if err == nil {
+		t.Errorf("Expected error when paying with insufficient colorless")
+	}
+}
+
+func TestPaySuccess(t *testing.T) {
+	pool := ManaPool{{'W'}, {'U'}, {'R'}}
+
+	err := pool.Pay("{W}{U}")
+	if err != nil {
+		t.Errorf("Should be able to pay {W}{U}: %v", err)
+	}
+	if len(pool) != 1 {
+		t.Errorf("Pool should have 1 mana left, has %d", len(pool))
+	}
+}
+
+func TestPayColorlessWithExcess(t *testing.T) {
+	pool := ManaPool{{'G'}, {'G'}, {'G'}}
+
+	err := pool.Pay("{2}{G}")
+	if err != nil {
+		t.Errorf("Should be able to pay {2}{G} with 3 green: %v", err)
+	}
+	if len(pool) != 0 {
+		t.Errorf("Pool should be empty, has %d", len(pool))
+	}
+}
+
+func TestHybridManaParseBasic(t *testing.T) {
+	pool := ManaPool{}
+	cost := pool.ParseCost("{R/W}")
+
+	if cost['R'] != 1 {
+		t.Errorf("Expected R: 1, got %d", cost['R'])
 	}
 }

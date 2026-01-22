@@ -1,7 +1,6 @@
 package core_engine
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
@@ -42,11 +41,6 @@ func createTestPlayer(numPlayers int) []*Player {
 		addCard("Lightning Bolt")
 		addCard("Mountain")
 		addCard("Sol Ring")
-
-		fmt.Println("Library")
-		for _, c := range player.Library {
-			fmt.Println(c)
-		}
 
 		players = append(players, player)
 	}
@@ -91,5 +85,91 @@ func TestMoveToWrongOwner(t *testing.T) {
 	err := player2.MoveTo(card, ZoneGraveyard)
 	if err == nil {
 		t.Errorf("Expected error when moving card owned by different player")
+	}
+}
+
+func TestReceiveDamage(t *testing.T) {
+	player := createTestPlayer(1)[0]
+	initialLife := player.LifeTotal
+
+	player.ReceiveDamage(5)
+	if player.LifeTotal != initialLife-5 {
+		t.Errorf("Expected life total %d, got %d", initialLife-5, player.LifeTotal)
+	}
+
+	player.ReceiveDamage(20)
+	if player.LifeTotal != initialLife-25 {
+		t.Errorf("Expected life total %d, got %d", initialLife-25, player.LifeTotal)
+	}
+}
+
+func TestPlayerIsDead(t *testing.T) {
+	player := createTestPlayer(1)[0]
+
+	if player.IsDead() {
+		t.Errorf("Player should not be dead at 20 life")
+	}
+
+	player.LifeTotal = 1
+	if player.IsDead() {
+		t.Errorf("Player should not be dead at 1 life")
+	}
+
+	player.LifeTotal = 0
+	if !player.IsDead() {
+		t.Errorf("Player should be dead at 0 life")
+	}
+
+	player.LifeTotal = -5
+	if !player.IsDead() {
+		t.Errorf("Player should be dead at negative life")
+	}
+}
+
+func TestPlayerTargetable(t *testing.T) {
+	player := createTestPlayer(1)[0]
+	player.ID = EntityID(1)
+
+	if player.Name() != "Player 1" {
+		t.Errorf("Expected 'Player 1', got '%s'", player.Name())
+	}
+
+	if player.TargetType() != TargetTypePlayer {
+		t.Errorf("Expected TargetTypePlayer, got %d", player.TargetType())
+	}
+}
+
+func TestMoveToInvalidSourceZone(t *testing.T) {
+	player := createTestPlayer(1)[0]
+	player.DrawCard()
+	card := player.Hand[0]
+
+	card.CurrentZone = Zone(99)
+	err := player.MoveTo(card, ZoneGraveyard)
+	if err == nil {
+		t.Errorf("Expected error for invalid source zone")
+	}
+}
+
+func TestMoveToInvalidDestZone(t *testing.T) {
+	player := createTestPlayer(1)[0]
+	player.DrawCard()
+	card := player.Hand[0]
+
+	err := player.MoveTo(card, Zone(99))
+	if err == nil {
+		t.Errorf("Expected error for invalid destination zone")
+	}
+}
+
+func TestMoveToCardNotInZone(t *testing.T) {
+	player := createTestPlayer(1)[0]
+	player.DrawCard()
+	card := player.Hand[0]
+
+	player.Hand = []*Card{}
+	err := player.MoveTo(card, ZoneGraveyard)
+	if err == nil {
+		t.Errorf("Expected error when card not found in source zone")
 	}
 }
