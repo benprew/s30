@@ -53,6 +53,10 @@ func (e *Enemy) Update(pLoc image.Point) error {
 	return nil
 }
 
+func (e *Enemy) Name() string {
+	return e.Character.Name
+}
+
 // move returns direction bits with random movement and wait behavior
 func (e *Enemy) move(playerX, playerY int) int {
 	dx := float64(playerX - e.X)

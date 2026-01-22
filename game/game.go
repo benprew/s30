@@ -189,7 +189,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func (g *Game) SaveGame(saveName string) error {
 	level := g.Level()
-	savePath, err := save.SaveGame(g.player, level, saveName)
+	savePath, err := save.SaveGame(level, saveName)
 	if err != nil {
 		return fmt.Errorf("failed to save game: %w", err)
 	}
@@ -198,13 +198,13 @@ func (g *Game) SaveGame(saveName string) error {
 }
 
 func LoadSavedGame(savePath string) (*Game, error) {
-	player, level, err := save.LoadGame(savePath)
+	level, err := save.LoadGame(savePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load game: %w", err)
 	}
 
 	m := minimap.NewMiniMap(level)
-	wf, err := screens.NewWorldFrame(player)
+	wf, err := screens.NewWorldFrame(level.Player)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create world frame: %w", err)
 	}
@@ -227,7 +227,7 @@ func LoadSavedGame(savePath string) (*Game, error) {
 			screenui.MiniMapScr:  m,
 			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
 		},
-		player: player,
+		player: level.Player,
 	}
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)

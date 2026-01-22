@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"math/rand"
+	"strings"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -327,9 +328,22 @@ func (s *WisemanScreen) findRandomCity() *domain.City {
 }
 
 func (s *WisemanScreen) loadStory() {
-	// Fallback to existing story logic
-	// Copy-paste from original wiseman.go logic or simplify
-	s.TextLines = []string{"I have no quests for you today.", "Travel safely."}
+	stories := loadStories()
+	story := "No stories found."
+	if len(stories) > 0 {
+		story = stories[rand.Intn(len(stories))]
+	}
+
+	fontFace := &text.GoTextFace{
+		Source: fonts.MtgFont,
+		Size:   24,
+	}
+	pages := paginateText(story, fontFace, 290, 768)
+	if len(pages) > 0 {
+		s.TextLines = strings.Split(pages[0], "\n")
+	} else {
+		s.TextLines = []string{"I have no quests for you today.", "Travel safely."}
+	}
 }
 
 func (s *WisemanScreen) prepareRewardText(q *domain.Quest) {
@@ -492,4 +506,69 @@ func (s *WisemanScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 			b.Draw(screen, opts, scale)
 		}
 	}
+}
+
+func loadStories() []string {
+	content := string(assets.Advblocks_txt)
+	var stories []string
+
+	parts := strings.Split(content, "STARTBLOCK")
+	for _, part := range parts {
+		end := strings.Index(part, "ENDBLOCK")
+		if end != -1 {
+			story := strings.TrimSpace(part[:end])
+			if story != "" {
+				stories = append(stories, story)
+			}
+		}
+	}
+	return stories
+}
+
+func paginateText(textStr string, face *text.GoTextFace, maxWidth, maxHeight float64) []string {
+	var pages []string
+
+	words := strings.Fields(textStr)
+	if len(words) == 0 {
+		return []string{}
+	}
+
+	var lines []string
+	currentLine := words[0]
+
+	for _, word := range words[1:] {
+		newLine := currentLine + " " + word
+		w, _ := text.Measure(newLine, face, 30.0)
+		if w > maxWidth-40 {
+			lines = append(lines, currentLine)
+			currentLine = word
+		} else {
+			currentLine = newLine
+		}
+	}
+	lines = append(lines, currentLine)
+
+	var currentPageLines []string
+	currentHeight := 0.0
+	lineHeight := 30.0
+
+	for _, line := range lines {
+		if currentHeight+lineHeight > maxHeight-40 {
+			if len(currentPageLines) > 0 {
+				currentPageLines[len(currentPageLines)-1] += "..."
+			}
+
+			pages = append(pages, strings.Join(currentPageLines, "\n"))
+			currentPageLines = []string{line}
+			currentHeight = lineHeight
+		} else {
+			currentPageLines = append(currentPageLines, line)
+			currentHeight += lineHeight
+		}
+	}
+	if len(currentPageLines) > 0 {
+		pages = append(pages, strings.Join(currentPageLines, "\n"))
+	}
+
+	return pages
 }
