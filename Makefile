@@ -4,7 +4,7 @@ default:
 
 test:
 	touch assets/art/cardimages.zip
-	go test ./...
+	go test -count=10 ./...
 
 winbuild:
 	GOOS=windows GOARCH=amd64 go build -o s30.exe

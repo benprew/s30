@@ -27,6 +27,7 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 		Character: domain.Character{
 			CardCollection: playerCollection,
 		},
+		Amulets: make(map[domain.ColorMask]int),
 	}
 
 	forest := domain.FindCardByName("Forest")
@@ -60,10 +61,11 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 	}
 
 	screen := &DuelAnteScreen{
-		player: player,
-		enemy:  enemy,
-		lvl:    lvl,
-		idx:    0,
+		player:         player,
+		enemy:          enemy,
+		lvl:            lvl,
+		idx:            0,
+		playerAnteCard: mountain,
 	}
 
 	screen.startDuel()
