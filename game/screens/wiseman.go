@@ -29,15 +29,15 @@ const (
 )
 
 type WisemanScreen struct {
-	BgImage      *ebiten.Image
-	City         *domain.City
-	Player       *domain.Player
-	Level        *world.Level
-	State        WisemanState
-	TextLines    []string
-	Page         int
+	BgImage       *ebiten.Image
+	City          *domain.City
+	Player        *domain.Player
+	Level         *world.Level
+	State         WisemanState
+	TextLines     []string
+	Page          int
 	ProposedQuest *domain.Quest
-	Buttons      []*elements.Button
+	Buttons       []*elements.Button
 }
 
 func (s *WisemanScreen) IsFramed() bool {
@@ -65,7 +65,7 @@ func (s *WisemanScreen) determineState() {
 	// Check for active quest completion
 	if s.Player.ActiveQuest != nil {
 		q := s.Player.ActiveQuest
-		
+
 		// Check Expiration
 		if q.DaysRemaining <= 0 {
 			// Failed!
@@ -76,7 +76,7 @@ func (s *WisemanScreen) determineState() {
 			// But the ban only matters when talking to the Wiseman in THAT city.
 			// So, if we talk to the Wiseman in the Origin city, and quest failed, we apply ban and clear quest.
 			// If we talk to Wiseman in another city, he probably doesn't care? Or says "You are busy".
-			
+
 			if s.City.Name == q.OriginCityName {
 				s.City.QuestBanDays = 20
 				s.Player.ActiveQuest = nil // Clear it
@@ -99,7 +99,7 @@ func (s *WisemanScreen) determineState() {
 				// If we are not at Origin, we can't easily access Origin City struct to set ban.
 				// Unless we search Level.
 				// Let's search Level for Origin City and ban it.
-				
+
 				origin := s.findCityByName(q.OriginCityName)
 				if origin != nil {
 					origin.QuestBanDays = 20
@@ -213,7 +213,7 @@ func (s *WisemanScreen) generateQuest() {
 		// For prototype, I'll pick a random enemy type and spawn it near the city?
 		// Or just pick an existing nearby enemy?
 		// Let's spawn a new enemy for the quest near the city.
-		
+
 		enemyType := "Goblin Lord" // default
 		// Pick a random rogue
 		keys := make([]string, 0, len(domain.Rogues))
@@ -223,16 +223,16 @@ func (s *WisemanScreen) generateQuest() {
 		if len(keys) > 0 {
 			enemyType = keys[rand.Intn(len(keys))]
 		}
-		
+
 		// Spawn it? We need to add it to level.
 		// But we are in "Offer" state. We shouldn't spawn until Accepted.
 		// So just propose it.
-		
+
 		rewardType := domain.RewardAmulet // Default
 		if rand.Float32() < 0.3 {
 			rewardType = domain.RewardManaLink
 		}
-		
+
 		s.ProposedQuest = &domain.Quest{
 			Type:           domain.QuestTypeDefeatEnemy,
 			EnemyName:      enemyType,
@@ -261,7 +261,7 @@ func (s *WisemanScreen) spawnQuestEnemy(enemyName string) {
 		fmt.Println("Failed to spawn quest enemy:", err)
 		return
 	}
-	
+
 	// Place near city
 	// City X,Y are in Tile coords?
 	// City struct has X,Y.
@@ -269,7 +269,7 @@ func (s *WisemanScreen) spawnQuestEnemy(enemyName string) {
 	// Enemy X,Y are pixels? `game/domain/enemy.go` Loc() returns X,Y.
 	// `Level` uses pixel coords for entities.
 	// `Level.tileWidth`
-	
+
 	// Need to convert City Tile X,Y to Pixel X,Y
 	// In Level: pixelX = x * tileWidth (+ offset for zigzag)
 	// We don't have access to Level private fields like tileWidth easily unless we use accessor or recalculate.
@@ -283,14 +283,14 @@ func (s *WisemanScreen) spawnQuestEnemy(enemyName string) {
 	// Or add `SpawnEnemyNearTile(x, y, type)` to Level?
 	// Accessing `s.Level.enemies` is possible via `SetEnemies`.
 	// But `enemies` field is private. `Enemies()` returns copy or slice? `Enemies()` returns slice. `SetEnemies` sets it.
-	
+
 	// Better: just accept that we can't perfectly place it without more Level modification.
 	// I'll skip actual spawning logic detail for this tool step and assume "Enemy exists" or just trust the player :)
 	// Actually, I should try to spawn it.
 	// `Level` has `SpawnEnemies(count)`.
 	// I'll stick to Delivery quests for MVP safety, OR just spawn a random enemy using `SpawnEnemies` and say "That one".
 	// But `SpawnEnemies` is random.
-	
+
 	// Let's implement Defeat Enemy quest as "Defeat ANY [EnemyType]".
 	// Simpler.
 }
@@ -299,7 +299,7 @@ func (s *WisemanScreen) findCityByName(name string) *domain.City {
 	w, h := s.Level.Size()
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			tile := s.Level.Tile(world.TilePoint{X: x, Y: y})
+			tile := s.Level.Tile(image.Point{X: x, Y: y})
 			if tile != nil && tile.IsCity && tile.City.Name == name {
 				return &tile.City
 			}
@@ -314,7 +314,7 @@ func (s *WisemanScreen) findRandomCity() *domain.City {
 	w, h := s.Level.Size()
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			tile := s.Level.Tile(world.TilePoint{X: x, Y: y})
+			tile := s.Level.Tile(image.Point{X: x, Y: y})
 			if tile != nil && tile.IsCity && tile.City.Name != s.City.Name {
 				cities = append(cities, &tile.City)
 			}
@@ -435,23 +435,25 @@ func (s *WisemanScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 
 func (s *WisemanScreen) giveReward() {
 	q := s.Player.ActiveQuest
-	if q == nil { return }
-	
+	if q == nil {
+		return
+	}
+
 	switch q.RewardType {
 	case domain.RewardManaLink:
 		s.Player.Life++ // Add life
-		// Also mark city as linked? 
+		// Also mark city as linked?
 		// "Once a city has been linked, it can't be linked again"
 		// This implies we should set IsManaLinked on the city that GAVE the link.
 		s.City.IsManaLinked = true
-		
+
 	case domain.RewardAmulet:
 		// 1-3 amulets
 		count := 1 + rand.Intn(3)
 		for i := 0; i < count; i++ {
 			s.Player.AddAmulet(domain.NewAmulet(q.AmuletColor))
 		}
-		
+
 	case domain.RewardCard:
 		// Give random card of color?
 		// For now, simple logic: Add a random card to collection
@@ -463,7 +465,6 @@ func (s *WisemanScreen) giveReward() {
 		}
 	}
 }
-
 
 func (s *WisemanScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	bgOpts := &ebiten.DrawImageOptions{}
@@ -482,7 +483,7 @@ func (s *WisemanScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		txt.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 		y += 35
 	}
-	
+
 	// Draw Buttons
 	if s.State == WisemanStateOffer {
 		opts := &ebiten.DrawImageOptions{}
