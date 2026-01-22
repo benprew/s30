@@ -69,16 +69,7 @@ func (s *WisemanScreen) determineState() {
 
 		// Check Expiration
 		if q.DaysRemaining <= 0 {
-			// Failed!
-			// Ban the ORIGIN city.
-			// Need to find origin city struct.
-			// If we are IN the origin city, easy.
-			// If we are in another city, we can't easily ban the origin city without searching Level.
-			// But the ban only matters when talking to the Wiseman in THAT city.
-			// So, if we talk to the Wiseman in the Origin city, and quest failed, we apply ban and clear quest.
-			// If we talk to Wiseman in another city, he probably doesn't care? Or says "You are busy".
-
-			if s.City.Name == q.OriginCityName {
+			if s.City.Name == q.OriginCity.Name {
 				s.City.QuestBanDays = 20
 				s.Player.ActiveQuest = nil // Clear it
 				s.State = WisemanStateBanned
@@ -90,35 +81,21 @@ func (s *WisemanScreen) determineState() {
 				}
 				return
 			} else {
-				// We are at another city, but have a failed quest.
-				// Should we clear it? Or wait until player returns to origin?
-				// "Each quest has a 'quest timer' and if not completed in that time, that city will no longer give the player new quests."
-				// This implies the penalty is on the Origin city.
-				// Ideally, we clear it now? Or tell player "You failed [Origin City]'s quest".
-				// Let's clear it and apply ban if we can find the city, OR just clear it and rely on Player logic to ban it?
-				// But City struct holds the ban.
-				// If we are not at Origin, we can't easily access Origin City struct to set ban.
-				// Unless we search Level.
-				// Let's search Level for Origin City and ban it.
-
-				origin := s.findCityByName(q.OriginCityName)
+				origin := q.OriginCity
 				if origin != nil {
 					origin.QuestBanDays = 20
 				}
 				s.Player.ActiveQuest = nil
-				// Now proceed to standard "No Quest" logic for THIS city (which might offer a new one).
-				// But we just failed one. Maybe this city offers one? Yes.
-				// Fall through to Offer logic.
 			}
 		} else {
 			// Not expired, check completion
-			if q.TargetCityName == s.City.Name && q.Type == domain.QuestTypeDelivery {
+			if q.TargetCity.Name == s.City.Name && q.Type == domain.QuestTypeDelivery {
 				// Completed Delivery
 				s.State = WisemanStateReward
 				s.prepareRewardText(q)
 				return
 			}
-			if q.OriginCityName == s.City.Name && q.Type == domain.QuestTypeDefeatEnemy {
+			if q.OriginCity.Name == s.City.Name && q.Type == domain.QuestTypeDefeatEnemy {
 				if q.IsCompleted {
 					s.State = WisemanStateReward
 					s.prepareRewardText(q)
@@ -146,7 +123,12 @@ func (s *WisemanScreen) determineState() {
 
 	// Offer Quest
 	s.State = WisemanStateOffer
-	s.generateQuest()
+
+	if rand.Float32() < .25 {
+		s.generateQuest()
+	} else {
+		s.loadStory()
+	}
 }
 
 func (s *WisemanScreen) generateQuest() {
@@ -174,12 +156,12 @@ func (s *WisemanScreen) generateQuest() {
 		}
 
 		s.ProposedQuest = &domain.Quest{
-			Type:           domain.QuestTypeDelivery,
-			TargetCityName: targetCity.Name,
-			OriginCityName: s.City.Name,
-			DaysRemaining:  20 + rand.Intn(20), // 20-40 days
-			RewardType:     rewardType,
-			AmuletColor:    targetCity.AmuletColor, // Reward based on target city? Or Origin? "1-3 amulets of that cities amulet color" usually refers to the quest giver or target?
+			Type:          domain.QuestTypeDelivery,
+			TargetCity:    targetCity,
+			OriginCity:    s.City,
+			DaysRemaining: 20 + rand.Intn(20), // 20-40 days
+			RewardType:    rewardType,
+			AmuletColor:   targetCity.AmuletColor, // Reward based on target city? Or Origin? "1-3 amulets of that cities amulet color" usually refers to the quest giver or target?
 			// "Go to a nearby city... Rewards: Amulet - 1-3 amulets of that cities amulet color".
 			// Usually refers to the city giving the reward. Delivery reward is usually at target?
 			// "Take this message... He will reward you..." -> Target city gives reward.
@@ -235,12 +217,12 @@ func (s *WisemanScreen) generateQuest() {
 		}
 
 		s.ProposedQuest = &domain.Quest{
-			Type:           domain.QuestTypeDefeatEnemy,
-			EnemyName:      enemyType,
-			OriginCityName: s.City.Name,
-			DaysRemaining:  15 + rand.Intn(15),
-			RewardType:     rewardType,
-			AmuletColor:    s.City.AmuletColor,
+			Type:          domain.QuestTypeDefeatEnemy,
+			EnemyName:     enemyType,
+			OriginCity:    s.City,
+			DaysRemaining: 15 + rand.Intn(15),
+			RewardType:    rewardType,
+			AmuletColor:   s.City.AmuletColor,
 		}
 
 		s.TextLines = []string{
@@ -355,7 +337,7 @@ func (s *WisemanScreen) prepareActiveText() {
 	q := s.Player.ActiveQuest
 	if q.Type == domain.QuestTypeDelivery {
 		s.TextLines = []string{
-			fmt.Sprintf("Please deliver the message to %s.", q.TargetCityName),
+			fmt.Sprintf("Please deliver the message to %s.", q.TargetCity.Name),
 			fmt.Sprintf("You have %d days remaining.", q.DaysRemaining),
 		}
 	} else {

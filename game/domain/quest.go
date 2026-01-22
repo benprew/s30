@@ -16,15 +16,15 @@ const (
 )
 
 type Quest struct {
-	Type           QuestType
-	TargetCityName string
-	TargetEnemyID  string // or Name
-	EnemyName      string // Display name
-	OriginCityName string
-	DaysRemaining  int
-	RewardType     RewardType
-	RewardCard     *Card
-	RewardAmulets  int
-	AmuletColor    ColorMask
-	IsCompleted    bool
+	Type          QuestType
+	TargetCity    *City
+	TargetEnemyID string // or Name
+	EnemyName     string // Display name
+	OriginCity    *City
+	DaysRemaining int
+	RewardType    RewardType
+	RewardCard    *Card
+	RewardAmulets int
+	AmuletColor   ColorMask
+	IsCompleted   bool
 }
