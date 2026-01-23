@@ -135,8 +135,8 @@ func TestRunStack(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for range expectedPhases {
-			player.InputChan <- PlayerAction{Type: "PassPriority"}
-			player2.InputChan <- PlayerAction{Type: "PassPriority"}
+			player.InputChan <- PlayerAction{Type: ActionPassPriority}
+			player2.InputChan <- PlayerAction{Type: ActionPassPriority}
 		}
 	}()
 

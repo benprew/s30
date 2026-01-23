@@ -432,3 +432,147 @@ func TestPlayLandWrongPhase(t *testing.T) {
 		}
 	}
 }
+
+func TestAvailableActionsPlayLandMainPhase(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+	game.StartGame()
+
+	player.Turn.Phase = PhaseMain1
+	player.Turn.LandPlayed = false
+
+	actions := game.AvailableActions(player)
+
+	landCount := 0
+	for _, card := range player.Hand {
+		if card.CardType == domain.CardTypeLand {
+			landCount++
+		}
+	}
+
+	playLandCount := 0
+	for _, action := range actions {
+		if action.Type == ActionPlayLand {
+			playLandCount++
+		}
+	}
+
+	if playLandCount != landCount {
+		t.Errorf("Expected %d PlayLand actions, got %d", landCount, playLandCount)
+	}
+}
+
+func TestAvailableActionsNoPlayLandAfterLandPlayed(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+	game.StartGame()
+
+	player.Turn.Phase = PhaseMain1
+	player.Turn.LandPlayed = true
+
+	actions := game.AvailableActions(player)
+
+	for _, action := range actions {
+		if action.Type == ActionPlayLand {
+			t.Errorf("Should not have PlayLand action when land already played")
+		}
+	}
+}
+
+func TestAvailableActionsNoPlayLandWrongPhase(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+	game.StartGame()
+
+	player.Turn.Phase = PhaseUntap
+	player.Turn.LandPlayed = false
+
+	actions := game.AvailableActions(player)
+
+	for _, action := range actions {
+		if action.Type == ActionPlayLand {
+			t.Errorf("Should not have PlayLand action during untap phase")
+		}
+	}
+}
+
+func TestAvailableActionsCastSpellWithMana(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+	game.StartGame()
+
+	player.Turn.Phase = PhaseMain1
+
+	landCard := game.FindCard(FindArgs{Name: "Forest"}, player.Hand)
+	if landCard == nil {
+		landCard = game.FindCard(FindArgs{Name: "Mountain"}, player.Hand)
+	}
+	if landCard == nil {
+		t.Skip("No land card found in hand")
+	}
+
+	game.PlayLand(player, landCard)
+	game.TapLandForMana(player, landCard)
+
+	actions := game.AvailableActions(player)
+
+	hasCastSpell := false
+	for _, action := range actions {
+		if action.Type == ActionCastSpell {
+			hasCastSpell = true
+			break
+		}
+	}
+
+	if !hasCastSpell {
+		t.Errorf("Expected CastSpell action when player has mana")
+	}
+}
+
+func TestAvailableActionsNoCastSpellWithoutMana(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+	game.StartGame()
+
+	player.Turn.Phase = PhaseMain1
+	player.ManaPool = ManaPool{}
+
+	actions := game.AvailableActions(player)
+
+	for _, action := range actions {
+		if action.Type == ActionCastSpell && len(action.Card.ManaCost) > 0 {
+			t.Errorf("Should not have CastSpell action for non-zero cost card %s without mana", action.Card.Name())
+		}
+	}
+}
+
+func TestAvailableActionsPassPriorityAlways(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+	game := NewGame(players)
+	game.StartGame()
+
+	phases := []Phase{PhaseUntap, PhaseUpkeep, PhaseDraw, PhaseMain1, PhaseCombat, PhaseMain2, PhaseEnd}
+
+	for _, phase := range phases {
+		player.Turn.Phase = phase
+		actions := game.AvailableActions(player)
+
+		hasPassPriority := false
+		for _, action := range actions {
+			if action.Type == ActionPassPriority {
+				hasPassPriority = true
+				break
+			}
+		}
+
+		if !hasPassPriority {
+			t.Errorf("PassPriority should always be available, missing in phase %s", phase)
+		}
+	}
+}

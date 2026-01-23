@@ -64,7 +64,7 @@ func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
 		select {
 		case action = <-player.InputChan:
 		case <-time.After(AITurnTimeout):
-			action = PlayerAction{Type: "PassPriority"}
+			action = PlayerAction{Type: ActionPassPriority}
 		}
 	} else {
 		action = <-player.InputChan
@@ -127,14 +127,14 @@ func (g *GameState) FindCard(args FindArgs, zone []*Card) *Card {
 
 func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackResult, *StackItem) {
 	switch action.Type {
-	case "CastSpell":
+	case ActionCastSpell:
 		// TODO: spells will have decisions that need to be made when cast
 		// the player will need to make those decisions (ie Lightning Bolt target)
 		g.Stack.Next(EventPlayerAddsAction, &StackItem{Player: player, Events: action.Card.Actions})
 		g.CastSpell(player, action.Card, nil) // TODO: fix this, add target where appropriate
-	case "PlayLand":
+	case ActionPlayLand:
 		g.PlayLand(player, action.Card)
-	case "PassPriority":
+	case ActionPassPriority:
 		return g.Stack.Next(EventPlayerPassesPriority, nil)
 	}
 	return -1, nil
@@ -292,6 +292,26 @@ func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
 	}
 
 	return true
+}
+
+func (g *GameState) AvailableActions(player *Player) []PlayerAction {
+	actions := []PlayerAction{}
+
+	for _, card := range player.Hand {
+		if g.CanPlayLand(player, card) {
+			actions = append(actions, PlayerAction{Type: ActionPlayLand, Card: card})
+		}
+	}
+
+	for _, card := range player.Hand {
+		if g.CanCast(player, card) {
+			actions = append(actions, PlayerAction{Type: ActionCastSpell, Card: card})
+		}
+	}
+
+	actions = append(actions, PlayerAction{Type: ActionPassPriority, Card: nil})
+
+	return actions
 }
 
 func PlayGame(g *GameState) []*Player {

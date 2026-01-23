@@ -16,6 +16,12 @@ const (
 	ZoneStack
 )
 
+const (
+	ActionPlayLand     = "PlayLand"
+	ActionCastSpell    = "CastSpell"
+	ActionPassPriority = "PassPriority"
+)
+
 type PlayerAction struct {
 	Type string
 	Card *Card
