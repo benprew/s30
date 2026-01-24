@@ -28,7 +28,6 @@ func (g *GameState) PlayLand(player *Player, card *Card) error {
 }
 
 func (g *GameState) CastSpell(player *Player, card *Card, target Targetable) error {
-	fmt.Println("Casting spell")
 	if !g.CanCast(player, card) {
 		return fmt.Errorf("cannot cast card")
 	}
@@ -44,7 +43,6 @@ func (g *GameState) CastSpell(player *Player, card *Card, target Targetable) err
 		e = append(e, a)
 	}
 
-	fmt.Printf("pushing stack, events: %v player: %v card: %v\n", e, player, card)
 	g.Stack.Push(&StackItem{Events: e, Player: player, Card: card})
 
 	return nil
@@ -69,12 +67,8 @@ func (g *GameState) TapLandForMana(player *Player, card *Card) error {
 
 	// Add mana production to the player's mana pool
 	for _, manaType := range card.ManaProduction {
-		// Assuming ManaProduction is a slice of strings like ["R", "G", "1"]
-		// We need to convert the string to []rune for AddMana
 		player.ManaPool.AddMana([]rune(manaType))
 	}
-
-	fmt.Printf("%d tapped %s for mana. Mana Pool: %v\n", player.ID, card.CardName, player.ManaPool)
 
 	return nil
 }

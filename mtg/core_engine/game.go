@@ -280,6 +280,27 @@ func (g *GameState) hasTarget(card *Card) bool {
 	return true
 }
 
+func (g *GameState) AvailableTargets(card *Card) []Targetable {
+	targets := []Targetable{}
+
+	if card.Targetable == "DamageableTarget" || card.Name() == "Lightning Bolt" {
+		for _, player := range g.Players {
+			if !player.IsDead() {
+				targets = append(targets, player)
+			}
+		}
+		for _, player := range g.Players {
+			for _, c := range player.Battlefield {
+				if c.CardType == domain.CardTypeCreature && !c.IsDead() {
+					targets = append(targets, c)
+				}
+			}
+		}
+	}
+
+	return targets
+}
+
 func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
 	if player.Turn.Phase != PhaseMain1 && player.Turn.Phase != PhaseMain2 {
 		return false

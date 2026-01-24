@@ -71,7 +71,6 @@ func (s *Stack) Next(event StackEvent, item *StackItem) (StackResult, *StackItem
 		case EventPlayerPassesPriority:
 			s.ConsecutivePasses++
 			if s.ConsecutivePasses == 2 { // Both players have passed in succession
-				fmt.Println("Got 2 consecutive passes")
 				s.CurrentState = StateResolve
 				s.ConsecutivePasses = 0
 				if s.IsEmpty() {
@@ -104,11 +103,9 @@ func (s *Stack) Next(event StackEvent, item *StackItem) (StackResult, *StackItem
 // Push adds an action to the top of the stack.
 func (s *Stack) Push(item *StackItem) {
 	s.Items = append(s.Items, item)
-	fmt.Println("Push stack", len(s.Items))
 }
 
 func (s *Stack) Pop() *StackItem {
-	fmt.Println("Pop stack", s.IsEmpty())
 	if s.IsEmpty() {
 		panic("Nothing to pop!")
 	}

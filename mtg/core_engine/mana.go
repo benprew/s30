@@ -103,7 +103,6 @@ func (m ManaPool) ParseCost(cost string) map[rune]int {
 
 func (m ManaPool) CanPay(cost string) bool {
 	requiredMana := m.ParseCost(cost)
-	fmt.Println("CanPay: requiredMana", requiredMana)
 
 	availableColored := make(map[rune]int)
 	availableColorlessFromSources := 0 // Mana from sources like Sol Ring ("2")
@@ -111,7 +110,6 @@ func (m ManaPool) CanPay(cost string) bool {
 
 	// Count available mana from sources in the pool
 	for _, manaType := range m {
-		fmt.Println("manaType", string(manaType), len(manaType))
 		if len(manaType) == 1 {
 			r := manaType[0]
 			switch r {
@@ -149,16 +147,12 @@ func (m ManaPool) CanPay(cost string) bool {
 		}
 	}
 
-	fmt.Println("CanPay: availableColored", availableColored)
-	fmt.Println("CanPay: availableColorlessFromSources", availableColorlessFromSources)
-
 	// Check if available colored mana is sufficient for required colored mana
 	for manaType, required := range requiredMana {
 		if manaType == 'C' {
 			continue
 		}
 		if availableColored[manaType] < required {
-			fmt.Printf("CanPay: Not enough %c mana. Required: %d, Available: %d\n", manaType, required, availableColored[manaType])
 			return false
 		}
 	}
@@ -176,7 +170,6 @@ func (m ManaPool) CanPay(cost string) bool {
 
 	// Check if available for colorless is sufficient for required colorless
 	if availableForColorless < requiredColorless {
-		fmt.Printf("CanPay: Not enough generic/colorless mana. Required: %d, Available for colorless: %d\n", requiredColorless, availableForColorless)
 		return false
 	}
 
@@ -186,7 +179,6 @@ func (m ManaPool) CanPay(cost string) bool {
 
 func (g *GameState) AvailableMana(player *Player, pPool ManaPool) (pool ManaPool) {
 	for _, card := range player.Battlefield {
-		fmt.Println("checking:", card)
 		if !card.IsActive() || card.ManaProduction == nil || len(card.ManaProduction) == 0 {
 			continue
 		}
@@ -206,7 +198,6 @@ func (m *ManaPool) Pay(cost string) error {
 	}
 
 	requiredMana := m.ParseCost(cost)
-	fmt.Printf("Pay: paying: %v\n", requiredMana)
 
 	// First, pay for specific colored mana requirements
 	for manaType, count := range requiredMana {

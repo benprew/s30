@@ -576,3 +576,61 @@ func TestAvailableActionsPassPriorityAlways(t *testing.T) {
 		}
 	}
 }
+
+func TestAvailableTargetsLightningBolt(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	bolt := game.FindCard(FindArgs{Name: "Lightning Bolt"}, players[0].Hand)
+	if bolt == nil {
+		t.Skip("No Lightning Bolt in hand")
+	}
+
+	targets := game.AvailableTargets(bolt)
+	if len(targets) != 2 {
+		t.Errorf("Expected 2 targets (both players), got %d", len(targets))
+	}
+
+	playerCount := 0
+	for _, target := range targets {
+		if target.TargetType() == TargetTypePlayer {
+			playerCount++
+		}
+	}
+	if playerCount != 2 {
+		t.Errorf("Expected 2 player targets, got %d", playerCount)
+	}
+}
+
+func TestAvailableTargetsWithCreature(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	elf := game.FindCard(FindArgs{Name: "Llanowar Elves"}, players[0].Hand)
+	if elf == nil {
+		t.Skip("No Llanowar Elves in hand")
+	}
+	players[0].MoveTo(elf, ZoneBattlefield)
+
+	bolt := game.FindCard(FindArgs{Name: "Lightning Bolt"}, players[0].Hand)
+	if bolt == nil {
+		t.Skip("No Lightning Bolt in hand")
+	}
+
+	targets := game.AvailableTargets(bolt)
+	if len(targets) != 3 {
+		t.Errorf("Expected 3 targets (2 players + 1 creature), got %d", len(targets))
+	}
+
+	creatureCount := 0
+	for _, target := range targets {
+		if target.TargetType() == TargetTypeCard {
+			creatureCount++
+		}
+	}
+	if creatureCount != 1 {
+		t.Errorf("Expected 1 creature target, got %d", creatureCount)
+	}
+}
