@@ -16,6 +16,8 @@ type GameState struct {
 	ConsecutivePasses int
 	Stack             Stack
 	CardMap           map[EntityID]*Card
+	Attackers         []*Card
+	BlockerMap        map[*Card][]*Card
 }
 
 func NewGame(players []*Player) *GameState {
@@ -27,6 +29,8 @@ func NewGame(players []*Player) *GameState {
 		ConsecutivePasses: 0,
 		Stack:             NewStack(),
 		CardMap:           make(map[EntityID]*Card),
+		Attackers:         []*Card{},
+		BlockerMap:        make(map[*Card][]*Card),
 	}
 }
 
@@ -86,14 +90,6 @@ func (g *GameState) Resolve(item *StackItem) error {
 
 	for _, e := range events {
 		e.Resolve()
-		if e.Target() != nil && e.Target().TargetType() == TargetTypeCard {
-			tgt := e.Target().(*Card)
-			if tgt.IsDead() {
-				if err := tgt.Owner.MoveTo(tgt, ZoneGraveyard); err != nil {
-					return fmt.Errorf("unable to move card to graveyard: %w", err)
-				}
-			}
-		}
 	}
 
 	if c.CardType != domain.CardTypeInstant && c.CardType != domain.CardTypeSorcery {
@@ -151,9 +147,11 @@ func (g *GameState) RunStack() {
 		}
 		switch result {
 		case ActPlayerPriority:
+			g.CheckStateBasedActions()
 			action := g.WaitForPlayerInput(player)
 			result, _ = g.ProcessAction(player, action)
 		case NonActPlayerPriority:
+			g.CheckStateBasedActions()
 			action := g.WaitForPlayerInput(player2)
 			result, _ = g.ProcessAction(player2, action)
 		case Resolve:
@@ -166,60 +164,231 @@ func (g *GameState) RunStack() {
 	}
 }
 
+func (g *GameState) CheckStateBasedActions() {
+	g.CleanupDeadCreatures()
+	g.CheckWinConditions()
+}
+
 func (g *GameState) NextTurn() {
 	player := g.Players[g.CurrentPlayer]
+	g.ActivePlayer = g.CurrentPlayer
+	player.Turn.Phase = PhaseUntap
+	player.Turn.LandPlayed = false
+
+	fmt.Printf("\n=== %s's Turn (Life: %d) ===\n", player.Name(), player.LifeTotal)
+
 	for player.Turn.Phase != PhaseEnd {
-		cards, err := g.CardsWithActions(player)
-		if err != nil {
-			return
-		}
 		switch player.Turn.Phase {
 		case PhaseUntap:
-			g.UntapPhase(player, cards)
+			g.UntapPhase(player)
 		case PhaseUpkeep:
-			g.UpkeepPhase(player, cards)
-			g.RunStack()
+			g.UpkeepPhase(player)
 		case PhaseDraw:
-			g.DrawPhase(player, cards)
-			g.RunStack()
-		case PhaseMain1:
-			g.MainPhase(player, cards)
-			g.RunStack()
+			g.DrawPhase(player)
+		case PhaseMain1, PhaseMain2:
+			g.MainPhase(player)
 		case PhaseCombat:
-			g.RunStack()
-		case PhaseMain2:
-			g.RunStack()
-		case PhaseEnd:
-			g.RunStack()
+			g.CombatPhase(player)
 		}
-		g.CheckWinConditions()
 
-		if player.HasLost {
+		g.CheckWinConditions()
+		if g.hasLoser() {
 			return
 		}
 		player.Turn.NextPhase()
 	}
 
+	g.printZoneStates()
 	g.CurrentPlayer = (g.CurrentPlayer + 1) % len(g.Players)
 }
 
-func (g *GameState) UntapPhase(player *Player, cards []*Card) {
-	for _, card := range player.Battlefield {
+func (g *GameState) UntapPhase(player *Player) {
+	for i := range player.Battlefield {
+		card := player.Battlefield[i]
 		card.Tapped = false
+		card.Active = true
 	}
 }
 
-func (g *GameState) UpkeepPhase(player *Player, cards []*Card) {
+func (g *GameState) UpkeepPhase(player *Player) {
 }
 
-func (g *GameState) DrawPhase(player *Player, cards []*Card) {
+func (g *GameState) DrawPhase(player *Player) {
 	if err := player.DrawCard(); err != nil {
+		fmt.Printf("  %s cannot draw - loses the game!\n", player.Name())
 		player.HasLost = true
+		return
+	}
+	fmt.Printf("  %s draws a card\n", player.Name())
+}
+
+func (g *GameState) MainPhase(player *Player) {
+	for {
+		action := g.WaitForPlayerInput(player)
+		switch action.Type {
+		case ActionPassPriority:
+			return
+		case ActionPlayLand:
+			g.PlayLand(player, action.Card)
+			fmt.Printf("  %s plays %s\n", player.Name(), cardStr(action.Card))
+		case ActionCastSpell:
+			if err := g.TapLandsForMana(player, action.Card.ManaCost); err != nil {
+				continue
+			}
+			if err := g.CastSpell(player, action.Card, action.Target); err != nil {
+				continue
+			}
+			if action.Target != nil {
+				fmt.Printf("  %s casts %s targeting %s\n", player.Name(), cardStr(action.Card), targetStr(action.Target))
+			} else {
+				fmt.Printf("  %s casts %s\n", player.Name(), cardStr(action.Card))
+			}
+			if item := g.Stack.Pop(); item != nil {
+				g.Resolve(item)
+			}
+			g.CheckWinConditions()
+			if g.hasLoser() {
+				return
+			}
+		}
 	}
 }
 
-func (g *GameState) MainPhase(player *Player, cards []*Card) {
+func (g *GameState) CombatPhase(player *Player) {
+	player.Turn.CombatStep = CombatStepBeginning
 
+	player.Turn.CombatStep = CombatStepDeclareAttackers
+	availableAttackers := g.AvailableAttackers(player)
+	if len(availableAttackers) > 0 {
+		fmt.Printf("  Combat: Available attackers: %s\n", g.cardListString(availableAttackers))
+	}
+	for {
+		action := g.WaitForPlayerInput(player)
+		if action.Type == ActionPassPriority {
+			break
+		}
+		if action.Type == ActionDeclareAttacker {
+			if err := g.DeclareAttacker(action.Card); err != nil {
+				continue
+			}
+			g.Attackers = append(g.Attackers, action.Card)
+			fmt.Printf("  %s attacks with %s (%d/%d)\n", player.Name(), cardStr(action.Card), action.Card.Power, action.Card.Toughness)
+		}
+	}
+
+	if len(g.Attackers) == 0 {
+		player.Turn.CombatStep = CombatStepEndOfCombat
+		return
+	}
+
+	player.Turn.CombatStep = CombatStepDeclareBlockers
+	opponent := g.GetOpponent(player)
+	for {
+		action := g.WaitForPlayerInput(opponent)
+		if action.Type == ActionPassPriority {
+			break
+		}
+		if action.Type == ActionDeclareBlocker {
+			if attacker, ok := action.Target.(*Card); ok {
+				if err := g.DeclareBlocker(action.Card, attacker); err != nil {
+					continue
+				}
+				fmt.Printf("  %s blocks %s with %s (%d/%d)\n", opponent.Name(), cardStr(attacker), cardStr(action.Card), action.Card.Power, action.Card.Toughness)
+			}
+		}
+	}
+
+	player.Turn.CombatStep = CombatStepCombatDamage
+	g.printCombatDamage(player, opponent)
+	g.ResolveCombatDamage()
+	g.CheckStateBasedActions()
+
+	player.Turn.CombatStep = CombatStepEndOfCombat
+	g.ClearCombatState()
+}
+
+func (g *GameState) TapLandsForMana(player *Player, cost string) error {
+	required := player.ManaPool.ParseCost(cost)
+	redNeeded := required['R']
+
+	tapped := 0
+	for _, card := range player.Battlefield {
+		if tapped >= redNeeded {
+			break
+		}
+		if card.CardType == domain.CardTypeLand && !card.Tapped {
+			g.TapLandForMana(player, card)
+			tapped++
+		}
+	}
+
+	if tapped < redNeeded {
+		return fmt.Errorf("not enough untapped lands")
+	}
+	return nil
+}
+
+func (g *GameState) GetOpponent(player *Player) *Player {
+	for _, p := range g.Players {
+		if p != player {
+			return p
+		}
+	}
+	return nil
+}
+
+func (g *GameState) hasLoser() bool {
+	for _, p := range g.Players {
+		if p.HasLost {
+			return true
+		}
+	}
+	return false
+}
+
+func (g *GameState) printZoneStates() {
+	fmt.Println("\n--- End of Turn Zone States ---")
+	for _, p := range g.Players {
+		fmt.Printf("%s (Life: %d):\n", p.Name(), p.LifeTotal)
+		fmt.Printf("  Hand: %s\n", g.cardListString(p.Hand))
+		fmt.Printf("  Battlefield: %s\n", g.cardListString(p.Battlefield))
+		fmt.Printf("  Graveyard: %s\n", g.cardListString(p.Graveyard))
+	}
+}
+
+func (g *GameState) printCombatDamage(attacker, defender *Player) {
+	for _, card := range g.Attackers {
+		blockers := g.BlockerMap[card]
+		if len(blockers) == 0 {
+			fmt.Printf("  %s deals %d damage to %s\n", cardStr(card), card.Power, defender.Name())
+		} else {
+			for _, blocker := range blockers {
+				fmt.Printf("  %s and %s trade blows (%d vs %d)\n", cardStr(card), cardStr(blocker), card.Power, blocker.Power)
+			}
+		}
+	}
+}
+
+func (g *GameState) cardListString(cards []*Card) string {
+	if len(cards) == 0 {
+		return "(empty)"
+	}
+	names := make([]string, len(cards))
+	for i, c := range cards {
+		names[i] = cardStr(c)
+	}
+	return fmt.Sprintf("%v", names)
+}
+
+func cardStr(c *Card) string {
+	return fmt.Sprintf("%s#%d", c.Name(), c.ID)
+}
+
+func targetStr(t Targetable) string {
+	if c, ok := t.(*Card); ok {
+		return cardStr(c)
+	}
+	return t.Name()
 }
 
 func (g *GameState) CardsWithActions(player *Player) ([]*Card, error) {
@@ -317,16 +486,46 @@ func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
 
 func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 	actions := []PlayerAction{}
+	activePlayer := g.Players[g.ActivePlayer]
 
-	for _, card := range player.Hand {
-		if g.CanPlayLand(player, card) {
-			actions = append(actions, PlayerAction{Type: ActionPlayLand, Card: card})
+	if player.Turn.Phase == PhaseMain1 || player.Turn.Phase == PhaseMain2 {
+		for _, card := range player.Hand {
+			if g.CanPlayLand(player, card) {
+				actions = append(actions, PlayerAction{Type: ActionPlayLand, Card: card})
+			}
+		}
+		for _, card := range player.Hand {
+			if g.CanCast(player, card) {
+				actions = append(actions, PlayerAction{Type: ActionCastSpell, Card: card})
+			}
+		}
+	} else {
+		for _, card := range player.Hand {
+			if g.CanCast(player, card) && card.CardType == domain.CardTypeInstant {
+				actions = append(actions, PlayerAction{Type: ActionCastSpell, Card: card})
+			}
 		}
 	}
 
-	for _, card := range player.Hand {
-		if g.CanCast(player, card) {
-			actions = append(actions, PlayerAction{Type: ActionCastSpell, Card: card})
+	if player == activePlayer && player.Turn.Phase == PhaseCombat {
+		if player.Turn.CombatStep == CombatStepDeclareAttackers {
+			for _, card := range g.AvailableAttackers(player) {
+				actions = append(actions, PlayerAction{Type: ActionDeclareAttacker, Card: card})
+			}
+		}
+	}
+
+	if player != activePlayer && activePlayer.Turn.Phase == PhaseCombat {
+		if activePlayer.Turn.CombatStep == CombatStepDeclareBlockers {
+			for _, card := range g.AvailableBlockers(player) {
+				for _, attacker := range g.Attackers {
+					actions = append(actions, PlayerAction{
+						Type:   ActionDeclareBlocker,
+						Card:   card,
+						Target: attacker,
+					})
+				}
+			}
 		}
 	}
 
@@ -335,8 +534,7 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 	return actions
 }
 
-func PlayGame(g *GameState) []*Player {
-	maxTurns := 500
+func PlayGame(g *GameState, maxTurns int) []*Player {
 	for totalTurns := range maxTurns {
 		g.CheckWinConditions()
 

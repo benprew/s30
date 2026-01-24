@@ -1,25 +1,98 @@
 package core_engine
 
-func BeginCombat() {
-	// TODO: Implement combat logic
+import (
+	"fmt"
+
+	"github.com/benprew/s30/game/domain"
+)
+
+func (g *GameState) AvailableAttackers(player *Player) []*Card {
+	attackers := []*Card{}
+	for _, card := range player.Battlefield {
+		if card.CardType == domain.CardTypeCreature && card.IsActive() {
+			attackers = append(attackers, card)
+		}
+	}
+	return attackers
 }
 
-func DeclareAttackers() {
-	// TODO: Implement attacker declaration
+func (g *GameState) DeclareAttacker(attacker *Card) error {
+	if attacker.CardType != domain.CardTypeCreature {
+		return fmt.Errorf("only creatures can attack")
+	}
+	if !attacker.IsActive() {
+		return fmt.Errorf("creature cannot attack: tapped or inactive")
+	}
+	attacker.Tapped = true
+	return nil
 }
 
-func DeclareBlockers() {
-	// TODO: Implement blocker declaration
+func (g *GameState) AvailableBlockers(player *Player) []*Card {
+	blockers := []*Card{}
+	for _, card := range player.Battlefield {
+		if card.CardType == domain.CardTypeCreature && !card.Tapped && !g.isAlreadyBlocking(card) {
+			blockers = append(blockers, card)
+		}
+	}
+	return blockers
 }
 
-func AssignCombatDamage() {
-	// TODO: Implement combat damage assignment
+func (g *GameState) DeclareBlocker(blocker *Card, attacker *Card) error {
+	if blocker.CardType != domain.CardTypeCreature {
+		return fmt.Errorf("only creatures can block")
+	}
+	if blocker.Tapped {
+		return fmt.Errorf("tapped creatures cannot block")
+	}
+	if g.isAlreadyBlocking(blocker) {
+		return fmt.Errorf("creature is already blocking")
+	}
+	g.BlockerMap[attacker] = append(g.BlockerMap[attacker], blocker)
+	return nil
 }
 
-func ResolveCombatDamage() {
-	// TODO: Implement combat damage resolution
+func (g *GameState) isAlreadyBlocking(blocker *Card) bool {
+	for _, blockers := range g.BlockerMap {
+		for _, b := range blockers {
+			if b == blocker {
+				return true
+			}
+		}
+	}
+	return false
 }
 
-func EndCombat() {
-	// TODO: Implement end of combat steps
+func (g *GameState) ResolveCombatDamage() {
+	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
+
+	for _, attacker := range g.Attackers {
+		blockers := g.BlockerMap[attacker]
+		if len(blockers) == 0 {
+			defendingPlayer.ReceiveDamage(attacker.Power)
+		} else {
+			for _, blocker := range blockers {
+				blocker.ReceiveDamage(attacker.Power)
+				attacker.ReceiveDamage(blocker.Power)
+			}
+		}
+	}
+}
+
+func (g *GameState) CleanupDeadCreatures() {
+	for _, player := range g.Players {
+		deadCreatures := []*Card{}
+		for _, card := range player.Battlefield {
+			if card.CardType == domain.CardTypeCreature && card.IsDead() {
+				deadCreatures = append(deadCreatures, card)
+			}
+		}
+		for _, card := range deadCreatures {
+			player.MoveTo(card, ZoneGraveyard)
+		}
+	}
+}
+
+func (g *GameState) ClearCombatState() {
+	g.Attackers = nil
+	g.BlockerMap = make(map[*Card][]*Card)
 }

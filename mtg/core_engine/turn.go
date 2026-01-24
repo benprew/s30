@@ -13,8 +13,20 @@ const (
 	PhaseCleanup Phase = "Cleanup"
 )
 
+type CombatStep string
+
+const (
+	CombatStepNone             CombatStep = ""
+	CombatStepBeginning        CombatStep = "BeginningOfCombat"
+	CombatStepDeclareAttackers CombatStep = "DeclareAttackers"
+	CombatStepDeclareBlockers  CombatStep = "DeclareBlockers"
+	CombatStepCombatDamage     CombatStep = "CombatDamage"
+	CombatStepEndOfCombat      CombatStep = "EndOfCombat"
+)
+
 type Turn struct {
 	Phase      Phase
+	CombatStep CombatStep
 	LandPlayed bool
 }
 

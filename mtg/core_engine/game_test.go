@@ -206,6 +206,7 @@ func TestCastLightningBolt(t *testing.T) {
 	if err := game.Resolve(game.Stack.Pop()); err != nil {
 		t.Errorf("Failed to do resolve: %v", err)
 	}
+	game.CheckStateBasedActions()
 
 	if !mtn.Tapped {
 		t.Errorf("Mountain should be tapped after casting Lightning Bolt")
@@ -388,7 +389,7 @@ func TestDrawFromEmptyLibraryLoses(t *testing.T) {
 	player.Library = []*Card{}
 	player.Turn.Phase = PhaseDraw
 
-	game.DrawPhase(player, nil)
+	game.DrawPhase(player)
 
 	if !player.HasLost {
 		t.Errorf("Player should have lost after drawing from empty library")

@@ -3,6 +3,8 @@ package core_engine
 import (
 	"fmt"
 	"slices"
+
+	"github.com/benprew/s30/game/domain"
 )
 
 type Zone int
@@ -17,14 +19,17 @@ const (
 )
 
 const (
-	ActionPlayLand     = "PlayLand"
-	ActionCastSpell    = "CastSpell"
-	ActionPassPriority = "PassPriority"
+	ActionPlayLand        = "PlayLand"
+	ActionCastSpell       = "CastSpell"
+	ActionPassPriority    = "PassPriority"
+	ActionDeclareAttacker = "DeclareAttacker"
+	ActionDeclareBlocker  = "DeclareBlocker"
 )
 
 type PlayerAction struct {
-	Type string
-	Card *Card
+	Type   string
+	Card   *Card
+	Target Targetable
 }
 
 type Player struct {
@@ -122,5 +127,10 @@ func (p *Player) MoveTo(card *Card, destZone Zone) error {
 
 	*destSlice = append(*destSlice, card)
 	card.CurrentZone = destZone
+
+	if destZone == ZoneBattlefield && card.CardType == domain.CardTypeCreature {
+		card.Active = false
+	}
+
 	return nil
 }
