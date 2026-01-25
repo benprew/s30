@@ -1,0 +1,18 @@
+  | Phase                 | Step               | Key Actions                                                      |
+  |-----------------------+--------------------+------------------------------------------------------------------|
+  | Beginning Phase       | Untap              | Phasing occurs; active player untaps all permanents              |
+  |                       | Upkeep             | "At beginning of upkeep" triggers; players get priority          |
+  |                       | Draw               | Active player draws a card (turn-based action)                   |
+  |-----------------------+--------------------+------------------------------------------------------------------|
+  | Precombat Main Phase  | —                  | Active player can cast spells and play lands                     |
+  |-----------------------+--------------------+------------------------------------------------------------------|
+  | Combat Phase          | Beginning of Combat| "At beginning of combat" triggers; players get priority          |
+  |                       | Declare Attackers  | Active player declares attackers; triggers fire                  |
+  |                       | Declare Blockers   | Defending player declares blockers; damage assignment order set  |
+  |                       | Combat Damage      | First/double strike damage (if applicable), then regular damage  |
+  |                       | End of Combat      | "At end of combat" triggers; creatures removed from combat       |
+  |-----------------------+--------------------+------------------------------------------------------------------|
+  | Postcombat Main Phase | —                  | Active player can cast spells and play lands                     |
+  |-----------------------+--------------------+------------------------------------------------------------------|
+  | Ending Phase          | End                | "At beginning of end step" triggers; players get priority        |
+  |                       | Cleanup            | Discard to hand size; damage removed; "until end of turn" ends   |
