@@ -34,5 +34,4 @@
 * **Testability**: The core engine and individual card scripts can be tested more easily in isolation.
 * **Clear Separation of Concerns**: Game mechanics, card logic, and presentation are distinct.
 
-You might also find it helpful to look at existing open-source Magic: The Gathering engines like Forge or XMage for inspiration on how they handle specific rules and card implementations. Frameworks like boardgame.io or specific engine tools like CardHouse (Unity) or Godot Car
-d Game Framework might also offer relevant concepts.
+You might also find it helpful to look at existing open-source Magic: The Gathering engines like Forge or XMage for inspiration on how they handle specific rules and card implementations. Frameworks like boardgame.io or specific engine tools like CardHouse (Unity) or Godot Card Game Framework might also offer relevant concepts.

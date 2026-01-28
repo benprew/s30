@@ -1,16 +1,19 @@
-package core_engine
+package core
 
 import (
 	"fmt"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/mtg/effects"
 )
 
 type EntityID int
 
+type Event = effects.Event
+
 type Card struct {
 	domain.Card
-	ID             EntityID // In a game, each card will have an entitiyID
+	ID             EntityID
 	Owner          *Player
 	CurrentZone    Zone
 	Tapped         bool
@@ -19,23 +22,20 @@ type Card struct {
 	Targetable     string
 	PowerBoost     int
 	ToughnessBoost int
-	// target         EntityID // target when casting this card. can be an instance
-	// of something: another card, or a player. can also be a zone: library or hand
-	// but it has to be something in the game
-	Events  [][]string // Events that happen when a card is cast, format: [["EventType", param1, param2], ...]
-	Actions []Event
+	Events         [][]string
+	Actions        []effects.Event
 }
 
 func (c *Card) Name() string {
 	return c.CardName
 }
 
-func (c *Card) CardActions() []Event {
+func (c *Card) CardActions() []effects.Event {
 	switch c.Name() {
 	case "Lightning Bolt":
-		return []Event{&DirectDamage{Amount: 3}}
+		return []effects.Event{&effects.DirectDamage{Amount: 3}}
 	case "Giant Growth":
-		return []Event{&StatBoost{PowerBoost: 3, ToughnessBoost: 3}}
+		return []effects.Event{&effects.StatBoost{PowerBoost: 3, ToughnessBoost: 3}}
 	}
 	return nil
 }
@@ -44,12 +44,20 @@ func (c *Card) ReceiveDamage(amount int) {
 	c.DamageTaken += amount
 }
 
-func (c *Card) TargetType() TargetType {
-	return TargetTypeCard
+func (c *Card) TargetType() effects.TargetType {
+	return effects.TargetTypeCard
 }
 
 func (c *Card) IsDead() bool {
 	return c.DamageTaken >= c.EffectiveToughness()
+}
+
+func (c *Card) AddPowerBoost(amount int) {
+	c.PowerBoost += amount
+}
+
+func (c *Card) AddToughnessBoost(amount int) {
+	c.ToughnessBoost += amount
 }
 
 func (c *Card) EffectivePower() int {
@@ -98,13 +106,9 @@ func (c *Card) UnMarshalActions() {
 	for _, e := range c.Events {
 		switch e[0] {
 		case "DirectDamage":
-			// Convert string amount to int
 			amount := 0
 			fmt.Sscanf(e[1], "%d", &amount)
-
-			// Create DirectDamage with proper amount and target
-			// The target should be set based on the card's Target field
-			damage := DirectDamage{Amount: amount}
+			damage := effects.DirectDamage{Amount: amount}
 			c.Actions = append(c.Actions, &damage)
 		}
 	}

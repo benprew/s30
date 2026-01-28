@@ -1,23 +1,21 @@
-package core_engine
+package core
 
 import (
 	"fmt"
 	"slices"
+
+	"github.com/benprew/s30/mtg/effects"
 )
 
-// An event is either
 type Action struct {
-	ActionID int     // One of the available actions (deal damage, draw card)
-	TargetID int     // either cardid or playerid, can be null (-1)
-	Player   *Player // owner of the action
+	ActionID int
+	TargetID int
+	Player   *Player
 }
 
 func (a *Action) Resolve() {
-
 }
 
-// Action functions assume the player can perform them
-// validating actions happens earlier
 func (g *GameState) PlayLand(player *Player, card *Card) error {
 	if err := player.MoveTo(card, ZoneBattlefield); err != nil {
 		return err
@@ -32,11 +30,10 @@ func (g *GameState) CastSpell(player *Player, card *Card, target Targetable) err
 		return fmt.Errorf("cannot cast card")
 	}
 
-	// Pay the mana cost
 	if err := player.ManaPool.Pay(card.ManaCost); err != nil {
 		return err
 	}
-	e := []Event{}
+	e := []effects.Event{}
 
 	for _, a := range card.CardActions() {
 		a.AddTarget(target)

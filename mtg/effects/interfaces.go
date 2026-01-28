@@ -1,4 +1,4 @@
-package core_engine
+package effects
 
 type TargetType int
 
@@ -12,4 +12,13 @@ type Targetable interface {
 	ReceiveDamage(amount int)
 	TargetType() TargetType
 	IsDead() bool
+	AddPowerBoost(int)
+	AddToughnessBoost(int)
+}
+
+type Event interface {
+	Name() string
+	Resolve()
+	Target() Targetable
+	AddTarget(Targetable)
 }

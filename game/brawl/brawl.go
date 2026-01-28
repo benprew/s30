@@ -1,15 +1,15 @@
 package brawl
 
 import (
-	"github.com/benprew/s30/mtg/core_engine"
+	"github.com/benprew/s30/mtg/core"
 )
 
 type Brawl struct {
-	game *core_engine.GameState
+	game *core.GameState
 }
 
-func NewBrawl(players []*core_engine.Player) *Brawl {
-	g := core_engine.NewGame(players)
+func NewBrawl(players []*core.Player) *Brawl {
+	g := core.NewGame(players)
 	return &Brawl{game: g}
 }
 

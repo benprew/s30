@@ -1,4 +1,4 @@
-package core_engine
+package core
 
 import (
 	"fmt"

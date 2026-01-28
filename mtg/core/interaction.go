@@ -1,4 +1,4 @@
-package core_engine
+package core
 
 func CanTarget(source *Card, target *Card) bool {
 	// TODO: Implement targeting logic

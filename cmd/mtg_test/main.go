@@ -6,32 +6,32 @@ import (
 	"time"
 
 	"github.com/benprew/s30/game/domain"
-	"github.com/benprew/s30/mtg/core_engine"
+	"github.com/benprew/s30/mtg/core"
 )
 
-func createPlayers() []*core_engine.Player {
-	players := []*core_engine.Player{}
-	entityID := core_engine.EntityID(1)
+func createPlayers() []*core.Player {
+	players := []*core.Player{}
+	entityID := core.EntityID(1)
 
 	for i := range 2 {
-		player := &core_engine.Player{
-			ID:          core_engine.EntityID(i + 1),
+		player := &core.Player{
+			ID:          core.EntityID(i + 1),
 			LifeTotal:   9,
-			ManaPool:    core_engine.ManaPool{},
-			Hand:        []*core_engine.Card{},
-			Library:     []*core_engine.Card{},
-			Battlefield: []*core_engine.Card{},
-			Graveyard:   []*core_engine.Card{},
-			Exile:       []*core_engine.Card{},
-			Turn:        &core_engine.Turn{},
-			InputChan:   make(chan core_engine.PlayerAction, 100),
+			ManaPool:    core.ManaPool{},
+			Hand:        []*core.Card{},
+			Library:     []*core.Card{},
+			Battlefield: []*core.Card{},
+			Graveyard:   []*core.Card{},
+			Exile:       []*core.Card{},
+			Turn:        &core.Turn{},
+			InputChan:   make(chan core.PlayerAction, 100),
 			IsAI:        true,
 		}
 
 		addCard := func(name string) {
 			domainCard := domain.FindCardByName(name)
 			if domainCard != nil {
-				coreCard := core_engine.NewCardFromDomain(domainCard, entityID, player)
+				coreCard := core.NewCardFromDomain(domainCard, entityID, player)
 				player.Library = append(player.Library, coreCard)
 				entityID++
 			}
@@ -63,7 +63,7 @@ func createPlayers() []*core_engine.Player {
 	return players
 }
 
-func runAI(game *core_engine.GameState, player *core_engine.Player, done chan struct{}) {
+func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
 	for {
 		select {
 		case <-done:
@@ -78,8 +78,8 @@ func runAI(game *core_engine.GameState, player *core_engine.Player, done chan st
 		activePlayer := game.Players[game.ActivePlayer]
 		isActivePlayer := player == activePlayer
 		isDefending := game.GetOpponent(player) == activePlayer &&
-			activePlayer.Turn.Phase == core_engine.PhaseCombat &&
-			activePlayer.Turn.CombatStep == core_engine.CombatStepDeclareBlockers
+			activePlayer.Turn.Phase == core.PhaseCombat &&
+			activePlayer.Turn.CombatStep == core.CombatStepDeclareBlockers
 
 		if !isActivePlayer && !isDefending {
 			time.Sleep(10 * time.Millisecond)
@@ -99,15 +99,15 @@ func runAI(game *core_engine.GameState, player *core_engine.Player, done chan st
 	}
 }
 
-func chooseAction(game *core_engine.GameState, player *core_engine.Player, actions []core_engine.PlayerAction) core_engine.PlayerAction {
-	castActions := []core_engine.PlayerAction{}
-	landActions := []core_engine.PlayerAction{}
-	attackActions := []core_engine.PlayerAction{}
-	blockActions := []core_engine.PlayerAction{}
+func chooseAction(game *core.GameState, player *core.Player, actions []core.PlayerAction) core.PlayerAction {
+	castActions := []core.PlayerAction{}
+	landActions := []core.PlayerAction{}
+	attackActions := []core.PlayerAction{}
+	blockActions := []core.PlayerAction{}
 
 	for _, a := range actions {
 		switch a.Type {
-		case core_engine.ActionCastSpell:
+		case core.ActionCastSpell:
 			if a.Card.CardType != domain.CardTypeLand {
 				targets := game.AvailableTargets(a.Card)
 				if len(targets) > 0 {
@@ -115,11 +115,11 @@ func chooseAction(game *core_engine.GameState, player *core_engine.Player, actio
 				}
 				castActions = append(castActions, a)
 			}
-		case core_engine.ActionPlayLand:
+		case core.ActionPlayLand:
 			landActions = append(landActions, a)
-		case core_engine.ActionDeclareAttacker:
+		case core.ActionDeclareAttacker:
 			attackActions = append(attackActions, a)
-		case core_engine.ActionDeclareBlocker:
+		case core.ActionDeclareBlocker:
 			blockActions = append(blockActions, a)
 		}
 	}
@@ -137,12 +137,12 @@ func chooseAction(game *core_engine.GameState, player *core_engine.Player, actio
 		return blockActions[rand.Intn(len(blockActions))]
 	}
 
-	return core_engine.PlayerAction{Type: core_engine.ActionPassPriority}
+	return core.PlayerAction{Type: core.ActionPassPriority}
 }
 
 func main() {
 	players := createPlayers()
-	game := core_engine.NewGame(players)
+	game := core.NewGame(players)
 	game.StartGame()
 
 	fmt.Println("=== MTG Test Game ===")
@@ -153,7 +153,7 @@ func main() {
 		go runAI(game, p, done)
 	}
 
-	winners := core_engine.PlayGame(game, 10)
+	winners := core.PlayGame(game, 10)
 	close(done)
 
 	fmt.Println("\n=== Game Over ===")

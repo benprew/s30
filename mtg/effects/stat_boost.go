@@ -1,4 +1,4 @@
-package core_engine
+package effects
 
 type StatBoost struct {
 	tgt            Targetable
@@ -12,8 +12,6 @@ func (s *StatBoost) AddTarget(target Targetable) { s.tgt = target }
 func (s *StatBoost) Target() Targetable          { return s.tgt }
 
 func (s *StatBoost) Resolve() {
-	if card, ok := s.tgt.(*Card); ok {
-		card.PowerBoost += s.PowerBoost
-		card.ToughnessBoost += s.ToughnessBoost
-	}
+	s.tgt.AddPowerBoost(s.PowerBoost)
+	s.tgt.AddToughnessBoost(s.ToughnessBoost)
 }

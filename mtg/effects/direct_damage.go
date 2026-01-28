@@ -1,4 +1,4 @@
-package core_engine
+package effects
 
 type DirectDamage struct {
 	tgt    Targetable

@@ -1,17 +1,19 @@
-package core_engine
+package core
 
-import "fmt"
+import (
+	"fmt"
 
-// The stack in MTG is complex enough that it deserves it's own file.
-// It's central to the gamea and most effects use it
+	"github.com/benprew/s30/mtg/effects"
+)
+
 type Stack struct {
 	Items             []*StackItem
-	CurrentState      StackState // Current state of the stack state machine
-	ConsecutivePasses int        // Tracks consecutive passes to determine stack resolution
+	CurrentState      StackState
+	ConsecutivePasses int
 }
 
 type StackItem struct {
-	Events []Event // a spell can have multiple events associated with it
+	Events []effects.Event
 	Player *Player
 	Card   *Card
 }

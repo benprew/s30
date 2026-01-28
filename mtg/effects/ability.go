@@ -1,4 +1,4 @@
-package core_engine
+package effects
 
 type AbilityType string
 
@@ -10,11 +10,10 @@ const (
 
 type Ability struct {
 	Type    AbilityType
-	Cost    string // Mana cost or other activation cost
-	Effect  string // Description of the ability's effect
-	Trigger string // Condition that triggers the ability (for triggered abilities)
+	Cost    string
+	Effect  string
+	Trigger string
 }
 
 func (a *Ability) Resolve() {
-	// TODO: Implement ability resolution logic
 }

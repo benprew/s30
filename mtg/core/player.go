@@ -1,10 +1,11 @@
-package core_engine
+package core
 
 import (
 	"fmt"
 	"slices"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/mtg/effects"
 )
 
 type Zone int
@@ -24,6 +25,14 @@ const (
 	ActionPassPriority    = "PassPriority"
 	ActionDeclareAttacker = "DeclareAttacker"
 	ActionDeclareBlocker  = "DeclareBlocker"
+)
+
+type Targetable = effects.Targetable
+type TargetType = effects.TargetType
+
+const (
+	TargetTypeCard   = effects.TargetTypeCard
+	TargetTypePlayer = effects.TargetTypePlayer
 )
 
 type PlayerAction struct {
@@ -76,8 +85,13 @@ func (p *Player) IsDead() bool {
 	return p.LifeTotal <= 0
 }
 
+func (p *Player) AddPowerBoost(int) {
+}
+
+func (p *Player) AddToughnessBoost(int) {
+}
+
 func (p *Player) Notify() {
-	// TODO: Send notification to player
 }
 
 func (p *Player) getZone(zone Zone) *[]*Card {

@@ -1,9 +1,10 @@
-package core_engine
+package core
 
 import (
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/mtg/effects"
 )
 
 func TestLoadCardDatabase(t *testing.T) {
@@ -88,7 +89,7 @@ func TestUnMarshalActionsDirectDamage(t *testing.T) {
 		t.Errorf("Expected 1 action, got %d", len(card.Actions))
 	}
 
-	dd, ok := card.Actions[0].(*DirectDamage)
+	dd, ok := card.Actions[0].(*effects.DirectDamage)
 	if !ok {
 		t.Errorf("Expected DirectDamage action")
 	}
@@ -110,8 +111,8 @@ func TestUnMarshalActionsMultiple(t *testing.T) {
 		t.Errorf("Expected 2 actions, got %d", len(card.Actions))
 	}
 
-	dd1 := card.Actions[0].(*DirectDamage)
-	dd2 := card.Actions[1].(*DirectDamage)
+	dd1 := card.Actions[0].(*effects.DirectDamage)
+	dd2 := card.Actions[1].(*effects.DirectDamage)
 
 	if dd1.Amount != 2 {
 		t.Errorf("Expected first damage amount 2, got %d", dd1.Amount)
