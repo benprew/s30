@@ -68,11 +68,11 @@ func (g *GameState) ResolveCombatDamage() {
 	for _, attacker := range g.Attackers {
 		blockers := g.BlockerMap[attacker]
 		if len(blockers) == 0 {
-			defendingPlayer.ReceiveDamage(attacker.Power)
+			defendingPlayer.ReceiveDamage(attacker.EffectivePower())
 		} else {
 			for _, blocker := range blockers {
-				blocker.ReceiveDamage(attacker.Power)
-				attacker.ReceiveDamage(blocker.Power)
+				blocker.ReceiveDamage(attacker.EffectivePower())
+				attacker.ReceiveDamage(blocker.EffectivePower())
 			}
 		}
 	}

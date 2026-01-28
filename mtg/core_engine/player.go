@@ -97,6 +97,22 @@ func (p *Player) getZone(zone Zone) *[]*Card {
 	}
 }
 
+func (p *Player) ControlsLandType(landType string) bool {
+	for _, card := range p.Battlefield {
+		if card.CardType == domain.CardTypeLand {
+			if card.Name() == landType {
+				return true
+			}
+			for _, subtype := range card.Subtypes {
+				if subtype == landType {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (p *Player) MoveTo(card *Card, destZone Zone) error {
 	if card.Owner != p {
 		return fmt.Errorf("card %s is not owned by this player", card.CardName)

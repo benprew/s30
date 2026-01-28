@@ -198,8 +198,17 @@ func (g *GameState) NextTurn() {
 		player.Turn.NextPhase()
 	}
 
+	g.CleanupEndOfTurnEffects()
 	g.printZoneStates()
 	g.CurrentPlayer = (g.CurrentPlayer + 1) % len(g.Players)
+}
+
+func (g *GameState) CleanupEndOfTurnEffects() {
+	for _, player := range g.Players {
+		for _, card := range player.Battlefield {
+			card.ClearEndOfTurnEffects()
+		}
+	}
 }
 
 func (g *GameState) UntapPhase(player *Player) {
@@ -272,7 +281,7 @@ func (g *GameState) CombatPhase(player *Player) {
 				continue
 			}
 			g.Attackers = append(g.Attackers, action.Card)
-			fmt.Printf("  %s attacks with %s (%d/%d)\n", player.Name(), cardStr(action.Card), action.Card.Power, action.Card.Toughness)
+			fmt.Printf("  %s attacks with %s (%d/%d)\n", player.Name(), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
 		}
 	}
 
@@ -293,7 +302,7 @@ func (g *GameState) CombatPhase(player *Player) {
 				if err := g.DeclareBlocker(action.Card, attacker); err != nil {
 					continue
 				}
-				fmt.Printf("  %s blocks %s with %s (%d/%d)\n", opponent.Name(), cardStr(attacker), cardStr(action.Card), action.Card.Power, action.Card.Toughness)
+				fmt.Printf("  %s blocks %s with %s (%d/%d)\n", opponent.Name(), cardStr(attacker), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
 			}
 		}
 	}
@@ -309,21 +318,46 @@ func (g *GameState) CombatPhase(player *Player) {
 
 func (g *GameState) TapLandsForMana(player *Player, cost string) error {
 	required := player.ManaPool.ParseCost(cost)
-	redNeeded := required['R']
 
-	tapped := 0
-	for _, card := range player.Battlefield {
-		if tapped >= redNeeded {
-			break
+	for color, needed := range required {
+		if color == 'C' {
+			continue
 		}
-		if card.CardType == domain.CardTypeLand && !card.Tapped {
-			g.TapLandForMana(player, card)
-			tapped++
+		tapped := 0
+		for _, card := range player.Battlefield {
+			if tapped >= needed {
+				break
+			}
+			if card.CardType == domain.CardTypeLand && !card.Tapped {
+				for _, mana := range card.ManaProduction {
+					if len(mana) == 1 && rune(mana[0]) == color {
+						g.TapLandForMana(player, card)
+						tapped++
+						break
+					}
+				}
+			}
+		}
+		if tapped < needed {
+			return fmt.Errorf("not enough untapped lands for %c", color)
 		}
 	}
 
-	if tapped < redNeeded {
-		return fmt.Errorf("not enough untapped lands")
+	colorlessNeeded := required['C']
+	if colorlessNeeded > 0 {
+		tapped := 0
+		for _, card := range player.Battlefield {
+			if tapped >= colorlessNeeded {
+				break
+			}
+			if card.CardType == domain.CardTypeLand && !card.Tapped {
+				g.TapLandForMana(player, card)
+				tapped++
+			}
+		}
+		if tapped < colorlessNeeded {
+			return fmt.Errorf("not enough untapped lands for colorless")
+		}
 	}
 	return nil
 }
@@ -360,10 +394,10 @@ func (g *GameState) printCombatDamage(attacker, defender *Player) {
 	for _, card := range g.Attackers {
 		blockers := g.BlockerMap[card]
 		if len(blockers) == 0 {
-			fmt.Printf("  %s deals %d damage to %s\n", cardStr(card), card.Power, defender.Name())
+			fmt.Printf("  %s deals %d damage to %s\n", cardStr(card), card.EffectivePower(), defender.Name())
 		} else {
 			for _, blocker := range blockers {
-				fmt.Printf("  %s and %s trade blows (%d vs %d)\n", cardStr(card), cardStr(blocker), card.Power, blocker.Power)
+				fmt.Printf("  %s and %s trade blows (%d vs %d)\n", cardStr(card), cardStr(blocker), card.EffectivePower(), blocker.EffectivePower())
 			}
 		}
 	}
@@ -438,13 +472,12 @@ func (g *GameState) CanCast(player *Player, card *Card) bool {
 	return pool.CanPay(card.ManaCost) && g.hasTarget(card)
 }
 
-// If card doesn't have a targetable type, it has a target, otherwise check if
-// there are valid targets
 func (g *GameState) hasTarget(card *Card) bool {
-	// this is always true since either player is damageable and if you're still
-	// playing the game you have a target
 	if card.Targetable == "DamageableTarget" {
 		return true
+	}
+	if card.TargetsCreaturesOnly() {
+		return len(g.AvailableTargets(card)) > 0
 	}
 	return true
 }
@@ -458,6 +491,16 @@ func (g *GameState) AvailableTargets(card *Card) []Targetable {
 				targets = append(targets, player)
 			}
 		}
+		for _, player := range g.Players {
+			for _, c := range player.Battlefield {
+				if c.CardType == domain.CardTypeCreature && !c.IsDead() {
+					targets = append(targets, c)
+				}
+			}
+		}
+	}
+
+	if card.TargetsCreaturesOnly() {
 		for _, player := range g.Players {
 			for _, c := range player.Battlefield {
 				if c.CardType == domain.CardTypeCreature && !c.IsDead() {

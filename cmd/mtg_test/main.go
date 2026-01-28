@@ -37,11 +37,17 @@ func createPlayers() []*core_engine.Player {
 			}
 		}
 
-		for range 10 {
+		for range 5 {
 			addCard("Mountain")
+		}
+		for range 5 {
+			addCard("Forest")
 		}
 		for range 3 {
 			addCard("Lightning Bolt")
+		}
+		for range 3 {
+			addCard("Giant Growth")
 		}
 		for range 10 {
 			addCard("Kird Ape")

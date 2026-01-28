@@ -10,13 +10,15 @@ type EntityID int
 
 type Card struct {
 	domain.Card
-	ID          EntityID // In a game, each card will have an entitiyID
-	Owner       *Player
-	CurrentZone Zone
-	Tapped      bool
-	Active      bool
-	DamageTaken int
-	Targetable  string
+	ID             EntityID // In a game, each card will have an entitiyID
+	Owner          *Player
+	CurrentZone    Zone
+	Tapped         bool
+	Active         bool
+	DamageTaken    int
+	Targetable     string
+	PowerBoost     int
+	ToughnessBoost int
 	// target         EntityID // target when casting this card. can be an instance
 	// of something: another card, or a player. can also be a zone: library or hand
 	// but it has to be something in the game
@@ -29,8 +31,11 @@ func (c *Card) Name() string {
 }
 
 func (c *Card) CardActions() []Event {
-	if c.Name() == "Lightning Bolt" {
+	switch c.Name() {
+	case "Lightning Bolt":
 		return []Event{&DirectDamage{Amount: 3}}
+	case "Giant Growth":
+		return []Event{&StatBoost{PowerBoost: 3, ToughnessBoost: 3}}
 	}
 	return nil
 }
@@ -44,7 +49,39 @@ func (c *Card) TargetType() TargetType {
 }
 
 func (c *Card) IsDead() bool {
-	return c.DamageTaken >= c.Toughness
+	return c.DamageTaken >= c.EffectiveToughness()
+}
+
+func (c *Card) EffectivePower() int {
+	return c.Power + c.PowerBoost + c.staticPowerBonus()
+}
+
+func (c *Card) EffectiveToughness() int {
+	return c.Toughness + c.ToughnessBoost + c.staticToughnessBonus()
+}
+
+func (c *Card) staticPowerBonus() int {
+	if c.Name() == "Kird Ape" && c.Owner != nil && c.Owner.ControlsLandType("Forest") {
+		return 1
+	}
+	return 0
+}
+
+func (c *Card) staticToughnessBonus() int {
+	if c.Name() == "Kird Ape" && c.Owner != nil && c.Owner.ControlsLandType("Forest") {
+		return 2
+	}
+	return 0
+}
+
+func (c *Card) ClearEndOfTurnEffects() {
+	c.PowerBoost = 0
+	c.ToughnessBoost = 0
+	c.DamageTaken = 0
+}
+
+func (c *Card) TargetsCreaturesOnly() bool {
+	return c.Targetable == "CreatureTarget" || c.Name() == "Giant Growth"
 }
 
 func (c *Card) IsActive() bool {
@@ -92,14 +129,16 @@ func NewCardFromDomain(domainCard *domain.Card, id EntityID, owner *Player) *Car
 // DeepCopy creates a deep copy of the Card struct.
 func (c *Card) DeepCopy() *Card {
 	newCard := &Card{
-		ID:          c.ID,
-		Card:        c.Card,
-		Owner:       c.Owner,
-		CurrentZone: c.CurrentZone,
-		Tapped:      c.Tapped,
-		Active:      c.Active,
-		DamageTaken: c.DamageTaken,
-		Targetable:  c.Targetable,
+		ID:             c.ID,
+		Card:           c.Card,
+		Owner:          c.Owner,
+		CurrentZone:    c.CurrentZone,
+		Tapped:         c.Tapped,
+		Active:         c.Active,
+		DamageTaken:    c.DamageTaken,
+		Targetable:     c.Targetable,
+		PowerBoost:     c.PowerBoost,
+		ToughnessBoost: c.ToughnessBoost,
 	}
 
 	// Deep copy slices
