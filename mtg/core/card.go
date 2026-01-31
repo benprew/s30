@@ -5,11 +5,14 @@ import (
 
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/mtg/effects"
+	"github.com/benprew/s30/mtg/parser"
 )
 
 type EntityID int
 
 type Event = effects.Event
+
+const cardNameKirdApe = "Kird Ape"
 
 type Card struct {
 	domain.Card
@@ -31,11 +34,27 @@ func (c *Card) Name() string {
 }
 
 func (c *Card) CardActions() []effects.Event {
+	if action := c.specialCaseAction(); action != nil {
+		return action
+	}
+
+	result := parser.DefaultParser.Parse(c.CardName, c.Text)
+	var events []effects.Event
+	for _, ability := range result.Abilities {
+		if ability.Effect != nil {
+			events = append(events, ability.Effect)
+		}
+	}
+	if len(events) > 0 {
+		return events
+	}
+	return nil
+}
+
+func (c *Card) specialCaseAction() []effects.Event {
 	switch c.Name() {
-	case "Lightning Bolt":
-		return []effects.Event{&effects.DirectDamage{Amount: 3}}
-	case "Giant Growth":
-		return []effects.Event{&effects.StatBoost{PowerBoost: 3, ToughnessBoost: 3}}
+	case cardNameKirdApe:
+		return []effects.Event{}
 	}
 	return nil
 }
@@ -69,14 +88,14 @@ func (c *Card) EffectiveToughness() int {
 }
 
 func (c *Card) staticPowerBonus() int {
-	if c.Name() == "Kird Ape" && c.Owner != nil && c.Owner.ControlsLandType("Forest") {
+	if c.Name() == cardNameKirdApe && c.Owner != nil && c.Owner.ControlsLandType("Forest") {
 		return 1
 	}
 	return 0
 }
 
 func (c *Card) staticToughnessBonus() int {
-	if c.Name() == "Kird Ape" && c.Owner != nil && c.Owner.ControlsLandType("Forest") {
+	if c.Name() == cardNameKirdApe && c.Owner != nil && c.Owner.ControlsLandType("Forest") {
 		return 2
 	}
 	return 0

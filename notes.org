@@ -1,4 +1,23 @@
 * MTG Engine
+** Card Ability Parsing
+I'm building a magic the gathering game (see mtg/GEMINI.md) and I'd like to parse the card text and return structured data describing the ability of the card.
+
+What are some systems/libraries I could use to do this.
+
+Example:
+This creature gets +1/+2 as long as you control a Forest.
+-> {"type": "staticboost", "condition": {"zone": "battlefield", "type": "land", "subtype": "forest"}, "boost": "+1/+2"}
+Lightning Bolt deals 3 damage to any target.
+-> {"type": "directdamange", "amount": 3, "target": "targetany" }
+Flying {R}: This creature gets +0/+1 until end of turn.
+-> [{"type": "ability", "ability": "flying"}, {"type": "activated_ability", "cost": "R", "boost": "+0/+1"]
+{1}{G}, {T}: Target creature gets -2/-0 until end of turn.
+-> {"type": "activated_ability", "cost": "{1}{G}, {T}", "boost": "-2/-0"}
+
+I'd like to use a hybrid approach of regex to cover common cases and full grammar parser/LLM/manual configuration for complex cases.
+
+Write a separate command to do card parsing and then write out the parsed results so edge cases can be handled manually. see cmd/ directory for separate commands. The parsing logic should be stored in mtg/parser/
+
 ** Combat
 Lets implement combat into the mtg engine. all the logic is in the mtg/ directory
 
