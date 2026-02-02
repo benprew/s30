@@ -68,6 +68,13 @@ func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
 	fmt.Printf("  [DEBUG] WaitForPlayerInput: waiting for %s, phase=%v, combat_step=%v, is_active=%v\n",
 		player.Name(), activePlayer.Turn.Phase, activePlayer.Turn.CombatStep, player == activePlayer)
 
+	if player.WaitingChan != nil {
+		select {
+		case player.WaitingChan <- struct{}{}:
+		default:
+		}
+	}
+
 	if player.IsAI {
 		select {
 		case action = <-player.InputChan:
@@ -354,6 +361,8 @@ func (g *GameState) CombatPhase(player *Player) {
 	player.Turn.CombatStep = CombatStepEndOfCombat
 	g.RunStack()
 	g.ClearCombatState()
+
+	player.Turn.CombatStep = CombatStepNone
 }
 
 func (g *GameState) EndPhase(player *Player) {

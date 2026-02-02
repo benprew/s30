@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"time"
 
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/mtg/core"
@@ -25,6 +24,7 @@ func createPlayers() []*core.Player {
 			Exile:       []*core.Card{},
 			Turn:        &core.Turn{},
 			InputChan:   make(chan core.PlayerAction, 100),
+			WaitingChan: make(chan struct{}, 1),
 			IsAI:        true,
 		}
 
@@ -74,7 +74,7 @@ func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
 		select {
 		case <-done:
 			return
-		default:
+		case <-player.WaitingChan:
 		}
 
 		if player.HasLost || game.GetOpponent(player).HasLost {
@@ -116,8 +116,6 @@ func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
 		case <-done:
 			return
 		}
-
-		time.Sleep(10 * time.Millisecond)
 	}
 }
 

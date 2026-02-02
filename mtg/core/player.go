@@ -53,6 +53,7 @@ type Player struct {
 	Turn        *Turn
 	HasLost     bool
 	InputChan   chan PlayerAction
+	WaitingChan chan struct{}
 	IsAI        bool
 }
 
