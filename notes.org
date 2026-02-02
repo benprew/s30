@@ -18,6 +18,12 @@ I'd like to use a hybrid approach of regex to cover common cases and full gramma
 
 Write a separate command to do card parsing and then write out the parsed results so edge cases can be handled manually. see cmd/ directory for separate commands. The parsing logic should be stored in mtg/parser/
 
+*** Loading abilities when loading cards
+when loading cards read assets/card_info_parsed_cards.json to get card effects and store them on the card object. These effects will be used in the engine (see mtg/). card struct is stored in game/domain/card.go.
+
+
+
+
 ** Combat
 Lets implement combat into the mtg engine. all the logic is in the mtg/ directory
 
@@ -30,6 +36,20 @@ Read mtg-Turn-structure.org in the combat phase to understand the steps.
 - AvailableActions() will need to be modified based on the phase/sub-phase that we're currently in (ex. only in the main phases can you play land or cast sorceries)
 
 Write tests for this and add this functionality to cmd/mtg_test where players attack and block randomly.
+
+*** Combat Subphases
+| Beginning of Combat | "At beginning of combat" triggers; players get priority               |
+| Declare Attackers   | Active player declares attackers; triggers fire; players get priority |
+| Declare Blockers    | Defending player declares blockers; damage assignment order set       |
+| Combat Damage       | First/double strike damage (if applicable), then regular damage       |
+| End of Combat       | "At end of combat" triggers; creatures removed from combat            |
+
+
+1. Beginning of Combat Step: Triggers that happen "at the beginning of combat" occur here. Players get priority.
+2. Declare Attackers Step: The active player declares attackers. Turn-based actions (tapping/declaring attackers) happen first, then players get priority.
+3. Declare Blockers Step: The defending player declares blockers. Turn-based actions (declaring blockers) happen, then players get priority.
+4. Combat Damage Step: If creatures with first/double strike exist, this happens twice; otherwise, once. Damage is assigned, then players get priority.
+5. End of Combat Step: Triggered abilities that happen "at end of combat" trigger here. Players get priority before creatures are removed from comba
 
 ** DONE Combat IsActive()
 

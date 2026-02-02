@@ -82,14 +82,14 @@ func LoadCardDatabase(reader io.Reader) []*Card {
 }
 
 func LoadParsedAbilities(data []byte) map[string][]ParsedAbility {
-	var parsedFile ParsedCardsFile
-	if err := json.Unmarshal(data, &parsedFile); err != nil {
+	var parsedCards []ParsedCardJSON
+	if err := json.Unmarshal(data, &parsedCards); err != nil {
 		log.Printf("Error unmarshalling parsed cards: %v", err)
 		return nil
 	}
 
-	result := make(map[string][]ParsedAbility, len(parsedFile.Parsed))
-	for _, pc := range parsedFile.Parsed {
+	result := make(map[string][]ParsedAbility, len(parsedCards))
+	for _, pc := range parsedCards {
 		if len(pc.Abilities) > 0 {
 			result[pc.CardName] = pc.Abilities
 		}

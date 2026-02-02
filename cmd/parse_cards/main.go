@@ -13,7 +13,7 @@ import (
 
 type ParsedCard struct {
 	CardName  string                   `json:"card_name"`
-	Text      string                   `json:"text"`
+	Text      string                   `json:"text,omitempty"`
 	Abilities []*parser.ParsedAbility  `json:"abilities,omitempty"`
 	Unparsed  []string                 `json:"unparsed,omitempty"`
 }
@@ -123,22 +123,26 @@ func main() {
 		out = os.Stdout
 	}
 
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
 	if *verbose {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
 		if err := enc.Encode(output); err != nil {
 			fmt.Fprintf(os.Stderr, "Error encoding output: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
+		cardsWithAbilities := make([]ParsedCard, 0)
 		for _, card := range output.Parsed {
-			if len(card.Abilities) == 0 {
-				continue
+			if len(card.Abilities) > 0 {
+				cardsWithAbilities = append(cardsWithAbilities, ParsedCard{
+					CardName:  card.CardName,
+					Abilities: card.Abilities,
+				})
 			}
-			fmt.Fprintf(out, "%s:\n", card.CardName)
-			for _, ability := range card.Abilities {
-				fmt.Fprintf(out, "  [%s] %s\n", ability.Type, ability.RawText)
-			}
+		}
+		if err := enc.Encode(cardsWithAbilities); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding output: %v\n", err)
+			os.Exit(1)
 		}
 	}
 
