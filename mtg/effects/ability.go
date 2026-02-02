@@ -6,6 +6,7 @@ const (
 	AbilityTypeActivated AbilityType = "Activated"
 	AbilityTypeTriggered AbilityType = "Triggered"
 	AbilityTypeStatic    AbilityType = "Static"
+	AbilityTypeMana      AbilityType = "Mana"
 )
 
 type Ability struct {

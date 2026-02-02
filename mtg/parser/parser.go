@@ -15,6 +15,7 @@ const (
 	AbilityTypeStatic    AbilityType = "Static"
 	AbilityTypeKeyword   AbilityType = "Keyword"
 	AbilityTypeSpell     AbilityType = "Spell"
+	AbilityTypeMana      AbilityType = "Mana"
 )
 
 type ParsedAbility struct {
@@ -131,6 +132,7 @@ func (p *Parser) splitSentences(text string) []string {
 	var sentences []string
 	var current strings.Builder
 	inBraces := 0
+	inParens := 0
 
 	for i, r := range text {
 		current.WriteRune(r)
@@ -140,13 +142,17 @@ func (p *Parser) splitSentences(text string) []string {
 			inBraces++
 		case '}':
 			inBraces--
+		case '(':
+			inParens++
+		case ')':
+			inParens--
 		}
 
-		if inBraces == 0 {
+		if inBraces == 0 && inParens == 0 {
 			if r == '.' || r == '\n' {
 				s := strings.TrimSpace(current.String())
 				if s != "" && s != "." {
-					sentences = append(sentences, strings.TrimSuffix(s, "."))
+					sentences = append(sentences, stripParens(strings.TrimSuffix(s, ".")))
 				}
 				current.Reset()
 			} else if i < len(text)-1 {
@@ -160,8 +166,16 @@ func (p *Parser) splitSentences(text string) []string {
 
 	remaining := strings.TrimSpace(current.String())
 	if remaining != "" {
-		sentences = append(sentences, strings.TrimSuffix(remaining, "."))
+		sentences = append(sentences, stripParens(strings.TrimSuffix(remaining, ".")))
 	}
 
 	return sentences
+}
+
+func stripParens(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "(") && strings.HasSuffix(s, ")") {
+		s = strings.TrimSpace(s[1 : len(s)-1])
+	}
+	return strings.TrimSuffix(s, ".")
 }

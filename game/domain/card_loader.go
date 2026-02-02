@@ -41,16 +41,24 @@ type CardJSON struct {
 	VintageRestricted bool
 }
 
-func LoadCardDatabase(reader io.Reader) []*Card {
+type ParsedCardJSON struct {
+	CardName  string          `json:"card_name"`
+	Text      string          `json:"text"`
+	Abilities []ParsedAbility `json:"abilities"`
+	Unparsed  []string        `json:"unparsed"`
+}
 
-	// Decompress the data
+type ParsedCardsFile struct {
+	Parsed []ParsedCardJSON `json:"parsed"`
+}
+
+func LoadCardDatabase(reader io.Reader) []*Card {
 	decompressedReader, err := decompress(reader)
 	if err != nil {
 		log.Fatalf("Error decompressing card data: %v", err)
 		return nil
 	}
 
-	// Decode JSON directly from the reader as an array
 	var cardJSONArray []*CardJSON
 	decoder := json.NewDecoder(decompressedReader)
 	err = decoder.Decode(&cardJSONArray)
@@ -59,13 +67,11 @@ func LoadCardDatabase(reader io.Reader) []*Card {
 		return nil
 	}
 
-	// Convert CardJSON to Card structs
 	cards := make([]*Card, 0, len(cardJSONArray))
 	for _, cardJSON := range cardJSONArray {
 		cards = append(cards, cardJSON.ToCard())
 	}
 
-	// Sort by card name
 	sort.Slice(cards, func(i, j int) bool {
 		return cards[i].CardName < cards[j].CardName
 	})
@@ -73,6 +79,35 @@ func LoadCardDatabase(reader io.Reader) []*Card {
 	fmt.Printf("Loaded %d cards\n", len(cards))
 
 	return cards
+}
+
+func LoadParsedAbilities(data []byte) map[string][]ParsedAbility {
+	var parsedFile ParsedCardsFile
+	if err := json.Unmarshal(data, &parsedFile); err != nil {
+		log.Printf("Error unmarshalling parsed cards: %v", err)
+		return nil
+	}
+
+	result := make(map[string][]ParsedAbility, len(parsedFile.Parsed))
+	for _, pc := range parsedFile.Parsed {
+		if len(pc.Abilities) > 0 {
+			result[pc.CardName] = pc.Abilities
+		}
+	}
+
+	fmt.Printf("Loaded %d parsed card abilities\n", len(result))
+	return result
+}
+
+func ApplyParsedAbilities(cards []*Card, parsedAbilities map[string][]ParsedAbility) {
+	matched := 0
+	for _, card := range cards {
+		if abilities, ok := parsedAbilities[card.CardName]; ok {
+			card.ParsedAbilities = abilities
+			matched++
+		}
+	}
+	fmt.Printf("Applied parsed abilities to %d cards\n", matched)
 }
 
 func decompress(input io.Reader) (io.Reader, error) {

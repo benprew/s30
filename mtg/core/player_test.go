@@ -41,6 +41,7 @@ func createTestPlayer(numPlayers int) []*Player {
 		addCard("Lightning Bolt")
 		addCard("Mountain")
 		addCard("Sol Ring")
+		addCard("Giant Growth")
 
 		players = append(players, player)
 	}

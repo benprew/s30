@@ -16,6 +16,9 @@ var (
 	//go:embed card_info/scryfall_cards.json.zst
 	Cards_json []byte
 
+	//go:embed card_info/parsed_cards.json
+	ParsedCards_json []byte
+
 	// Basic land tiles
 	//go:embed art/sprites/world/land/Landtile.spr.png
 	Landtile_png []byte

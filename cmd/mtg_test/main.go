@@ -16,7 +16,7 @@ func createPlayers() []*core.Player {
 	for i := range 2 {
 		player := &core.Player{
 			ID:          core.EntityID(i + 1),
-			LifeTotal:   9,
+			LifeTotal:   12,
 			ManaPool:    core.ManaPool{},
 			Hand:        []*core.Card{},
 			Library:     []*core.Card{},
@@ -43,14 +43,20 @@ func createPlayers() []*core.Player {
 		for range 5 {
 			addCard("Forest")
 		}
-		for range 3 {
+		for range 2 {
 			addCard("Lightning Bolt")
 		}
-		for range 3 {
+		for range 2 {
 			addCard("Giant Growth")
 		}
-		for range 10 {
+		for range 4 {
 			addCard("Kird Ape")
+		}
+		for range 4 {
+			addCard("Sol Ring")
+		}
+		for range 4 {
+			addCard("War Mammoth")
 		}
 
 		rand.Shuffle(len(player.Library), func(i, j int) {
@@ -76,21 +82,37 @@ func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
 		}
 
 		activePlayer := game.Players[game.ActivePlayer]
-		isActivePlayer := player == activePlayer
-		isDefending := game.GetOpponent(player) == activePlayer &&
-			activePlayer.Turn.Phase == core.PhaseCombat &&
-			activePlayer.Turn.CombatStep == core.CombatStepDeclareBlockers
 
-		if !isActivePlayer && !isDefending {
-			time.Sleep(10 * time.Millisecond)
-			continue
-		}
+		fmt.Printf("  [AI %s] Getting actions, phase=%v, combat_step=%v\n",
+			player.Name(), activePlayer.Turn.Phase, activePlayer.Turn.CombatStep)
 
 		actions := game.AvailableActions(player)
+		fmt.Printf("  [AI %s] Available actions: %d\n", player.Name(), len(actions))
+		for i, a := range actions {
+			if a.Card != nil {
+				fmt.Printf("    [%d] %v - %s\n", i, a.Type, a.Card.Name())
+			} else {
+				fmt.Printf("    [%d] %v\n", i, a.Type)
+			}
+		}
+
 		action := chooseAction(game, player, actions)
+		if action.Type == core.ActionCastSpell && action.Card != nil {
+			if action.Target != nil {
+				fmt.Printf("  [AI %s] Chose action: %v - %s#%d -> %s#%d\n",
+					player.Name(), action.Type, action.Card.Name(), action.Card.ID,
+					action.Target.Name(), action.Target.EntityID())
+			} else {
+				fmt.Printf("  [AI %s] Chose action: %v - %s#%d\n",
+					player.Name(), action.Type, action.Card.Name(), action.Card.ID)
+			}
+		} else {
+			fmt.Printf("  [AI %s] Chose action: %v\n", player.Name(), action.Type)
+		}
 
 		select {
 		case player.InputChan <- action:
+			fmt.Printf("  [AI %s] Sent action to channel\n", player.Name())
 		case <-done:
 			return
 		}
@@ -153,7 +175,7 @@ func main() {
 		go runAI(game, p, done)
 	}
 
-	winners := core.PlayGame(game, 10)
+	winners := core.PlayGame(game, 15)
 	close(done)
 
 	fmt.Println("\n=== Game Over ===")

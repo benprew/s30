@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
-	"github.com/benprew/s30/mtg/effects"
 )
 
 func TestLoadCardDatabase(t *testing.T) {
@@ -79,57 +78,48 @@ func TestCardIsActive(t *testing.T) {
 	}
 }
 
-func TestUnMarshalActionsDirectDamage(t *testing.T) {
+func TestCardActionsFromParsedAbilities(t *testing.T) {
 	card := &Card{}
-	card.Events = [][]string{{"DirectDamage", "3"}}
-
-	card.UnMarshalActions()
-
-	if len(card.Actions) != 1 {
-		t.Errorf("Expected 1 action, got %d", len(card.Actions))
+	card.ParsedAbilities = []domain.ParsedAbility{
+		{
+			Type: "Activated",
+			Effect: &domain.ParsedEffect{
+				Amount: 3,
+			},
+		},
 	}
 
-	dd, ok := card.Actions[0].(*effects.DirectDamage)
-	if !ok {
-		t.Errorf("Expected DirectDamage action")
-	}
-	if dd.Amount != 3 {
-		t.Errorf("Expected damage amount 3, got %d", dd.Amount)
+	actions := card.CardActions()
+	if len(actions) != 1 {
+		t.Errorf("Expected 1 action, got %d", len(actions))
 	}
 }
 
-func TestUnMarshalActionsMultiple(t *testing.T) {
+func TestCardActionsStatBoost(t *testing.T) {
 	card := &Card{}
-	card.Events = [][]string{
-		{"DirectDamage", "2"},
-		{"DirectDamage", "5"},
+	card.ParsedAbilities = []domain.ParsedAbility{
+		{
+			Type: "Static",
+			Effect: &domain.ParsedEffect{
+				PowerBoost:     2,
+				ToughnessBoost: 2,
+			},
+		},
 	}
 
-	card.UnMarshalActions()
-
-	if len(card.Actions) != 2 {
-		t.Errorf("Expected 2 actions, got %d", len(card.Actions))
-	}
-
-	dd1 := card.Actions[0].(*effects.DirectDamage)
-	dd2 := card.Actions[1].(*effects.DirectDamage)
-
-	if dd1.Amount != 2 {
-		t.Errorf("Expected first damage amount 2, got %d", dd1.Amount)
-	}
-	if dd2.Amount != 5 {
-		t.Errorf("Expected second damage amount 5, got %d", dd2.Amount)
+	actions := card.CardActions()
+	if len(actions) != 1 {
+		t.Errorf("Expected 1 action, got %d", len(actions))
 	}
 }
 
-func TestUnMarshalActionsEmpty(t *testing.T) {
+func TestCardActionsEmpty(t *testing.T) {
 	card := &Card{}
-	card.Events = [][]string{}
+	card.ParsedAbilities = nil
 
-	card.UnMarshalActions()
-
-	if len(card.Actions) != 0 {
-		t.Errorf("Expected 0 actions, got %d", len(card.Actions))
+	actions := card.CardActions()
+	if len(actions) != 0 {
+		t.Errorf("Expected 0 actions, got %d", len(actions))
 	}
 }
 

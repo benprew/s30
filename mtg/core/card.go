@@ -1,11 +1,8 @@
 package core
 
 import (
-	"fmt"
-
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/mtg/effects"
-	"github.com/benprew/s30/mtg/parser"
 )
 
 type EntityID int
@@ -25,12 +22,14 @@ type Card struct {
 	Targetable     string
 	PowerBoost     int
 	ToughnessBoost int
-	Events         [][]string
-	Actions        []effects.Event
 }
 
 func (c *Card) Name() string {
 	return c.CardName
+}
+
+func (c *Card) EntityID() int {
+	return int(c.ID)
 }
 
 func (c *Card) CardActions() []effects.Event {
@@ -38,16 +37,31 @@ func (c *Card) CardActions() []effects.Event {
 		return action
 	}
 
-	result := parser.DefaultParser.Parse(c.CardName, c.Text)
 	var events []effects.Event
-	for _, ability := range result.Abilities {
-		if ability.Effect != nil {
-			events = append(events, ability.Effect)
+	for _, ability := range c.ParsedAbilities {
+		if event := abilityToEvent(&ability); event != nil {
+			events = append(events, event)
 		}
 	}
-	if len(events) > 0 {
-		return events
+	return events
+}
+
+func abilityToEvent(ability *domain.ParsedAbility) effects.Event {
+	if ability.Effect == nil {
+		return nil
 	}
+
+	if ability.Effect.Amount > 0 {
+		return &effects.DirectDamage{Amount: ability.Effect.Amount}
+	}
+
+	if ability.Effect.PowerBoost != 0 || ability.Effect.ToughnessBoost != 0 {
+		return &effects.StatBoost{
+			PowerBoost:     ability.Effect.PowerBoost,
+			ToughnessBoost: ability.Effect.ToughnessBoost,
+		}
+	}
+
 	return nil
 }
 
@@ -115,25 +129,37 @@ func (c *Card) IsActive() bool {
 	return !c.Tapped && c.Active
 }
 
-func (c *Card) AddTarget(target Targetable) {
-	for _, a := range c.Actions {
-		a.AddTarget(target)
-	}
-}
-
-func (c *Card) UnMarshalActions() {
-	for _, e := range c.Events {
-		switch e[0] {
-		case "DirectDamage":
-			amount := 0
-			fmt.Sscanf(e[1], "%d", &amount)
-			damage := effects.DirectDamage{Amount: amount}
-			c.Actions = append(c.Actions, &damage)
+func (c *Card) GetManaProduction() []string {
+	for _, ability := range c.ParsedAbilities {
+		if ability.Type == "Mana" && ability.Cost != nil && ability.Cost.Tap {
+			if ability.Effect != nil && len(ability.Effect.ManaTypes) > 0 {
+				return ability.Effect.ManaTypes
+			}
 		}
 	}
+	return c.ManaProduction
 }
 
-// NewCardFromDomain creates a new core_engine Card from a domain Card
+func (c *Card) GetManaAbility() *effects.ManaAbility {
+	for _, ability := range c.ParsedAbilities {
+		if ability.Type == "Mana" && ability.Cost != nil && ability.Cost.Tap {
+			if ability.Effect != nil && len(ability.Effect.ManaTypes) > 0 {
+				return &effects.ManaAbility{
+					ManaTypes: ability.Effect.ManaTypes,
+					AnyColor:  ability.Effect.AnyColor,
+				}
+			}
+		}
+	}
+	if len(c.ManaProduction) > 0 {
+		return &effects.ManaAbility{
+			ManaTypes: c.ManaProduction,
+			AnyColor:  false,
+		}
+	}
+	return nil
+}
+
 func NewCardFromDomain(domainCard *domain.Card, id EntityID, owner *Player) *Card {
 	return &Card{
 		Card:        *domainCard,
@@ -144,12 +170,9 @@ func NewCardFromDomain(domainCard *domain.Card, id EntityID, owner *Player) *Car
 		Active:      true,
 		DamageTaken: 0,
 		Targetable:  "",
-		Events:      [][]string{},
-		Actions:     []Event{},
 	}
 }
 
-// DeepCopy creates a deep copy of the Card struct.
 func (c *Card) DeepCopy() *Card {
 	newCard := &Card{
 		ID:             c.ID,
@@ -164,7 +187,6 @@ func (c *Card) DeepCopy() *Card {
 		ToughnessBoost: c.ToughnessBoost,
 	}
 
-	// Deep copy slices
 	newCard.ManaProduction = make([]string, len(c.ManaProduction))
 	copy(newCard.ManaProduction, c.ManaProduction)
 
@@ -177,23 +199,8 @@ func (c *Card) DeepCopy() *Card {
 	newCard.Abilities = make([]string, len(c.Abilities))
 	copy(newCard.Abilities, c.Abilities)
 
-	// Deep copy the slice of slices for Events
-	newCard.Events = make([][]string, len(c.Events))
-	for i, event := range c.Events {
-		newCard.Events[i] = make([]string, len(event))
-		copy(newCard.Events[i], event)
-	}
-
-	// Actions slice contains interfaces, which might need careful deep copying
-	// depending on the underlying types. For now, we'll create a new slice
-	// but the underlying Event implementations might still be shared references
-	// if they are not value types or don't have their own DeepCopy methods.
-	// Assuming the current Event implementations (like DirectDamage) are simple
-	// value-like structs or don't hold mutable state that needs deep copying
-	// for test purposes, a shallow copy of the slice is a starting point.
-	// If Events become more complex, this will need refinement.
-	newCard.Actions = make([]Event, len(c.Actions))
-	copy(newCard.Actions, c.Actions) // This is a shallow copy of the interface values
+	newCard.ParsedAbilities = make([]domain.ParsedAbility, len(c.ParsedAbilities))
+	copy(newCard.ParsedAbilities, c.ParsedAbilities)
 
 	return newCard
 }

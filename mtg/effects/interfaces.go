@@ -9,6 +9,7 @@ const (
 
 type Targetable interface {
 	Name() string
+	EntityID() int
 	ReceiveDamage(amount int)
 	TargetType() TargetType
 	IsDead() bool

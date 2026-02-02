@@ -17,8 +17,8 @@ func TestNewGame(t *testing.T) {
 		if len(player.Hand) != 7 {
 			t.Errorf("Player %d should have 7 cards in hand, but has %d", i+1, len(player.Hand))
 		}
-		if len(player.Library) != 0 {
-			t.Errorf("Player %d should have 0 cards in library, but has %d", i+1, len(player.Library))
+		if len(player.Library) != 1 {
+			t.Errorf("Player %d should have 1 card in library, but has %d", i+1, len(player.Library))
 		}
 		if len(player.Graveyard) != 0 {
 			t.Errorf("Player %d should have 0 cards in graveyard, but has %d", i+1, len(player.Library))
@@ -119,7 +119,7 @@ func TestCastLlanowarElves(t *testing.T) {
 	}
 
 	// Tap the land for mana first
-	if err := game.TapLandForMana(player, landCard); err != nil {
+	if err := game.ActivateManaAbility(player, landCard); err != nil {
 		t.Errorf("Failed to tap land for mana: %v", err)
 		return
 	}
@@ -197,7 +197,9 @@ func TestCastLightningBolt(t *testing.T) {
 		return
 	}
 
-	game.TapLandForMana(player, mtn)
+	if err := game.ActivateManaAbility(player, mtn); err != nil {
+		panic(err)
+	}
 
 	err := game.CastSpell(player, bolt, elf)
 	if err != nil {
@@ -242,7 +244,7 @@ func TestCastArtifact(t *testing.T) {
 	}
 
 	// Tap the land for mana
-	if err := game.TapLandForMana(player, landCard); err != nil {
+	if err := game.ActivateManaAbility(player, landCard); err != nil {
 		t.Errorf("Failed to tap land for mana: %v", err)
 		return
 	}
@@ -517,7 +519,9 @@ func TestAvailableActionsCastSpellWithMana(t *testing.T) {
 	}
 
 	game.PlayLand(player, landCard)
-	game.TapLandForMana(player, landCard)
+	if err := game.ActivateManaAbility(player, landCard); err != nil {
+		panic(err)
+	}
 
 	actions := game.AvailableActions(player)
 
@@ -633,5 +637,68 @@ func TestAvailableTargetsWithCreature(t *testing.T) {
 	}
 	if creatureCount != 1 {
 		t.Errorf("Expected 1 creature target, got %d", creatureCount)
+	}
+}
+
+func TestCombatPhaseCastSpellAction(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+	opponent := players[1]
+
+	elf := game.FindCard(FindArgs{Name: "Llanowar Elves"}, player.Hand)
+	if elf == nil {
+		t.Skip("No Llanowar Elves in hand")
+	}
+	player.MoveTo(elf, ZoneBattlefield)
+	elf.Active = true
+
+	forest := game.FindCard(FindArgs{Name: "Forest"}, player.Hand)
+	if forest == nil {
+		t.Skip("No Forest in hand")
+	}
+	player.MoveTo(forest, ZoneBattlefield)
+
+	giantGrowth := game.FindCard(FindArgs{Name: "Giant Growth"}, player.Library)
+	if giantGrowth == nil {
+		t.Skip("No Giant Growth in library")
+	}
+	player.DrawCard()
+	for game.FindCard(FindArgs{Name: "Giant Growth"}, player.Hand) == nil && len(player.Library) > 0 {
+		player.DrawCard()
+	}
+	giantGrowth = game.FindCard(FindArgs{Name: "Giant Growth"}, player.Hand)
+	if giantGrowth == nil {
+		t.Skip("Could not draw Giant Growth")
+	}
+
+	player.Turn.Phase = PhaseCombat
+	player.Turn.CombatStep = CombatStepDeclareAttackers
+	game.ActivePlayer = 0
+	game.CurrentPlayer = 0
+	game.Attackers = []*Card{elf}
+
+	initialHandSize := len(player.Hand)
+
+	go func() {
+		player.InputChan <- PlayerAction{
+			Type:   ActionCastSpell,
+			Card:   giantGrowth,
+			Target: elf,
+		}
+		player.InputChan <- PlayerAction{Type: ActionPassPriority}
+		opponent.InputChan <- PlayerAction{Type: ActionPassPriority}
+	}()
+
+	game.RunStack()
+
+	if len(player.Hand) != initialHandSize-1 {
+		t.Errorf("Giant Growth was NOT cast during combat. Expected hand size %d, got %d", initialHandSize-1, len(player.Hand))
+	}
+
+	if elf.EffectivePower() != 4 {
+		t.Errorf("Expected Llanowar Elves to have 4 power after Giant Growth, got %d", elf.EffectivePower())
 	}
 }

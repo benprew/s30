@@ -47,6 +47,46 @@ type CardSet struct {
 	CollectorNo string
 }
 
+type ParsedCost struct {
+	Mana        string `json:"Mana"`
+	Tap         bool   `json:"Tap"`
+	Sacrifice   bool   `json:"Sacrifice"`
+	LifePayment int    `json:"LifePayment"`
+}
+
+type ParsedEffect struct {
+	Keywords       []string `json:"Keywords"`
+	Modifier       string   `json:"Modifier"`
+	PowerBoost     int      `json:"PowerBoost"`
+	ToughnessBoost int      `json:"ToughnessBoost"`
+	Amount         int      `json:"Amount"`
+	ManaTypes      []string `json:"ManaTypes"`
+	AnyColor       bool     `json:"AnyColor"`
+}
+
+type ParsedTrigger struct {
+	Type      string `json:"Type"`
+	Condition string `json:"Condition"`
+}
+
+type ParsedTargetSpec struct {
+	Type       string `json:"Type"`
+	Controller string `json:"Controller"`
+	Subtype    string `json:"Subtype"`
+	Count      int    `json:"Count"`
+	Condition  string `json:"Condition"`
+}
+
+type ParsedAbility struct {
+	Type       string            `json:"Type"`
+	Cost       *ParsedCost       `json:"Cost"`
+	Effect     *ParsedEffect     `json:"Effect"`
+	Keywords   []string          `json:"Keywords"`
+	Trigger    *ParsedTrigger    `json:"Trigger"`
+	TargetSpec *ParsedTargetSpec `json:"TargetSpec"`
+	RawText    string            `json:"RawText"`
+}
+
 type Card struct {
 	CardName string
 	CardSet
@@ -72,14 +112,24 @@ type Card struct {
 	Artist            string
 	Price             int
 	VintageRestricted bool
+	ParsedAbilities   []ParsedAbility
 }
 
 // Cards sorted by name
-var CARDS = LoadCardDatabase(bytes.NewReader(assets.Cards_json))
+var CARDS = loadCardsWithAbilities()
 var CARD_IMAGES map[*Card]*ebiten.Image
 var remoteCardArchive *httpzip.Reader
 var initRemoteCardArchiveOnce sync.Once
 var remoteCardArchiveErr error
+
+func loadCardsWithAbilities() []*Card {
+	cards := LoadCardDatabase(bytes.NewReader(assets.Cards_json))
+	parsedAbilities := LoadParsedAbilities(assets.ParsedCards_json)
+	if parsedAbilities != nil {
+		ApplyParsedAbilities(cards, parsedAbilities)
+	}
+	return cards
+}
 
 func (c *Card) Name() string {
 	return c.CardName

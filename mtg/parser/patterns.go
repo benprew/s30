@@ -277,7 +277,7 @@ func (p *Parser) registerManaAbilityPatterns() {
 		func(matches []string, cardName string) (*ParsedAbility, error) {
 			symbols := ParseManaSymbols(matches[1])
 			return &ParsedAbility{
-				Type:   AbilityTypeActivated,
+				Type:   AbilityTypeMana,
 				Cost:   &Cost{Tap: true},
 				Effect: &effects.ManaAbility{ManaTypes: symbols},
 			}, nil
@@ -289,7 +289,7 @@ func (p *Parser) registerManaAbilityPatterns() {
 		regexp.MustCompile(`(?i)^\{T\}\s*:\s*add\s+one\s+mana\s+of\s+any\s+color$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
 			return &ParsedAbility{
-				Type:   AbilityTypeActivated,
+				Type:   AbilityTypeMana,
 				Cost:   &Cost{Tap: true},
 				Effect: &effects.ManaAbility{ManaTypes: []string{"W", "U", "B", "R", "G"}, AnyColor: true},
 			}, nil
@@ -305,7 +305,7 @@ func (p *Parser) registerManaAbilityPatterns() {
 				symbols = append(symbols, ParseManaSymbols(matches[i])...)
 			}
 			return &ParsedAbility{
-				Type:   AbilityTypeActivated,
+				Type:   AbilityTypeMana,
 				Cost:   &Cost{Tap: true},
 				Effect: &effects.ManaAbility{ManaTypes: symbols},
 			}, nil

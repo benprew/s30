@@ -72,34 +72,34 @@ func (s *Stack) Next(event StackEvent, item *StackItem) (StackResult, *StackItem
 
 		case EventPlayerPassesPriority:
 			s.ConsecutivePasses++
-			if s.ConsecutivePasses == 2 { // Both players have passed in succession
+			if s.ConsecutivePasses == 2 {
 				s.CurrentState = StateResolve
 				s.ConsecutivePasses = 0
 				if s.IsEmpty() {
 					return Resolve, nil
 				}
 				return Resolve, s.Pop()
-			} else {
-				return NonActPlayerPriority, nil
 			}
+			return NonActPlayerPriority, nil
+
+		default:
+			panic(fmt.Sprintf("Unhandled event in StateWaitPlayer: %d", event))
 		}
 
 	case StateResolve:
 		if s.IsEmpty() {
 			s.CurrentState = StateEmpty
-		} else {
-			s.CurrentState = StateWaitPlayer
+			return -1, nil
 		}
+		s.CurrentState = StateWaitPlayer
+		return ActPlayerPriority, nil
 
 	case StateEmpty:
-		if !s.IsEmpty() {
-			s.CurrentState = StateStartStack
-		}
+		return -1, nil
+
 	default:
 		panic(fmt.Sprintf("Unhandled State: %d", s.CurrentState))
 	}
-
-	return -1, nil
 }
 
 // Push adds an action to the top of the stack.

@@ -77,6 +77,10 @@ func (p *Player) Name() string {
 	return fmt.Sprintf("Player %d", p.ID)
 }
 
+func (p *Player) EntityID() int {
+	return int(p.ID)
+}
+
 func (p *Player) TargetType() TargetType {
 	return TargetTypePlayer
 }

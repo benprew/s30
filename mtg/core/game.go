@@ -64,10 +64,16 @@ func (g *GameState) StartGame() {
 func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
 	AITurnTimeout := 5 * time.Second
 
+	activePlayer := g.Players[g.ActivePlayer]
+	fmt.Printf("  [DEBUG] WaitForPlayerInput: waiting for %s, phase=%v, combat_step=%v, is_active=%v\n",
+		player.Name(), activePlayer.Turn.Phase, activePlayer.Turn.CombatStep, player == activePlayer)
+
 	if player.IsAI {
 		select {
 		case action = <-player.InputChan:
+			fmt.Printf("  [DEBUG] WaitForPlayerInput: %s sent action %v\n", player.Name(), action.Type)
 		case <-time.After(AITurnTimeout):
+			fmt.Printf("  [DEBUG] WaitForPlayerInput: %s TIMEOUT, defaulting to pass\n", player.Name())
 			action = PlayerAction{Type: ActionPassPriority}
 		}
 	} else {
@@ -124,36 +130,67 @@ func (g *GameState) FindCard(args FindArgs, zone []*Card) *Card {
 func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackResult, *StackItem) {
 	switch action.Type {
 	case ActionCastSpell:
-		// TODO: spells will have decisions that need to be made when cast
-		// the player will need to make those decisions (ie Lightning Bolt target)
-		g.Stack.Next(EventPlayerAddsAction, &StackItem{Player: player, Events: action.Card.Actions})
-		g.CastSpell(player, action.Card, nil) // TODO: fix this, add target where appropriate
+		if err := g.TapManaSourcesFor(player, action.Card.ManaCost); err != nil {
+			fmt.Println("error tapping mana:", err)
+			return ActPlayerPriority, nil
+		}
+		if err := g.CastSpell(player, action.Card, action.Target); err != nil {
+			fmt.Println("error casting spell:", err)
+			return ActPlayerPriority, nil
+		}
+		if action.Target != nil {
+			fmt.Printf("  %s casts %s targeting %s\n", player.Name(), cardStr(action.Card), targetStr(action.Target))
+		} else {
+			fmt.Printf("  %s casts %s\n", player.Name(), cardStr(action.Card))
+		}
+		g.Stack.ConsecutivePasses = 0
+		return ActPlayerPriority, nil
 	case ActionPlayLand:
 		g.PlayLand(player, action.Card)
+		fmt.Printf("  %s plays %s\n", player.Name(), cardStr(action.Card))
+		return ActPlayerPriority, nil
 	case ActionPassPriority:
-		return g.Stack.Next(EventPlayerPassesPriority, nil)
+		res, item := g.Stack.Next(EventPlayerPassesPriority, nil)
+		fmt.Printf("after pass: res: %d, item: %v\n", res, item)
+		return res, item
+		// return g.Stack.Next(EventPlayerPassesPriority, nil)
 	}
 	return -1, nil
 }
 
-func (g *GameState) RunStack() {
+func (g *GameState) RunStack() bool {
+	for _, p := range g.Players {
+		if len(p.InputChan) > 0 {
+			fmt.Printf("  [WARN] RunStack: %s has %d pending actions in channel\n", p.Name(), len(p.InputChan))
+			for len(p.InputChan) > 0 {
+				<-p.InputChan
+			}
+		}
+	}
+
 	player := g.Players[g.CurrentPlayer]
 	player2 := g.Players[(g.CurrentPlayer+1)%len(g.Players)]
 	cnt := 0
+	g.Stack.CurrentState = StateStartStack
 	result, item := g.Stack.Next(-1, nil)
 	for g.Stack.CurrentState != StateEmpty {
-		if cnt > 500 {
+		g.CheckStateBasedActions()
+		if g.hasLoser() {
+			return false
+		}
+		if cnt > 100 {
 			break
 		}
+		fmt.Printf("RunStack: res: %d, item: %v\n", result, item)
 		switch result {
 		case ActPlayerPriority:
 			g.CheckStateBasedActions()
 			action := g.WaitForPlayerInput(player)
-			result, _ = g.ProcessAction(player, action)
+			result, item = g.ProcessAction(player, action)
 		case NonActPlayerPriority:
 			g.CheckStateBasedActions()
 			action := g.WaitForPlayerInput(player2)
-			result, _ = g.ProcessAction(player2, action)
+			result, item = g.ProcessAction(player2, action)
 		case Resolve:
 			g.Resolve(item)
 			result, item = g.Stack.Next(-1, nil)
@@ -162,6 +199,12 @@ func (g *GameState) RunStack() {
 		}
 		cnt++
 	}
+	for _, p := range g.Players {
+		for len(p.InputChan) > 0 {
+			<-p.InputChan
+		}
+	}
+	return true
 }
 
 func (g *GameState) CheckStateBasedActions() {
@@ -189,12 +232,16 @@ func (g *GameState) NextTurn() {
 			g.MainPhase(player)
 		case PhaseCombat:
 			g.CombatPhase(player)
+		case PhaseEnd:
+			g.EndPhase(player)
 		}
 
+		// check for win at tne end of each phase
 		g.CheckWinConditions()
 		if g.hasLoser() {
 			return
 		}
+
 		player.Turn.NextPhase()
 	}
 
@@ -220,6 +267,9 @@ func (g *GameState) UntapPhase(player *Player) {
 }
 
 func (g *GameState) UpkeepPhase(player *Player) {
+	// TODO Process upkeep triggers
+	fmt.Println("UpkeepPhase: running stack")
+	g.RunStack()
 }
 
 func (g *GameState) DrawPhase(player *Player) {
@@ -232,39 +282,17 @@ func (g *GameState) DrawPhase(player *Player) {
 }
 
 func (g *GameState) MainPhase(player *Player) {
-	for {
-		action := g.WaitForPlayerInput(player)
-		switch action.Type {
-		case ActionPassPriority:
-			return
-		case ActionPlayLand:
-			g.PlayLand(player, action.Card)
-			fmt.Printf("  %s plays %s\n", player.Name(), cardStr(action.Card))
-		case ActionCastSpell:
-			if err := g.TapLandsForMana(player, action.Card.ManaCost); err != nil {
-				continue
-			}
-			if err := g.CastSpell(player, action.Card, action.Target); err != nil {
-				continue
-			}
-			if action.Target != nil {
-				fmt.Printf("  %s casts %s targeting %s\n", player.Name(), cardStr(action.Card), targetStr(action.Target))
-			} else {
-				fmt.Printf("  %s casts %s\n", player.Name(), cardStr(action.Card))
-			}
-			if item := g.Stack.Pop(); item != nil {
-				g.Resolve(item)
-			}
-			g.CheckWinConditions()
-			if g.hasLoser() {
-				return
-			}
-		}
-	}
+	g.RunStack()
 }
 
 func (g *GameState) CombatPhase(player *Player) {
+	opponent := g.GetOpponent(player)
+
 	player.Turn.CombatStep = CombatStepBeginning
+	g.RunStack()
+	if g.hasLoser() {
+		return
+	}
 
 	player.Turn.CombatStep = CombatStepDeclareAttackers
 	availableAttackers := g.AvailableAttackers(player)
@@ -284,6 +312,10 @@ func (g *GameState) CombatPhase(player *Player) {
 			fmt.Printf("  %s attacks with %s (%d/%d)\n", player.Name(), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
 		}
 	}
+	g.RunStack()
+	if g.hasLoser() {
+		return
+	}
 
 	if len(g.Attackers) == 0 {
 		player.Turn.CombatStep = CombatStepEndOfCombat
@@ -291,7 +323,6 @@ func (g *GameState) CombatPhase(player *Player) {
 	}
 
 	player.Turn.CombatStep = CombatStepDeclareBlockers
-	opponent := g.GetOpponent(player)
 	for {
 		action := g.WaitForPlayerInput(opponent)
 		if action.Type == ActionPassPriority {
@@ -306,19 +337,34 @@ func (g *GameState) CombatPhase(player *Player) {
 			}
 		}
 	}
+	g.RunStack()
+	if g.hasLoser() {
+		return
+	}
 
 	player.Turn.CombatStep = CombatStepCombatDamage
 	g.printCombatDamage(player, opponent)
 	g.ResolveCombatDamage()
 	g.CheckStateBasedActions()
+	g.RunStack()
+	if g.hasLoser() {
+		return
+	}
 
 	player.Turn.CombatStep = CombatStepEndOfCombat
+	g.RunStack()
 	g.ClearCombatState()
 }
 
-func (g *GameState) TapLandsForMana(player *Player, cost string) error {
-	required := player.ManaPool.ParseCost(cost)
+func (g *GameState) EndPhase(player *Player) {
+	g.RunStack()
+}
 
+func (g *GameState) TapManaSourcesFor(player *Player, cost string) error {
+	required := player.ManaPool.ParseCost(cost)
+	fmt.Printf("TapManaSourcesFor: required: %v - pool: %c\n", required, player.ManaPool)
+
+	fmt.Printf("avail mana: %c\n", g.AvailableMana(player, player.ManaPool))
 	for color, needed := range required {
 		if color == 'C' {
 			continue
@@ -331,7 +377,10 @@ func (g *GameState) TapLandsForMana(player *Player, cost string) error {
 			if card.CardType == domain.CardTypeLand && !card.Tapped {
 				for _, mana := range card.ManaProduction {
 					if len(mana) == 1 && rune(mana[0]) == color {
-						g.TapLandForMana(player, card)
+						if err := g.ActivateManaAbility(player, card); err != nil {
+							panic(err)
+						}
+						fmt.Printf("Tapping %s for color\n", card.CardName)
 						tapped++
 						break
 					}
@@ -343,19 +392,22 @@ func (g *GameState) TapLandsForMana(player *Player, cost string) error {
 		}
 	}
 
-	colorlessNeeded := required['C']
-	if colorlessNeeded > 0 {
-		tapped := 0
+	fmt.Printf("avail mana: %c\n", g.AvailableMana(player, player.ManaPool))
+
+	if required['C'] > 0 {
 		for _, card := range player.Battlefield {
-			if tapped >= colorlessNeeded {
+			if player.ManaPool.CanPay(cost) {
 				break
 			}
-			if card.CardType == domain.CardTypeLand && !card.Tapped {
-				g.TapLandForMana(player, card)
-				tapped++
+			if !card.Tapped && (card.CardType == domain.CardTypeLand || len(card.ManaProduction) > 0) {
+				fmt.Printf("tapping %s\n", card.CardName)
+				if err := g.ActivateManaAbility(player, card); err != nil {
+					panic(err)
+				}
+				fmt.Printf("cost: %s pool: %c, required: %v\n", cost, player.ManaPool, player.ManaPool.ParseCost(cost))
 			}
 		}
-		if tapped < colorlessNeeded {
+		if !player.ManaPool.CanPay(cost) {
 			return fmt.Errorf("not enough untapped lands for colorless")
 		}
 	}
@@ -459,7 +511,10 @@ func (g *GameState) CanTap(player *Player, card *Card) bool {
 }
 
 func (g *GameState) CanCast(player *Player, card *Card) bool {
-	// Check if the card is in the player's hand
+	if card.CardType == domain.CardTypeLand {
+		return false
+	}
+
 	cardInHand := slices.Contains(player.Hand, card)
 	if !cardInHand {
 		return false

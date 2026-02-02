@@ -45,25 +45,24 @@ func (g *GameState) CastSpell(player *Player, card *Card, target Targetable) err
 	return nil
 }
 
-// TapLandForMana taps a land card on the battlefield and adds its mana production to the player's mana pool.
-func (g *GameState) TapLandForMana(player *Player, card *Card) error {
-	// Check if the card is on the player's battlefield
+func (g *GameState) ActivateManaAbility(player *Player, card *Card) error {
 	isOnBattlefield := slices.Contains(player.Battlefield, card)
-
 	if !isOnBattlefield {
 		return fmt.Errorf("card %s is not on the battlefield", card.CardName)
 	}
 
-	// Check if the card is already tapped
 	if card.Tapped {
 		return fmt.Errorf("card %s is already tapped", card.CardName)
 	}
 
-	// Tap the card
+	manaAbility := card.GetManaAbility()
+	if manaAbility == nil {
+		return fmt.Errorf("card %s has no mana ability", card.CardName)
+	}
+
 	card.Tapped = true
 
-	// Add mana production to the player's mana pool
-	for _, manaType := range card.ManaProduction {
+	for _, manaType := range manaAbility.ManaTypes {
 		player.ManaPool.AddMana([]rune(manaType))
 	}
 

@@ -179,13 +179,13 @@ func (m ManaPool) CanPay(cost string) bool {
 
 func (g *GameState) AvailableMana(player *Player, pPool ManaPool) (pool ManaPool) {
 	for _, card := range player.Battlefield {
-		if !card.IsActive() || card.ManaProduction == nil || len(card.ManaProduction) == 0 {
+		if !card.IsActive() {
 			continue
 		}
 
-		for _, manaStr := range card.ManaProduction {
-			manaRunes := []rune(manaStr)
-			pool.AddMana(manaRunes)
+		manaTypes := card.GetManaProduction()
+		for _, manaType := range manaTypes {
+			pool.AddMana([]rune(manaType))
 		}
 	}
 	pool = append(pool, pPool...)
