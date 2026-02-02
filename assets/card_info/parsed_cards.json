@@ -1,0 +1,801 @@
+Air Elemental:
+  [Keyword] Flying
+Ali Baba:
+  [Activated] {R}: Tap target Wall
+All Hallow's Eve:
+  [Triggered] At the beginning of your upkeep, if this card is exiled with a scream counter on it, remove a scream counter from it
+Angry Mob:
+  [Keyword] Trample
+Animate Dead:
+  [Static] Enchanted creature gets -1/-0
+Arcades Sabboth:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, sacrifice Arcades Sabboth unless you pay {G}{W}{U}
+  [Activated] {W}: Arcades Sabboth gets +0/+1 until end of turn
+Argivian Blacksmith:
+  [Activated] {T}: Prevent the next 2 damage that would be dealt to target artifact creature this turn
+Armageddon Clock:
+  [Triggered] At the beginning of your upkeep, put a doom counter on this artifact
+  [Activated] {4}: Remove a doom counter from this artifact
+Axelrod Gunnarson:
+  [Keyword] Trample
+  [Triggered] Whenever a creature dealt damage by Axelrod Gunnarson this turn dies, you gain 1 life and Axelrod Gunnarson deals 1 damage to target player or planeswalker
+Ayesha Tanaka:
+  [Activated] {T}: Counter target activated ability from an artifact source unless that ability's controller pays {W}
+Azure Drake:
+  [Keyword] Flying
+Badlands:
+  [Activated] {T}: Add {B} or {R}
+Barl's Cage:
+  [Activated] {3}: Target creature doesn't untap during its controller's next untap step
+Bartel Runeaxe:
+  [Keyword] Vigilance
+Basalt Monolith:
+  [Activated] {T}: Add {C}{C}{C}
+  [Activated] {3}: Untap this artifact
+Bayou:
+  [Activated] {T}: Add {B} or {G}
+Bazaar of Baghdad:
+  [Activated] {T}: Draw two cards, then discard three cards
+Beasts of Bogardan:
+  [Keyword] Protection from red
+Bird Maiden:
+  [Keyword] Flying
+Birds of Paradise:
+  [Keyword] Flying
+  [Mana] {T}: Add one mana of any color
+Blessing:
+  [Activated] {W}: Enchanted creature gets +1/+1 until end of turn
+Bottomless Vault:
+  [Triggered] At the beginning of your upkeep, if this land is tapped, put a storage counter on it
+Brass Man:
+  [Triggered] At the beginning of your upkeep, you may pay {1}
+Breeding Pit:
+  [Triggered] At the beginning of your upkeep, sacrifice this enchantment unless you pay {B}{B}
+Bronze Horse:
+  [Keyword] Trample
+Brothers of Fire:
+  [Activated] {1}{R}{R}: This creature deals 1 damage to any target and 1 damage to you
+Carnivorous Plant:
+  [Keyword] Defender
+Carrion Ants:
+  [Activated] {1}: This creature gets +1/+1 until end of turn
+Cave People:
+  [Triggered] Whenever this creature attacks, it gets +1/-2 until end of turn
+Chain Lightning:
+  [Spell] Chain Lightning deals 3 damage to any target
+Chromium:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, sacrifice Chromium unless you pay {W}{U}{B}
+Circle of Protection: Artifacts:
+  [Activated] {2}: The next time an artifact source of your choice would deal damage to you this turn, prevent that damage
+Circle of Protection: Black:
+  [Activated] {1}: The next time a black source of your choice would deal damage to you this turn, prevent that damage
+Circle of Protection: Blue:
+  [Activated] {1}: The next time a blue source of your choice would deal damage to you this turn, prevent that damage
+Circle of Protection: Green:
+  [Activated] {1}: The next time a green source of your choice would deal damage to you this turn, prevent that damage
+Circle of Protection: Red:
+  [Activated] {1}: The next time a red source of your choice would deal damage to you this turn, prevent that damage
+Circle of Protection: White:
+  [Activated] {1}: The next time a white source of your choice would deal damage to you this turn, prevent that damage
+City of Brass:
+  [Mana] {T}: Add one mana of any color
+City of Shadows:
+  [Activated] {T}: Add {C} for each storage counter on this land
+Clay Statue:
+  [Activated] {2}: Regenerate this creature
+Clergy of the Holy Nimbus:
+  [Activated] {1}: This creature can't be regenerated this turn
+Clockwork Avian:
+  [Keyword] Flying
+Cockatrice:
+  [Keyword] Flying
+Cocoon:
+  [Triggered] At the beginning of your upkeep, remove a pupa counter from this Aura
+Colossus of Sardia:
+  [Activated] {9}: Untap this creature
+Combat Medic:
+  [Activated] {1}{W}: Prevent the next 1 damage that would be dealt to any target this turn
+Conversion:
+  [Triggered] At the beginning of your upkeep, sacrifice this enchantment unless you pay {W}{W}
+Cosmic Horror:
+  [Keyword] First strike
+  [Triggered] At the beginning of your upkeep, destroy this creature unless you pay {3}{B}{B}{B}
+Craw Giant:
+  [Keyword] Trample
+Crimson Manticore:
+  [Keyword] Flying
+Cuombajj Witches:
+  [Activated] {T}: This creature deals 1 damage to any target and 1 damage to any target of an opponent's choice
+Cyclone:
+  [Triggered] At the beginning of your upkeep, put a wind counter on this enchantment, then sacrifice this enchantment unless you pay {G} for each wind counter on it
+D'Avenant Archer:
+  [Activated] {T}: This creature deals 1 damage to target attacking or blocking creature
+Dance of Many:
+  [Triggered] At the beginning of your upkeep, sacrifice this enchantment unless you pay {U}{U}
+Deathgrip:
+  [Activated] {B}{B}: Counter target green spell
+Deep Spawn:
+  [Keyword] Trample
+  [Triggered] At the beginning of your upkeep, sacrifice this creature unless you mill two cards
+  [Activated] {U}: This creature gains shroud until end of turn and doesn't untap during your next untap step
+Deep Water:
+  [Activated] {U}: Until end of turn, if you tap a land you control for mana, it produces {U} instead of any other type
+Demonic Hordes:
+  [Activated] {T}: Destroy target land
+  [Triggered] At the beginning of your upkeep, unless you pay {B}{B}{B}, tap this creature and sacrifice a land of an opponent's choice
+Desert:
+  [Mana] {T}: Add {C}
+  [Activated] {T}: This land deals 1 damage to target attacking creature
+Diabolic Machine:
+  [Activated] {3}: Regenerate this creature
+Divine Intervention:
+  [Triggered] At the beginning of your upkeep, remove an intervention counter from this enchantment
+Divine Transformation:
+  [Static] Enchanted creature gets +3/+3
+Dragon Engine:
+  [Activated] {2}: This creature gets +1/+0 until end of turn
+Dragon Whelp:
+  [Keyword] Flying
+  [Activated] {R}: This creature gets +1/+0 until end of turn
+Dream Coat:
+  [Activated] {0}: Enchanted creature becomes the color or colors of your choice
+Drop of Honey:
+  [Triggered] At the beginning of your upkeep, destroy the creature with the least power
+Drowned:
+  [Activated] {B}: Regenerate this creature
+Drudge Skeletons:
+  [Activated] {B}: Regenerate this creature
+Dwarven Demolition Team:
+  [Activated] {T}: Destroy target Wall
+Dwarven Hold:
+  [Triggered] At the beginning of your upkeep, if this land is tapped, put a storage counter on it
+Dwarven Lieutenant:
+  [Activated] {1}{R}: Target Dwarf creature gets +1/+0 until end of turn
+Dwarven Ruins:
+  [Mana] {T}: Add {R}
+Dwarven Warriors:
+  [Activated] {T}: Target creature with power 2 or less can't be blocked this turn
+Eater of the Dead:
+  [Activated] {0}: If this creature is tapped, exile target creature card from a graveyard and untap this creature
+Ebon Praetor:
+  [Keyword] First strike, trample
+  [Triggered] At the beginning of your upkeep, put a -2/-2 counter on this creature
+Ebon Stronghold:
+  [Mana] {T}: Add {B}
+Elder Land Wurm:
+  [Keyword] Defender, trample
+Elder Spawn:
+  [Triggered] At the beginning of your upkeep, unless you sacrifice an Island, sacrifice this creature and it deals 6 damage to you
+Electric Eel:
+  [Activated] {R}{R}: This creature gets +2/+0 until end of turn and deals 1 damage to you
+Elephant Graveyard:
+  [Mana] {T}: Add {C}
+  [Activated] {T}: Regenerate target Elephant
+Elven Fortress:
+  [Activated] {1}{G}: Target blocking creature gets +0/+1 until end of turn
+Elves of Deep Shadow:
+  [Mana] {T}: Add {B}
+Elvish Archers:
+  [Keyword] First strike
+Elvish Farmer:
+  [Triggered] At the beginning of your upkeep, put a spore counter on this creature
+Emerald Dragonfly:
+  [Keyword] Flying
+  [Activated] {G}{G}: This creature gains first strike until end of turn
+Erhnam Djinn:
+  [Triggered] At the beginning of your upkeep, target non-Wall creature an opponent controls gains forestwalk until your next upkeep
+Faerie Dragon:
+  [Keyword] Flying
+  [Activated] {1}{G}{G}: Play a random effect
+Fallen Angel:
+  [Keyword] Flying
+Farrel's Mantle:
+  [Triggered] Whenever enchanted creature attacks and isn't blocked, its controller may have it deal damage equal to its power plus 2 to another target creature
+Farrel's Zealot:
+  [Triggered] Whenever this creature attacks and isn't blocked, you may have it deal 3 damage to target creature
+Farrelite Priest:
+  [Activated] {1}: Add {W}
+Fasting:
+  [Triggered] At the beginning of your upkeep, put a hunger counter on this enchantment
+Fellwar Stone:
+  [Activated] {T}: Add one mana of any color that a land an opponent controls could produce
+Feral Thallid:
+  [Triggered] At the beginning of your upkeep, put a spore counter on this creature
+Fire Drake:
+  [Keyword] Flying
+  [Activated] {R}: This creature gets +1/+0 until end of turn
+Fire Sprites:
+  [Keyword] Flying
+Firebreathing:
+  [Activated] {R}: Enchanted creature gets +1/+0 until end of turn
+Firestorm Phoenix:
+  [Keyword] Flying
+Flood:
+  [Activated] {U}{U}: Tap target creature without flying
+Floral Spuzzem:
+  [Triggered] Whenever this creature attacks and isn't blocked, you may destroy target artifact defending player controls
+Flying Men:
+  [Keyword] Flying
+Force of Nature:
+  [Triggered] At the beginning of your upkeep, this creature deals 8 damage to you unless you pay {G}{G}{G}{G}
+Forcefield:
+  [Activated] {1}: The next time an unblocked creature of your choice would deal combat damage to you this turn, prevent all but 1 of that damage
+Forest:
+  [Mana] {T}: Add {G}
+Forethought Amulet:
+  [Triggered] At the beginning of your upkeep, sacrifice this artifact unless you pay {3}
+Frozen Shade:
+  [Activated] {B}: This creature gets +1/+1 until end of turn
+Fungal Bloom:
+  [Activated] {G}{G}: Put a spore counter on target Fungus
+Gabriel Angelfire:
+  [Triggered] At the beginning of your upkeep, choose flying, first strike, trample, or rampage 3
+Gaea's Liege:
+  [Activated] {T}: Target land becomes a Forest until this creature leaves the battlefield
+Gaea's Touch:
+  [Activated] {0}: You may put a basic Forest card from your hand onto the battlefield
+Gem Bazaar:
+  [Activated] {T}: Add to your mana pool one mana of the color last chosen
+Ghazbán Ogre:
+  [Triggered] At the beginning of your upkeep, if a player has more life than each other player, the player with the most life gains control of this creature
+Ghost Ship:
+  [Keyword] Flying
+  [Activated] {U}{U}{U}: Regenerate this creature
+Ghosts of the Damned:
+  [Activated] {T}: Target creature gets -1/-0 until end of turn
+Giant Growth:
+  [Spell] Target creature gets +3/+3 until end of turn
+Giant Slug:
+  [Activated] {5}: At the beginning of your next upkeep, choose a basic land type
+Giant Strength:
+  [Static] Enchanted creature gets +2/+2
+Glasses of Urza:
+  [Activated] {T}: Look at target player's hand
+Goblin Artisans:
+  [Activated] {T}: Flip a coin
+Goblin Balloon Brigade:
+  [Activated] {R}: This creature gains flying until end of turn
+Goblin Grenade:
+  [Spell] Goblin Grenade deals 5 damage to any target
+Goblin King:
+  [Static] Other Goblins get +1/+1 and have mountainwalk
+Goblin Kites:
+  [Activated] {R}: Target creature you control with toughness 2 or less gains flying until end of turn
+Goblin Rock Sled:
+  [Keyword] Trample
+Goblin Wizard:
+  [Activated] {T}: You may put a Goblin permanent card from your hand onto the battlefield
+  [Activated] {R}: Target Goblin gains protection from white until end of turn
+Gosta Dirk:
+  [Keyword] First strike
+Granite Gargoyle:
+  [Keyword] Flying
+  [Activated] {R}: This creature gets +0/+1 until end of turn
+Grapeshot Catapult:
+  [Activated] {T}: This creature deals 1 damage to target creature with flying
+Greater Realm of Preservation:
+  [Activated] {1}{W}: The next time a black or red source of your choice would deal damage to you this turn, prevent that damage
+Gwendlyn Di Corci:
+  [Activated] {T}: Target player discards a card at random
+Halfdane:
+  [Triggered] At the beginning of your upkeep, change Halfdane's base power and toughness to the power and toughness of target creature other than Halfdane until the end of your next upkeep
+Hammerheim:
+  [Mana] {T}: Add {R}
+  [Activated] {T}: Target creature loses all landwalk abilities until end of turn
+Hasran Ogress:
+  [Triggered] Whenever this creature attacks, it deals 3 damage to you unless you pay {2}
+Havenwood Battleground:
+  [Mana] {T}: Add {G}
+Hollow Trees:
+  [Triggered] At the beginning of your upkeep, if this land is tapped, put a storage counter on it
+Holy Armor:
+  [Static] Enchanted creature gets +0/+2
+  [Activated] {W}: Enchanted creature gets +0/+1 until end of turn
+Holy Strength:
+  [Static] Enchanted creature gets +1/+2
+Homarid:
+  [Triggered] At the beginning of your upkeep, put a tide counter on this creature
+Homarid Shaman:
+  [Activated] {U}: Tap target green creature
+Homarid Warrior:
+  [Activated] {U}: This creature gains shroud until end of turn and doesn't untap during your next untap step
+Hornet Cobra:
+  [Keyword] First strike
+Hurr Jackal:
+  [Activated] {T}: Target creature can't be regenerated this turn
+Hyperion Blacksmith:
+  [Activated] {T}: You may tap or untap target artifact an opponent controls
+Hypnotic Specter:
+  [Keyword] Flying
+Icatian Infantry:
+  [Activated] {1}: This creature gains first strike until end of turn
+  [Activated] {1}: This creature gains banding until end of turn
+Icatian Lieutenant:
+  [Activated] {1}{W}: Target Soldier creature gets +1/+0 until end of turn
+Icatian Moneychanger:
+  [Triggered] At the beginning of your upkeep, put a credit counter on this creature
+Icatian Priest:
+  [Activated] {1}{W}{W}: Target creature gets +1/+1 until end of turn
+Icatian Skirmishers:
+  [Triggered] Whenever this creature attacks, all creatures banded with it gain first strike until end of turn
+Icatian Store:
+  [Triggered] At the beginning of your upkeep, if this land is tapped, put a storage counter on it
+Ifh-Bíff Efreet:
+  [Keyword] Flying
+  [Activated] {G}: This creature deals 1 damage to each creature with flying and each player
+Illusionary Mask:
+  [Activated] {X}: You may choose a creature card in your hand whose mana cost could be paid by some amount of, or all of, the mana you spent on {X}
+Immolation:
+  [Static] Enchanted creature gets +2/-2
+Imprison:
+  [Triggered] Whenever enchanted creature attacks or blocks, you may pay {1}
+Initiates of the Ebon Hand:
+  [Activated] {1}: Add {B}
+Instill Energy:
+  [Activated] {0}: Untap enchanted creature
+Island:
+  [Mana] {T}: Add {U}
+Island Fish Jasconius:
+  [Triggered] At the beginning of your upkeep, you may pay {U}{U}{U}
+Island of Wak-Wak:
+  [Activated] {T}: Target creature with flying has base power 0 until end of turn
+Ivory Guardians:
+  [Keyword] Protection from red
+Ivory Tower:
+  [Triggered] At the beginning of your upkeep, you gain X life, where X is the number of cards in your hand minus 4
+Jade Monolith:
+  [Activated] {1}: The next time a source of your choice would deal damage to target creature this turn, that source deals that damage to you instead
+Jade Statue:
+  [Activated] {2}: This artifact becomes a 3/6 Golem artifact creature until end of combat
+Jeweled Bird:
+  [Activated] {T}: Ante this artifact
+Junún Efreet:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, sacrifice this creature unless you pay {B}{B}
+Juzám Djinn:
+  [Triggered] At the beginning of your upkeep, this creature deals 1 damage to you
+Karakas:
+  [Mana] {T}: Add {W}
+  [Activated] {T}: Return target legendary creature to its owner's hand
+Kei Takahashi:
+  [Activated] {T}: Prevent the next 2 damage that would be dealt to target creature this turn
+Killer Bees:
+  [Keyword] Flying
+  [Activated] {G}: This creature gets +1/+1 until end of turn
+King Suleiman:
+  [Activated] {T}: Destroy target Djinn or Efreet
+Knowledge Vault:
+  [Activated] {0}: Sacrifice this artifact
+Kobold Drill Sergeant:
+  [Static] Other Kobold creatures you control get +0/+1 and have trample
+Kobold Overlord:
+  [Keyword] First strike
+Kobold Taskmaster:
+  [Static] Other Kobold creatures you control get +1/+0
+Lady Caleria:
+  [Activated] {T}: Lady Caleria deals 3 damage to target attacking or blocking creature
+Land Leeches:
+  [Keyword] First strike
+Land Tax:
+  [Triggered] At the beginning of your upkeep, if an opponent controls more lands than you, you may search your library for up to three basic land cards, reveal them, put them into your hand, then shuffle
+Lesser Werewolf:
+  [Activated] {B}: If this creature's power is 1 or more, it gets -1/-0 until end of turn and put a -0/-1 counter on target creature blocking or blocked by this creature
+Leviathan:
+  [Keyword] Trample
+  [Triggered] At the beginning of your upkeep, you may sacrifice two Islands
+Ley Druid:
+  [Activated] {T}: Untap target land
+Library of Alexandria:
+  [Mana] {T}: Add {C}
+  [Activated] {T}: Draw a card
+Lifeforce:
+  [Activated] {G}{G}: Counter target black spell
+Lightning Bolt:
+  [Spell] Lightning Bolt deals 3 damage to any target
+Living Artifact:
+  [Triggered] At the beginning of your upkeep, you may remove a vitality counter from this Aura
+Living Wall:
+  [Activated] {1}: Regenerate Living Wall
+Llanowar Elves:
+  [Mana] {T}: Add {G}
+Lord Magnus:
+  [Keyword] First strike
+Lord of Atlantis:
+  [Static] Other Merfolk get +1/+1 and have islandwalk
+Lord of the Pit:
+  [Keyword] Flying, trample
+  [Triggered] At the beginning of your upkeep, sacrifice a creature other than this creature
+Mana Crypt:
+  [Triggered] At the beginning of your upkeep, flip a coin
+  [Mana] {T}: Add {C}{C}
+Mana Vault:
+  [Triggered] At the beginning of your upkeep, you may pay {4}
+  [Activated] {T}: Add {C}{C}{C}
+Master of the Hunt:
+  [Activated] {2}{G}{G}: Create a 1/1 green Wolf creature token named Wolves of the Hunt
+Maze of Ith:
+  [Activated] {T}: Untap target attacking creature
+Merchant Ship:
+  [Triggered] Whenever this creature attacks and isn't blocked, you gain 2 life
+Merfolk Assassin:
+  [Activated] {T}: Destroy target creature with islandwalk
+Mijae Djinn:
+  [Triggered] Whenever this creature attacks, flip a coin
+Mindstab Thrull:
+  [Triggered] Whenever this creature attacks and isn't blocked, you may sacrifice it
+Miracle Worker:
+  [Activated] {T}: Destroy target Aura attached to a creature you control
+Mishra's Factory:
+  [Mana] {T}: Add {C}
+  [Activated] {1}: This land becomes a 2/2 Assembly-Worker artifact creature until end of turn
+  [Activated] {T}: Target Assembly-Worker creature gets +1/+1 until end of turn
+Mishra's War Machine:
+  [Triggered] At the beginning of your upkeep, this creature deals 3 damage to you unless you discard a card
+Mishra's Workshop:
+  [Activated] {T}: Add {C}{C}{C}
+Moorish Cavalry:
+  [Keyword] Trample
+Mountain:
+  [Mana] {T}: Add {R}
+Mountain Yeti:
+  [Keyword] Protection from white
+Mox Emerald:
+  [Mana] {T}: Add {G}
+Mox Jet:
+  [Mana] {T}: Add {B}
+Mox Pearl:
+  [Mana] {T}: Add {W}
+Mox Ruby:
+  [Mana] {T}: Add {R}
+Mox Sapphire:
+  [Mana] {T}: Add {U}
+Murk Dwellers:
+  [Triggered] Whenever this creature attacks and isn't blocked, it gets +2/+0 until end of combat
+Nameless Race:
+  [Keyword] Trample
+Necrite:
+  [Triggered] Whenever this creature attacks and isn't blocked, you may sacrifice it
+Nether Shadow:
+  [Keyword] Haste
+  [Triggered] At the beginning of your upkeep, if this card is in your graveyard with three or more creature cards above it, you may put this card onto the battlefield
+Nettling Imp:
+  [Activated] {T}: Choose target non-Wall creature the active player has controlled continuously since the beginning of the turn
+Nicol Bolas:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, sacrifice Nicol Bolas unless you pay {U}{B}{R}
+Oasis:
+  [Activated] {T}: Prevent the next 1 damage that would be dealt to target creature this turn
+Old Man of the Sea:
+  [Activated] {T}: Gain control of target creature with power less than or equal to this creature's power for as long as this creature remains tapped and that creature's power remains less than or equal to this creature's power
+Orcish Artillery:
+  [Activated] {T}: This creature deals 2 damage to any target and 3 damage to you
+Orcish Captain:
+  [Activated] {1}: Flip a coin
+Orcish Spy:
+  [Activated] {T}: Look at the top three cards of target player's library
+Orcish Veteran:
+  [Activated] {R}: This creature gains first strike until end of turn
+Order of Leitbur:
+  [Keyword] Protection from black
+  [Activated] {W}: This creature gains first strike until end of turn
+  [Activated] {W}{W}: This creature gets +1/+0 until end of turn
+Order of the Ebon Hand:
+  [Keyword] Protection from white
+  [Activated] {B}: This creature gains first strike until end of turn
+  [Activated] {B}{B}: This creature gets +1/+0 until end of turn
+Orgg:
+  [Keyword] Trample
+Ornithopter:
+  [Keyword] Flying
+Osai Vultures:
+  [Keyword] Flying
+Palladia-Mors:
+  [Keyword] Flying, trample
+  [Triggered] At the beginning of your upkeep, sacrifice Palladia-Mors unless you pay {R}{G}{W}
+Pavel Maliki:
+  [Activated] {B}{R}: Pavel Maliki gets +1/+0 until end of turn
+Pendelhaven:
+  [Mana] {T}: Add {G}
+  [Activated] {T}: Target 1/1 creature gets +1/+2 until end of turn
+Personal Incarnation:
+  [Activated] {0}: The next 1 damage that would be dealt to this creature this turn is dealt to its owner instead
+Pestilence:
+  [Activated] {B}: This enchantment deals 1 damage to each creature and each player
+Petra Sphinx:
+  [Activated] {T}: Target player chooses a card name, then reveals the top card of their library
+Phantasmal Forces:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, sacrifice this creature unless you pay {U}
+Phantom Monster:
+  [Keyword] Flying
+Phyrexian Gremlins:
+  [Activated] {T}: Tap target artifact
+Pirate Ship:
+  [Activated] {T}: This creature deals 1 damage to any target
+Pixie Queen:
+  [Keyword] Flying
+Plains:
+  [Mana] {T}: Add {W}
+Plateau:
+  [Activated] {T}: Add {R} or {W}
+Preacher:
+  [Activated] {T}: For as long as this creature remains tapped, gain control of target creature of an opponent's choice they control
+Primordial Ooze:
+  [Triggered] At the beginning of your upkeep, put a +1/+1 counter on this creature
+Princess Lucrezia:
+  [Mana] {T}: Add {U}
+Prismatic Dragon:
+  [Keyword] Flying
+  [Activated] {2}: Prismatic Dragon becomes a random color permanently
+Prodigal Sorcerer:
+  [Activated] {T}: This creature deals 1 damage to any target
+Psionic Entity:
+  [Activated] {T}: This creature deals 2 damage to any target and 3 damage to itself
+Psychic Allergy:
+  [Triggered] At the beginning of your upkeep, destroy this enchantment unless you sacrifice two Islands
+Psychic Purge:
+  [Spell] Psychic Purge deals 1 damage to any target
+Pyramids:
+  [Activated] {2}: Choose one —
+Quarum Trench Gnomes:
+  [Activated] {T}: If target Plains is tapped for mana, it produces colorless mana instead of white mana
+Rabid Wombat:
+  [Keyword] Vigilance
+Radjan Spirit:
+  [Activated] {T}: Target creature loses flying until end of turn
+Rainbow Knights:
+  [Activated] {1}: First strike until end of turn
+  [Activated] {W}{W}: +0/+0, +1/+0 or +2/+0 until end of turn chosen at random
+Rainbow Vale:
+  [Mana] {T}: Add one mana of any color
+Rakalite:
+  [Activated] {2}: Prevent the next 1 damage that would be dealt to any target this turn
+Ramirez DePietro:
+  [Keyword] First strike
+Ramses Overdark:
+  [Activated] {T}: Destroy target enchanted creature
+Rasputin Dreamweaver:
+  [Triggered] At the beginning of your upkeep, if Rasputin started the turn untapped, put a dream counter on it
+Regeneration:
+  [Activated] {G}: Regenerate enchanted creature
+Relic Barrier:
+  [Activated] {T}: Tap target artifact
+Repentant Blacksmith:
+  [Keyword] Protection from red
+Riven Turnbull:
+  [Mana] {T}: Add {B}
+River Merfolk:
+  [Activated] {U}: This creature gains mountainwalk until end of turn
+Roc of Kher Ridges:
+  [Keyword] Flying
+Rock Hydra:
+  [Activated] {R}: Prevent the next 1 damage that would be dealt to this creature this turn
+  [Activated] {R}{R}{R}: Put a +1/+1 counter on this creature
+Rocket Launcher:
+  [Activated] {2}: This artifact deals 1 damage to any target
+Rohgahh of Kher Keep:
+  [Triggered] At the beginning of your upkeep, you may pay {R}{R}{R}
+Royal Assassin:
+  [Activated] {T}: Destroy target tapped creature
+Rubinia Soulsinger:
+  [Activated] {T}: Gain control of target creature for as long as you control Rubinia Soulsinger and Rubinia Soulsinger remains tapped
+Ruins of Trokair:
+  [Mana] {T}: Add {W}
+Safe Haven:
+  [Triggered] At the beginning of your upkeep, you may sacrifice this land
+Samite Healer:
+  [Activated] {T}: Prevent the next 1 damage that would be dealt to any target this turn
+Sand Silos:
+  [Triggered] At the beginning of your upkeep, if this land is tapped, put a storage counter on it
+Savannah:
+  [Activated] {T}: Add {G} or {W}
+Scarwood Hag:
+  [Activated] {T}: Target creature loses forestwalk until end of turn
+Scrubland:
+  [Activated] {T}: Add {W} or {B}
+Scryb Sprites:
+  [Keyword] Flying
+Seasinger:
+  [Activated] {T}: Gain control of target creature whose controller controls an Island for as long as you control this creature and this creature remains tapped
+Season of the Witch:
+  [Triggered] At the beginning of your upkeep, sacrifice this enchantment unless you pay 2 life
+Sedge Troll:
+  [Activated] {B}: Regenerate this creature
+Sengir Vampire:
+  [Triggered] Whenever a creature dealt damage by this creature this turn dies, put a +1/+1 counter on this creature
+Sentinel:
+  [Activated] {0}: Change this creature's base toughness to 1 plus the power of target creature blocking or blocked by this creature
+Serendib Djinn:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, sacrifice a land
+Serendib Efreet:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, this creature deals 1 damage to you
+Serra Angel:
+  [Keyword] Flying
+Shapeshifter:
+  [Triggered] At the beginning of your upkeep, you may choose a number between 0 and 7
+Shelkin Brownie:
+  [Activated] {T}: Target creature loses all "bands with other" abilities until end of turn
+Shivan Dragon:
+  [Keyword] Flying
+  [Activated] {R}: This creature gets +1/+0 until end of turn
+Sindbad:
+  [Activated] {T}: Draw a card and reveal it
+Singing Tree:
+  [Activated] {T}: Target attacking creature has base power 0 until end of turn
+Sisters of the Flame:
+  [Mana] {T}: Add {R}
+Sol Ring:
+  [Mana] {T}: Add {C}{C}
+Sorceress Queen:
+  [Activated] {T}: Target creature other than this creature has base power and toughness 0/2 until end of turn
+Sorrow's Path:
+  [Activated] {T}: Choose two target blocking creatures controlled by the same opponent
+Spinal Villain:
+  [Activated] {T}: Destroy target blue creature
+Spore Flower:
+  [Triggered] At the beginning of your upkeep, put a spore counter on this creature
+Stasis:
+  [Triggered] At the beginning of your upkeep, sacrifice this enchantment unless you pay {U}
+Stone Giant:
+  [Activated] {T}: Target creature you control with toughness less than this creature's power gains flying until end of turn
+Stone-Throwing Devils:
+  [Keyword] First strike
+Strip Mine:
+  [Mana] {T}: Add {C}
+Sunastian Falconer:
+  [Mana] {T}: Add {C}{C}
+Sunken City:
+  [Triggered] At the beginning of your upkeep, sacrifice this enchantment unless you pay {U}{U}
+Svyelunite Temple:
+  [Mana] {T}: Add {U}
+Swamp:
+  [Mana] {T}: Add {B}
+Taiga:
+  [Activated] {T}: Add {R} or {G}
+Tetravus:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, you may remove any number of +1/+1 counters from this creature
+  [Triggered] At the beginning of your upkeep, you may exile any number of tokens created with this creature
+Thallid:
+  [Triggered] At the beginning of your upkeep, put a spore counter on this creature
+Thallid Devourer:
+  [Triggered] At the beginning of your upkeep, put a spore counter on this creature
+The Brute:
+  [Static] Enchanted creature gets +1/+0
+  [Activated] {R}{R}{R}: Regenerate enchanted creature
+The Fallen:
+  [Triggered] At the beginning of your upkeep, this creature deals 1 damage to each opponent and planeswalker it has dealt damage to this game
+Thelon's Chant:
+  [Triggered] At the beginning of your upkeep, sacrifice this enchantment unless you pay {G}
+Thorn Thallid:
+  [Triggered] At the beginning of your upkeep, put a spore counter on this creature
+Thrull Champion:
+  [Activated] {T}: Gain control of target Thrull for as long as you control this creature
+Thrull Retainer:
+  [Static] Enchanted creature gets +1/+1
+Thrull Wizard:
+  [Activated] {1}{B}: Counter target black spell unless that spell's controller pays {B} or {3}
+Thunder Spirit:
+  [Keyword] Flying, first strike
+Tidal Flats:
+  [Activated] {U}{U}: For each attacking creature without flying, its controller may pay {1}
+Tidal Influence:
+  [Triggered] At the beginning of your upkeep, put a tide counter on this enchantment
+Time Vault:
+  [Activated] {T}: Take an extra turn after this one
+Tolaria:
+  [Mana] {T}: Add {U}
+  [Activated] {T}: Target creature loses banding and all "bands with other" abilities until end of turn
+Tor Wauki:
+  [Activated] {T}: Tor Wauki deals 2 damage to target attacking or blocking creature
+Tourach's Chant:
+  [Triggered] At the beginning of your upkeep, sacrifice this enchantment unless you pay {B}
+Tourach's Gate:
+  [Triggered] At the beginning of your upkeep, remove a time counter from this Aura
+Tower of Coireall:
+  [Activated] {T}: Target creature can't be blocked by Walls this turn
+Tropical Island:
+  [Activated] {T}: Add {G} or {U}
+Tuknir Deathlock:
+  [Keyword] Flying
+Tundra:
+  [Activated] {T}: Add {W} or {U}
+Two-Headed Giant of Foriys:
+  [Keyword] Trample
+Underground Sea:
+  [Activated] {T}: Add {U} or {B}
+Unholy Strength:
+  [Static] Enchanted creature gets +2/+1
+Unstable Mutation:
+  [Static] Enchanted creature gets +3/+3
+Ur-Drago:
+  [Keyword] First strike
+Urborg:
+  [Mana] {T}: Add {B}
+  [Activated] {T}: Target creature loses first strike or swampwalk until end of turn
+Urza's Avenger:
+  [Activated] {0}: This creature gets -1/-1 and gains your choice of banding, flying, first strike, or trample until end of turn
+Urza's Mine:
+  [Mana] {T}: Add {C}
+Urza's Power Plant:
+  [Mana] {T}: Add {C}
+Urza's Tower:
+  [Mana] {T}: Add {C}
+Uthden Troll:
+  [Activated] {R}: Regenerate this creature
+Vaevictis Asmadi:
+  [Keyword] Flying
+  [Triggered] At the beginning of your upkeep, sacrifice Vaevictis Asmadi unless you pay {B}{R}{G}
+  [Activated] {B}: Vaevictis Asmadi gets +1/+0 until end of turn
+  [Activated] {R}: Vaevictis Asmadi gets +1/+0 until end of turn
+  [Activated] {G}: Vaevictis Asmadi gets +1/+0 until end of turn
+Vampire Bats:
+  [Activated] {B}: This creature gets +1/+0 until end of turn
+Vodalian Knights:
+  [Keyword] First strike
+  [Activated] {U}: This creature gains flying until end of turn
+Volcanic Island:
+  [Activated] {T}: Add {U} or {R}
+Voodoo Doll:
+  [Triggered] At the beginning of your upkeep, put a pin counter on this artifact
+Walking Dead:
+  [Activated] {B}: Regenerate this creature
+Wall of Bone:
+  [Activated] {B}: Regenerate this creature
+Wall of Brambles:
+  [Activated] {G}: Regenerate this creature
+Wall of Fire:
+  [Activated] {R}: This creature gets +1/+0 until end of turn
+Wall of Light:
+  [Keyword] Protection from black
+Wall of Opposition:
+  [Activated] {1}: This creature gets +1/+0 until end of turn
+Wall of Putrid Flesh:
+  [Keyword] Protection from white
+Wall of Spears:
+  [Keyword] First strike
+Wall of Swords:
+  [Keyword] Flying
+Wall of Tombstones:
+  [Triggered] At the beginning of your upkeep, change this creature's base toughness to 1 plus the number of creature cards in your graveyard
+Wall of Water:
+  [Activated] {U}: This creature gets +1/+0 until end of turn
+Wall of Wonder:
+  [Activated] {2}{U}{U}: This creature gets +4/-4 until end of turn and can attack this turn as though it didn't have defender
+War Barge:
+  [Activated] {3}: Target creature gains islandwalk until end of turn
+War Mammoth:
+  [Keyword] Trample
+Weakness:
+  [Static] Enchanted creature gets -2/-1
+Whirling Dervish:
+  [Keyword] Protection from black
+Will-o'-the-Wisp:
+  [Activated] {B}: Regenerate this creature
+Willow Satyr:
+  [Activated] {T}: Gain control of target legendary creature for as long as you control this creature and this creature remains tapped
+Windseeker Centaur:
+  [Keyword] Vigilance
+Witch Hunter:
+  [Activated] {T}: This creature deals 1 damage to target player or planeswalker
+Worms of the Earth:
+  [Triggered] At the beginning of each upkeep, any player may sacrifice two lands of their choice or have this enchantment deal 5 damage to that player
+Wormwood Treefolk:
+  [Activated] {G}{G}: This creature gains forestwalk until end of turn and deals 2 damage to you
+  [Activated] {B}{B}: This creature gains swampwalk until end of turn and deals 2 damage to you
+Wyluli Wolf:
+  [Activated] {T}: Target creature gets +1/+1 until end of turn
+Xenic Poltergeist:
+  [Activated] {T}: Until your next upkeep, target noncreature artifact becomes an artifact creature with power and toughness each equal to its mana value
+Xira Arien:
+  [Keyword] Flying
+Yawgmoth Demon:
+  [Triggered] At the beginning of your upkeep, you may sacrifice an artifact
+Yotian Soldier:
+  [Keyword] Vigilance
+Zephyr Falcon:
+  [Keyword] Flying, vigilance

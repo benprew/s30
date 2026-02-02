@@ -41,6 +41,7 @@ func main() {
 	showUnparsed := flag.Bool("unparsed", false, "only show unparsed text")
 	cardName := flag.String("card", "", "parse a specific card by name")
 	outFile := flag.String("o", "", "output file (default: stdout)")
+	verbose := flag.Bool("verbose", false, "show full output including stats and unparsed")
 	flag.Parse()
 
 	cards := domain.CARDS
@@ -122,11 +123,23 @@ func main() {
 		out = os.Stdout
 	}
 
-	enc := json.NewEncoder(out)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(output); err != nil {
-		fmt.Fprintf(os.Stderr, "Error encoding output: %v\n", err)
-		os.Exit(1)
+	if *verbose {
+		enc := json.NewEncoder(out)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(output); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding output: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		for _, card := range output.Parsed {
+			if len(card.Abilities) == 0 {
+				continue
+			}
+			fmt.Fprintf(out, "%s:\n", card.CardName)
+			for _, ability := range card.Abilities {
+				fmt.Fprintf(out, "  [%s] %s\n", ability.Type, ability.RawText)
+			}
+		}
 	}
 
 	if *outFile != "" {
