@@ -1,7 +1,6 @@
 package core
 
 import (
-	"sync"
 	"testing"
 )
 
@@ -80,16 +79,14 @@ func TestStackResolveEmpty(t *testing.T) {
 	stack.Next(EventPlayerPassesPriority, nil)
 	result, item := stack.Next(EventPlayerPassesPriority, nil)
 
-	if result != Resolve {
-		t.Errorf("Expected Resolve result, got %d", result)
+	if result != -1 {
+		t.Errorf("Expected -1 result when both pass with empty stack, got %d", result)
 	}
 	if item != nil {
-		t.Errorf("Expected nil item when resolving empty stack, got %v", item)
+		t.Errorf("Expected nil item when both pass with empty stack, got %v", item)
 	}
-
-	stack.Next(-1, nil)
 	if stack.CurrentState != StateEmpty {
-		t.Errorf("Expected StateEmpty after resolving empty stack, got %d", stack.CurrentState)
+		t.Errorf("Expected StateEmpty when both pass with empty stack, got %d", stack.CurrentState)
 	}
 }
 
@@ -113,34 +110,21 @@ func TestStackConsecutivePassesTracking(t *testing.T) {
 }
 
 func TestRunStack(t *testing.T) {
-	// Test the next turn functionality with 1 player, make sure the player
-	// has the opportunity to respond in each phase
 	players := createTestPlayer(2)
 	player := players[0]
 	player2 := players[1]
 	game := NewGame(players)
 
-	// Check that the player had an opportunity to respond in each phase
-	expectedPhases := []Phase{
-		PhaseUpkeep,
-		PhaseDraw,
-		PhaseMain1,
-		PhaseCombat,
-		PhaseMain2,
-		PhaseEnd,
-	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-
+	done := make(chan struct{})
 	go func() {
-		defer wg.Done()
-		for range expectedPhases {
-			player.InputChan <- PlayerAction{Type: ActionPassPriority}
-			player2.InputChan <- PlayerAction{Type: ActionPassPriority}
-		}
+		defer close(done)
+		<-player.WaitingChan
+		player.InputChan <- PlayerAction{Type: ActionPassPriority}
+		<-player2.WaitingChan
+		player2.InputChan <- PlayerAction{Type: ActionPassPriority}
 	}()
 
 	player.Turn.Phase = PhaseUntap
 	game.RunStack()
-	wg.Wait()
+	<-done
 }

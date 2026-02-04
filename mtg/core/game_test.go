@@ -682,17 +682,27 @@ func TestCombatPhaseCastSpellAction(t *testing.T) {
 
 	initialHandSize := len(player.Hand)
 
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
+		<-player.WaitingChan
 		player.InputChan <- PlayerAction{
 			Type:   ActionCastSpell,
 			Card:   giantGrowth,
 			Target: elf,
 		}
+		<-player.WaitingChan
 		player.InputChan <- PlayerAction{Type: ActionPassPriority}
+		<-opponent.WaitingChan
+		opponent.InputChan <- PlayerAction{Type: ActionPassPriority}
+		<-player.WaitingChan
+		player.InputChan <- PlayerAction{Type: ActionPassPriority}
+		<-opponent.WaitingChan
 		opponent.InputChan <- PlayerAction{Type: ActionPassPriority}
 	}()
 
 	game.RunStack()
+	<-done
 
 	if len(player.Hand) != initialHandSize-1 {
 		t.Errorf("Giant Growth was NOT cast during combat. Expected hand size %d, got %d", initialHandSize-1, len(player.Hand))

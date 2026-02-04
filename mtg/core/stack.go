@@ -73,11 +73,12 @@ func (s *Stack) Next(event StackEvent, item *StackItem) (StackResult, *StackItem
 		case EventPlayerPassesPriority:
 			s.ConsecutivePasses++
 			if s.ConsecutivePasses == 2 {
-				s.CurrentState = StateResolve
 				s.ConsecutivePasses = 0
 				if s.IsEmpty() {
-					return Resolve, nil
+					s.CurrentState = StateEmpty
+					return -1, nil
 				}
+				s.CurrentState = StateResolve
 				return Resolve, s.Pop()
 			}
 			return NonActPlayerPriority, nil
@@ -87,10 +88,6 @@ func (s *Stack) Next(event StackEvent, item *StackItem) (StackResult, *StackItem
 		}
 
 	case StateResolve:
-		if s.IsEmpty() {
-			s.CurrentState = StateEmpty
-			return -1, nil
-		}
 		s.CurrentState = StateWaitPlayer
 		return ActPlayerPriority, nil
 

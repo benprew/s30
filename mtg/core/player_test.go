@@ -22,6 +22,7 @@ func createTestPlayer(numPlayers int) []*Player {
 			Exile:       []*Card{},
 			Turn:        &Turn{},
 			InputChan:   make(chan PlayerAction, 100),
+			WaitingChan: make(chan struct{}, 1),
 			IsAI:        true,
 		}
 
