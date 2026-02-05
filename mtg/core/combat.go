@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/mtg/effects"
 )
 
 func (g *GameState) AvailableAttackers(player *Player) []*Card {
@@ -46,6 +47,9 @@ func (g *GameState) DeclareBlocker(blocker *Card, attacker *Card) error {
 	}
 	if g.isAlreadyBlocking(blocker) {
 		return fmt.Errorf("creature is already blocking")
+	}
+	if attacker.HasKeyword(effects.KeywordFlying) && !blocker.HasKeyword(effects.KeywordFlying) && !blocker.HasKeyword(effects.KeywordReach) {
+		return fmt.Errorf("creature with flying can only be blocked by creatures with flying or reach")
 	}
 	g.BlockerMap[attacker] = append(g.BlockerMap[attacker], blocker)
 	return nil

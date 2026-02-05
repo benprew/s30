@@ -19,7 +19,6 @@ type Card struct {
 	Tapped         bool
 	Active         bool
 	DamageTaken    int
-	Targetable     string
 	PowerBoost     int
 	ToughnessBoost int
 }
@@ -48,6 +47,11 @@ func (c *Card) CardActions() []effects.Event {
 
 func abilityToEvent(ability *domain.ParsedAbility) effects.Event {
 	if ability.Effect == nil {
+		return nil
+	}
+
+	// Activated abilities require a cost and should not resolve when casting
+	if ability.Type == "Activated" {
 		return nil
 	}
 
@@ -121,12 +125,39 @@ func (c *Card) ClearEndOfTurnEffects() {
 	c.DamageTaken = 0
 }
 
+func (c *Card) GetTargetSpec() *domain.ParsedTargetSpec {
+	for _, ability := range c.ParsedAbilities {
+		if ability.TargetSpec != nil {
+			return ability.TargetSpec
+		}
+	}
+	return nil
+}
+
 func (c *Card) TargetsCreaturesOnly() bool {
-	return c.Targetable == "CreatureTarget" || c.Name() == "Giant Growth"
+	spec := c.GetTargetSpec()
+	return spec != nil && spec.Type == "creature"
 }
 
 func (c *Card) IsActive() bool {
 	return !c.Tapped && c.Active
+}
+
+func (c *Card) HasKeyword(keyword effects.Keyword) bool {
+	kw := string(keyword)
+	for _, k := range c.Keywords {
+		if k == kw {
+			return true
+		}
+	}
+	for _, ability := range c.ParsedAbilities {
+		for _, k := range ability.Keywords {
+			if k == kw {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (c *Card) GetManaProduction() []string {
@@ -169,7 +200,6 @@ func NewCardFromDomain(domainCard *domain.Card, id EntityID, owner *Player) *Car
 		Tapped:      false,
 		Active:      true,
 		DamageTaken: 0,
-		Targetable:  "",
 	}
 }
 
@@ -182,7 +212,6 @@ func (c *Card) DeepCopy() *Card {
 		Tapped:         c.Tapped,
 		Active:         c.Active,
 		DamageTaken:    c.DamageTaken,
-		Targetable:     c.Targetable,
 		PowerBoost:     c.PowerBoost,
 		ToughnessBoost: c.ToughnessBoost,
 	}

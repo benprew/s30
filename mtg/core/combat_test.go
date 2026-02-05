@@ -488,3 +488,80 @@ func TestClearCombatState(t *testing.T) {
 		t.Errorf("BlockerMap should be cleared")
 	}
 }
+
+func TestDeclareBlocker_FlyingCannotBeBlockedByGround(t *testing.T) {
+	game, player, opponent := setupCombatTest()
+
+	attacker := addCreatureToBattlefield(player, "Air Elemental", true, false)
+	if attacker == nil {
+		t.Skip("Air Elemental not found")
+	}
+
+	blocker := addCreatureToBattlefield(opponent, "Llanowar Elves", true, false)
+	if blocker == nil {
+		t.Skip("Llanowar Elves not found")
+	}
+
+	err := game.DeclareBlocker(blocker, attacker)
+	if err == nil {
+		t.Errorf("Ground creature should not be able to block flying creature")
+	}
+}
+
+func TestDeclareBlocker_FlyingCanBeBlockedByFlying(t *testing.T) {
+	game, player, opponent := setupCombatTest()
+
+	attacker := addCreatureToBattlefield(player, "Air Elemental", true, false)
+	if attacker == nil {
+		t.Skip("Air Elemental not found")
+	}
+
+	blocker := addCreatureToBattlefield(opponent, "Air Elemental", true, false)
+	if blocker == nil {
+		t.Skip("Air Elemental not found for blocker")
+	}
+
+	err := game.DeclareBlocker(blocker, attacker)
+	if err != nil {
+		t.Errorf("Flying creature should be able to block flying creature: %v", err)
+	}
+}
+
+func TestDeclareBlocker_FlyingCanBeBlockedByReach(t *testing.T) {
+	game, player, opponent := setupCombatTest()
+
+	attacker := addCreatureToBattlefield(player, "Air Elemental", true, false)
+	if attacker == nil {
+		t.Skip("Air Elemental not found")
+	}
+
+	blocker := addCreatureToBattlefield(opponent, "Llanowar Elves", true, false)
+	if blocker == nil {
+		t.Skip("Llanowar Elves not found")
+	}
+	blocker.Keywords = append(blocker.Keywords, "Reach")
+
+	err := game.DeclareBlocker(blocker, attacker)
+	if err != nil {
+		t.Errorf("Creature with reach should be able to block flying creature: %v", err)
+	}
+}
+
+func TestDeclareBlocker_GroundCanBeBlockedByGround(t *testing.T) {
+	game, player, opponent := setupCombatTest()
+
+	attacker := addCreatureToBattlefield(player, "Llanowar Elves", true, false)
+	if attacker == nil {
+		t.Skip("Llanowar Elves not found")
+	}
+
+	blocker := addCreatureToBattlefield(opponent, "Llanowar Elves", true, false)
+	if blocker == nil {
+		t.Skip("Llanowar Elves not found for blocker")
+	}
+
+	err := game.DeclareBlocker(blocker, attacker)
+	if err != nil {
+		t.Errorf("Ground creature should be able to block ground creature: %v", err)
+	}
+}

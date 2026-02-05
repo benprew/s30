@@ -14,28 +14,28 @@ import (
 )
 
 type CardJSON struct {
-	ScryfallID     string // Used to get images
-	OracleID       string
-	CardName       string
-	ManaCost       string
-	ManaProduction []string
-	Colors         []string
-	ColorIdentity  []string
-	Keywords       []string
-	TypeLine       string
-	Subtypes       []string
-	Abilities      []string
-	Text           string
-	Power          string // can be "*"
-	Toughness      string // can be "*"
-	SetName        string
-	SetID          string
-	CollectorNo    string
-	Rarity         string
-	Frame          string
-	FlavorText     string
-	FrameEffects   []string
-	Watermark      string
+	ScryfallID        string // Used to get images
+	OracleID          string
+	CardName          string
+	ManaCost          string
+	ManaProduction    []string
+	Colors            []string
+	ColorIdentity     []string
+	Keywords          []string
+	TypeLine          string
+	Subtypes          []string
+	Abilities         []string
+	Text              string
+	Power             string // can be "*"
+	Toughness         string // can be "*"
+	SetName           string
+	SetID             string
+	CollectorNo       string
+	Rarity            string
+	Frame             string
+	FlavorText        string
+	FrameEffects      []string
+	Watermark         string
 	Artist            string
 	PriceUSD          string
 	VintageRestricted bool
@@ -133,25 +133,25 @@ func (cj *CardJSON) ToCard() *Card {
 			SetName:     cj.SetName,
 			CollectorNo: cj.CollectorNo,
 		},
-		ScryfallID:     cj.ScryfallID,
-		OracleID:       cj.OracleID,
-		CardName:       cj.CardName,
-		ManaCost:       cj.ManaCost,
-		ManaProduction: cj.ManaProduction,
-		Colors:         cj.Colors,
-		ColorIdentity:  cj.ColorIdentity,
-		Keywords:       cj.Keywords,
-		CardType:       parseCardType(cj.TypeLine),
-		TypeLine:       cj.TypeLine,
-		Subtypes:       cj.Subtypes,
-		Abilities:      cj.Abilities,
-		Text:           cj.Text,
-		Power:          power,
-		Toughness:      toughness,
-		Rarity:         cj.Rarity,
-		Frame:          cj.Frame,
-		FlavorText:     cj.FlavorText,
-		FrameEffects:   cj.FrameEffects,
+		ScryfallID:        cj.ScryfallID,
+		OracleID:          cj.OracleID,
+		CardName:          cj.CardName,
+		ManaCost:          cj.ManaCost,
+		ManaProduction:    cj.ManaProduction,
+		Colors:            cj.Colors,
+		ColorIdentity:     cj.ColorIdentity,
+		Keywords:          cj.Keywords,
+		CardType:          parseCardType(cj.TypeLine),
+		TypeLine:          cj.TypeLine,
+		Subtypes:          cj.Subtypes,
+		Abilities:         cj.Abilities,
+		Text:              cj.Text,
+		Power:             power,
+		Toughness:         toughness,
+		Rarity:            cj.Rarity,
+		Frame:             cj.Frame,
+		FlavorText:        cj.FlavorText,
+		FrameEffects:      cj.FrameEffects,
 		Watermark:         cj.Watermark,
 		Artist:            cj.Artist,
 		Price:             price,

@@ -1,4 +1,7 @@
 * MTG Engine
+** Support Abilities
+- [X] Flying
+- [ ] First strike
 ** Card Ability Parsing
 I'm building a magic the gathering game (see mtg/GEMINI.md) and I'd like to parse the card text and return structured data describing the ability of the card.
 
@@ -24,7 +27,8 @@ when loading cards read assets/card_info_parsed_cards.json to get card effects a
 
 
 
-** Combat
+** DONE Combat
+CLOSED: [2026-02-04 Wed 18:39]
 Lets implement combat into the mtg engine. all the logic is in the mtg/ directory
 
 Read mtg-Turn-structure.org in the combat phase to understand the steps.
@@ -37,7 +41,7 @@ Read mtg-Turn-structure.org in the combat phase to understand the steps.
 
 Write tests for this and add this functionality to cmd/mtg_test where players attack and block randomly.
 
-*** Combat Subphases
+*** Combat Sub-phases
 | Beginning of Combat | "At beginning of combat" triggers; players get priority               |
 | Declare Attackers   | Active player declares attackers; triggers fire; players get priority |
 | Declare Blockers    | Defending player declares blockers; damage assignment order set       |
@@ -49,7 +53,7 @@ Write tests for this and add this functionality to cmd/mtg_test where players at
 2. Declare Attackers Step: The active player declares attackers. Turn-based actions (tapping/declaring attackers) happen first, then players get priority.
 3. Declare Blockers Step: The defending player declares blockers. Turn-based actions (declaring blockers) happen, then players get priority.
 4. Combat Damage Step: If creatures with first/double strike exist, this happens twice; otherwise, once. Damage is assigned, then players get priority.
-5. End of Combat Step: Triggered abilities that happen "at end of combat" trigger here. Players get priority before creatures are removed from comba
+5. End of Combat Step: Triggered abilities that happen "at end of combat" trigger here. Players get priority before creatures are removed from combat.
 
 ** DONE Combat IsActive()
 

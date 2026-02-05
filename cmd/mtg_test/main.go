@@ -49,14 +49,20 @@ func createPlayers() []*core.Player {
 		for range 2 {
 			addCard("Giant Growth")
 		}
-		for range 4 {
+		for range 2 {
 			addCard("Kird Ape")
 		}
-		for range 4 {
+		for range 2 {
 			addCard("Sol Ring")
 		}
-		for range 4 {
+		for range 2 {
 			addCard("War Mammoth")
+		}
+		for range 2 {
+			addCard("Dragon Whelp")
+		}
+		for range 2 {
+			addCard("Scryb Sprites")
 		}
 
 		rand.Shuffle(len(player.Library), func(i, j int) {
@@ -129,10 +135,6 @@ func chooseAction(game *core.GameState, player *core.Player, actions []core.Play
 		switch a.Type {
 		case core.ActionCastSpell:
 			if a.Card.CardType != domain.CardTypeLand {
-				targets := game.AvailableTargets(a.Card)
-				if len(targets) > 0 {
-					a.Target = targets[rand.Intn(len(targets))]
-				}
 				castActions = append(castActions, a)
 			}
 		case core.ActionPlayLand:

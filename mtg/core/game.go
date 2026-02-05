@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/mtg/effects"
 )
 
 type GameState struct {
@@ -285,7 +286,14 @@ func (g *GameState) DrawPhase(player *Player) {
 		player.HasLost = true
 		return
 	}
-	fmt.Printf("  %s draws a card\n", player.Name())
+	fmt.Printf("  %s draws a card. Hand: ", player.Name())
+	for i, c := range player.Hand {
+		if i > 0 {
+			fmt.Print(", ")
+		}
+		fmt.Print(c.Name())
+	}
+	fmt.Println()
 }
 
 func (g *GameState) MainPhase(player *Player) {
@@ -338,6 +346,7 @@ func (g *GameState) CombatPhase(player *Player) {
 		if action.Type == ActionDeclareBlocker {
 			if attacker, ok := action.Target.(*Card); ok {
 				if err := g.DeclareBlocker(action.Card, attacker); err != nil {
+					fmt.Printf("  error declaring blocker: %v\n", err)
 					continue
 				}
 				fmt.Printf("  %s blocks %s with %s (%d/%d)\n", opponent.Name(), cardStr(attacker), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
@@ -537,44 +546,57 @@ func (g *GameState) CanCast(player *Player, card *Card) bool {
 }
 
 func (g *GameState) hasTarget(card *Card) bool {
-	if card.Targetable == "DamageableTarget" {
+	spec := card.GetTargetSpec()
+	if spec == nil {
 		return true
 	}
-	if card.TargetsCreaturesOnly() {
-		return len(g.AvailableTargets(card)) > 0
+	return len(g.AvailableTargets(card)) > 0
+}
+
+func (g *GameState) cardRequiresTarget(card *Card) bool {
+	return card.GetTargetSpec() != nil
+}
+
+func (g *GameState) castActionsForCard(card *Card) []PlayerAction {
+	if !g.cardRequiresTarget(card) {
+		return []PlayerAction{{Type: ActionCastSpell, Card: card}}
 	}
-	return true
+	targets := g.AvailableTargets(card)
+	actions := make([]PlayerAction, len(targets))
+	for i, target := range targets {
+		actions[i] = PlayerAction{Type: ActionCastSpell, Card: card, Target: target}
+	}
+	return actions
 }
 
 func (g *GameState) AvailableTargets(card *Card) []Targetable {
-	targets := []Targetable{}
+	spec := card.GetTargetSpec()
+	if spec == nil {
+		return []Targetable{}
+	}
 
-	if card.Targetable == "DamageableTarget" || card.Name() == "Lightning Bolt" {
-		for _, player := range g.Players {
-			if !player.IsDead() {
-				targets = append(targets, player)
-			}
-		}
-		for _, player := range g.Players {
-			for _, c := range player.Battlefield {
-				if c.CardType == domain.CardTypeCreature && !c.IsDead() {
-					targets = append(targets, c)
-				}
+	creature_targets := []Targetable{}
+	player_targets := []Targetable{}
+	for _, player := range g.Players {
+		player_targets = append(player_targets, player) // dead players are still valid targets
+	}
+
+	for _, player := range g.Players {
+		for _, c := range player.Battlefield {
+			if c.CardType == domain.CardTypeCreature {
+				creature_targets = append(creature_targets, c)
 			}
 		}
 	}
 
-	if card.TargetsCreaturesOnly() {
-		for _, player := range g.Players {
-			for _, c := range player.Battlefield {
-				if c.CardType == domain.CardTypeCreature && !c.IsDead() {
-					targets = append(targets, c)
-				}
-			}
-		}
+	switch spec.Type {
+	case "creature":
+		return creature_targets
+	case "player":
+		return player_targets
+	default: // any
+		return append(creature_targets, player_targets...)
 	}
-
-	return targets
 }
 
 func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
@@ -603,13 +625,13 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 		}
 		for _, card := range player.Hand {
 			if g.CanCast(player, card) {
-				actions = append(actions, PlayerAction{Type: ActionCastSpell, Card: card})
+				actions = append(actions, g.castActionsForCard(card)...)
 			}
 		}
 	} else {
 		for _, card := range player.Hand {
 			if g.CanCast(player, card) && card.CardType == domain.CardTypeInstant {
-				actions = append(actions, PlayerAction{Type: ActionCastSpell, Card: card})
+				actions = append(actions, g.castActionsForCard(card)...)
 			}
 		}
 	}
@@ -626,6 +648,11 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 		if activePlayer.Turn.CombatStep == CombatStepDeclareBlockers {
 			for _, card := range g.AvailableBlockers(player) {
 				for _, attacker := range g.Attackers {
+					if attacker.HasKeyword(effects.KeywordFlying) &&
+						!card.HasKeyword(effects.KeywordFlying) &&
+						!card.HasKeyword(effects.KeywordReach) {
+						continue
+					}
 					actions = append(actions, PlayerAction{
 						Type:   ActionDeclareBlocker,
 						Card:   card,

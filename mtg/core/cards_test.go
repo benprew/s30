@@ -82,7 +82,7 @@ func TestCardActionsFromParsedAbilities(t *testing.T) {
 	card := &Card{}
 	card.ParsedAbilities = []domain.ParsedAbility{
 		{
-			Type: "Activated",
+			Type: "Spell",
 			Effect: &domain.ParsedEffect{
 				Amount: 3,
 			},
@@ -92,6 +92,23 @@ func TestCardActionsFromParsedAbilities(t *testing.T) {
 	actions := card.CardActions()
 	if len(actions) != 1 {
 		t.Errorf("Expected 1 action, got %d", len(actions))
+	}
+}
+
+func TestActivatedAbilitiesNotTriggeredOnCast(t *testing.T) {
+	card := &Card{}
+	card.ParsedAbilities = []domain.ParsedAbility{
+		{
+			Type: "Activated",
+			Effect: &domain.ParsedEffect{
+				PowerBoost: 1,
+			},
+		},
+	}
+
+	actions := card.CardActions()
+	if len(actions) != 0 {
+		t.Errorf("Activated abilities should not trigger on cast, got %d actions", len(actions))
 	}
 }
 
