@@ -74,9 +74,25 @@ func (g *GameState) ResolveCombatDamage() {
 		if len(blockers) == 0 {
 			defendingPlayer.ReceiveDamage(attacker.EffectivePower())
 		} else {
-			for _, blocker := range blockers {
-				blocker.ReceiveDamage(attacker.EffectivePower())
+			hasTrample := attacker.HasKeyword(effects.KeywordTrample)
+			remainingDamage := attacker.EffectivePower()
+			for i, blocker := range blockers {
+				lethal := blocker.EffectiveToughness() - blocker.DamageTaken
+				if lethal < 0 {
+					lethal = 0
+				}
+				assigned := lethal
+				if !hasTrample && i == len(blockers)-1 {
+					assigned = remainingDamage
+				} else if assigned > remainingDamage {
+					assigned = remainingDamage
+				}
+				blocker.ReceiveDamage(assigned)
+				remainingDamage -= assigned
 				attacker.ReceiveDamage(blocker.EffectivePower())
+			}
+			if remainingDamage > 0 && hasTrample {
+				defendingPlayer.ReceiveDamage(remainingDamage)
 			}
 		}
 	}
