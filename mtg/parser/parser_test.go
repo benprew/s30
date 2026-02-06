@@ -19,6 +19,7 @@ func TestParseKeywords(t *testing.T) {
 		{"Trample", "Craw Wurm", "Trample", []Keyword{KeywordTrample}},
 		{"Haste", "Ball Lightning", "Haste", []Keyword{KeywordHaste}},
 		{"Banding", "Benalish Hero", "Banding", []Keyword{KeywordBanding}},
+		{"Reach", "Giant Spider", "Reach", []Keyword{KeywordReach}},
 		{"Fear", "Black Knight", "Fear", []Keyword{KeywordFear}},
 		{"Protection", "Black Knight", "Protection from white", []Keyword{KeywordProtection}},
 		{"Swampwalk", "Bog Wraith", "Swampwalk", []Keyword{KeywordLandwalk}},
