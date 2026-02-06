@@ -68,15 +68,28 @@ func (g *GameState) isAlreadyBlocking(blocker *Card) bool {
 
 func (g *GameState) ResolveCombatDamage() {
 	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
+	attackingPlayer := g.Players[g.ActivePlayer]
 
 	for _, attacker := range g.Attackers {
 		blockers := g.BlockerMap[attacker]
 		if len(blockers) == 0 {
-			defendingPlayer.ReceiveDamage(attacker.EffectivePower())
+			damage := attacker.EffectivePower()
+			defendingPlayer.ReceiveDamage(damage)
+			if attacker.HasKeyword(effects.KeywordLifelink) {
+				attackingPlayer.GainLife(damage)
+			}
 		} else {
 			for _, blocker := range blockers {
-				blocker.ReceiveDamage(attacker.EffectivePower())
-				attacker.ReceiveDamage(blocker.EffectivePower())
+				attackerDamage := attacker.EffectivePower()
+				blockerDamage := blocker.EffectivePower()
+				blocker.ReceiveDamage(attackerDamage)
+				attacker.ReceiveDamage(blockerDamage)
+				if attacker.HasKeyword(effects.KeywordLifelink) {
+					attackingPlayer.GainLife(attackerDamage)
+				}
+				if blocker.HasKeyword(effects.KeywordLifelink) {
+					defendingPlayer.GainLife(blockerDamage)
+				}
 			}
 		}
 	}

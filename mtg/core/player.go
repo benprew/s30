@@ -74,6 +74,10 @@ func (p *Player) ReceiveDamage(amount int) {
 	p.LifeTotal -= amount
 }
 
+func (p *Player) GainLife(amount int) {
+	p.LifeTotal += amount
+}
+
 func (p *Player) Name() string {
 	return fmt.Sprintf("Player %d", p.ID)
 }
