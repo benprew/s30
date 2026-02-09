@@ -66,17 +66,66 @@ func (g *GameState) isAlreadyBlocking(blocker *Card) bool {
 	return false
 }
 
+func (g *GameState) combatHasFirstStrike() bool {
+	for _, attacker := range g.Attackers {
+		if attacker.HasKeyword(effects.KeywordFirstStrike) {
+			return true
+		}
+		for _, blocker := range g.BlockerMap[attacker] {
+			if blocker.HasKeyword(effects.KeywordFirstStrike) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (g *GameState) ResolveFirstStrikeDamage() {
+	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
+
+	for _, attacker := range g.Attackers {
+		blockers := g.BlockerMap[attacker]
+		attackerHasFS := attacker.HasKeyword(effects.KeywordFirstStrike)
+
+		if len(blockers) == 0 {
+			if attackerHasFS {
+				defendingPlayer.ReceiveDamage(attacker.EffectivePower())
+			}
+		} else {
+			for _, blocker := range blockers {
+				if attackerHasFS {
+					blocker.ReceiveDamage(attacker.EffectivePower())
+				}
+				if blocker.HasKeyword(effects.KeywordFirstStrike) {
+					attacker.ReceiveDamage(blocker.EffectivePower())
+				}
+			}
+		}
+	}
+}
+
+// ResolveCombatDamage resolves normal combat damage. Creatures killed by
+// first strike are already in the graveyard (via state-based actions) and
+// won't deal damage since they're no longer on the battlefield.
 func (g *GameState) ResolveCombatDamage() {
 	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
 
 	for _, attacker := range g.Attackers {
 		blockers := g.BlockerMap[attacker]
+		attackerHasFS := attacker.HasKeyword(effects.KeywordFirstStrike)
+
 		if len(blockers) == 0 {
-			defendingPlayer.ReceiveDamage(attacker.EffectivePower())
+			if !attackerHasFS && attacker.CurrentZone == ZoneBattlefield {
+				defendingPlayer.ReceiveDamage(attacker.EffectivePower())
+			}
 		} else {
 			for _, blocker := range blockers {
-				blocker.ReceiveDamage(attacker.EffectivePower())
-				attacker.ReceiveDamage(blocker.EffectivePower())
+				if !attackerHasFS && attacker.CurrentZone == ZoneBattlefield {
+					blocker.ReceiveDamage(attacker.EffectivePower())
+				}
+				if !blocker.HasKeyword(effects.KeywordFirstStrike) && blocker.CurrentZone == ZoneBattlefield {
+					attacker.ReceiveDamage(blocker.EffectivePower())
+				}
 			}
 		}
 	}
