@@ -50,6 +50,11 @@ var KeywordMap = map[string]Keyword{
 	"intimidate":    KeywordIntimidation,
 	"shadow":        KeywordShadow,
 	"horsemanship":  KeywordHorsemanship,
+	"swampwalk":     KeywordLandwalk,
+	"forestwalk":    KeywordLandwalk,
+	"mountainwalk":  KeywordLandwalk,
+	"islandwalk":    KeywordLandwalk,
+	"plainswalk":    KeywordLandwalk,
 }
 
 type KeywordAbility struct {

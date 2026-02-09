@@ -5,8 +5,9 @@ type LordEffect struct {
 	Subtype        string
 	PowerBoost     int
 	ToughnessBoost int
-	GrantedKeyword *Keyword
-	ExcludeSelf    bool
+	GrantedKeyword  *Keyword
+	GrantedModifier string
+	ExcludeSelf     bool
 }
 
 func (l *LordEffect) Name() string {

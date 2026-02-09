@@ -653,6 +653,9 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 						!card.HasKeyword(effects.KeywordReach) {
 						continue
 					}
+					if landType := attacker.LandwalkType(); landType != "" && player.ControlsLandType(landType) {
+						continue
+					}
 					actions = append(actions, PlayerAction{
 						Type:   ActionDeclareBlocker,
 						Card:   card,

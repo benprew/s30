@@ -297,6 +297,22 @@ func (p *Parser) registerManaAbilityPatterns() {
 	)
 
 	p.RegisterPattern(
+		"tap-add-mana-or",
+		regexp.MustCompile(`(?i)^\{T\}\s*:\s*add\s+(\{[WUBRGC]\})\s+or\s+(\{[WUBRGC]\})$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			var symbols []string
+			for i := 1; i < len(matches); i++ {
+				symbols = append(symbols, ParseManaSymbols(matches[i])...)
+			}
+			return &ParsedAbility{
+				Type:   AbilityTypeMana,
+				Cost:   &Cost{Tap: true},
+				Effect: &effects.ManaAbility{ManaTypes: symbols},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
 		"tap-add-multiple-mana",
 		regexp.MustCompile(`(?i)^\{T\}\s*:\s*add\s+(\{[WUBRGC]\})(\{[WUBRGC]\})$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
@@ -348,11 +364,12 @@ func (p *Parser) registerLordPatterns() {
 			return &ParsedAbility{
 				Type: AbilityTypeStatic,
 				Effect: &effects.LordEffect{
-					Subtype:        matches[1],
-					PowerBoost:     power,
-					ToughnessBoost: toughness,
-					GrantedKeyword: &kw,
-					ExcludeSelf:    true,
+					Subtype:         matches[1],
+					PowerBoost:      power,
+					ToughnessBoost:  toughness,
+					GrantedKeyword:  &kw,
+					GrantedModifier: strings.ToLower(keyword),
+					ExcludeSelf:     true,
 				},
 			}, nil
 		},

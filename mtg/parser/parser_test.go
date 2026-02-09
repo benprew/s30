@@ -168,11 +168,12 @@ func TestParseLordEffects(t *testing.T) {
 		subtype   string
 		power     int
 		toughness int
-		hasKw     bool
+		keyword   effects.Keyword
+		modifier  string
 	}{
-		{"Lord of Atlantis", "Lord of Atlantis", "Other Merfolk creatures you control get +1/+1 and have islandwalk", "Merfolk", 1, 1, true},
-		{"Goblin King", "Goblin King", "Other Goblin creatures you control get +1/+1 and have mountainwalk", "Goblin", 1, 1, true},
-		{"Zombie Master", "Zombie Master", "Other Zombie creatures get +1/+1", "Zombie", 1, 1, false},
+		{"Lord of Atlantis", "Lord of Atlantis", "Other Merfolk creatures you control get +1/+1 and have islandwalk", "Merfolk", 1, 1, effects.KeywordLandwalk, "islandwalk"},
+		{"Goblin King", "Goblin King", "Other Goblin creatures you control get +1/+1 and have mountainwalk", "Goblin", 1, 1, effects.KeywordLandwalk, "mountainwalk"},
+		{"Zombie Master", "Zombie Master", "Other Zombie creatures get +1/+1", "Zombie", 1, 1, "", ""},
 	}
 
 	p := NewParser()
@@ -198,8 +199,15 @@ func TestParseLordEffects(t *testing.T) {
 			if lord.ToughnessBoost != tt.toughness {
 				t.Errorf("expected toughness boost %d, got %d", tt.toughness, lord.ToughnessBoost)
 			}
-			if tt.hasKw && lord.GrantedKeyword == nil {
-				t.Error("expected granted keyword, got nil")
+			if tt.keyword != "" {
+				if lord.GrantedKeyword == nil {
+					t.Error("expected granted keyword, got nil")
+				} else if *lord.GrantedKeyword != tt.keyword {
+					t.Errorf("expected granted keyword %q, got %q", tt.keyword, *lord.GrantedKeyword)
+				}
+				if lord.GrantedModifier != tt.modifier {
+					t.Errorf("expected granted modifier %q, got %q", tt.modifier, lord.GrantedModifier)
+				}
 			}
 		})
 	}

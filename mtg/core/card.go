@@ -143,6 +143,26 @@ func (c *Card) IsActive() bool {
 	return !c.Tapped && c.Active
 }
 
+func (c *Card) LandwalkType() string {
+	lwMap := map[string]string{
+		"swampwalk":    "Swamp",
+		"forestwalk":   "Forest",
+		"mountainwalk": "Mountain",
+		"islandwalk":   "Island",
+		"plainswalk":   "Plains",
+	}
+	for _, ability := range c.ParsedAbilities {
+		for _, k := range ability.Keywords {
+			if k == string(effects.KeywordLandwalk) && ability.Effect != nil {
+				if landType, ok := lwMap[ability.Effect.Modifier]; ok {
+					return landType
+				}
+			}
+		}
+	}
+	return ""
+}
+
 func (c *Card) HasKeyword(keyword effects.Keyword) bool {
 	kw := string(keyword)
 	for _, k := range c.Keywords {

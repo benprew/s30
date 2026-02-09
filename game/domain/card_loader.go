@@ -110,6 +110,53 @@ func ApplyParsedAbilities(cards []*Card, parsedAbilities map[string][]ParsedAbil
 	fmt.Printf("Applied parsed abilities to %d cards\n", matched)
 }
 
+var subtypeToMana = map[string]string{
+	"Plains":   "W",
+	"Island":   "U",
+	"Swamp":    "B",
+	"Mountain": "R",
+	"Forest":   "G",
+}
+
+func ApplyLandManaAbilities(cards []*Card) {
+	added := 0
+	for _, card := range cards {
+		if card.CardType != CardTypeLand {
+			continue
+		}
+
+		hasManaAbility := false
+		for _, a := range card.ParsedAbilities {
+			if a.Type == "Mana" {
+				hasManaAbility = true
+				break
+			}
+		}
+		if hasManaAbility {
+			continue
+		}
+
+		var manaTypes []string
+		for _, subtype := range card.Subtypes {
+			if mana, ok := subtypeToMana[subtype]; ok {
+				manaTypes = append(manaTypes, mana)
+			}
+		}
+
+		if len(manaTypes) > 0 {
+			card.ParsedAbilities = append(card.ParsedAbilities, ParsedAbility{
+				Type: "Mana",
+				Cost: &ParsedCost{Tap: true},
+				Effect: &ParsedEffect{
+					ManaTypes: manaTypes,
+				},
+			})
+			added++
+		}
+	}
+	fmt.Printf("Added land mana abilities to %d cards\n", added)
+}
+
 func decompress(input io.Reader) (io.Reader, error) {
 	// Create a zstd decoder
 	decoder, err := zstd.NewReader(input)

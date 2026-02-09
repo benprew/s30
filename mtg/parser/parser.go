@@ -152,7 +152,7 @@ func (p *Parser) splitSentences(text string) []string {
 			if r == '.' || r == '\n' {
 				s := strings.TrimSpace(current.String())
 				if s != "" && s != "." {
-					sentences = append(sentences, stripParens(strings.TrimSuffix(s, ".")))
+					sentences = append(sentences, stripReminderText(stripParens(strings.TrimSuffix(s, "."))))
 				}
 				current.Reset()
 			} else if i < len(text)-1 {
@@ -166,10 +166,15 @@ func (p *Parser) splitSentences(text string) []string {
 
 	remaining := strings.TrimSpace(current.String())
 	if remaining != "" {
-		sentences = append(sentences, stripParens(strings.TrimSuffix(remaining, ".")))
+		sentences = append(sentences, stripReminderText(stripParens(strings.TrimSuffix(remaining, "."))))
 	}
 
 	return sentences
+}
+
+func stripReminderText(s string) string {
+	re := regexp.MustCompile(`\s*\(.*\)\s*$`)
+	return strings.TrimSpace(re.ReplaceAllString(s, ""))
 }
 
 func stripParens(s string) string {

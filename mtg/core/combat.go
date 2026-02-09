@@ -51,6 +51,12 @@ func (g *GameState) DeclareBlocker(blocker *Card, attacker *Card) error {
 	if attacker.HasKeyword(effects.KeywordFlying) && !blocker.HasKeyword(effects.KeywordFlying) && !blocker.HasKeyword(effects.KeywordReach) {
 		return fmt.Errorf("creature with flying can only be blocked by creatures with flying or reach")
 	}
+	if landType := attacker.LandwalkType(); landType != "" {
+		defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
+		if defendingPlayer.ControlsLandType(landType) {
+			return fmt.Errorf("creature with %s cannot be blocked", landType+"walk")
+		}
+	}
 	g.BlockerMap[attacker] = append(g.BlockerMap[attacker], blocker)
 	return nil
 }

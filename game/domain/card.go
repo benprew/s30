@@ -128,6 +128,7 @@ func loadCardsWithAbilities() []*Card {
 	if parsedAbilities != nil {
 		ApplyParsedAbilities(cards, parsedAbilities)
 	}
+	ApplyLandManaAbilities(cards)
 	return cards
 }
 

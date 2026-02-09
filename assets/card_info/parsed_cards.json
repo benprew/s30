@@ -243,6 +243,22 @@
     "card_name": "Ayesha Tanaka",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Banding"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Banding"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Banding"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "",
@@ -283,18 +299,61 @@
     "card_name": "Badlands",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "B",
+            "R"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Add {B} or {R}"
+      }
+    ]
+  },
+  {
+    "card_name": "Ball Lightning",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Trample"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Trample"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Trample"
+      },
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Haste"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Haste"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Haste"
       }
     ]
   },
@@ -381,14 +440,20 @@
     "card_name": "Bayou",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "B",
+            "G"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
@@ -433,6 +498,27 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Protection from red"
+      }
+    ]
+  },
+  {
+    "card_name": "Benalish Hero",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Banding"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Banding"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Banding"
       }
     ]
   },
@@ -502,6 +588,43 @@
     ]
   },
   {
+    "card_name": "Black Knight",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "First Strike"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "First Strike"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "First strike"
+      },
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Protection"
+          ],
+          "Modifier": "white"
+        },
+        "Keywords": [
+          "Protection"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Protection from white"
+      }
+    ]
+  },
+  {
     "card_name": "Blessing",
     "abilities": [
       {
@@ -520,6 +643,48 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{W}: Enchanted creature gets +1/+1 until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Bog Imp",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Flying"
+      }
+    ]
+  },
+  {
+    "card_name": "Bog Wraith",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "swampwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Swampwalk"
       }
     ]
   },
@@ -621,6 +786,27 @@
     ]
   },
   {
+    "card_name": "Camel",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Banding"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Banding"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Banding"
+      }
+    ]
+  },
+  {
     "card_name": "Carnivorous Plant",
     "abilities": [
       {
@@ -660,6 +846,27 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{1}: This creature gets +1/+1 until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Cat Warriors",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "forestwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Forestwalk"
       }
     ]
   },
@@ -1004,6 +1211,22 @@
     "card_name": "Colossus of Sardia",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Trample"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Trample"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Trample"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "{9}",
@@ -1215,6 +1438,27 @@
     ]
   },
   {
+    "card_name": "Dancing Scimitar",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Flying"
+      }
+    ]
+  },
+  {
     "card_name": "Deathgrip",
     "abilities": [
       {
@@ -1377,6 +1621,27 @@
           "Condition": "attacking"
         },
         "RawText": "{T}: This land deals 1 damage to target attacking creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Devouring Deep",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "islandwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Islandwalk"
       }
     ]
   },
@@ -2380,6 +2645,22 @@
     "card_name": "Force of Nature",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Trample"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Trample"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Trample"
+      },
+      {
         "Type": "Triggered",
         "Cost": null,
         "Effect": null,
@@ -2698,6 +2979,27 @@
     ]
   },
   {
+    "card_name": "Giant Spider",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Reach"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Reach"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Reach"
+      }
+    ]
+  },
+  {
     "card_name": "Giant Strength",
     "abilities": [
       {
@@ -2784,6 +3086,27 @@
     ]
   },
   {
+    "card_name": "Goblin Flotilla",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "islandwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Islandwalk"
+      }
+    ]
+  },
+  {
     "card_name": "Goblin Grenade",
     "abilities": [
       {
@@ -2815,7 +3138,8 @@
           "Subtype": "Goblins",
           "PowerBoost": 1,
           "ToughnessBoost": 1,
-          "GrantedKeyword": "",
+          "GrantedKeyword": "Landwalk",
+          "GrantedModifier": "mountainwalk",
           "ExcludeSelf": true
         },
         "Keywords": null,
@@ -2901,6 +3225,27 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{R}: Target Goblin gains protection from white until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Goblins of the Flarg",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "mountainwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Mountainwalk"
       }
     ]
   },
@@ -3442,6 +3787,27 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, put a credit counter on this creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Icatian Phalanx",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Banding"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Banding"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Banding"
       }
     ]
   },
@@ -4024,6 +4390,7 @@
           "PowerBoost": 0,
           "ToughnessBoost": 1,
           "GrantedKeyword": "Trample",
+          "GrantedModifier": "trample",
           "ExcludeSelf": true
         },
         "Keywords": null,
@@ -4065,6 +4432,7 @@
           "PowerBoost": 1,
           "ToughnessBoost": 0,
           "GrantedKeyword": null,
+          "GrantedModifier": "",
           "ExcludeSelf": true
         },
         "Keywords": null,
@@ -4314,6 +4682,22 @@
     "card_name": "Living Wall",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "{1}",
@@ -4391,7 +4775,8 @@
           "Subtype": "Merfolk",
           "PowerBoost": 1,
           "ToughnessBoost": 1,
-          "GrantedKeyword": "",
+          "GrantedKeyword": "Landwalk",
+          "GrantedModifier": "islandwalk",
           "ExcludeSelf": true
         },
         "Keywords": null,
@@ -4433,6 +4818,48 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, sacrifice a creature other than this creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Lost Soul",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "swampwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Swampwalk"
+      }
+    ]
+  },
+  {
+    "card_name": "Mahamoti Djinn",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Flying"
       }
     ]
   },
@@ -4501,6 +4928,27 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Add {C}{C}{C}"
+      }
+    ]
+  },
+  {
+    "card_name": "Marsh Goblins",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "swampwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Swampwalk"
       }
     ]
   },
@@ -4699,6 +5147,22 @@
     "card_name": "Mishra's War Machine",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Banding"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Banding"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Banding"
+      },
+      {
         "Type": "Triggered",
         "Cost": null,
         "Effect": null,
@@ -4779,6 +5243,22 @@
   {
     "card_name": "Mountain Yeti",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "mountainwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Mountainwalk"
+      },
       {
         "Type": "Keyword",
         "Cost": null,
@@ -4973,6 +5453,27 @@
     ]
   },
   {
+    "card_name": "Necropolis",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
     "card_name": "Nether Shadow",
     "abilities": [
       {
@@ -5054,6 +5555,27 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, sacrifice Nicol Bolas unless you pay {U}{B}{R}"
+      }
+    ]
+  },
+  {
+    "card_name": "Nightmare",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Flying"
       }
     ]
   },
@@ -5681,14 +6203,20 @@
     "card_name": "Plateau",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "R",
+            "W"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
@@ -6194,6 +6722,27 @@
     ]
   },
   {
+    "card_name": "Righteous Avengers",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "plainswalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Plainswalk"
+      }
+    ]
+  },
+  {
     "card_name": "Riven Turnbull",
     "abilities": [
       {
@@ -6469,18 +7018,45 @@
     "card_name": "Savannah",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "G",
+            "W"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Add {G} or {W}"
+      }
+    ]
+  },
+  {
+    "card_name": "Scarwood Bandits",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "forestwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Forestwalk"
       }
     ]
   },
@@ -6513,14 +7089,20 @@
     "card_name": "Scrubland",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "W",
+            "B"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
@@ -6618,8 +7200,45 @@
     ]
   },
   {
+    "card_name": "Segovian Leviathan",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "islandwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Islandwalk"
+      }
+    ]
+  },
+  {
     "card_name": "Sengir Vampire",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Flying"
+      },
       {
         "Type": "Triggered",
         "Cost": null,
@@ -6743,6 +7362,43 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      },
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Vigilance"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Vigilance"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Vigilance"
+      }
+    ]
+  },
+  {
+    "card_name": "Shanodin Dryads",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "forestwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Forestwalk"
       }
     ]
   },
@@ -6916,6 +7572,27 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Add {C}{C}"
+      }
+    ]
+  },
+  {
+    "card_name": "Sol'kanar the Swamp King",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "swampwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Swampwalk"
       }
     ]
   },
@@ -7192,14 +7869,20 @@
     "card_name": "Taiga",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "R",
+            "G"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
@@ -7502,6 +8185,27 @@
     ]
   },
   {
+    "card_name": "Timber Wolves",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Banding"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Banding"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Banding"
+      }
+    ]
+  },
+  {
     "card_name": "Time Vault",
     "abilities": [
       {
@@ -7646,14 +8350,20 @@
     "card_name": "Tropical Island",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "G",
+            "U"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
@@ -7686,18 +8396,45 @@
     "card_name": "Tundra",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "W",
+            "U"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Add {W} or {U}"
+      }
+    ]
+  },
+  {
+    "card_name": "Tundra Wolves",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "First Strike"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "First Strike"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "First strike"
       }
     ]
   },
@@ -7726,14 +8463,20 @@
     "card_name": "Underground Sea",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "U",
+            "B"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
@@ -8057,6 +8800,22 @@
     "card_name": "Vampire Bats",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Flying"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "{B}",
@@ -8111,17 +8870,44 @@
     ]
   },
   {
+    "card_name": "Vodalian War Machine",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
     "card_name": "Volcanic Island",
     "abilities": [
       {
-        "Type": "Activated",
+        "Type": "Mana",
         "Cost": {
           "Mana": "",
           "Tap": true,
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "ManaTypes": [
+            "U",
+            "R"
+          ],
+          "AnyColor": false
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": null,
@@ -8173,8 +8959,47 @@
     ]
   },
   {
+    "card_name": "Wall of Air",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender",
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender",
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender, flying"
+      }
+    ]
+  },
+  {
     "card_name": "Wall of Bone",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -8202,6 +9027,22 @@
     "card_name": "Wall of Brambles",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "{G}",
@@ -8225,8 +9066,87 @@
     ]
   },
   {
+    "card_name": "Wall of Caltrops",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
+    "card_name": "Wall of Dust",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
+    "card_name": "Wall of Earth",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
     "card_name": "Wall of Fire",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -8247,8 +9167,66 @@
     ]
   },
   {
+    "card_name": "Wall of Heat",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
+    "card_name": "Wall of Ice",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
     "card_name": "Wall of Light",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
       {
         "Type": "Keyword",
         "Cost": null,
@@ -8270,6 +9248,22 @@
   {
     "card_name": "Wall of Opposition",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -8297,6 +9291,22 @@
         "Cost": null,
         "Effect": {
           "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
             "Protection"
           ],
           "Modifier": "white"
@@ -8311,8 +9321,45 @@
     ]
   },
   {
+    "card_name": "Wall of Shadows",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
     "card_name": "Wall of Spears",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
       {
         "Type": "Keyword",
         "Cost": null,
@@ -8332,8 +9379,45 @@
     ]
   },
   {
+    "card_name": "Wall of Stone",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
     "card_name": "Wall of Swords",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
       {
         "Type": "Keyword",
         "Cost": null,
@@ -8356,6 +9440,22 @@
     "card_name": "Wall of Tombstones",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
+      {
         "Type": "Triggered",
         "Cost": null,
         "Effect": null,
@@ -8370,8 +9470,45 @@
     ]
   },
   {
+    "card_name": "Wall of Vapor",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      }
+    ]
+  },
+  {
     "card_name": "Wall of Water",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -8395,6 +9532,22 @@
     "card_name": "Wall of Wonder",
     "abilities": [
       {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "{2}{U}{U}",
@@ -8407,6 +9560,27 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{2}{U}{U}: This creature gets +4/-4 until end of turn and can attack this turn as though it didn't have defender"
+      }
+    ]
+  },
+  {
+    "card_name": "Wall of Wood",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Defender"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Defender"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Defender"
       }
     ]
   },
@@ -8501,8 +9675,61 @@
     ]
   },
   {
+    "card_name": "White Knight",
+    "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "First Strike"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "First Strike"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "First strike"
+      },
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Protection"
+          ],
+          "Modifier": "black"
+        },
+        "Keywords": [
+          "Protection"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Protection from black"
+      }
+    ]
+  },
+  {
     "card_name": "Will-o'-the-Wisp",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Flying"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -8712,6 +9939,38 @@
   {
     "card_name": "Yawgmoth Demon",
     "abilities": [
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Flying"
+      },
+      {
+        "Type": "Keyword",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "First Strike"
+          ],
+          "Modifier": ""
+        },
+        "Keywords": [
+          "First Strike"
+        ],
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "First strike"
+      },
       {
         "Type": "Triggered",
         "Cost": null,
