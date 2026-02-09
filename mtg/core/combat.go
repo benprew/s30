@@ -24,7 +24,9 @@ func (g *GameState) DeclareAttacker(attacker *Card) error {
 	if !attacker.IsActive() {
 		return fmt.Errorf("creature cannot attack: tapped or inactive")
 	}
-	attacker.Tapped = true
+	if !attacker.HasKeyword(effects.KeywordVigilance) {
+		attacker.Tapped = true
+	}
 	return nil
 }
 
