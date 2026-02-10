@@ -1,3 +1,55 @@
+* Polishing ideas
+  Critical
+
+  1. Combat is faked — duel_ante.go resolves duels with rand.Float64() > 0.25 (flat 75% win
+  rate). The MTG rules engine exists in mtg/ but isn't wired up. This makes deck-building feel
+  pointless. This is by far the biggest issue.
+  2. No audio at all — Zero sound effects or music anywhere. Button clicks, card purchases,
+  combat, movement — all silent. Even simple click/hover sounds would make a big difference.
+  3. Debug prints left in — button.go prints "Pressed" and "Hover" to stdout on every
+  interaction. buycards.go prints button counts. These should be removed.
+
+  ---
+  High Impact
+
+  4. Abrupt screen transitions — Every screen change is an instant cut (city entry, shop opening,
+   duel start/end). Fade-to-black or slide transitions would make navigation feel much smoother.
+  5. Camera snaps to player — The world map camera instantly locks to position with no smooth
+  follow, easing, or anticipation. Even basic lerp would help.
+  6. No quest HUD — Active quest and days remaining only show in the wiseman screen. The world
+  frame should display current quest progress so players don't forget what they're doing.
+  7. No visual feedback for actions — Buying/selling cards, accepting quests, winning duels — all
+   happen with minimal or no feedback. Needs success indicators, animations, or at least flash
+  effects.
+
+  ---
+  Medium Impact
+
+  8. No card animations — Cards appear/disappear instantly in the deck editor and shop. Draw,
+  flip, shuffle, and slide animations would add a lot of feel.
+  9. Random encounter screen is a stub — Just shows a sprite and "Random Encounter" text, press
+  Escape to dismiss. No choices, text, or consequences.
+  10. Hardcoded screen dimensions — Magic numbers throughout (buycards.go even has a TODO about
+  it). Makes the game fragile at different resolutions.
+  11. Wiseman text pagination broken — Multi-page stories get truncated with "..." but there's no
+   way to advance pages.
+  12. No particle effects — The game is entirely static visually. Ambient particles, purchase
+  sparkles, or combat effects would add life.
+
+  ---
+  Low-Hanging Fruit (Quick Wins)
+
+  13. Smooth scrolling — The scrollable list jumps instantly; adding interpolation is
+  straightforward.
+  14. Number counting animations — Gold, food, and life changes are instant. Counting up/down is
+  simple and satisfying.
+  15. Button press animation — Buttons have states but no scale/bounce on click. A small scale
+  tween makes them feel tactile.
+  16. Minimap player pulse — Currently blinks on/off every few frames. A smooth alpha pulse would
+   look much better.
+  17. Deck stats in editor — No mana curve or color distribution display. The 872-line editor is
+  the most polished screen but still missing this.
+
 * MTG Engine
 ** Duel UI screen
 ** Add new card keywords

@@ -254,6 +254,9 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	// Draw deck cards
 	s.drawDeckCards(screen, scale)
 
+	// Draw deck stats header
+	s.drawDeckStats(screen, scale)
+
 	// Draw the magnifier image if it exists
 	if s.MagnifierImage != nil {
 		magOpts := &ebiten.DrawImageOptions{}
@@ -645,7 +648,7 @@ func (s *EditDeckScreen) calculateDeckCardPositions() {
 		row := i / cols
 
 		x := bounds.Min.X + 10 + col*(cardWidth+padding)
-		y := bounds.Min.Y + 10 + row*(cardHeight+padding)
+		y := bounds.Min.Y + 55 + row*(cardHeight+padding)
 
 		s.deckCardDisplays[i].X = x
 		s.deckCardDisplays[i].Y = y
@@ -824,6 +827,173 @@ func (s *EditDeckScreen) getVisibleCollectionItems(collectionY int) []Collection
 	}
 
 	return visibleItems
+}
+
+// parseCMC parses a mana cost string like "{3}{G}{R}" and returns the total converted mana cost.
+func parseCMC(manaCost string) int {
+	cmc := 0
+	i := 0
+	for i < len(manaCost) {
+		if manaCost[i] == '{' {
+			j := i + 1
+			for j < len(manaCost) && manaCost[j] != '}' {
+				j++
+			}
+			if j < len(manaCost) {
+				content := manaCost[i+1 : j]
+				if intValue, err := strconv.Atoi(content); err == nil {
+					cmc += intValue
+				} else {
+					cmc++
+				}
+				i = j + 1
+			} else {
+				i++
+			}
+		} else {
+			i++
+		}
+	}
+	return cmc
+}
+
+// drawDeckStats draws a stats header bar at the top of the deck area
+func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
+	if len(s.deckCardDisplays) == 0 {
+		return
+	}
+
+	bounds := s.deckDropArea.GetDropBounds()
+
+	totalCards := 0
+	cmcCounts := make([]int, 8) // CMC 0 through 7+
+	colorCounts := map[string]int{"W": 0, "U": 0, "B": 0, "R": 0, "G": 0}
+	landCount := 0
+	creatureCount := 0
+	spellCount := 0
+
+	for _, display := range s.deckCardDisplays {
+		totalCards += display.Count
+
+		if display.Card.ManaCost != "" {
+			cmc := parseCMC(display.Card.ManaCost)
+			if cmc >= 7 {
+				cmc = 7
+			}
+			cmcCounts[cmc] += display.Count
+		}
+
+		for _, c := range display.Card.Colors {
+			colorCounts[c] += display.Count
+		}
+
+		switch display.Card.CardType {
+		case domain.CardTypeLand:
+			landCount += display.Count
+		case domain.CardTypeCreature:
+			creatureCount += display.Count
+		default:
+			spellCount += display.Count
+		}
+	}
+
+	mainFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 14}
+	smallFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 10}
+
+	// Section 1: Card count
+	countX := float64(bounds.Min.X + 10)
+	countText := fmt.Sprintf("%d cards", totalCards)
+	countOpts := &ebiten.DrawImageOptions{}
+	countOpts.GeoM.Scale(scale, scale)
+	countOpts.GeoM.Translate(countX*scale, 16*scale)
+	countOpts.ColorScale.Scale(1, 1, 1, 1)
+	fonts.DrawText(screen, countText, mainFace, countOpts)
+
+	// Section 2: Mana curve histogram
+	curveX := bounds.Min.X + 80
+	maxCount := 0
+	for _, c := range cmcCounts {
+		if c > maxCount {
+			maxCount = c
+		}
+	}
+
+	barWidth := 16
+	barGap := 4
+	maxBarHeight := 28.0
+
+	for i, count := range cmcCounts {
+		bx := curveX + i*(barWidth+barGap)
+
+		if count > 0 && maxCount > 0 {
+			barHeight := int(maxBarHeight * float64(count) / float64(maxCount))
+			if barHeight < 2 {
+				barHeight = 2
+			}
+			bar := ebiten.NewImage(barWidth, barHeight)
+			bar.Fill(color.RGBA{180, 180, 220, 255})
+
+			barOpts := &ebiten.DrawImageOptions{}
+			barOpts.GeoM.Scale(scale, scale)
+			barY := 42.0 - float64(barHeight)
+			barOpts.GeoM.Translate(float64(bx)*scale, barY*scale)
+			screen.DrawImage(bar, barOpts)
+		}
+
+		labelOpts := &ebiten.DrawImageOptions{}
+		labelOpts.GeoM.Scale(scale, scale)
+		labelOpts.GeoM.Translate(float64(bx+2)*scale, 1*scale)
+		labelOpts.ColorScale.Scale(1, 1, 1, 1)
+		fonts.DrawText(screen, strconv.Itoa(count), smallFace, labelOpts)
+
+		cmcLabel := strconv.Itoa(i)
+		if i == 7 {
+			cmcLabel = "7+"
+		}
+		cmcOpts := &ebiten.DrawImageOptions{}
+		cmcOpts.GeoM.Scale(scale, scale)
+		cmcOpts.GeoM.Translate(float64(bx+2)*scale, 43*scale)
+		cmcOpts.ColorScale.Scale(1, 1, 1, 1)
+		fonts.DrawText(screen, cmcLabel, smallFace, cmcOpts)
+	}
+
+	// Section 3: Color distribution
+	colorX := curveX + 8*(barWidth+barGap) + 15
+	colorRGBA := map[string]color.RGBA{
+		"W": {248, 231, 185, 255},
+		"U": {14, 104, 171, 255},
+		"B": {166, 159, 157, 255},
+		"R": {211, 32, 42, 255},
+		"G": {0, 115, 62, 255},
+	}
+	colorOrder := []string{"W", "U", "B", "R", "G"}
+	pipSize := 12
+
+	for ci, c := range colorOrder {
+		px := colorX + ci*36
+
+		pip := ebiten.NewImage(pipSize, pipSize)
+		pip.Fill(colorRGBA[c])
+		pipOpts := &ebiten.DrawImageOptions{}
+		pipOpts.GeoM.Scale(scale, scale)
+		pipOpts.GeoM.Translate(float64(px)*scale, 18*scale)
+		screen.DrawImage(pip, pipOpts)
+
+		cOpts := &ebiten.DrawImageOptions{}
+		cOpts.GeoM.Scale(scale, scale)
+		cOpts.GeoM.Translate(float64(px+pipSize+2)*scale, 16*scale)
+		cOpts.ColorScale.Scale(1, 1, 1, 1)
+		fonts.DrawText(screen, strconv.Itoa(colorCounts[c]), mainFace, cOpts)
+	}
+
+	// Section 4: Type counts
+	typeX := float64(colorX + 5*36 + 15)
+	typeText := fmt.Sprintf("L:%d C:%d S:%d", landCount, creatureCount, spellCount)
+	typeOpts := &ebiten.DrawImageOptions{}
+	typeOpts.GeoM.Scale(scale, scale)
+	typeOpts.GeoM.Translate(typeX*scale, 16*scale)
+	typeOpts.ColorScale.Scale(1, 1, 1, 1)
+	fonts.DrawText(screen, typeText, mainFace, typeOpts)
 }
 
 // drawCountOverlay draws a count overlay at the specified position

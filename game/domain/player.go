@@ -9,6 +9,7 @@ import (
 	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Player struct {
@@ -19,10 +20,11 @@ type Player struct {
 	Food        int
 	Amulets     map[ColorMask]int
 	WorldMagics []*WorldMagic
-	ActiveDeck  int
-	ActiveQuest *Quest
-	Days        int
+	ActiveDeck      int
+	ActiveQuest     *Quest
+	Days            int
 	TimeAccumulator float64
+	mouseMoving     bool
 }
 
 const TicksPerDay = 5000.0
@@ -139,8 +141,15 @@ func (p *Player) Move(screenW, screenH int) (dirBits int) {
 		dirBits |= DirUp
 	}
 
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		p.mouseMoving = true
+	}
+	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		p.mouseMoving = false
+	}
+
 	var cursorX, cursorY = ui.TouchPosition()
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+	if p.mouseMoving {
 		cursorX, cursorY = ebiten.CursorPosition()
 	}
 
