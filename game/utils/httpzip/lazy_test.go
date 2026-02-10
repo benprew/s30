@@ -40,14 +40,14 @@ func TestLazyLoading(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount.Add(1)
 
-		if r.Method == "HEAD" {
+		if r.Method == http.MethodHead {
 			headCount.Add(1)
 			w.Header().Set("Accept-Ranges", "bytes")
 			w.Header().Set("Content-Length", strconv.Itoa(len(zipData)))
 			return
 		}
 
-		if r.Method == "GET" {
+		if r.Method == http.MethodGet {
 			getCount.Add(1)
 		}
 

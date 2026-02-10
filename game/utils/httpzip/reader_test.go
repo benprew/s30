@@ -34,7 +34,7 @@ func TestNewReader(t *testing.T) {
 	zipData := createTestZip()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "HEAD" {
+		if r.Method == http.MethodHead {
 			w.Header().Set("Accept-Ranges", "bytes")
 			w.Header().Set("Content-Length", strconv.Itoa(len(zipData)))
 			return
@@ -58,7 +58,7 @@ func TestReadFile(t *testing.T) {
 	zipData := createTestZip()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "HEAD" {
+		if r.Method == http.MethodHead {
 			w.Header().Set("Accept-Ranges", "bytes")
 			w.Header().Set("Content-Length", strconv.Itoa(len(zipData)))
 			return
@@ -99,7 +99,7 @@ func TestFileOpen(t *testing.T) {
 	zipData := createTestZip()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "HEAD" {
+		if r.Method == http.MethodHead {
 			w.Header().Set("Accept-Ranges", "bytes")
 			w.Header().Set("Content-Length", strconv.Itoa(len(zipData)))
 			return
@@ -134,7 +134,7 @@ func TestFileNotFound(t *testing.T) {
 	zipData := createTestZip()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "HEAD" {
+		if r.Method == http.MethodHead {
 			w.Header().Set("Accept-Ranges", "bytes")
 			w.Header().Set("Content-Length", strconv.Itoa(len(zipData)))
 			return

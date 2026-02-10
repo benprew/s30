@@ -237,14 +237,6 @@ func (l *Level) isVisible(x, y, width, height, screenW, screenH int) bool {
 	return true
 }
 
-// the X,Y pixels visible to the screen
-func (l *Level) screenRect(screenW, screenH int) image.Rectangle {
-	pLoc := l.Player.Loc()
-	min := image.Point{pLoc.X - screenW/2, pLoc.Y - screenH/2}
-	max := image.Point{pLoc.X + screenW/2, pLoc.Y + screenH/2}
-	return image.Rectangle{min, max}
-}
-
 func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 	pLoc := l.Player.Loc()
 	// Calculate screen position based on player position

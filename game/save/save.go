@@ -60,6 +60,7 @@ func deserializeSave(jsonData []byte) (*SaveData, error) {
 func LoadGame(savePath string) (*world.Level, error) {
 	jsonData, err := os.ReadFile(savePath)
 	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", savePath, err)
 	}
 
 	saveData, err := deserializeSave(jsonData)

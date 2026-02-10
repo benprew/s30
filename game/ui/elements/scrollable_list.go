@@ -392,16 +392,6 @@ func (sl *ScrollableList) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptio
 	}
 }
 
-// drawVertical is no longer used as Draw handles everything
-func (sl *ScrollableList) drawVertical(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale float64) {
-	// Deprecated
-}
-
-// drawHorizontal is no longer used as Draw handles everything
-func (sl *ScrollableList) drawHorizontal(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale float64) {
-	// Deprecated
-}
-
 // GetItems returns the list of buttons in the scrollable list
 func (sl *ScrollableList) GetItems() []*Button {
 	return sl.items

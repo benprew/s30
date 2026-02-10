@@ -180,7 +180,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 			opts.GeoM.Translate(float64(width), 0)
 
 			if col.IsCity && col.City.Name != "" {
-				cityNameLines := strings.Replace(col.City.Name, " ", "\n", -1)
+				cityNameLines := strings.ReplaceAll(col.City.Name, " ", "\n")
 
 				textWidth, _ := text.Measure(cityNameLines, m.fontFace, 0)
 				textOp := &text.DrawOptions{}

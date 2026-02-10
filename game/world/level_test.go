@@ -148,7 +148,7 @@ func TestConnectCityBFS(t *testing.T) {
 			if len(actualPath) > 0 {
 				endPoint := actualPath[0]
 				endTile := level.Tile(endPoint)
-				if endTile == nil || endPoint == tc.start || !(endTile.IsCity || endTile.IsRoad()) {
+				if endTile == nil || endPoint == tc.start || (!endTile.IsCity && !endTile.IsRoad()) {
 					t.Errorf("connectCityBFS path endpoint %v is not a valid target (city or road) %v", endPoint, endTile)
 				}
 			}

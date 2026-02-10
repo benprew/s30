@@ -40,25 +40,25 @@ func (db *DraggableButton) IsDraggable() bool {
 
 func (db *DraggableButton) StartDrag(x, y int) DragData {
 	return &CardDragData{
-		ID:   db.Button.ID,
+		ID:   db.ID,
 		Card: db.dragData,
 	}
 }
 
 func (db *DraggableButton) GetDragImage() *ebiten.Image {
-	return db.Button.Normal
+	return db.Normal
 }
 
 func (db *DraggableButton) GetBounds() image.Rectangle {
-	return db.Button.Bounds
+	return db.Bounds
 }
 
 func (db *DraggableButton) OnDragStart() {
-	db.Button.State = elements.StatePressed
+	db.State = elements.StatePressed
 }
 
 func (db *DraggableButton) OnDragEnd(dropped bool) {
-	db.Button.State = elements.StateNormal
+	db.State = elements.StateNormal
 }
 
 func (db *DraggableButton) SetDraggable(draggable bool) {

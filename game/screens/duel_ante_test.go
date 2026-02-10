@@ -1,7 +1,6 @@
 package screens
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
@@ -9,8 +8,6 @@ import (
 )
 
 func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
-	rand.Seed(42)
-
 	mountain := domain.FindCardByName("Mountain")
 	lightningBolt := domain.FindCardByName("Lightning Bolt")
 

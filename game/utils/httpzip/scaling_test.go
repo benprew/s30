@@ -45,7 +45,7 @@ func TestScaling(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requestCount.Add(1)
 
-				if r.Method == "HEAD" {
+				if r.Method == http.MethodHead {
 					w.Header().Set("Accept-Ranges", "bytes")
 					w.Header().Set("Content-Length", strconv.Itoa(len(zipData)))
 					return
