@@ -76,11 +76,16 @@ func (g *GameState) isAlreadyBlocking(blocker *Card) bool {
 
 func (g *GameState) ResolveCombatDamage() {
 	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
+	attackingPlayer := g.Players[g.ActivePlayer]
 
 	for _, attacker := range g.Attackers {
 		blockers := g.BlockerMap[attacker]
 		if len(blockers) == 0 {
-			defendingPlayer.ReceiveDamage(attacker.EffectivePower())
+			damage := attacker.EffectivePower()
+			defendingPlayer.ReceiveDamage(damage)
+			if attacker.HasKeyword(effects.KeywordLifelink) {
+				attackingPlayer.GainLife(damage)
+			}
 		} else {
 			hasTrample := attacker.HasKeyword(effects.KeywordTrample)
 			hasDeathtouch := attacker.HasKeyword(effects.KeywordDeathtouch)
@@ -106,13 +111,20 @@ func (g *GameState) ResolveCombatDamage() {
 				remainingDamage -= assigned
 			}
 			for _, blocker := range blockers {
-				attacker.ReceiveDamage(blocker.EffectivePower())
+				blockerDamage := blocker.EffectivePower()
+				attacker.ReceiveDamage(blockerDamage)
 				if blocker.HasKeyword(effects.KeywordDeathtouch) {
 					attacker.DeathtouchDamaged = true
+				}
+				if blocker.HasKeyword(effects.KeywordLifelink) {
+					defendingPlayer.GainLife(blockerDamage)
 				}
 			}
 			if remainingDamage > 0 && hasTrample {
 				defendingPlayer.ReceiveDamage(remainingDamage)
+			}
+			if attacker.HasKeyword(effects.KeywordLifelink) {
+				attackingPlayer.GainLife(attacker.EffectivePower())
 			}
 		}
 	}
