@@ -358,6 +358,16 @@ func (g *GameState) CombatPhase(player *Player) {
 		return
 	}
 
+	if g.combatHasFirstStrike() {
+		player.Turn.CombatStep = CombatStepFirstStrikeDamage
+		g.ResolveFirstStrikeDamage()
+		g.CheckStateBasedActions()
+		g.RunStack()
+		if g.hasLoser() {
+			return
+		}
+	}
+
 	player.Turn.CombatStep = CombatStepCombatDamage
 	g.printCombatDamage(player, opponent)
 	g.ResolveCombatDamage()

@@ -20,7 +20,8 @@ const (
 	CombatStepBeginning        CombatStep = "BeginningOfCombat"
 	CombatStepDeclareAttackers CombatStep = "DeclareAttackers"
 	CombatStepDeclareBlockers  CombatStep = "DeclareBlockers"
-	CombatStepCombatDamage     CombatStep = "CombatDamage"
+	CombatStepFirstStrikeDamage CombatStep = "FirstStrikeDamage"
+	CombatStepCombatDamage      CombatStep = "CombatDamage"
 	CombatStepEndOfCombat      CombatStep = "EndOfCombat"
 )
 

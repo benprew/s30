@@ -74,57 +74,146 @@ func (g *GameState) isAlreadyBlocking(blocker *Card) bool {
 	return false
 }
 
+func (g *GameState) combatHasFirstStrike() bool {
+	for _, attacker := range g.Attackers {
+		if attacker.HasKeyword(effects.KeywordFirstStrike) {
+			return true
+		}
+		for _, blocker := range g.BlockerMap[attacker] {
+			if blocker.HasKeyword(effects.KeywordFirstStrike) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (g *GameState) ResolveFirstStrikeDamage() {
+	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
+	attackingPlayer := g.Players[g.ActivePlayer]
+
+	for _, attacker := range g.Attackers {
+		blockers := g.BlockerMap[attacker]
+		attackerHasFS := attacker.HasKeyword(effects.KeywordFirstStrike)
+
+		if len(blockers) == 0 {
+			if attackerHasFS {
+				damage := attacker.EffectivePower()
+				defendingPlayer.ReceiveDamage(damage)
+				if attacker.HasKeyword(effects.KeywordLifelink) {
+					attackingPlayer.GainLife(damage)
+				}
+			}
+		} else {
+			if attackerHasFS {
+				hasTrample := attacker.HasKeyword(effects.KeywordTrample)
+				hasDeathtouch := attacker.HasKeyword(effects.KeywordDeathtouch)
+				remainingDamage := attacker.EffectivePower()
+				for i, blocker := range blockers {
+					lethal := blocker.EffectiveToughness() - blocker.DamageTaken
+					if lethal < 0 {
+						lethal = 0
+					}
+					if hasDeathtouch && lethal > 1 {
+						lethal = 1
+					}
+					assigned := lethal
+					if !hasTrample && i == len(blockers)-1 {
+						assigned = remainingDamage
+					} else if assigned > remainingDamage {
+						assigned = remainingDamage
+					}
+					blocker.ReceiveDamage(assigned)
+					if hasDeathtouch {
+						blocker.DeathtouchDamaged = true
+					}
+					remainingDamage -= assigned
+				}
+				if remainingDamage > 0 && hasTrample {
+					defendingPlayer.ReceiveDamage(remainingDamage)
+				}
+				if attacker.HasKeyword(effects.KeywordLifelink) {
+					attackingPlayer.GainLife(attacker.EffectivePower())
+				}
+			}
+			for _, blocker := range blockers {
+				if blocker.HasKeyword(effects.KeywordFirstStrike) {
+					blockerDamage := blocker.EffectivePower()
+					attacker.ReceiveDamage(blockerDamage)
+					if blocker.HasKeyword(effects.KeywordDeathtouch) {
+						attacker.DeathtouchDamaged = true
+					}
+					if blocker.HasKeyword(effects.KeywordLifelink) {
+						defendingPlayer.GainLife(blockerDamage)
+					}
+				}
+			}
+		}
+	}
+}
+
+// ResolveCombatDamage resolves normal combat damage. Creatures killed by
+// first strike are already in the graveyard (via state-based actions) and
+// won't deal damage since they're no longer on the battlefield.
 func (g *GameState) ResolveCombatDamage() {
 	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
 	attackingPlayer := g.Players[g.ActivePlayer]
 
 	for _, attacker := range g.Attackers {
 		blockers := g.BlockerMap[attacker]
+		attackerHasFS := attacker.HasKeyword(effects.KeywordFirstStrike)
+
 		if len(blockers) == 0 {
-			damage := attacker.EffectivePower()
-			defendingPlayer.ReceiveDamage(damage)
-			if attacker.HasKeyword(effects.KeywordLifelink) {
-				attackingPlayer.GainLife(damage)
+			if !attackerHasFS && attacker.CurrentZone == ZoneBattlefield {
+				damage := attacker.EffectivePower()
+				defendingPlayer.ReceiveDamage(damage)
+				if attacker.HasKeyword(effects.KeywordLifelink) {
+					attackingPlayer.GainLife(damage)
+				}
 			}
 		} else {
 			hasTrample := attacker.HasKeyword(effects.KeywordTrample)
 			hasDeathtouch := attacker.HasKeyword(effects.KeywordDeathtouch)
-			remainingDamage := attacker.EffectivePower()
-			for i, blocker := range blockers {
-				lethal := blocker.EffectiveToughness() - blocker.DamageTaken
-				if lethal < 0 {
-					lethal = 0
+			if !attackerHasFS && attacker.CurrentZone == ZoneBattlefield {
+				remainingDamage := attacker.EffectivePower()
+				for i, blocker := range blockers {
+					lethal := blocker.EffectiveToughness() - blocker.DamageTaken
+					if lethal < 0 {
+						lethal = 0
+					}
+					if hasDeathtouch && lethal > 1 {
+						lethal = 1
+					}
+					assigned := lethal
+					if !hasTrample && i == len(blockers)-1 {
+						assigned = remainingDamage
+					} else if assigned > remainingDamage {
+						assigned = remainingDamage
+					}
+					blocker.ReceiveDamage(assigned)
+					if hasDeathtouch {
+						blocker.DeathtouchDamaged = true
+					}
+					remainingDamage -= assigned
 				}
-				if hasDeathtouch && lethal > 1 {
-					lethal = 1
+				if remainingDamage > 0 && hasTrample {
+					defendingPlayer.ReceiveDamage(remainingDamage)
 				}
-				assigned := lethal
-				if !hasTrample && i == len(blockers)-1 {
-					assigned = remainingDamage
-				} else if assigned > remainingDamage {
-					assigned = remainingDamage
+				if attacker.HasKeyword(effects.KeywordLifelink) {
+					attackingPlayer.GainLife(attacker.EffectivePower())
 				}
-				blocker.ReceiveDamage(assigned)
-				if hasDeathtouch {
-					blocker.DeathtouchDamaged = true
-				}
-				remainingDamage -= assigned
 			}
 			for _, blocker := range blockers {
-				blockerDamage := blocker.EffectivePower()
-				attacker.ReceiveDamage(blockerDamage)
-				if blocker.HasKeyword(effects.KeywordDeathtouch) {
-					attacker.DeathtouchDamaged = true
+				if !blocker.HasKeyword(effects.KeywordFirstStrike) && blocker.CurrentZone == ZoneBattlefield {
+					blockerDamage := blocker.EffectivePower()
+					attacker.ReceiveDamage(blockerDamage)
+					if blocker.HasKeyword(effects.KeywordDeathtouch) {
+						attacker.DeathtouchDamaged = true
+					}
+					if blocker.HasKeyword(effects.KeywordLifelink) {
+						defendingPlayer.GainLife(blockerDamage)
+					}
 				}
-				if blocker.HasKeyword(effects.KeywordLifelink) {
-					defendingPlayer.GainLife(blockerDamage)
-				}
-			}
-			if remainingDamage > 0 && hasTrample {
-				defendingPlayer.ReceiveDamage(remainingDamage)
-			}
-			if attacker.HasKeyword(effects.KeywordLifelink) {
-				attackingPlayer.GainLife(attacker.EffectivePower())
 			}
 		}
 	}
