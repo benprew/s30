@@ -89,15 +89,29 @@ func (g *GameState) combatHasFirstStrike() bool {
 }
 
 func (g *GameState) ResolveFirstStrikeDamage() {
+	g.resolveDamage(func(c *Card) bool {
+		return c.HasKeyword(effects.KeywordFirstStrike)
+	})
+}
+
+// ResolveCombatDamage resolves normal combat damage. Creatures killed by
+// first strike are already in the graveyard (via state-based actions) and
+// won't deal damage since they're no longer on the battlefield.
+func (g *GameState) ResolveCombatDamage() {
+	g.resolveDamage(func(c *Card) bool {
+		return !c.HasKeyword(effects.KeywordFirstStrike) && c.CurrentZone == ZoneBattlefield
+	})
+}
+
+func (g *GameState) resolveDamage(dealsDamage func(*Card) bool) {
 	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
 	attackingPlayer := g.Players[g.ActivePlayer]
 
 	for _, attacker := range g.Attackers {
 		blockers := g.BlockerMap[attacker]
-		attackerHasFS := attacker.HasKeyword(effects.KeywordFirstStrike)
 
 		if len(blockers) == 0 {
-			if attackerHasFS {
+			if dealsDamage(attacker) {
 				damage := attacker.EffectivePower()
 				defendingPlayer.ReceiveDamage(damage)
 				if attacker.HasKeyword(effects.KeywordLifelink) {
@@ -105,7 +119,7 @@ func (g *GameState) ResolveFirstStrikeDamage() {
 				}
 			}
 		} else {
-			if attackerHasFS {
+			if dealsDamage(attacker) {
 				hasTrample := attacker.HasKeyword(effects.KeywordTrample)
 				hasDeathtouch := attacker.HasKeyword(effects.KeywordDeathtouch)
 				remainingDamage := attacker.EffectivePower()
@@ -137,74 +151,7 @@ func (g *GameState) ResolveFirstStrikeDamage() {
 				}
 			}
 			for _, blocker := range blockers {
-				if blocker.HasKeyword(effects.KeywordFirstStrike) {
-					blockerDamage := blocker.EffectivePower()
-					attacker.ReceiveDamage(blockerDamage)
-					if blocker.HasKeyword(effects.KeywordDeathtouch) {
-						attacker.DeathtouchDamaged = true
-					}
-					if blocker.HasKeyword(effects.KeywordLifelink) {
-						defendingPlayer.GainLife(blockerDamage)
-					}
-				}
-			}
-		}
-	}
-}
-
-// ResolveCombatDamage resolves normal combat damage. Creatures killed by
-// first strike are already in the graveyard (via state-based actions) and
-// won't deal damage since they're no longer on the battlefield.
-func (g *GameState) ResolveCombatDamage() {
-	defendingPlayer := g.Players[(g.ActivePlayer+1)%len(g.Players)]
-	attackingPlayer := g.Players[g.ActivePlayer]
-
-	for _, attacker := range g.Attackers {
-		blockers := g.BlockerMap[attacker]
-		attackerHasFS := attacker.HasKeyword(effects.KeywordFirstStrike)
-
-		if len(blockers) == 0 {
-			if !attackerHasFS && attacker.CurrentZone == ZoneBattlefield {
-				damage := attacker.EffectivePower()
-				defendingPlayer.ReceiveDamage(damage)
-				if attacker.HasKeyword(effects.KeywordLifelink) {
-					attackingPlayer.GainLife(damage)
-				}
-			}
-		} else {
-			hasTrample := attacker.HasKeyword(effects.KeywordTrample)
-			hasDeathtouch := attacker.HasKeyword(effects.KeywordDeathtouch)
-			if !attackerHasFS && attacker.CurrentZone == ZoneBattlefield {
-				remainingDamage := attacker.EffectivePower()
-				for i, blocker := range blockers {
-					lethal := blocker.EffectiveToughness() - blocker.DamageTaken
-					if lethal < 0 {
-						lethal = 0
-					}
-					if hasDeathtouch && lethal > 1 {
-						lethal = 1
-					}
-					assigned := lethal
-					if !hasTrample && i == len(blockers)-1 {
-						assigned = remainingDamage
-					} else if assigned > remainingDamage {
-						assigned = remainingDamage
-					}
-					blocker.ReceiveDamage(assigned)
-					if hasDeathtouch {
-						blocker.DeathtouchDamaged = true
-					}
-					remainingDamage -= assigned
-				}
-				if remainingDamage > 0 && hasTrample {
-					defendingPlayer.ReceiveDamage(remainingDamage)
-				}
-				if attacker.HasKeyword(effects.KeywordLifelink) {
-					attackingPlayer.GainLife(attacker.EffectivePower())
-				}
-			}
-			for _, blocker := range blockers {
-				if !blocker.HasKeyword(effects.KeywordFirstStrike) && blocker.CurrentZone == ZoneBattlefield {
+				if dealsDamage(blocker) {
 					blockerDamage := blocker.EffectivePower()
 					attacker.ReceiveDamage(blockerDamage)
 					if blocker.HasKeyword(effects.KeywordDeathtouch) {
