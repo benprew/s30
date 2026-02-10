@@ -166,9 +166,18 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 	l.totalTicks++
 	l.ticksSinceLastInteraction++
 
+	oldX, oldY := l.Player.X, l.Player.Y
+	oldTimeAccumulator := l.Player.TimeAccumulator
+	oldDays := l.Player.Days
 	currentDay := l.Player.Days
 	if err := l.Player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
 		return err
+	}
+	if l.IsWaterAtPixel(l.Player.Loc()) {
+		l.Player.X = oldX
+		l.Player.Y = oldY
+		l.Player.TimeAccumulator = oldTimeAccumulator
+		l.Player.Days = oldDays
 	}
 	if l.Player.Days > currentDay {
 		// New day, update city bans
@@ -184,7 +193,58 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 	}
 
 	for i := range l.enemies {
+		ex, ey := l.enemies[i].X, l.enemies[i].Y
 		_ = l.enemies[i].Update(l.Player.Loc())
+		newPos := l.enemies[i].Loc()
+
+		if !l.IsWaterAtPixel(newPos) {
+			continue
+		}
+
+		dx := newPos.X - ex
+		dy := newPos.Y - ey
+
+		// Wall-slide: when moving diagonally, try allowing movement on one axis only
+		if dx != 0 && dy != 0 {
+			if !l.IsWaterAtPixel(image.Point{X: newPos.X, Y: ey}) {
+				l.enemies[i].Y = ey
+				continue
+			}
+			if !l.IsWaterAtPixel(image.Point{X: ex, Y: newPos.Y}) {
+				l.enemies[i].X = ex
+				continue
+			}
+		}
+
+		// Blocked: restore and nudge perpendicular to get around the water
+		l.enemies[i].X = ex
+		l.enemies[i].Y = ey
+		speed := l.enemies[i].MoveSpeed
+		pLoc := l.Player.Loc()
+
+		if dx != 0 {
+			// Has horizontal movement, nudge vertically toward player
+			nudgeY := speed
+			if pLoc.Y < ey {
+				nudgeY = -speed
+			}
+			if !l.IsWaterAtPixel(image.Point{X: ex, Y: ey + nudgeY}) {
+				l.enemies[i].Y = ey + nudgeY
+			} else if !l.IsWaterAtPixel(image.Point{X: ex, Y: ey - nudgeY}) {
+				l.enemies[i].Y = ey - nudgeY
+			}
+		} else {
+			// Vertical movement, nudge horizontally toward player
+			nudgeX := speed
+			if pLoc.X < ex {
+				nudgeX = -speed
+			}
+			if !l.IsWaterAtPixel(image.Point{X: ex + nudgeX, Y: ey}) {
+				l.enemies[i].X = ex + nudgeX
+			} else if !l.IsWaterAtPixel(image.Point{X: ex - nudgeX, Y: ey}) {
+				l.enemies[i].X = ex - nudgeX
+			}
+		}
 	}
 
 	l.UpdateEncounters()
@@ -288,14 +348,17 @@ func (l *Level) SpawnEnemies(count int) error {
 		}
 		var x, y int
 
-		// Set random position (avoiding player's immediate area)
-		minDistance := 500.0 // Minimum distance from player
+		// Set random position (avoiding player's immediate area and water)
+		minDistance := 500.0
 		for {
-			// Random position within world bounds
 			x = rand.Intn(l.LevelW())
 			y = rand.Intn(l.LevelH())
 
-			// Check distance from player
+			pos := image.Point{X: x, Y: y}
+			if l.IsWaterAtPixel(pos) {
+				continue
+			}
+
 			dx := x - pLoc.X
 			dy := y - pLoc.Y
 			distance := math.Sqrt(float64(dx*dx + dy*dy))
@@ -424,21 +487,28 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale
 	}
 }
 
-func (l *Level) CharacterTile() image.Point {
-	pLoc := l.Player.Loc()
-	pixelX := pLoc.X
-	pixelY := pLoc.Y
+func (l *Level) PixelToTile(pixel image.Point) image.Point {
+	tileY := pixel.Y / (l.tileHeight / 2)
+	tileX := (pixel.X - (tileY%2)*(l.tileWidth/2)) / l.tileWidth
 
-	// Calculate the approximate row and column
-	tileY := pixelY / (l.tileHeight / 2)
-	tileX := (pixelX - (tileY%2)*(l.tileWidth/2)) / l.tileWidth
-
-	// Ensure the tile coordinates are within bounds
-	if pixelX < 0 || tileX >= l.w || pixelY < 0 || tileY >= l.h {
-		return image.Point{-1, -1} // Return invalid coordinates if out of bounds
+	if pixel.X < 0 || tileX >= l.w || pixel.Y < 0 || tileY >= l.h {
+		return image.Point{-1, -1}
 	}
 
 	return image.Point{tileX, tileY}
+}
+
+func (l *Level) IsWaterAtPixel(pixel image.Point) bool {
+	tp := l.PixelToTile(pixel)
+	t := l.Tile(tp)
+	if t == nil {
+		return true
+	}
+	return t.TerrainType == TerrainWater
+}
+
+func (l *Level) CharacterTile() image.Point {
+	return l.PixelToTile(l.Player.Loc())
 }
 
 // EncounterPending returns true if an encounter was recorded and not yet taken.
