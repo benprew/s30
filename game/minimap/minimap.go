@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -186,12 +187,23 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 				textOp := &text.DrawOptions{}
 				textOp.GeoM.Concat(opts.GeoM)
 				textOp.GeoM.Translate(-float64(textWidth)/2, 8)
-				textOp.ColorScale.ScaleWithColor(color.White)
 				textOp.LineSpacing = m.fontFace.Size
+
+				if m.isQuestTarget(col.City.Name) && m.blinkCounter%10 < 7 {
+					textOp.ColorScale.ScaleWithColor(color.RGBA{R: 255, G: 215, B: 0, A: 255})
+				} else {
+					textOp.ColorScale.ScaleWithColor(color.White)
+				}
+
 				text.Draw(screen, cityNameLines, m.fontFace, textOp)
 			}
 		}
 	}
+}
+
+func (m *MiniMap) isQuestTarget(cityName string) bool {
+	q := m.level.Player.ActiveQuest
+	return q != nil && q.Type == domain.QuestTypeDelivery && q.TargetCity != nil && q.TargetCity.Name == cityName
 }
 
 func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
