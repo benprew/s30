@@ -13,14 +13,15 @@ const cardNameKirdApe = "Kird Ape"
 
 type Card struct {
 	domain.Card
-	ID             EntityID
-	Owner          *Player
-	CurrentZone    Zone
-	Tapped         bool
-	Active         bool
-	DamageTaken    int
-	PowerBoost     int
-	ToughnessBoost int
+	ID                 EntityID
+	Owner              *Player
+	CurrentZone        Zone
+	Tapped             bool
+	Active             bool
+	DamageTaken        int
+	DeathtouchDamaged  bool
+	PowerBoost         int
+	ToughnessBoost     int
 }
 
 func (c *Card) Name() string {
@@ -86,6 +87,9 @@ func (c *Card) TargetType() effects.TargetType {
 }
 
 func (c *Card) IsDead() bool {
+	if c.DeathtouchDamaged && c.DamageTaken > 0 {
+		return true
+	}
 	return c.DamageTaken >= c.EffectiveToughness()
 }
 
@@ -123,6 +127,7 @@ func (c *Card) ClearEndOfTurnEffects() {
 	c.PowerBoost = 0
 	c.ToughnessBoost = 0
 	c.DamageTaken = 0
+	c.DeathtouchDamaged = false
 }
 
 func (c *Card) GetTargetSpec() *domain.ParsedTargetSpec {
@@ -225,15 +230,16 @@ func NewCardFromDomain(domainCard *domain.Card, id EntityID, owner *Player) *Car
 
 func (c *Card) DeepCopy() *Card {
 	newCard := &Card{
-		ID:             c.ID,
-		Card:           c.Card,
-		Owner:          c.Owner,
-		CurrentZone:    c.CurrentZone,
-		Tapped:         c.Tapped,
-		Active:         c.Active,
-		DamageTaken:    c.DamageTaken,
-		PowerBoost:     c.PowerBoost,
-		ToughnessBoost: c.ToughnessBoost,
+		ID:                c.ID,
+		Card:              c.Card,
+		Owner:             c.Owner,
+		CurrentZone:       c.CurrentZone,
+		Tapped:            c.Tapped,
+		Active:            c.Active,
+		DamageTaken:       c.DamageTaken,
+		DeathtouchDamaged: c.DeathtouchDamaged,
+		PowerBoost:        c.PowerBoost,
+		ToughnessBoost:    c.ToughnessBoost,
 	}
 
 	newCard.ManaProduction = make([]string, len(c.ManaProduction))
