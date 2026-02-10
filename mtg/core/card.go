@@ -145,7 +145,10 @@ func (c *Card) TargetsCreaturesOnly() bool {
 }
 
 func (c *Card) IsActive() bool {
-	return !c.Tapped && c.Active
+	if c.Tapped {
+		return false
+	}
+	return c.Active || c.HasKeyword(effects.KeywordHaste)
 }
 
 func (c *Card) LandwalkType() string {

@@ -78,6 +78,23 @@ func TestCardIsActive(t *testing.T) {
 	}
 }
 
+func TestCardIsActive_HasteBypassesSummoningSickness(t *testing.T) {
+	card := &Card{}
+	card.Keywords = []string{"Haste"}
+
+	card.Tapped = false
+	card.Active = false
+	if !card.IsActive() {
+		t.Errorf("Untapped creature with haste should be active even when summoning sick")
+	}
+
+	card.Tapped = true
+	card.Active = false
+	if card.IsActive() {
+		t.Errorf("Tapped creature with haste should not be active")
+	}
+}
+
 func TestCardActionsFromParsedAbilities(t *testing.T) {
 	card := &Card{}
 	card.ParsedAbilities = []domain.ParsedAbility{
