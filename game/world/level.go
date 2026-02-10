@@ -251,10 +251,11 @@ func (l *Level) SpawnEnemies(count int) error {
 	// Enemy character types to choose from
 	enemyTypes := domain.Rogues
 
-	// Get the keys (rogue names) from the map
 	var rogueNames []string
-	for name := range enemyTypes {
-		rogueNames = append(rogueNames, name)
+	for name, char := range enemyTypes {
+		if char.Level <= 10 {
+			rogueNames = append(rogueNames, name)
+		}
 	}
 
 	pLoc := l.Player.Loc()
@@ -310,6 +311,37 @@ func (l *Level) SpawnEnemies(count int) error {
 		l.enemies = append(l.enemies, enemy)
 	}
 
+	return nil
+}
+
+// SpawnEnemyNear creates a named enemy near the given tile position and adds
+// it to the level. The enemy is placed at a random offset within ~2 tiles of
+// the target.
+func (l *Level) SpawnEnemyNear(enemyName string, tile image.Point) error {
+	enemy, err := domain.NewEnemy(enemyName)
+	if err != nil {
+		return fmt.Errorf("spawn quest enemy %q: %w", enemyName, err)
+	}
+	if enemy.Character.WalkingSprite == nil {
+		return fmt.Errorf("enemy %q has no walking sprite", enemyName)
+	}
+
+	center := l.TileToPixel(tile)
+	spread := l.tileWidth * 2
+	x, y := center.X, center.Y
+	for attempts := 0; attempts < 20; attempts++ {
+		x = center.X + rand.Intn(spread) - spread/2
+		y = center.Y + rand.Intn(spread) - spread/2
+		x = max(0, min(x, l.LevelW()-1))
+		y = max(0, min(y, l.LevelH()-1))
+		if !l.IsWaterAtPixel(image.Point{X: x, Y: y}) {
+			break
+		}
+	}
+
+	enemy.SetLoc(image.Point{X: x, Y: y})
+	enemy.MoveSpeed = 5 + rand.Intn(3)
+	l.enemies = append(l.enemies, enemy)
 	return nil
 }
 
