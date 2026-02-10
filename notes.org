@@ -1,7 +1,29 @@
 * MTG Engine
-** Support Abilities
-- [X] Flying
-- [ ] First strike
+** Duel UI screen
+** Add new card keywords
+Implement this keyword in the mtg core engine see mtg/core/
+
+Also update AvailableActions to remove illegal blocks (ex. a create without reach or flying can't be assigned as a blocker to an attacker with flying)
+
+Write tests to verify the correct behavior
+
+- Flying
+- First strike
+  First strike is a keyword ability in Magic: The Gathering that allows a creature to deal combat damage before creatures without first strike during the combat damage step. This means that if a creature with first strike is involved in combat, it can potentially eliminate its opponent before they have a chance to deal damage back.
+- Reach
+  Reach is a keyword ability in Magic: The Gathering that allows a creature to block other creatures with flying. Essentially, creatures with reach can stop flying creatures from attacking, even though they themselves do not have flying.
+- trample
+  Trample is a keyword ability in Magic: The Gathering that allows an attacking creature to deal excess damage to the defending player if it is blocked. When a creature with trample is blocked, it must assign enough damage to destroy the blocking creature(s) first, and any remaining damage can then be dealt to the defending player.
+- haste
+  Haste is a keyword ability in Magic: The Gathering that allows a creature to attack or use activated abilities that require tapping immediately after it enters the battlefield, bypassing the summoning sickness rule. This means the creature can act right away, rather than having to wait until your next turn.
+- vigilance
+  Vigilance is a keyword ability that allows a creature to attack without tapping, meaning it can still block on the opponent's next turn. This ability is primarily found on white creatures and helps maintain both offensive and defensive capabilities during gameplay.
+- deathtouch
+  Deathtouch is a keyword ability in Magic: The Gathering that means any amount of damage dealt by a creature with deathtouch to another creature is considered lethal damage, resulting in that creature being destroyed. This ability allows smaller creatures to effectively trade with larger ones in combat.
+- lifelink
+  Lifelink is a keyword ability in Magic: The Gathering that allows a player to gain life equal to the damage dealt by a source with lifelink. This life gain occurs simultaneously with the damage, meaning if a creature with lifelink deals 5 damage, its controller gains 5 life at the same time.
+- landwalk
+  Landwalk is a keyword ability in Magic: The Gathering that allows a creature to be unblockable if the defending player controls a land of a specified type, such as "islandwalk" for Islands or "swampwalk" for Swamps. This means that if the opponent has the relevant land type, they cannot block the creature with that ability.
 ** Card Ability Parsing
 I'm building a magic the gathering game (see mtg/GEMINI.md) and I'd like to parse the card text and return structured data describing the ability of the card.
 
