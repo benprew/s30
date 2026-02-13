@@ -73,7 +73,12 @@ func (w *World) Get(p TilePoint) TileType {
 	if t, ok := w.Grid[p]; ok {
 		return t
 	}
-	return Plains // Default to lowest level if out of bounds/empty
+	return Plains
+}
+
+func (w *World) Has(p TilePoint) bool {
+	_, ok := w.Grid[p]
+	return ok
 }
 
 func (w *World) Set(x, y int, t TileType) {
@@ -82,122 +87,169 @@ func (w *World) Set(x, y int, t TileType) {
 
 // Transition describes the edge graphic needed
 type Transition struct {
-	Side       string   // North, South, East, West
+	Side       string   // NW, NE, SE, SW
 	SourceType TileType // The dominant tile type causing the transition (e.g., Water)
-	OpenStart  bool     // Is the transition connected at the "start" (Top for W/E, Left for N/S)?
-	OpenEnd    bool     // Is the transition connected at the "end" (Bottom for W/E, Right for N/S)?
+	Open1      bool     // First corner of Side (e.g., N for "NW")
+	Open2      bool     // Second corner of Side (e.g., W for "NW")
 }
 
 func (t Transition) String() string {
-	startStr := "Closed"
-	if t.OpenStart {
-		startStr = "Open"
+	c1 := "Closed"
+	if t.Open1 {
+		c1 = "Open"
 	}
-	endStr := "Closed"
-	if t.OpenEnd {
-		endStr = "Open"
+	c2 := "Closed"
+	if t.Open2 {
+		c2 = "Open"
 	}
-	return fmt.Sprintf("[%s Edge] Type: %s | Start: %s | End: %s", t.Side, t.SourceType, startStr, endStr)
+	return fmt.Sprintf("[%s Edge] Type: %s | %c: %s | %c: %s", t.Side, t.SourceType, t.Side[0], c1, t.Side[1], c2)
 }
 
-// GetTransitions calculates all needed overlays for a specific tile
+// GetTransitions calculates all needed overlays for a specific tile.
+// Each tile is a diamond with vertices N, E, S, W and edges NW, NE, SE, SW.
+// Each vertex is shared by 4 tiles. A corner is "open" if the tile across the
+// vertex also has a transition on the same edge direction.
+//
+// Corner adjacency (the tile across each vertex for a given edge):
+//
+//	NW: N corner → NE neighbor, W corner → SW neighbor
+//	NE: N corner → NW neighbor, E corner → SE neighbor
+//	SE: S corner → SW neighbor, E corner → NE neighbor
+//	SW: S corner → SE neighbor, W corner → NW neighbor
 func GetTransitions(currentPos TilePoint, world *World) []Transition {
 	transitions := []Transition{}
 	myType := world.Get(currentPos)
+	d := Directions[currentPos.Y%2]
 
-	// We check for any neighbor types that have a higher precedence than us.
-	// For this POC, let's just assume Water > Plains.
-	// In a full system, you'd loop from myType+1 to MaxType.
+	isCornerOpen := func(adjDirIdx, sideDirIdx DirIdx, sourceType TileType) bool {
+		adjPos := currentPos.Add(d[adjDirIdx])
+		if !world.Has(adjPos) {
+			return false
+		}
+		adjType := world.Get(adjPos)
+		adjD := Directions[adjPos.Y%2]
+		adjNeighborType := world.Get(adjPos.Add(adjD[sideDirIdx]))
+		return adjNeighborType == sourceType && sourceType >= adjType
+	}
 
-	// Helper to reduce code duplication
-	checkEdge := func(sideVec TilePoint, sideName string, startDiag, endDiag TilePoint) {
+	checkEdge := func(sideVec TilePoint, sideDirIdx DirIdx, sideName string, corner1Adj, corner2Adj DirIdx) {
 		neighborPos := currentPos.Add(sideVec)
 		neighborType := world.Get(neighborPos)
 
-		// Rule: Only draw transition if neighbor is "above" me in hierarchy
 		if neighborType > myType {
-			// Check Diagonals to see if the edge connects
-
-			// For West/East edges: Start is Top (Y-1), End is Bottom (Y+1)
-			// For North/South edges: Start is Left (X-1), End is Right (X+1)
-
-			// Note: We check the neighbor of the neighbor!
-			// Actually, per the "Open/Closed" logic discussed:
-			// We check the diagonal neighbor relative to US (the current tile).
-			// If that diagonal is ALSO the higher type, then the edge "continues".
-
-			startVal := world.Get(currentPos.Add(startDiag))
-			endVal := world.Get(currentPos.Add(endDiag))
-
-			isOpenStart := startVal == neighborType
-			isOpenEnd := endVal == neighborType
-
-			fmt.Println("neighborPos", neighborPos, "start:", currentPos.Add(startDiag), "end:", currentPos.Add(endDiag))
 			transitions = append(transitions, Transition{
 				Side:       sideName,
 				SourceType: neighborType,
-				OpenStart:  isOpenStart,
-				OpenEnd:    isOpenEnd,
+				Open1:      isCornerOpen(corner1Adj, sideDirIdx, neighborType),
+				Open2:      isCornerOpen(corner2Adj, sideDirIdx, neighborType),
 			})
 		}
 	}
 
-	d := Directions[currentPos.Y%2]
+	checkEdge(d[NWIdx], NWIdx, "NW", NEIdx, SWIdx)
+	checkEdge(d[NEIdx], NEIdx, "NE", NWIdx, SEIdx)
+	checkEdge(d[SEIdx], SEIdx, "SE", SWIdx, NEIdx)
+	checkEdge(d[SWIdx], SWIdx, "SW", SEIdx, NWIdx)
 
-	// 1. Check NW (Vertical Edge)
-	// Start: NorthWest, End: SouthWest
-	fmt.Println("current:", currentPos)
-	checkEdge(d[NWIdx], "NW", d[WIdx], d[NIdx])
-
-	// 2. Check NE (Vertical Edge)
-	// Start: NorthEast, End: SouthEast
-	checkEdge(d[NEIdx], "NE", d[NIdx], d[EIdx])
-
-	// 3. Check SE (Horizontal Edge)
-	// Start: SouthEast, End: NorthEast
-	checkEdge(d[SEIdx], "SE", d[EIdx], d[SIdx])
-
-	// 4. Check South (Horizontal Edge)
-	// Start: SouthWest, End: SouthEast
-	checkEdge(d[SWIdx], "SW", d[WIdx], d[SIdx])
+	fixVertexCorners := func(cardinalIdx DirIdx, edge1Name, edge2Name string) {
+		if len(transitions) == 4 {
+			return
+		}
+		var e1, e2 int = -1, -1
+		for i, t := range transitions {
+			if t.Side == edge1Name {
+				e1 = i
+			}
+			if t.Side == edge2Name {
+				e2 = i
+			}
+		}
+		if e1 < 0 || e2 < 0 || transitions[e1].SourceType != transitions[e2].SourceType {
+			return
+		}
+		cardinalType := world.Get(currentPos.Add(d[cardinalIdx]))
+		if cardinalType != transitions[e1].SourceType {
+			return
+		}
+		transitions[e1].Open2 = true
+		transitions[e2].Open1 = true
+		transitions[e2].Open2 = false
+	}
+	fixVertexCorners(WIdx, "NW", "SW")
+	fixVertexCorners(EIdx, "NE", "SE")
 
 	return transitions
+}
+
+func tr(side string, source TileType, open1, open2 bool) Transition {
+	return Transition{Side: side, SourceType: source, Open1: open1, Open2: open2}
 }
 
 func main() {
 	fmt.Println("--- Autotiling POC ---")
 
-	// Scenario 1: Continuous Coast
-	// W (0,0)   W (1,0)
-	// W (0,1)   P1 (1,1)
-	// W (0,2)   P2 (1,2)
 	fmt.Println("\nScenario 1: Continuous Coast")
-	world1 := NewWorld(2, 2)
-	m := []string{
-		"WW",
-		"WP",
-		"WP",
-	}
-	buildWorld(world1, m)
+	buildWorld(
+		[]string{
+			"WW",
+			"WP",
+			"WP",
+		},
+		map[TilePoint][]Transition{
+			{1, 1}: {tr("NW", Water, false, true)},
+			{1, 2}: {tr("NW", Water, true, false)},
+		},
+	)
 
-	printTileTransitions(world1, TilePoint{1, 1}, "P1 (1,1)")
-	printTileTransitions(world1, TilePoint{1, 2}, "P2 (1,2)")
+	fmt.Println("\nScenario 2: Water block")
+	buildWorld(
+		[]string{
+			"WPPP",
+			"PPPP",
+			"PWWW",
+			"PPPP",
+		},
+		map[TilePoint][]Transition{
+			{0, 1}: {tr("NW", Water, false, false), tr("SE", Water, false, false)},
+			{1, 1}: {tr("SE", Water, false, false), tr("SW", Water, false, false)},
+			{2, 1}: {tr("SE", Water, false, false), tr("SW", Water, false, false)},
+			{3, 1}: {tr("SW", Water, false, false)},
+			{0, 3}: {tr("NE", Water, false, false)},
+			{1, 3}: {tr("NW", Water, false, false), tr("NE", Water, false, false)},
+			{2, 3}: {tr("NW", Water, false, false), tr("NE", Water, false, false)},
+			{3, 3}: {tr("NW", Water, false, false)},
+		},
+	)
 
-	fmt.Println("\nScenario 2: layout1")
-	w2 := NewWorld(4, 4)
-	m2 := []string{
-		"WPPP",
-		"PPPP",
-		"PWWW",
-		"PPPP",
-	}
-	buildWorld(w2, m2)
-	printTileTransitions(w2, TilePoint{0, 1}, "0,1")
-	printTileTransitions(w2, TilePoint{1, 1}, "1,1")
-	printTileTransitions(w2, TilePoint{1, 3}, "1,3")
+	fmt.Println("\nScenario 3: Wrapped Coast")
+	buildWorld(
+		[]string{
+			"WW",
+			"WP",
+			"WW",
+		},
+		map[TilePoint][]Transition{
+			{1, 1}: {tr("NW", Water, false, true), tr("SW", Water, true, false)},
+		},
+	)
+
+	fmt.Println("\nScenario 4: island")
+	buildWorld(
+		[]string{
+			"WW",
+			"WW",
+			"WPW",
+			"WW",
+			"WW",
+		},
+		map[TilePoint][]Transition{
+			{1, 2}: {tr("NW", Water, true, true), tr("NE", Water, true, true), tr("SE", Water, true, true), tr("SW", Water, true, true)},
+		},
+	)
 }
 
-func buildWorld(w *World, layout []string) {
+func buildWorld(layout []string, expected map[TilePoint][]Transition) {
+	w := NewWorld(len(layout[0]), len(layout))
 	for y := range layout {
 		for x, tile := range layout[y] {
 			switch tile {
@@ -205,20 +257,39 @@ func buildWorld(w *World, layout []string) {
 				w.Set(x, y, Water)
 			case 'P':
 				w.Set(x, y, Plains)
+			case 'F':
+				w.Set(x, y, Forest)
 			default:
 				panic("unknown tile type")
 			}
 		}
 	}
-}
 
-func printTileTransitions(w *World, p TilePoint, label string) {
-	trans := GetTransitions(p, w)
-	fmt.Printf("Transitions for %s:\n", label)
-	if len(trans) == 0 {
-		fmt.Println("  (None)")
+	failed := false
+	for y := range layout {
+		for x := range layout[y] {
+			p := TilePoint{x, y}
+			got := GetTransitions(p, w)
+			want := expected[p]
+			if len(got) != len(want) {
+				fmt.Printf("FAIL %v: expected %d transitions, got %d\n", p, len(want), len(got))
+				for _, t := range got {
+					fmt.Printf("  got: %s\n", t)
+				}
+				failed = true
+				continue
+			}
+			for i := range got {
+				if got[i] != want[i] {
+					fmt.Printf("FAIL %v[%d]: expected %s, got %s\n", p, i, want[i], got[i])
+					failed = true
+				}
+			}
+		}
 	}
-	for _, t := range trans {
-		fmt.Printf("  -> %s\n", t)
+	if failed {
+		fmt.Println("FAIL")
+	} else {
+		fmt.Println("PASS")
 	}
 }
