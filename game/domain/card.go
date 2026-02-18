@@ -2,7 +2,6 @@ package domain
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 	"regexp"
 	"sort"
@@ -85,9 +84,8 @@ type ParsedAbility struct {
 type Card struct {
 	CardName string
 	CardSet
-	ScryfallID        string // Used to get images
 	PngURL            string
-	OracleID          string
+	cardID            string
 	ManaCost          string   // ex. {3}{G}{R}
 	ManaProduction    []string // This only has the possible colors of production
 	Colors            []string
@@ -128,15 +126,8 @@ func (c *Card) Name() string {
 	return c.CardName
 }
 
-// Returns a unique string for each card.
-// Used to identify cards when names are the same
 func (c *Card) CardID() string {
-	id := fmt.Sprintf(
-		"%s-%s-%s",
-		c.SetID,
-		c.CollectorNo,
-		sanitizeFilename(c.CardName))
-	return id
+	return c.cardID
 }
 
 // FindCardByName searches for a card by name using binary search
@@ -175,10 +166,10 @@ func FindAllCardsByName(name string) []*Card {
 func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 	var fullImg *ebiten.Image
 
-	if cached, ok := cardImages.Load(card.OracleID); ok {
+	if cached, ok := cardImages.Load(card.cardID); ok {
 		fullImg = cached.(*ebiten.Image)
 	} else {
-		if _, alreadyFetching := fetchingSet.LoadOrStore(card.OracleID, true); !alreadyFetching {
+		if _, alreadyFetching := fetchingSet.LoadOrStore(card.cardID, true); !alreadyFetching {
 			go fetchAndCacheCardImage(card)
 		}
 		fullImg = blankCard()

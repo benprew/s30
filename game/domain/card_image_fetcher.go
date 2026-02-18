@@ -44,7 +44,7 @@ func resizeToWidth(src image.Image, targetWidth int) image.Image {
 }
 
 func fetchAndCacheCardImage(card *Card) {
-	id := card.OracleID
+	id := card.cardID
 	if card.PngURL == "" {
 		fmt.Printf("WARN: No PngURL for card: %s\n", card.CardName)
 		cardImages.Store(id, blankCard())
@@ -81,16 +81,16 @@ func CollectPriorityCards(player *Player) []*Card {
 	var priority []*Card
 
 	for card := range player.CardCollection {
-		if !seen[card.OracleID] {
-			seen[card.OracleID] = true
+		if !seen[card.cardID] {
+			seen[card.cardID] = true
 			priority = append(priority, card)
 		}
 	}
 
 	for _, rogue := range Rogues {
 		for card := range rogue.CardCollection {
-			if !seen[card.OracleID] {
-				seen[card.OracleID] = true
+			if !seen[card.cardID] {
+				seen[card.cardID] = true
 				priority = append(priority, card)
 			}
 		}
@@ -109,7 +109,7 @@ func PreloadCardImages(priorityCards []*Card) {
 		go func() {
 			defer wg.Done()
 			for card := range ch {
-				if _, loaded := cardImages.Load(card.OracleID); loaded {
+				if _, loaded := cardImages.Load(card.cardID); loaded {
 					continue
 				}
 				fetchAndCacheCardImage(card)
@@ -119,12 +119,12 @@ func PreloadCardImages(priorityCards []*Card) {
 
 	prioritySet := make(map[string]bool, len(priorityCards))
 	for _, card := range priorityCards {
-		prioritySet[card.OracleID] = true
+		prioritySet[card.cardID] = true
 		ch <- card
 	}
 
 	for _, card := range CARDS {
-		if !prioritySet[card.OracleID] {
+		if !prioritySet[card.cardID] {
 			ch <- card
 		}
 	}

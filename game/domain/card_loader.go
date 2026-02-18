@@ -14,8 +14,6 @@ import (
 )
 
 type CardJSON struct {
-	ScryfallID        string // Used to get images
-	OracleID          string
 	CardName          string
 	ManaCost          string
 	ManaProduction    []string
@@ -181,9 +179,9 @@ func (cj *CardJSON) ToCard() *Card {
 			SetName:     cj.SetName,
 			CollectorNo: cj.CollectorNo,
 		},
-		ScryfallID:        cj.ScryfallID,
-		PngURL:            cj.PngURL,
-		OracleID:          cj.OracleID,
+		PngURL: cj.PngURL,
+		cardID: fmt.Sprintf("%s-%s-%s",
+			cj.SetID, cj.CollectorNo, sanitizeFilename(cj.CardName)),
 		CardName:          cj.CardName,
 		ManaCost:          cj.ManaCost,
 		ManaProduction:    cj.ManaProduction,
