@@ -128,6 +128,15 @@ var (
 	RogueCfgFS embed.FS
 
 	////////////////////////
+	// Duel screen sprites
+	////////////////////////
+	//go:embed art/sprites/duel/*.png
+	DuelFS embed.FS
+
+	//go:embed art/sprites/Statbutt.spr.png
+	Statbutt_png []byte
+
+	////////////////////////
 	// Duel Ante backgrounds
 	////////////////////////
 	//go:embed art/sprites/duel_ante/*.png

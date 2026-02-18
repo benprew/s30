@@ -12,6 +12,7 @@ const (
 	BuyCardsScr
 	EditDeckScr
 	DuelAnteScr
+	DuelScr
 	DuelWinScr
 	DuelLoseScr
 	WisemanScr
@@ -41,6 +42,8 @@ func ScreenNameToString(sn ScreenName) string {
 		return "EditDeck"
 	case DuelAnteScr:
 		return "DuelAnte"
+	case DuelScr:
+		return "Duel"
 	case DuelWinScr:
 		return "DuelWin"
 	case DuelLoseScr:

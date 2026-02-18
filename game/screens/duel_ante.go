@@ -193,41 +193,7 @@ func hCenter(dest, src *ebiten.Image) float64 {
 }
 
 func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, error) {
-	outcome := rand.Float64()
-
-	s.lvl.RemoveEnemyAt(s.idx)
-	if outcome > 0.25 {
-		if s.player.ActiveQuest != nil && 
-			s.player.ActiveQuest.Type == domain.QuestTypeDefeatEnemy && 
-			s.player.ActiveQuest.EnemyName == s.enemyName {
-			s.player.ActiveQuest.IsCompleted = true
-		}
-
-		enemyLevel := s.enemy.Character.Level
-		cardCount := getRewardCardCount(enemyLevel)
-		enemyDeck := s.enemy.Character.GetActiveDeck()
-
-		wonCards := selectRewardCards(enemyDeck, cardCount)
-
-		for _, card := range wonCards {
-			if card != nil {
-				s.player.CardCollection.AddCard(card, 1)
-			}
-		}
-
-		if rand.Float64() < 0.1 {
-			availableColors := domain.GetAllAmuletColors()
-			randomColor := availableColors[rand.Intn(len(availableColors))]
-			amulet := domain.NewAmulet(randomColor)
-			s.player.AddAmulet(amulet)
-		}
-
-		s.wonCards = wonCards
-		return screenui.DuelWinScr, NewWinDuelScreen(s.WonCards()), nil
-	} else {
-		err := s.player.RemoveCard(s.playerAnteCard)
-		return screenui.DuelLoseScr, NewDuelLoseScreen(s.LostCards()), err
-	}
+	return screenui.DuelScr, NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, s.playerAnteCard), nil
 }
 
 func (s *DuelAnteScreen) bribe() (screenui.ScreenName, screenui.Screen, error) {
