@@ -63,7 +63,7 @@ func (g *Game) Update() error {
 	}
 
 	// Generate layout with seed 100 for debugging
-	seeds := []int64{100}
+	seeds := []int64{120}
 	for _, seed := range seeds {
 		fmt.Printf("Generating layout with seed %d...\n", seed)
 		g.grid.createRandomPattern(seed)
@@ -261,6 +261,7 @@ func (g *TileGrid) renderWithTransitions(landtile *world.SpriteSheet, cstline1, 
 	}
 
 	// Pass 2: Draw Transitions
+	tileMap := g.toTileMap()
 	for y := 0; y < g.height; y++ {
 		for x := 0; x < g.width; x++ {
 			if g.tiles[y][x] == Plains {
@@ -271,7 +272,7 @@ func (g *TileGrid) renderWithTransitions(landtile *world.SpriteSheet, cstline1, 
 					pixelX += tileWidth / 2
 				}
 
-				transitions := g.getEdgeTransitions(x, y, cstMap, cstline1)
+				transitions := g.getEdgeTransitions(x, y, cstMap, cstline1, tileMap)
 				for _, pt := range transitions {
 					if pt.sprite != nil {
 						if x == 0 && y == 1 {
@@ -292,17 +293,23 @@ func (g *TileGrid) renderWithTransitions(landtile *world.SpriteSheet, cstline1, 
 	return outputImg
 }
 
-func (g *TileGrid) getNeighbors(x, y int) [8]int {
-	neighbors := [8]int{-1, -1, -1, -1, -1, -1, -1, -1}
-	dirs := world.Directions[y%2]
-	for i := 0; i < 8; i++ {
-		nx := x + dirs[i].X
-		ny := y + dirs[i].Y
-		if nx >= 0 && nx < g.width && ny >= 0 && ny < g.height {
-			neighbors[i] = g.tiles[ny][nx]
+func (g *TileGrid) toTileMap() *world.TileMap {
+	tm := world.NewTileMap(g.width, g.height)
+	for y := 0; y < g.height; y++ {
+		for x := 0; x < g.width; x++ {
+			switch g.tiles[y][x] {
+			case Water:
+				tm.Set(x, y, world.TileWater)
+			case Plains:
+				tm.Set(x, y, world.TilePlains)
+			case Forest:
+				tm.Set(x, y, world.TileForest)
+			default:
+				tm.Set(x, y, world.TilePlains)
+			}
 		}
 	}
-	return neighbors
+	return tm
 }
 
 type TransitionSprite struct {
@@ -318,28 +325,18 @@ type PositionedTransition struct {
 	col     int
 }
 
-type EdgeDef struct {
-	Name        string
-	NeighborIdx int
-	StartIdx    int
-	EndIdx      int
-	PrevEdge    string
-	NextEdge    string
-}
+const (
+	edgeNW = "3->0"
+	edgeNE = "0->1"
+	edgeSE = "1->2"
+	edgeSW = "2->3"
+)
 
-// getEdgeTransitions implements the Autotiling Algorithm using "Open/Closed" logic.
-// Logic adapted from cmd/autotiling/main.go.
-func (g *TileGrid) getEdgeTransitions(x, y int, cstMap *CoastlineMap, cstline1 [][]*ebiten.Image) []PositionedTransition {
-	neighbors := g.getNeighbors(x, y)
-	transitions := []PositionedTransition{}
-
-	// Indices based on world.Directions: N=0, S=1, E=2, W=3, NE=4, NW=5, SE=6, SW=7
-	edges := []EdgeDef{
-		{"3->0", 5, 3, 0, "2->3", "0->1"}, // NW Edge: Neighbor=NW(5), Start=W(3), End=N(0)
-		{"0->1", 4, 0, 2, "3->0", "1->2"}, // NE Edge: Neighbor=NE(4), Start=N(0), End=E(2)
-		{"1->2", 6, 2, 1, "0->1", "2->3"}, // SE Edge: Neighbor=SE(6), Start=E(2), End=S(1)
-		{"2->3", 7, 1, 3, "1->2", "3->0"}, // SW Edge: Neighbor=SW(7), Start=S(1), End=W(3)
-	}
+// getEdgeTransitions uses world.GetTransitions to determine open/closed edges,
+// then finds sprite pairs for each transition.
+func (g *TileGrid) getEdgeTransitions(x, y int, cstMap *CoastlineMap, cstline1 [][]*ebiten.Image, tileMap *world.TileMap) []PositionedTransition {
+	results := []PositionedTransition{}
+	autoTransitions := world.GetTransitions(image.Point{x, y}, tileMap)
 
 	tileCornerPositions := map[int][2]int{
 		0: {103, 0},   // Top
@@ -349,30 +346,38 @@ func (g *TileGrid) getEdgeTransitions(x, y int, cstMap *CoastlineMap, cstline1 [
 	}
 	transitionCorner0 := [2]int{51, 0}
 
-	for _, e := range edges {
-		// 1. Activation Check (Diagonal Neighbor)
-		if neighbors[e.NeighborIdx] != Water {
-			continue
-		}
+	for _, t := range autoTransitions {
+		var edgeName, prevEdge, nextEdge string
+		var openStart, openEnd bool
 
-		// 2. Open/Closed Check (Orthogonal Neighbors)
-		openStart := neighbors[e.StartIdx] == Water
-		openEnd := neighbors[e.EndIdx] == Water
+		switch t.Side {
+		case "NW":
+			edgeName, prevEdge, nextEdge = edgeNW, edgeSW, edgeNE
+			openStart, openEnd = t.Open2, t.Open1
+		case "NE":
+			edgeName, prevEdge, nextEdge = edgeNE, edgeNW, edgeSE
+			openStart, openEnd = t.Open1, t.Open2
+		case "SE":
+			edgeName, prevEdge, nextEdge = edgeSE, edgeNE, edgeSW
+			openStart, openEnd = t.Open2, t.Open1
+		case "SW":
+			edgeName, prevEdge, nextEdge = edgeSW, edgeSE, edgeNW
+			openStart, openEnd = t.Open1, t.Open2
+		}
 
 		if x == 0 && y == 1 {
-			fmt.Printf("DEBUG (0,1) Edge %s: Active (Neighbor %d is Water). Start(Idx %d)=%v, End(Idx %d)=%v\n",
-				e.Name, e.NeighborIdx, e.StartIdx, openStart, e.EndIdx, openEnd)
+			fmt.Printf("DEBUG (0,1) Edge %s: openStart=%v, openEnd=%v\n",
+				edgeName, openStart, openEnd)
 		}
 
-		// 3. Find Pair
-		transitionPair := g.findSmartTransitionPair(e.Name, openStart, openEnd, e.PrevEdge, e.NextEdge, cstMap)
+		transitionPair := g.findSmartTransitionPair(edgeName, openStart, openEnd, prevEdge, nextEdge, cstMap)
 
 		if x == 0 && y == 1 && len(transitionPair) > 0 {
-			fmt.Printf("DEBUG (0,1) Edge %s: Selected Pair %v\n", e.Name, transitionPair)
+			fmt.Printf("DEBUG (0,1) Edge %s: Selected Pair %v\n", edgeName, transitionPair)
 		}
 
 		if len(transitionPair) > 0 {
-			parts := strings.Split(e.Name, "->")
+			parts := strings.Split(edgeName, "->")
 			if len(parts) == 2 {
 				c1, _ := strconv.Atoi(parts[0])
 				c2, _ := strconv.Atoi(parts[1])
@@ -397,7 +402,7 @@ func (g *TileGrid) getEdgeTransitions(x, y int, cstMap *CoastlineMap, cstline1 [
 				for i, ts := range transitionPair {
 					sprite := g.getSpriteFromRowCol(ts.row, ts.col, cstline1, Water)
 					if sprite != nil {
-						transitions = append(transitions, PositionedTransition{
+						results = append(results, PositionedTransition{
 							sprite:  sprite,
 							offsetX: offsets[i][0],
 							offsetY: offsets[i][1],
@@ -410,7 +415,7 @@ func (g *TileGrid) getEdgeTransitions(x, y int, cstMap *CoastlineMap, cstline1 [
 		}
 	}
 
-	return transitions
+	return results
 }
 
 type CandidatePair struct {
