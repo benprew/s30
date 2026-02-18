@@ -1,3 +1,13 @@
+* Loading cards from Scryfall
+Note: Moving to getting card images from scryfall.com instead of storing them in the repo: see https://claude.ai/chat/f1e34184-a73c-4598-9b3e-2f81ad49658d.
+
+When the game starts, in a separate go func, start loading card images for the players deck and enemy decks. Preallocate the space needed for all these cards.
+
+Instead of loading cards from cardimages.zip, use the PngURL (in assets/card_info/scryfall_cards.json.zst, see utils/download_card_images.py for reading PngURL) to fetch card images from scryfall.com.
+
+Cache the images once fetched (like it works now). This fetching can be done for local and web builds.
+
+If a card image hasn't been downloaded yet and needs to be shown on the screen, use the blankcard image (current functionality).
 * Polishing ideas
   Critical
 
