@@ -4,16 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"net/http"
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/ui/imageutil"
-	"github.com/benprew/s30/game/utils"
-	"github.com/benprew/s30/game/utils/httpzip"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -91,6 +86,7 @@ type Card struct {
 	CardName string
 	CardSet
 	ScryfallID        string // Used to get images
+	PngURL            string
 	OracleID          string
 	ManaCost          string   // ex. {3}{G}{R}
 	ManaProduction    []string // This only has the possible colors of production
@@ -117,10 +113,6 @@ type Card struct {
 
 // Cards sorted by name
 var CARDS = loadCardsWithAbilities()
-var CARD_IMAGES map[*Card]*ebiten.Image
-var remoteCardArchive *httpzip.Reader
-var initRemoteCardArchiveOnce sync.Once
-var remoteCardArchiveErr error
 
 func loadCardsWithAbilities() []*Card {
 	cards := LoadCardDatabase(bytes.NewReader(assets.Cards_json))
@@ -181,38 +173,15 @@ func FindAllCardsByName(name string) []*Card {
 }
 
 func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
-	if CARD_IMAGES == nil {
-		CARD_IMAGES = make(map[*Card]*ebiten.Image, 0)
-	}
+	var fullImg *ebiten.Image
 
-	fullImg := CARD_IMAGES[card]
-	if fullImg == nil {
-		fmt.Println("Loading uncached card")
-		filename := card.Filename()
-		var data []byte
-		var err error
-
-		if assets.CardImages_zip == nil {
-			initRemoteCardArchiveOnce.Do(func() {
-				remoteCardArchive, remoteCardArchiveErr = httpzip.NewReader("https://throwingbones.com/ben/s30/cardimages.zip", http.DefaultClient)
-			})
-			if remoteCardArchiveErr != nil {
-				return nil, remoteCardArchiveErr
-			}
-			data, err = remoteCardArchive.ReadFile(filename)
-		} else {
-			data, err = utils.ReadFromEmbeddedZip(assets.CardImages_zip, filename)
+	if cached, ok := cardImages.Load(card.OracleID); ok {
+		fullImg = cached.(*ebiten.Image)
+	} else {
+		if _, alreadyFetching := fetchingSet.LoadOrStore(card.OracleID, true); !alreadyFetching {
+			go fetchAndCacheCardImage(card)
 		}
-
-		if err != nil {
-			data = assets.CardBlank_png
-			fmt.Printf("WARN: Unable to load card image for: %s, using blank\n", filename)
-		}
-		fullImg, err = imageutil.LoadImage(data)
-		if err != nil {
-			return nil, err
-		}
-		CARD_IMAGES[card] = fullImg
+		fullImg = blankCard()
 	}
 
 	if view == CardViewArtOnly {
@@ -223,14 +192,6 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 	}
 
 	return fullImg, nil
-}
-
-func (c *Card) Filename() string {
-	res := "200"
-	// for art only images
-	// res := "236x"
-	fn := fmt.Sprintf("%s-%s-%s-%s.png", c.SetID, c.CollectorNo, res, sanitizeFilename(c.CardName))
-	return fn
 }
 
 func (c *Card) SalePrice(city *City) int {

@@ -38,6 +38,7 @@ type CardJSON struct {
 	Watermark         string
 	Artist            string
 	PriceUSD          string
+	PngURL            string
 	VintageRestricted bool
 }
 
@@ -181,6 +182,7 @@ func (cj *CardJSON) ToCard() *Card {
 			CollectorNo: cj.CollectorNo,
 		},
 		ScryfallID:        cj.ScryfallID,
+		PngURL:            cj.PngURL,
 		OracleID:          cj.OracleID,
 		CardName:          cj.CardName,
 		ManaCost:          cj.ManaCost,

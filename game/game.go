@@ -79,6 +79,8 @@ func NewGame() (*Game, error) {
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
 
+	go domain.PreloadCardImages(domain.CollectPriorityCards(player))
+
 	fmt.Printf("NewGame execution time: %s\n", time.Since(startTime))
 	return g, err
 }
@@ -231,6 +233,8 @@ func LoadSavedGame(savePath string) (*Game, error) {
 	}
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
+
+	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
 
 	return g, nil
 }
