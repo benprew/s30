@@ -6,3 +6,4 @@ assets/art/carddata/*
 .claude
 *.zip
 __pycache__/
+scryfall_cards.json
