@@ -27,30 +27,33 @@ var phaseNames = []core.Phase{
 	core.PhaseEnd,
 }
 
+type duelPlayer struct {
+	core         *core.Player
+	name         string
+	boardBg      *ebiten.Image
+	handBg       *ebiten.Image
+	graveyardImg *ebiten.Image
+}
+
 type DuelScreen struct {
 	player *domain.Player
 	enemy  *domain.Enemy
 	lvl    *world.Level
 	idx    int
 
-	gameState    *core.GameState
-	corePlayer   *core.Player
-	coreOpponent *core.Player
-	gameDone     chan struct{}
+	gameState *core.GameState
+	self      *duelPlayer
+	opponent  *duelPlayer
+	gameDone  chan struct{}
 
 	phaseDefaultBg  *ebiten.Image
 	phaseActiveImgs []*ebiten.Image
-	playerBoardBg *ebiten.Image
-	opponentBg    *ebiten.Image
-	manaPoolBg    *ebiten.Image
-	handBg        *ebiten.Image
-	graveyardImg  *ebiten.Image
-	bigCardBg     *ebiten.Image
-	spellChainBg  *ebiten.Image
-	messageBg     *ebiten.Image
+	bigCardBg       *ebiten.Image
+	spellChainBg    *ebiten.Image
+	messageBg       *ebiten.Image
+	manaPoolBg      *ebiten.Image
 
-	manaSymbols []*ebiten.Image // 5 mana symbols (B, U, R, G, W)
-	doneBtn     [3]*ebiten.Image
+	doneBtn [3]*ebiten.Image
 
 	selectedCardIdx int
 	cardPreviewImg  *ebiten.Image
@@ -78,7 +81,7 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 func (s *DuelScreen) initGameState() {
 	entityID := core.EntityID(1)
 
-	s.corePlayer = &core.Player{
+	corePlayer := &core.Player{
 		ID:          1,
 		LifeTotal:   20,
 		ManaPool:    core.ManaPool{},
@@ -96,16 +99,16 @@ func (s *DuelScreen) initGameState() {
 	playerDeck := s.player.GetActiveDeck()
 	for card, count := range playerDeck {
 		for range count {
-			coreCard := core.NewCardFromDomain(card, entityID, s.corePlayer)
-			s.corePlayer.Library = append(s.corePlayer.Library, coreCard)
+			coreCard := core.NewCardFromDomain(card, entityID, corePlayer)
+			corePlayer.Library = append(corePlayer.Library, coreCard)
 			entityID++
 		}
 	}
-	rand.Shuffle(len(s.corePlayer.Library), func(i, j int) {
-		s.corePlayer.Library[i], s.corePlayer.Library[j] = s.corePlayer.Library[j], s.corePlayer.Library[i]
+	rand.Shuffle(len(corePlayer.Library), func(i, j int) {
+		corePlayer.Library[i], corePlayer.Library[j] = corePlayer.Library[j], corePlayer.Library[i]
 	})
 
-	s.coreOpponent = &core.Player{
+	coreOpponent := &core.Player{
 		ID:          2,
 		LifeTotal:   s.enemy.Character.CalculateLifeFromLevel(),
 		ManaPool:    core.ManaPool{},
@@ -123,16 +126,19 @@ func (s *DuelScreen) initGameState() {
 	enemyDeck := s.enemy.Character.GetActiveDeck()
 	for card, count := range enemyDeck {
 		for range count {
-			coreCard := core.NewCardFromDomain(card, entityID, s.coreOpponent)
-			s.coreOpponent.Library = append(s.coreOpponent.Library, coreCard)
+			coreCard := core.NewCardFromDomain(card, entityID, coreOpponent)
+			coreOpponent.Library = append(coreOpponent.Library, coreCard)
 			entityID++
 		}
 	}
-	rand.Shuffle(len(s.coreOpponent.Library), func(i, j int) {
-		s.coreOpponent.Library[i], s.coreOpponent.Library[j] = s.coreOpponent.Library[j], s.coreOpponent.Library[i]
+	rand.Shuffle(len(coreOpponent.Library), func(i, j int) {
+		coreOpponent.Library[i], coreOpponent.Library[j] = coreOpponent.Library[j], coreOpponent.Library[i]
 	})
 
-	s.gameState = core.NewGame([]*core.Player{s.corePlayer, s.coreOpponent})
+	s.self = &duelPlayer{core: corePlayer, name: "You"}
+	s.opponent = &duelPlayer{core: coreOpponent, name: s.enemy.Character.Name}
+
+	s.gameState = core.NewGame([]*core.Player{corePlayer, coreOpponent})
 	s.gameState.StartGame()
 
 	s.gameDone = make(chan struct{})
@@ -152,11 +158,13 @@ func (s *DuelScreen) loadImages() {
 			s.phaseActiveImgs[r] = phaseImg.SubImage(image.Rect(41, r*42, 82, (r+1)*42)).(*ebiten.Image)
 		}
 	}
-	s.playerBoardBg = loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", playerColor))
-	s.opponentBg = loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", enemyColor))
+	s.self.boardBg = loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", playerColor))
+	s.self.handBg = loadDuelImage(fmt.Sprintf("Hand_%s.pic.png", playerColor))
+	s.self.graveyardImg = loadDuelImage(fmt.Sprintf("Grave_%s.pic.png", playerColor))
+	s.opponent.boardBg = loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", enemyColor))
+	s.opponent.graveyardImg = loadDuelImage(fmt.Sprintf("Grave_%s.pic.png", enemyColor))
+
 	s.manaPoolBg = loadDuelImage("Winbk_Manapool.pic.png")
-	s.handBg = loadDuelImage(fmt.Sprintf("Hand_%s.pic.png", playerColor))
-	s.graveyardImg = loadDuelImage(fmt.Sprintf("Grave_%s.pic.png", playerColor))
 	s.bigCardBg = loadDuelImage("Winbk_Bigcard.pic.png")
 	s.spellChainBg = loadDuelImage("Winbk_Spellchain.pic.png")
 	s.messageBg = loadDuelImage("Winbk_Telluser.pic.png")
@@ -165,10 +173,6 @@ func (s *DuelScreen) loadImages() {
 	if err != nil {
 		fmt.Printf("Error loading Statbutt sprite sheet: %v\n", err)
 		return
-	}
-	s.manaSymbols = make([]*ebiten.Image, 5)
-	for i := range 5 {
-		s.manaSymbols[i] = imageutil.ScaleImage(statbutt[0][i], 0.35)
 	}
 	s.doneBtn = [3]*ebiten.Image{statbutt[0][11], statbutt[0][12], statbutt[0][13]}
 }
@@ -195,11 +199,11 @@ func colorNameForDeck(primaryColor string) string {
 }
 
 const (
-	duelPhaseX      = 0
-	duelBoardX      = 82
-	duelBoardW      = 942
-	duelMsgY        = 370
-	duelPlayerBoardY = 405
+	duelPhaseX         = 0
+	duelBoardX         = 303
+	duelBoardW         = 721
+	duelMsgY           = 370
+	duelPlayerBoardY   = 381
 	duelOpponentBoardY = 0
 )
 
@@ -217,7 +221,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if mx >= doneX && mx < doneX+doneBounds.Dx() && my >= doneY && my < doneY+doneBounds.Dy() {
 			select {
-			case s.corePlayer.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
+			case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
 			default:
 			}
 		}
@@ -227,18 +231,18 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	handStartY := duelPlayerBoardY + 300
 	if my >= handStartY && mx >= duelBoardX+20 && mx < duelBoardX+400 {
 		cardIdx := (my - handStartY) / 20
-		if cardIdx >= 0 && cardIdx < len(s.corePlayer.Hand) {
+		if cardIdx >= 0 && cardIdx < len(s.self.core.Hand) {
 			s.selectedCardIdx = cardIdx
-			s.loadCardPreview(s.corePlayer.Hand[cardIdx])
+			s.loadCardPreview(s.self.core.Hand[cardIdx])
 		}
 	}
 
 	// Check win/loss
 	s.gameState.CheckWinConditions()
-	if s.coreOpponent.HasLost {
+	if s.opponent.core.HasLost {
 		return s.handleWin()
 	}
-	if s.corePlayer.HasLost {
+	if s.self.core.HasLost {
 		return s.handleLoss()
 	}
 
@@ -255,18 +259,18 @@ func (s *DuelScreen) runOpponentAI() {
 		select {
 		case <-s.gameDone:
 			return
-		case <-s.coreOpponent.WaitingChan:
+		case <-s.opponent.core.WaitingChan:
 		}
 
-		if s.coreOpponent.HasLost || s.corePlayer.HasLost {
+		if s.opponent.core.HasLost || s.self.core.HasLost {
 			return
 		}
 
-		actions := s.gameState.AvailableActions(s.coreOpponent)
+		actions := s.gameState.AvailableActions(s.opponent.core)
 		action := chooseAIAction(actions)
 
 		select {
-		case s.coreOpponent.InputChan <- action:
+		case s.opponent.core.InputChan <- action:
 		case <-s.gameDone:
 			return
 		}
@@ -360,9 +364,9 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.Fill(color.RGBA{30, 30, 30, 255})
 
 	s.drawPhasePanel(screen)
-	s.drawOpponentBoard(screen)
+	s.drawBoard(screen, s.opponent, duelOpponentBoardY, duelMsgY)
+	s.drawBoard(screen, s.self, duelPlayerBoardY, H-duelPlayerBoardY)
 	s.drawMessageBar(screen)
-	s.drawPlayerBoard(screen, H)
 	s.drawSidebar(screen, W, H)
 	s.drawCardPreview(screen, H)
 }
@@ -372,21 +376,23 @@ func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
 		return
 	}
 
+	const phaseX = 262
+
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(0, 4)
+	opts.GeoM.Translate(phaseX, 4)
 	screen.DrawImage(s.phaseDefaultBg, opts)
 
 	active := s.gameState.Players[s.gameState.ActivePlayer]
 	idx := phaseIndex(active.Turn.Phase)
 	var row int
-	if active == s.corePlayer {
+	if active == s.self.core {
 		row = 10 + idx
 	} else {
 		row = idx
 	}
 	if s.phaseActiveImgs[row] != nil {
 		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(0, float64(4+row*42))
+		opts.GeoM.Translate(phaseX, float64(4+row*42))
 		screen.DrawImage(s.phaseActiveImgs[row], opts)
 	}
 }
@@ -400,34 +406,36 @@ func phaseIndex(phase core.Phase) int {
 	return 0
 }
 
-func (s *DuelScreen) drawOpponentBoard(screen *ebiten.Image) {
-	if s.opponentBg != nil {
+func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boardH int) {
+	if dp.boardBg != nil {
 		opts := &ebiten.DrawImageOptions{}
-		bgW := float64(s.opponentBg.Bounds().Dx())
-		bgH := float64(s.opponentBg.Bounds().Dy())
+		bgW := float64(dp.boardBg.Bounds().Dx())
+		bgH := float64(dp.boardBg.Bounds().Dy())
 		scaleX := float64(duelBoardW) / bgW
-		scaleY := float64(duelMsgY) / bgH
+		scaleY := float64(boardH) / bgH
 		opts.GeoM.Scale(scaleX, scaleY)
-		opts.GeoM.Translate(float64(duelBoardX), float64(duelOpponentBoardY))
-		screen.DrawImage(s.opponentBg, opts)
+		opts.GeoM.Translate(float64(duelBoardX), float64(startY))
+		screen.DrawImage(dp.boardBg, opts)
 	}
 
-	// Opponent life and info
-	lifeText := fmt.Sprintf("Life: %d", s.coreOpponent.LifeTotal)
-	txt := elements.NewText(16, s.enemy.Character.Name, duelBoardX+10, 10)
+	lifeText := fmt.Sprintf("Life: %d", dp.core.LifeTotal)
+	txt := elements.NewText(16, dp.name, duelBoardX+10, startY+10)
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	txt = elements.NewText(14, lifeText, duelBoardX+10, 32)
+	txt = elements.NewText(14, lifeText, duelBoardX+10, startY+32)
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	handText := fmt.Sprintf("Hand: %d  Library: %d  Graveyard: %d",
-		len(s.coreOpponent.Hand), len(s.coreOpponent.Library), len(s.coreOpponent.Graveyard))
-	txt = elements.NewText(12, handText, duelBoardX+10, 52)
+	infoText := fmt.Sprintf("Hand: %d  Library: %d  Graveyard: %d",
+		len(dp.core.Hand), len(dp.core.Library), len(dp.core.Graveyard))
+	txt = elements.NewText(12, infoText, duelBoardX+10, startY+52)
 	txt.Color = color.RGBA{200, 200, 200, 255}
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	// Opponent battlefield
-	s.drawBattlefield(screen, s.coreOpponent, duelBoardX+20, 80)
+	s.drawBattlefield(screen, dp.core, duelBoardX+20, startY+80)
+
+	if dp == s.self {
+		s.drawHand(screen, duelBoardX+20, startY+200)
+	}
 }
 
 func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
@@ -446,43 +454,9 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 	}
 
 	// Phase description text
-	phaseDesc := phaseDescription(s.corePlayer.Turn.Phase)
+	phaseDesc := phaseDescription(s.self.core.Turn.Phase)
 	txt := elements.NewText(14, phaseDesc, duelBoardX+60, duelMsgY+12)
 	txt.Color = color.RGBA{255, 255, 255, 255}
-	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-}
-
-func (s *DuelScreen) drawPlayerBoard(screen *ebiten.Image, H int) {
-	if s.playerBoardBg != nil {
-		opts := &ebiten.DrawImageOptions{}
-		bgW := float64(s.playerBoardBg.Bounds().Dx())
-		bgH := float64(s.playerBoardBg.Bounds().Dy())
-		boardH := float64(H - duelPlayerBoardY)
-		scaleX := float64(duelBoardW) / bgW
-		scaleY := boardH / bgH
-		opts.GeoM.Scale(scaleX, scaleY)
-		opts.GeoM.Translate(float64(duelBoardX), float64(duelPlayerBoardY))
-		screen.DrawImage(s.playerBoardBg, opts)
-	}
-
-	// Player life
-	lifeText := fmt.Sprintf("Life: %d", s.corePlayer.LifeTotal)
-	txt := elements.NewText(16, "You", duelBoardX+10, duelPlayerBoardY+10)
-	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-
-	txt = elements.NewText(14, lifeText, duelBoardX+10, duelPlayerBoardY+32)
-	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-
-	// Player battlefield
-	s.drawBattlefield(screen, s.corePlayer, duelBoardX+20, duelPlayerBoardY+60)
-
-	// Player hand
-	s.drawHand(screen, duelBoardX+20, duelPlayerBoardY+200)
-
-	// Library / Graveyard counts
-	infoText := fmt.Sprintf("Library: %d  Graveyard: %d", len(s.corePlayer.Library), len(s.corePlayer.Graveyard))
-	txt = elements.NewText(12, infoText, duelBoardX+10, duelPlayerBoardY+52)
-	txt.Color = color.RGBA{200, 200, 200, 255}
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
@@ -509,8 +483,9 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, player *core.Player, 
 	}
 }
 
+// only draw players hand
 func (s *DuelScreen) drawHand(screen *ebiten.Image, startX, startY int) {
-	for i, card := range s.corePlayer.Hand {
+	for i, card := range s.self.core.Hand {
 		y := startY + i*20
 		displayName := card.Name()
 		if card.ManaCost != "" {
@@ -525,41 +500,47 @@ func (s *DuelScreen) drawHand(screen *ebiten.Image, startX, startY int) {
 	}
 }
 
-func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
+func drawManaPool(screen, manaPoolBg *ebiten.Image, player *duelPlayer, manaPoolY int) {
+	const manaPoolX = 132
+
 	// Mana pool display
-	if s.manaPoolBg != nil {
-		opts := &ebiten.DrawImageOptions{}
-		poolScale := 0.6
-		opts.GeoM.Scale(poolScale, poolScale)
-		opts.GeoM.Translate(float64(duelBoardX+duelBoardW-90), float64(duelPlayerBoardY+10))
-		screen.DrawImage(s.manaPoolBg, opts)
-	}
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(manaPoolX, float64(manaPoolY))
+	screen.DrawImage(manaPoolBg, opts)
 
-	// Mana symbols with counts
-	manaColors := []rune{'B', 'U', 'R', 'G', 'W'}
-	for i, sym := range s.manaSymbols {
-		if sym == nil {
-			continue
-		}
-		x := duelBoardX + duelBoardW - 85
-		y := duelPlayerBoardY + 30 + i*22
-
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(x), float64(y))
-		screen.DrawImage(sym, opts)
-
-		count := countManaOfColor(s.corePlayer.ManaPool, manaColors[i])
-		countTxt := elements.NewText(10, fmt.Sprintf("%d", count), x+20, y+2)
+	manaColors := []rune{'B', 'U', 'G', 'R', 'W', 'C'}
+	for i := range manaColors {
+		x := manaPoolX + 50
+		y := (i * 30) + 10
+		count := countManaOfColor(player.core.ManaPool, manaColors[i])
+		countTxt := elements.NewText(24, fmt.Sprintf("%d", count), x, manaPoolY+y)
 		countTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	}
+}
 
+func drawLife(screen *ebiten.Image, player *duelPlayer, Y int) {
+	countTxt := elements.NewText(64, fmt.Sprintf("%d", player.core.LifeTotal), 15, Y)
+	countTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+}
+
+func drawGraveyard(screen *ebiten.Image, player *duelPlayer, Y float64) {
 	// Graveyard (in left sidebar, below phases)
-	if s.graveyardImg != nil {
+	if player.graveyardImg != nil {
 		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Scale(0.6, 0.6)
-		opts.GeoM.Translate(40, float64(H-70))
-		screen.DrawImage(s.graveyardImg, opts)
+		opts.GeoM.Translate(71, Y)
+		screen.DrawImage(player.graveyardImg, opts)
 	}
+}
+
+func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
+	drawManaPool(screen, s.manaPoolBg, s.opponent, 0)
+	drawManaPool(screen, s.manaPoolBg, s.self, 580)
+
+	drawGraveyard(screen, s.opponent, 94)
+	drawGraveyard(screen, s.self, 580)
+
+	drawLife(screen, s.opponent, 0)
+	drawLife(screen, s.self, 700)
 }
 
 func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
