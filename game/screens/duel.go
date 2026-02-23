@@ -32,6 +32,7 @@ type duelPlayer struct {
 	name         string
 	boardBg      *ebiten.Image
 	handBg       *ebiten.Image
+	lifeBg       *ebiten.Image
 	graveyardImg *ebiten.Image
 }
 
@@ -158,11 +159,15 @@ func (s *DuelScreen) loadImages() {
 			s.phaseActiveImgs[r] = phaseImg.SubImage(image.Rect(41, r*42, 82, (r+1)*42)).(*ebiten.Image)
 		}
 	}
-	s.self.boardBg = loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", playerColor))
+	s.self.boardBg = imageutil.ScaleImageInd(loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", playerColor)), 1.02, 1.01)
 	s.self.handBg = loadDuelImage(fmt.Sprintf("Hand_%s.pic.png", playerColor))
 	s.self.graveyardImg = loadDuelImage(fmt.Sprintf("Grave_%s.pic.png", playerColor))
-	s.opponent.boardBg = loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", enemyColor))
+	s.self.lifeBg = imageutil.ScaleImageInd(loadDuelImage(fmt.Sprintf("Life_%spict.pic.png", playerColor)), 1, 1.09)
+
+	s.opponent.boardBg = imageutil.ScaleImageInd(loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", enemyColor)), 1.02, 1.01)
+	s.opponent.handBg = loadDuelImage(fmt.Sprintf("Hand_%s.pic.png", enemyColor))
 	s.opponent.graveyardImg = loadDuelImage(fmt.Sprintf("Grave_%s.pic.png", enemyColor))
+	s.opponent.lifeBg = imageutil.ScaleImageInd(loadDuelImage(fmt.Sprintf("Life_%spict.pic.png", enemyColor)), 1, 1.09)
 
 	s.manaPoolBg = loadDuelImage("Winbk_Manapool.pic.png")
 	s.bigCardBg = loadDuelImage("Winbk_Bigcard.pic.png")
@@ -200,10 +205,10 @@ func colorNameForDeck(primaryColor string) string {
 
 const (
 	duelPhaseX         = 0
-	duelBoardX         = 303
+	duelBoardX         = 293
 	duelBoardW         = 721
 	duelMsgY           = 370
-	duelPlayerBoardY   = 381
+	duelPlayerBoardY   = 384
 	duelOpponentBoardY = 0
 )
 
@@ -376,7 +381,7 @@ func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
 		return
 	}
 
-	const phaseX = 262
+	const phaseX = 250
 
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(phaseX, 4)
@@ -409,11 +414,6 @@ func phaseIndex(phase core.Phase) int {
 func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boardH int) {
 	if dp.boardBg != nil {
 		opts := &ebiten.DrawImageOptions{}
-		bgW := float64(dp.boardBg.Bounds().Dx())
-		bgH := float64(dp.boardBg.Bounds().Dy())
-		scaleX := float64(duelBoardW) / bgW
-		scaleY := float64(boardH) / bgH
-		opts.GeoM.Scale(scaleX, scaleY)
 		opts.GeoM.Translate(float64(duelBoardX), float64(startY))
 		screen.DrawImage(dp.boardBg, opts)
 	}
@@ -501,7 +501,7 @@ func (s *DuelScreen) drawHand(screen *ebiten.Image, startX, startY int) {
 }
 
 func drawManaPool(screen, manaPoolBg *ebiten.Image, player *duelPlayer, manaPoolY int) {
-	const manaPoolX = 132
+	const manaPoolX = 120
 
 	// Mana pool display
 	opts := &ebiten.DrawImageOptions{}
@@ -519,6 +519,9 @@ func drawManaPool(screen, manaPoolBg *ebiten.Image, player *duelPlayer, manaPool
 }
 
 func drawLife(screen *ebiten.Image, player *duelPlayer, Y int) {
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(0, float64(Y))
+	screen.DrawImage(player.lifeBg, opts)
 	countTxt := elements.NewText(64, fmt.Sprintf("%d", player.core.LifeTotal), 15, Y)
 	countTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
@@ -527,7 +530,7 @@ func drawGraveyard(screen *ebiten.Image, player *duelPlayer, Y float64) {
 	// Graveyard (in left sidebar, below phases)
 	if player.graveyardImg != nil {
 		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(71, Y)
+		opts.GeoM.Translate(60, Y)
 		screen.DrawImage(player.graveyardImg, opts)
 	}
 }
@@ -540,7 +543,7 @@ func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
 	drawGraveyard(screen, s.self, 580)
 
 	drawLife(screen, s.opponent, 0)
-	drawLife(screen, s.self, 700)
+	drawLife(screen, s.self, 671)
 }
 
 func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
@@ -548,8 +551,8 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 		return
 	}
 	opts := &ebiten.DrawImageOptions{}
-	previewX := float64(duelBoardX + duelBoardW - 260)
-	previewY := float64(duelPlayerBoardY + 120)
+	previewX := float64(0)
+	previewY := float64(188)
 	opts.GeoM.Translate(previewX, previewY)
 	screen.DrawImage(s.cardPreviewImg, opts)
 }
