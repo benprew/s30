@@ -34,6 +34,7 @@ type duelPlayer struct {
 	handBg       *ebiten.Image
 	lifeBg       *ebiten.Image
 	graveyardImg *ebiten.Image
+	handX, handY int
 }
 
 type DuelScreen struct {
@@ -59,7 +60,18 @@ type DuelScreen struct {
 	selectedCardIdx int
 	cardPreviewImg  *ebiten.Image
 
+	draggingHand *duelPlayer
+	dragOffsetX  int
+	dragOffsetY  int
+
+	handCardCache map[core.EntityID]handCardEntry
+
 	anteCard *domain.Card
+}
+
+type handCardEntry struct {
+	source *ebiten.Image
+	scaled *ebiten.Image
 }
 
 func (s *DuelScreen) IsFramed() bool { return false }
@@ -72,10 +84,17 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		idx:             idx,
 		selectedCardIdx: -1,
 		anteCard:        anteCard,
+		handCardCache:   make(map[core.EntityID]handCardEntry),
 	}
 
 	s.initGameState()
 	s.loadImages()
+
+	s.self.handX = 860
+	s.self.handY = 430
+	s.opponent.handX = 860
+	s.opponent.handY = 310
+
 	return s
 }
 
@@ -219,6 +238,10 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 
 	mx, my := ebiten.CursorPosition()
 
+	if s.updateHandDrag(mx, my) {
+		return screenui.DuelScr, nil, nil
+	}
+
 	// Done button click (positioned at right of message bar)
 	doneBounds := s.doneBtn[0].Bounds()
 	doneX := duelBoardX + 2
@@ -232,13 +255,23 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 	}
 
-	// Hand card selection
-	handStartY := duelPlayerBoardY + 300
-	if my >= handStartY && mx >= duelBoardX+20 && mx < duelBoardX+400 {
-		cardIdx := (my - handStartY) / 20
-		if cardIdx >= 0 && cardIdx < len(s.self.core.Hand) {
-			s.selectedCardIdx = cardIdx
-			s.loadCardPreview(s.self.core.Hand[cardIdx])
+	// Hand card selection (click on card images below hand header)
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		handBgW, handBgH := 145, 51
+		if s.self.handBg != nil {
+			b := s.self.handBg.Bounds()
+			handBgW, handBgH = b.Dx(), b.Dy()
+		}
+		cardListY := s.self.handY + handBgH
+		if my >= cardListY && mx >= s.self.handX && mx < s.self.handX+handBgW {
+			cardIdx := (my - cardListY) / handCardOverlap
+			if cardIdx >= len(s.self.core.Hand) {
+				cardIdx = len(s.self.core.Hand) - 1
+			}
+			if cardIdx >= 0 && cardIdx < len(s.self.core.Hand) {
+				s.selectedCardIdx = cardIdx
+				s.loadCardPreview(s.self.core.Hand[cardIdx])
+			}
 		}
 	}
 
@@ -252,6 +285,65 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	return screenui.DuelScr, nil, nil
+}
+
+const handCardOverlap = 20
+
+func (s *DuelScreen) getHandCardImg(card *core.Card, targetW int) *ebiten.Image {
+	artImg, err := card.CardImage(domain.CardViewArtOnly)
+	if err != nil || artImg == nil {
+		return nil
+	}
+
+	entry, ok := s.handCardCache[card.ID]
+	if ok && entry.source == artImg {
+		return entry.scaled
+	}
+
+	scale := float64(targetW) / float64(artImg.Bounds().Dx())
+	scaled := imageutil.ScaleImage(artImg, scale)
+	s.handCardCache[card.ID] = handCardEntry{source: artImg, scaled: scaled}
+	return scaled
+}
+
+func (s *DuelScreen) handHeaderBounds(dp *duelPlayer) image.Rectangle {
+	w, h := 145, 51
+	if dp.handBg != nil {
+		b := dp.handBg.Bounds()
+		w, h = b.Dx(), b.Dy()
+	}
+	return image.Rect(dp.handX, dp.handY, dp.handX+w, dp.handY+h)
+}
+
+func (s *DuelScreen) updateHandDrag(mx, my int) bool {
+	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) && s.draggingHand != nil {
+		s.draggingHand = nil
+		return false
+	}
+
+	if s.draggingHand != nil {
+		s.draggingHand.handX = mx - s.dragOffsetX
+		s.draggingHand.handY = my - s.dragOffsetY
+		return true
+	}
+
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		pt := image.Pt(mx, my)
+		if pt.In(s.handHeaderBounds(s.self)) {
+			s.draggingHand = s.self
+			s.dragOffsetX = mx - s.self.handX
+			s.dragOffsetY = my - s.self.handY
+			return true
+		}
+		if pt.In(s.handHeaderBounds(s.opponent)) {
+			s.draggingHand = s.opponent
+			s.dragOffsetX = mx - s.opponent.handX
+			s.dragOffsetY = my - s.opponent.handY
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *DuelScreen) runGameLoop() {
@@ -373,6 +465,8 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawBoard(screen, s.self, duelPlayerBoardY, H-duelPlayerBoardY)
 	s.drawMessageBar(screen)
 	s.drawSidebar(screen, W, H)
+	s.drawHandPanel(screen, s.opponent)
+	s.drawHandPanel(screen, s.self)
 	s.drawCardPreview(screen, H)
 }
 
@@ -432,10 +526,6 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	s.drawBattlefield(screen, dp.core, duelBoardX+20, startY+80)
-
-	if dp == s.self {
-		s.drawHand(screen, duelBoardX+20, startY+200)
-	}
 }
 
 func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
@@ -483,20 +573,35 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, player *core.Player, 
 	}
 }
 
-// only draw players hand
-func (s *DuelScreen) drawHand(screen *ebiten.Image, startX, startY int) {
-	for i, card := range s.self.core.Hand {
-		y := startY + i*20
-		displayName := card.Name()
-		if card.ManaCost != "" {
-			displayName += " " + card.ManaCost
-		}
+func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer) {
+	if dp.handBg == nil {
+		return
+	}
 
-		txt := elements.NewText(12, displayName, startX, y)
-		if i == s.selectedCardIdx {
-			txt.Color = color.RGBA{255, 255, 100, 255}
+	handBgW := dp.handBg.Bounds().Dx()
+	handBgH := dp.handBg.Bounds().Dy()
+
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(dp.handX), float64(dp.handY))
+	screen.DrawImage(dp.handBg, opts)
+
+	label := fmt.Sprintf("Your Hand (%d)", len(dp.core.Hand))
+	txt := elements.NewText(16, label, dp.handX+15, dp.handY+13)
+	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+
+	if dp != s.self {
+		return
+	}
+
+	for i, card := range dp.core.Hand {
+		y := dp.handY + handBgH + i*handCardOverlap
+		cardImg := s.getHandCardImg(card, handBgW)
+		if cardImg == nil {
+			continue
 		}
-		txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		cardOpts := &ebiten.DrawImageOptions{}
+		cardOpts.GeoM.Translate(float64(dp.handX), float64(y))
+		screen.DrawImage(cardImg, cardOpts)
 	}
 }
 
