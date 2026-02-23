@@ -332,49 +332,46 @@ func (g *GameState) CombatPhase(player *Player) {
 		return
 	}
 
-	if len(g.Attackers) == 0 {
-		player.Turn.CombatStep = CombatStepEndOfCombat
-		return
-	}
-
-	player.Turn.CombatStep = CombatStepDeclareBlockers
-	for {
-		action := g.WaitForPlayerInput(opponent)
-		if action.Type == ActionPassPriority {
-			break
-		}
-		if action.Type == ActionDeclareBlocker {
-			if attacker, ok := action.Target.(*Card); ok {
-				if err := g.DeclareBlocker(action.Card, attacker); err != nil {
-					fmt.Printf("  error declaring blocker: %v\n", err)
-					continue
+	if len(g.Attackers) > 0 {
+		player.Turn.CombatStep = CombatStepDeclareBlockers
+		for {
+			action := g.WaitForPlayerInput(opponent)
+			if action.Type == ActionPassPriority {
+				break
+			}
+			if action.Type == ActionDeclareBlocker {
+				if attacker, ok := action.Target.(*Card); ok {
+					if err := g.DeclareBlocker(action.Card, attacker); err != nil {
+						fmt.Printf("  error declaring blocker: %v\n", err)
+						continue
+					}
+					fmt.Printf("  %s blocks %s with %s (%d/%d)\n", opponent.Name(), cardStr(attacker), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
 				}
-				fmt.Printf("  %s blocks %s with %s (%d/%d)\n", opponent.Name(), cardStr(attacker), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
 			}
 		}
-	}
-	g.RunStack()
-	if g.hasLoser() {
-		return
-	}
+		g.RunStack()
+		if g.hasLoser() {
+			return
+		}
 
-	if g.combatHasFirstStrike() {
-		player.Turn.CombatStep = CombatStepFirstStrikeDamage
-		g.ResolveFirstStrikeDamage()
+		if g.combatHasFirstStrike() {
+			player.Turn.CombatStep = CombatStepFirstStrikeDamage
+			g.ResolveFirstStrikeDamage()
+			g.CheckStateBasedActions()
+			g.RunStack()
+			if g.hasLoser() {
+				return
+			}
+		}
+
+		player.Turn.CombatStep = CombatStepCombatDamage
+		g.printCombatDamage(player, opponent)
+		g.ResolveCombatDamage()
 		g.CheckStateBasedActions()
 		g.RunStack()
 		if g.hasLoser() {
 			return
 		}
-	}
-
-	player.Turn.CombatStep = CombatStepCombatDamage
-	g.printCombatDamage(player, opponent)
-	g.ResolveCombatDamage()
-	g.CheckStateBasedActions()
-	g.RunStack()
-	if g.hasLoser() {
-		return
 	}
 
 	player.Turn.CombatStep = CombatStepEndOfCombat

@@ -536,6 +536,59 @@ func TestDeclareBlocker_FailsForTappedCreature(t *testing.T) {
 	}
 }
 
+func TestCombatPhase_NoAttackersSkipsBlockersAndDamage(t *testing.T) {
+	game, player, opponent := setupCombatTest()
+	game.ActivePlayer = 0
+	game.CurrentPlayer = 0
+
+	addCreatureToBattlefield(player, "Llanowar Elves", true, false)
+	addCreatureToBattlefield(opponent, "Llanowar Elves", true, false)
+
+	initialLife := opponent.LifeTotal
+
+	// Feed pass actions for each WaitForPlayerInput call:
+	// BeginningOfCombat RunStack: player pass, opponent pass
+	// DeclareAttackers loop: player pass (no attackers declared)
+	// DeclareAttackers RunStack: player pass, opponent pass
+	// EndOfCombat RunStack: player pass, opponent pass
+	// If blockers/damage were NOT skipped, the test would deadlock
+	// waiting for additional input.
+	passAll := func(p *Player, n int) <-chan struct{} {
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for range n {
+				<-p.WaitingChan
+				p.InputChan <- PlayerAction{Type: ActionPassPriority}
+			}
+		}()
+		return done
+	}
+	playerDone := passAll(player, 4)
+	opponentDone := passAll(opponent, 3)
+
+	game.CombatPhase(player)
+
+	<-playerDone
+	<-opponentDone
+
+	if opponent.LifeTotal != initialLife {
+		t.Errorf("Opponent should take no damage when no attackers declared, expected life %d, got %d", initialLife, opponent.LifeTotal)
+	}
+
+	if len(game.Attackers) != 0 {
+		t.Errorf("Attackers should be cleared after combat, got %d", len(game.Attackers))
+	}
+
+	if len(game.BlockerMap) != 0 {
+		t.Errorf("BlockerMap should be cleared after combat, got %d entries", len(game.BlockerMap))
+	}
+
+	if player.Turn.CombatStep != CombatStepNone {
+		t.Errorf("CombatStep should be None after combat, got %s", player.Turn.CombatStep)
+	}
+}
+
 func TestClearCombatState(t *testing.T) {
 	game, player, _ := setupCombatTest()
 
