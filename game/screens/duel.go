@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"math/rand"
 
 	"github.com/benprew/s30/assets"
@@ -60,11 +61,15 @@ type DuelScreen struct {
 	selectedCardIdx int
 	cardPreviewImg  *ebiten.Image
 
-	draggingHand *duelPlayer
-	dragOffsetX  int
-	dragOffsetY  int
+	dragTargetX *int
+	dragTargetY *int
+	dragOffsetX int
+	dragOffsetY int
 
-	handCardCache map[core.EntityID]handCardEntry
+	draggingCardID core.EntityID
+	cardPositions  map[core.EntityID]image.Point
+
+	cardImgCache map[cardImgKey]cardImgEntry
 
 	cardActions map[core.EntityID]core.PlayerAction
 
@@ -76,7 +81,12 @@ type DuelScreen struct {
 	anteCard *domain.Card
 }
 
-type handCardEntry struct {
+type cardImgKey struct {
+	id    core.EntityID
+	width int
+}
+
+type cardImgEntry struct {
 	source *ebiten.Image
 	scaled *ebiten.Image
 }
@@ -91,7 +101,8 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		idx:             idx,
 		selectedCardIdx: -1,
 		anteCard:        anteCard,
-		handCardCache:   make(map[core.EntityID]handCardEntry),
+		cardImgCache:    make(map[cardImgKey]cardImgEntry),
+		cardPositions:   make(map[core.EntityID]image.Point),
 	}
 
 	s.initGameState()
@@ -170,6 +181,7 @@ func (s *DuelScreen) initGameState() {
 
 	s.gameDone = make(chan struct{})
 	go s.runOpponentAI()
+	go s.runAutoPass()
 	go s.runGameLoop()
 }
 
@@ -248,7 +260,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 
 	mx, my := ebiten.CursorPosition()
 
-	if s.updateHandDrag(mx, my) {
+	if s.updateDrag(mx, my) {
 		return screenui.DuelScr, nil, nil
 	}
 
@@ -265,24 +277,8 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 	}
 
-	// Hand card selection (click on card images below hand header)
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		handBgW, handBgH := 145, 51
-		if s.self.handBg != nil {
-			b := s.self.handBg.Bounds()
-			handBgW, handBgH = b.Dx(), b.Dy()
-		}
-		cardListY := s.self.handY + handBgH
-		if my >= cardListY && mx >= s.self.handX && mx < s.self.handX+handBgW {
-			cardIdx := (my - cardListY) / handCardOverlap
-			if cardIdx >= len(s.self.core.Hand) {
-				cardIdx = len(s.self.core.Hand) - 1
-			}
-			if cardIdx >= 0 && cardIdx < len(s.self.core.Hand) {
-				s.selectedCardIdx = cardIdx
-				s.loadCardPreview(s.self.core.Hand[cardIdx])
-			}
-		}
+		s.handleCardClick(mx, my)
 	}
 
 	s.handleDoubleClick(mx, my)
@@ -299,7 +295,35 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	return screenui.DuelScr, nil, nil
 }
 
-const handCardOverlap = 20
+const (
+	handCardOverlap = 20
+	fieldCardW      = 100
+	fieldCardH      = 83
+)
+
+func (s *DuelScreen) getFieldCardPos(card *core.Card, dp *duelPlayer, idx int) image.Point {
+	if pos, ok := s.cardPositions[card.ID]; ok {
+		return pos
+	}
+	baseY := duelPlayerBoardY + 20
+	if dp == s.opponent {
+		baseY = duelOpponentBoardY + 70
+	}
+	pos := image.Pt(duelBoardX+30+idx*35, baseY)
+	s.cardPositions[card.ID] = pos
+	return pos
+}
+
+func (s *DuelScreen) fieldCardAtPoint(mx, my int, dp *duelPlayer) *core.Card {
+	for i := len(dp.core.Battlefield) - 1; i >= 0; i-- {
+		card := dp.core.Battlefield[i]
+		pos := s.getFieldCardPos(card, dp, i)
+		if mx >= pos.X && mx < pos.X+fieldCardW && my >= pos.Y && my < pos.Y+fieldCardH {
+			return card
+		}
+	}
+	return nil
+}
 
 func (s *DuelScreen) refreshCardActions() {
 	s.cardActions = make(map[core.EntityID]core.PlayerAction)
@@ -316,6 +340,55 @@ func (s *DuelScreen) refreshCardActions() {
 		if !card.Tapped && card.GetManaAbility() != nil {
 			s.cardActions[card.ID] = core.PlayerAction{Type: "ActivateMana", Card: card}
 		}
+	}
+}
+
+func (s *DuelScreen) panelCardW(dp *duelPlayer) int {
+	if dp.handBg != nil {
+		return dp.handBg.Bounds().Dx()
+	}
+	return 145
+}
+
+func (s *DuelScreen) panelCardH(dp *duelPlayer) int {
+	if dp.handBg != nil {
+		return dp.handBg.Bounds().Dy()
+	}
+	return 51
+}
+
+func (s *DuelScreen) cardIdxAtPoint(mx, my, panelX, panelY int, cards []*core.Card, dp *duelPlayer) int {
+	headerH := s.panelCardH(dp)
+	w := s.panelCardW(dp)
+	cardListY := panelY + headerH
+	if my < cardListY || mx < panelX || mx >= panelX+w {
+		return -1
+	}
+	idx := (my - cardListY) / handCardOverlap
+	if idx >= len(cards) {
+		idx = len(cards) - 1
+	}
+	if idx < 0 {
+		return -1
+	}
+	return idx
+}
+
+func (s *DuelScreen) handleCardClick(mx, my int) {
+	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
+		s.selectedCardIdx = idx
+		s.loadCardPreview(s.self.core.Hand[idx])
+		return
+	}
+
+	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
+		s.loadCardPreview(card)
+		return
+	}
+
+	if card := s.fieldCardAtPoint(mx, my, s.opponent); card != nil {
+		s.loadCardPreview(card)
+		return
 	}
 }
 
@@ -347,34 +420,14 @@ func (s *DuelScreen) handleDoubleClick(mx, my int) {
 	// Reset so a third click doesn't trigger again
 	s.lastClickFrame = 0
 
-	// Check hand cards
-	handBgW, handBgH := 145, 51
-	if s.self.handBg != nil {
-		b := s.self.handBg.Bounds()
-		handBgW, handBgH = b.Dx(), b.Dy()
-	}
-	cardListY := s.self.handY + handBgH
-	if my >= cardListY && mx >= s.self.handX && mx < s.self.handX+handBgW {
-		cardIdx := (my - cardListY) / handCardOverlap
-		if cardIdx >= len(s.self.core.Hand) {
-			cardIdx = len(s.self.core.Hand) - 1
-		}
-		if cardIdx >= 0 && cardIdx < len(s.self.core.Hand) {
-			s.performCardAction(s.self.core.Hand[cardIdx])
-			return
-		}
+	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
+		s.performCardAction(s.self.core.Hand[idx])
+		return
 	}
 
-	// Check battlefield cards
-	startX := duelBoardX + 20
-	startY := duelPlayerBoardY + 80
-	for i, card := range s.self.core.Battlefield {
-		cx := startX + (i%8)*100
-		cy := startY + (i/8)*25
-		if mx >= cx && mx < cx+100 && my >= cy && my < cy+25 {
-			s.performCardAction(card)
-			return
-		}
+	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
+		s.performCardAction(card)
+		return
 	}
 }
 
@@ -397,57 +450,88 @@ func (s *DuelScreen) performCardAction(card *core.Card) {
 	s.refreshCardActions()
 }
 
-func (s *DuelScreen) getHandCardImg(card *core.Card, targetW int) *ebiten.Image {
+func (s *DuelScreen) getCardArtImg(card *core.Card, targetW int) *ebiten.Image {
 	artImg, err := card.CardImage(domain.CardViewArtOnly)
 	if err != nil || artImg == nil {
 		return nil
 	}
 
-	entry, ok := s.handCardCache[card.ID]
+	key := cardImgKey{id: card.ID, width: targetW}
+	entry, ok := s.cardImgCache[key]
 	if ok && entry.source == artImg {
 		return entry.scaled
 	}
 
 	scale := float64(targetW) / float64(artImg.Bounds().Dx())
 	scaled := imageutil.ScaleImage(artImg, scale)
-	s.handCardCache[card.ID] = handCardEntry{source: artImg, scaled: scaled}
+	s.cardImgCache[key] = cardImgEntry{source: artImg, scaled: scaled}
 	return scaled
 }
 
-func (s *DuelScreen) handHeaderBounds(dp *duelPlayer) image.Rectangle {
+func (s *DuelScreen) panelHeaderBounds(dp *duelPlayer, px, py int) image.Rectangle {
 	w, h := 145, 51
 	if dp.handBg != nil {
 		b := dp.handBg.Bounds()
 		w, h = b.Dx(), b.Dy()
 	}
-	return image.Rect(dp.handX, dp.handY, dp.handX+w, dp.handY+h)
+	return image.Rect(px, py, px+w, py+h)
 }
 
-func (s *DuelScreen) updateHandDrag(mx, my int) bool {
-	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) && s.draggingHand != nil {
-		s.draggingHand = nil
+func (s *DuelScreen) updateDrag(mx, my int) bool {
+	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+		if s.dragTargetX != nil {
+			s.dragTargetX = nil
+			s.dragTargetY = nil
+		}
+		s.draggingCardID = 0
 		return false
 	}
 
-	if s.draggingHand != nil {
-		s.draggingHand.handX = mx - s.dragOffsetX
-		s.draggingHand.handY = my - s.dragOffsetY
+	if s.draggingCardID != 0 {
+		pos := s.cardPositions[s.draggingCardID]
+		pos.X = mx - s.dragOffsetX
+		pos.Y = my - s.dragOffsetY
+		s.cardPositions[s.draggingCardID] = pos
+		return true
+	}
+
+	if s.dragTargetX != nil {
+		*s.dragTargetX = mx - s.dragOffsetX
+		*s.dragTargetY = my - s.dragOffsetY
 		return true
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		// Check hand panel headers
 		pt := image.Pt(mx, my)
-		if pt.In(s.handHeaderBounds(s.self)) {
-			s.draggingHand = s.self
-			s.dragOffsetX = mx - s.self.handX
-			s.dragOffsetY = my - s.self.handY
-			return true
+		type dragTarget struct {
+			bounds image.Rectangle
+			x, y   *int
 		}
-		if pt.In(s.handHeaderBounds(s.opponent)) {
-			s.draggingHand = s.opponent
-			s.dragOffsetX = mx - s.opponent.handX
-			s.dragOffsetY = my - s.opponent.handY
-			return true
+		targets := []dragTarget{
+			{s.panelHeaderBounds(s.self, s.self.handX, s.self.handY), &s.self.handX, &s.self.handY},
+			{s.panelHeaderBounds(s.opponent, s.opponent.handX, s.opponent.handY), &s.opponent.handX, &s.opponent.handY},
+		}
+		for _, t := range targets {
+			if pt.In(t.bounds) {
+				s.dragTargetX = t.x
+				s.dragTargetY = t.y
+				s.dragOffsetX = mx - *t.x
+				s.dragOffsetY = my - *t.y
+				return true
+			}
+		}
+
+		// Check individual battlefield cards
+		for _, dp := range []*duelPlayer{s.self, s.opponent} {
+			if card := s.fieldCardAtPoint(mx, my, dp); card != nil {
+				pos := s.cardPositions[card.ID]
+				s.draggingCardID = card.ID
+				s.dragOffsetX = mx - pos.X
+				s.dragOffsetY = my - pos.Y
+				s.loadCardPreview(card)
+				return true
+			}
 		}
 	}
 
@@ -457,6 +541,33 @@ func (s *DuelScreen) updateHandDrag(mx, my int) bool {
 func (s *DuelScreen) runGameLoop() {
 	core.PlayGame(s.gameState, 100)
 	close(s.gameDone)
+}
+
+func (s *DuelScreen) runAutoPass() {
+	for {
+		select {
+		case <-s.gameDone:
+			return
+		case <-s.self.core.WaitingChan:
+		}
+
+		actions := s.gameState.AvailableActions(s.self.core)
+		onlyPass := true
+		for _, a := range actions {
+			if a.Type != core.ActionPassPriority {
+				onlyPass = false
+				break
+			}
+		}
+
+		if onlyPass {
+			select {
+			case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
+			case <-s.gameDone:
+				return
+			}
+		}
+	}
 }
 
 func (s *DuelScreen) runOpponentAI() {
@@ -525,7 +636,7 @@ func (s *DuelScreen) loadCardPreview(card *core.Card) {
 		s.cardPreviewImg = nil
 		return
 	}
-	s.cardPreviewImg = imageutil.ScaleImage(img, 0.65)
+	s.cardPreviewImg = imageutil.ScaleImage(img, 0.95)
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
@@ -573,6 +684,8 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawBoard(screen, s.self, duelPlayerBoardY, H-duelPlayerBoardY)
 	s.drawMessageBar(screen)
 	s.drawSidebar(screen, W, H)
+	s.drawBattlefield(screen, s.opponent)
+	s.drawBattlefield(screen, s.self)
 	s.drawHandPanel(screen, s.opponent)
 	s.drawHandPanel(screen, s.self)
 	s.drawCardPreview(screen, H)
@@ -633,7 +746,6 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 	txt.Color = color.RGBA{200, 200, 200, 255}
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	s.drawBattlefield(screen, dp.core, duelBoardX+20, startY+80)
 }
 
 func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
@@ -658,30 +770,31 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
-func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, player *core.Player, startX, startY int) {
-	for i, card := range player.Battlefield {
-		x := startX + (i%8)*100
-		y := startY + (i/8)*25
-
-		displayName := ""
-		if _, hasAction := s.cardActions[card.ID]; hasAction && player == s.self.core {
-			displayName = "* "
+func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
+	for i, card := range dp.core.Battlefield {
+		if card == nil {
+			continue
 		}
-		displayName += card.Name()
+		pos := s.getFieldCardPos(card, dp, i)
+		cardImg := s.getCardArtImg(card, fieldCardW)
+		if cardImg == nil {
+			continue
+		}
+
+		cardOpts := &ebiten.DrawImageOptions{}
 		if card.Tapped {
-			displayName += " (T)"
+			imgH := float64(cardImg.Bounds().Dy())
+			cardOpts.GeoM.Rotate(math.Pi / 2)
+			cardOpts.GeoM.Translate(imgH, 0)
 		}
-		if card.CardType == domain.CardTypeCreature {
-			displayName += fmt.Sprintf(" %d/%d", card.EffectivePower(), card.EffectiveToughness())
-		}
+		cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
+		screen.DrawImage(cardImg, cardOpts)
 
-		txt := elements.NewText(12, displayName, x, y)
-		if !card.Active && card.CardType == domain.CardTypeCreature {
-			txt.Color = color.RGBA{150, 150, 150, 255}
-		} else if card.Tapped {
-			txt.Color = color.RGBA{180, 180, 120, 255}
+		if _, hasAction := s.cardActions[card.ID]; hasAction && dp == s.self {
+			star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
+			star.Color = color.RGBA{255, 255, 0, 255}
+			star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
-		txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	}
 }
 
@@ -706,8 +819,11 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer) {
 	}
 
 	for i, card := range dp.core.Hand {
+		if card == nil {
+			continue
+		}
 		y := dp.handY + handBgH + i*handCardOverlap
-		cardImg := s.getHandCardImg(card, handBgW)
+		cardImg := s.getCardArtImg(card, handBgW)
 		if cardImg == nil {
 			continue
 		}
