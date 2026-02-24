@@ -40,7 +40,7 @@ func (g *GameState) CastSpell(player *Player, card *Card, target Targetable) err
 		e = append(e, a)
 	}
 
-	g.Stack.Push(&StackItem{Events: e, Player: player, Card: card})
+	g.Stack.Push(&StackItem{Events: e, Player: player, Card: card, Target: target})
 
 	return nil
 }

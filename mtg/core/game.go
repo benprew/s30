@@ -106,6 +106,22 @@ func (g *GameState) Resolve(item *StackItem) error {
 		e.Resolve()
 	}
 
+	if c.IsAura() {
+		targetCreature, ok := item.Target.(*Card)
+		if !ok || targetCreature.CurrentZone != ZoneBattlefield {
+			if err := c.Owner.MoveTo(c, ZoneGraveyard); err != nil {
+				return fmt.Errorf("unable to move aura to graveyard: %w", err)
+			}
+			return nil
+		}
+		if err := c.Owner.MoveTo(c, ZoneBattlefield); err != nil {
+			return fmt.Errorf("unable to move aura to battlefield: %w", err)
+		}
+		c.AttachedTo = targetCreature
+		targetCreature.Attachments = append(targetCreature.Attachments, c)
+		return nil
+	}
+
 	if c.CardType != domain.CardTypeInstant && c.CardType != domain.CardTypeSorcery {
 		if err := c.Owner.MoveTo(c, ZoneBattlefield); err != nil {
 			return fmt.Errorf("unable to move card to battlefield: %w", err)

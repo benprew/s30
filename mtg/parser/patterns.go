@@ -35,6 +35,7 @@ const (
 
 func (p *Parser) registerPatterns() {
 	p.registerKeywordPatterns()
+	p.registerAuraPatterns()
 	p.registerDamagePatterns()
 	p.registerStatBoostPatterns()
 	p.registerManaAbilityPatterns()
@@ -138,6 +139,43 @@ func (p *Parser) registerKeywordPatterns() {
 				Cost:     cost,
 				Keywords: []Keyword{KeywordRegeneration},
 				Effect:   &effects.KeywordAbility{Keywords: []effects.Keyword{KeywordRegeneration}},
+			}, nil
+		},
+	)
+}
+
+func (p *Parser) registerAuraPatterns() {
+	p.RegisterPattern(
+		"enchant-creature",
+		regexp.MustCompile(`(?i)^enchant creature$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:       AbilityTypeStatic,
+				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: 1, Condition: "enchant"},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"enchanted-creature-has-keyword",
+		regexp.MustCompile(`(?i)^enchanted creature has (\w+)$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			keyword := strings.ToLower(matches[1])
+			var keywords []Keyword
+			if kw, ok := effects.KeywordMap[keyword]; ok {
+				keywords = []Keyword{kw}
+			} else {
+				keywords = []Keyword{Keyword(matches[1])}
+			}
+			var effect effects.Event
+			if kw, ok := effects.KeywordMap[keyword]; ok {
+				effect = &effects.KeywordAbility{Keywords: []effects.Keyword{kw}, Modifier: keyword}
+			}
+			return &ParsedAbility{
+				Type:       AbilityTypeStatic,
+				Keywords:   keywords,
+				Effect:     effect,
+				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: 1, Condition: "enchanted"},
 			}, nil
 		},
 	)

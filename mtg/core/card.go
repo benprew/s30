@@ -11,6 +11,11 @@ type Event = effects.Event
 
 const cardNameKirdApe = "Kird Ape"
 
+const (
+	conditionEnchanted = "enchanted"
+	conditionEnchant   = "enchant"
+)
+
 type Card struct {
 	domain.Card
 	ID                 EntityID
@@ -22,6 +27,8 @@ type Card struct {
 	DeathtouchDamaged  bool
 	PowerBoost         int
 	ToughnessBoost     int
+	Attachments        []*Card
+	AttachedTo         *Card
 }
 
 func (c *Card) Name() string {
@@ -56,6 +63,11 @@ func abilityToEvent(ability *domain.ParsedAbility) effects.Event {
 		return nil
 	}
 
+	// Aura continuous effects are applied through attachments, not one-shot events
+	if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted {
+		return nil
+	}
+
 	if ability.Effect.Amount > 0 {
 		return &effects.DirectDamage{Amount: ability.Effect.Amount}
 	}
@@ -68,6 +80,21 @@ func abilityToEvent(ability *domain.ParsedAbility) effects.Event {
 	}
 
 	return nil
+}
+
+func (c *Card) IsAura() bool {
+	if c.CardType != domain.CardTypeEnchantment {
+		return false
+	}
+	for _, ability := range c.ParsedAbilities {
+		if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted {
+			return true
+		}
+		if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchant {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Card) specialCaseAction() []effects.Event {
@@ -102,11 +129,11 @@ func (c *Card) AddToughnessBoost(amount int) {
 }
 
 func (c *Card) EffectivePower() int {
-	return c.Power + c.PowerBoost + c.staticPowerBonus()
+	return c.Power + c.PowerBoost + c.staticPowerBonus() + c.auraPowerBonus()
 }
 
 func (c *Card) EffectiveToughness() int {
-	return c.Toughness + c.ToughnessBoost + c.staticToughnessBonus()
+	return c.Toughness + c.ToughnessBoost + c.staticToughnessBonus() + c.auraToughnessBonus()
 }
 
 func (c *Card) staticPowerBonus() int {
@@ -123,6 +150,30 @@ func (c *Card) staticToughnessBonus() int {
 	return 0
 }
 
+func (c *Card) auraPowerBonus() int {
+	bonus := 0
+	for _, aura := range c.Attachments {
+		for _, ability := range aura.ParsedAbilities {
+			if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted && ability.Effect != nil {
+				bonus += ability.Effect.PowerBoost
+			}
+		}
+	}
+	return bonus
+}
+
+func (c *Card) auraToughnessBonus() int {
+	bonus := 0
+	for _, aura := range c.Attachments {
+		for _, ability := range aura.ParsedAbilities {
+			if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted && ability.Effect != nil {
+				bonus += ability.Effect.ToughnessBoost
+			}
+		}
+	}
+	return bonus
+}
+
 func (c *Card) ClearEndOfTurnEffects() {
 	c.PowerBoost = 0
 	c.ToughnessBoost = 0
@@ -132,9 +183,12 @@ func (c *Card) ClearEndOfTurnEffects() {
 
 func (c *Card) GetTargetSpec() *domain.ParsedTargetSpec {
 	for _, ability := range c.ParsedAbilities {
-		if ability.TargetSpec != nil {
+		if ability.TargetSpec != nil && ability.TargetSpec.Condition != conditionEnchanted && ability.TargetSpec.Condition != conditionEnchant {
 			return ability.TargetSpec
 		}
+	}
+	if c.IsAura() {
+		return &domain.ParsedTargetSpec{Type: "creature", Count: 1}
 	}
 	return nil
 }
@@ -168,6 +222,19 @@ func (c *Card) LandwalkType() string {
 			}
 		}
 	}
+	for _, aura := range c.Attachments {
+		for _, ability := range aura.ParsedAbilities {
+			if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted {
+				for _, k := range ability.Keywords {
+					if k == string(effects.KeywordLandwalk) && ability.Effect != nil {
+						if landType, ok := lwMap[ability.Effect.Modifier]; ok {
+							return landType
+						}
+					}
+				}
+			}
+		}
+	}
 	return ""
 }
 
@@ -182,6 +249,17 @@ func (c *Card) HasKeyword(keyword effects.Keyword) bool {
 		for _, k := range ability.Keywords {
 			if k == kw {
 				return true
+			}
+		}
+	}
+	for _, aura := range c.Attachments {
+		for _, ability := range aura.ParsedAbilities {
+			if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted {
+				for _, k := range ability.Keywords {
+					if k == kw {
+						return true
+					}
+				}
 			}
 		}
 	}
@@ -243,6 +321,8 @@ func (c *Card) DeepCopy() *Card {
 		DeathtouchDamaged: c.DeathtouchDamaged,
 		PowerBoost:        c.PowerBoost,
 		ToughnessBoost:    c.ToughnessBoost,
+		Attachments:       nil,
+		AttachedTo:        nil,
 	}
 
 	newCard.ManaProduction = make([]string, len(c.ManaProduction))

@@ -175,9 +175,18 @@ func (g *GameState) CleanupDeadCreatures() {
 			}
 		}
 		for _, card := range deadCreatures {
+			g.detachAuras(card)
 			player.MoveTo(card, ZoneGraveyard)
 		}
 	}
+}
+
+func (g *GameState) detachAuras(creature *Card) {
+	for _, aura := range creature.Attachments {
+		aura.AttachedTo = nil
+		aura.Owner.MoveTo(aura, ZoneGraveyard)
+	}
+	creature.Attachments = nil
 }
 
 func (g *GameState) ClearCombatState() {

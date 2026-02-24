@@ -16,6 +16,7 @@ type StackItem struct {
 	Events []effects.Event
 	Player *Player
 	Card   *Card
+	Target Targetable
 }
 
 // NewStack creates a new Stack instance

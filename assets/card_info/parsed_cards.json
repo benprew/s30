@@ -101,6 +101,26 @@
     ]
   },
   {
+    "card_name": "Anti-Magic Aura",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Arcades Sabboth",
     "abilities": [
       {
@@ -207,6 +227,46 @@
     ]
   },
   {
+    "card_name": "Artifact Ward",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Aspect of Wolf",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Axelrod Gunnarson",
     "abilities": [
       {
@@ -292,6 +352,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      }
+    ]
+  },
+  {
+    "card_name": "Backfire",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -625,8 +705,43 @@
     ]
   },
   {
+    "card_name": "Black Ward",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Blessing",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -643,6 +758,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{W}: Enchanted creature gets +1/+1 until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Blue Ward",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -702,6 +837,26 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, if this land is tapped, put a storage counter on it"
+      }
+    ]
+  },
+  {
+    "card_name": "Brainwash",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -782,6 +937,48 @@
           "Condition": ""
         },
         "RawText": "{1}{R}{R}: This creature deals 1 damage to any target and 1 damage to you"
+      }
+    ]
+  },
+  {
+    "card_name": "Burrowing",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "mountainwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "Enchanted creature has mountainwalk"
       }
     ]
   },
@@ -1268,6 +1465,26 @@
     ]
   },
   {
+    "card_name": "Control Magic",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Conversion",
     "abilities": [
       {
@@ -1335,6 +1552,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Trample"
+      }
+    ]
+  },
+  {
+    "card_name": "Creature Bond",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -1581,6 +1818,26 @@
     ]
   },
   {
+    "card_name": "Demonic Torment",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Desert",
     "abilities": [
       {
@@ -1694,6 +1951,21 @@
       {
         "Type": "Static",
         "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
         "Effect": {
           "PowerBoost": 3,
           "ToughnessBoost": 3
@@ -1774,6 +2046,21 @@
   {
     "card_name": "Dream Coat",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -1969,6 +2256,26 @@
           "Condition": ""
         },
         "RawText": "{T}: Target creature with power 2 or less can't be blocked this turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Earthbind",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -2297,6 +2604,48 @@
     ]
   },
   {
+    "card_name": "Eternal Warrior",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Vigilance"
+          ],
+          "Modifier": "vigilance"
+        },
+        "Keywords": [
+          "Vigilance"
+        ],
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "Enchanted creature has vigilance"
+      }
+    ]
+  },
+  {
     "card_name": "Faerie Dragon",
     "abilities": [
       {
@@ -2355,6 +2704,21 @@
   {
     "card_name": "Farrel's Mantle",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Triggered",
         "Cost": null,
@@ -2431,6 +2795,48 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, put a hunger counter on this enchantment"
+      }
+    ]
+  },
+  {
+    "card_name": "Fear",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Fear"
+          ],
+          "Modifier": "fear"
+        },
+        "Keywords": [
+          "Fear"
+        ],
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "Enchanted creature has fear"
       }
     ]
   },
@@ -2533,6 +2939,21 @@
     "card_name": "Firebreathing",
     "abilities": [
       {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "{R}",
@@ -2569,6 +2990,90 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      }
+    ]
+  },
+  {
+    "card_name": "Fishliver Oil",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Landwalk"
+          ],
+          "Modifier": "islandwalk"
+        },
+        "Keywords": [
+          "Landwalk"
+        ],
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "Enchanted creature has islandwalk"
+      }
+    ]
+  },
+  {
+    "card_name": "Flight",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "Keywords": [
+            "Flying"
+          ],
+          "Modifier": "flying"
+        },
+        "Keywords": [
+          "Flying"
+        ],
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "Enchanted creature has flying"
       }
     ]
   },
@@ -2837,6 +3342,26 @@
     ]
   },
   {
+    "card_name": "Gaseous Form",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Gem Bazaar",
     "abilities": [
       {
@@ -3002,6 +3527,21 @@
   {
     "card_name": "Giant Strength",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Static",
         "Cost": null,
@@ -3353,6 +3893,26 @@
     ]
   },
   {
+    "card_name": "Green Ward",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Gwendlyn Di Corci",
     "abilities": [
       {
@@ -3508,6 +4068,21 @@
       {
         "Type": "Static",
         "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
         "Effect": {
           "PowerBoost": 0,
           "ToughnessBoost": 2
@@ -3545,6 +4120,21 @@
   {
     "card_name": "Holy Strength",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Static",
         "Cost": null,
@@ -3939,6 +4529,21 @@
       {
         "Type": "Static",
         "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
         "Effect": {
           "PowerBoost": 2,
           "ToughnessBoost": -2
@@ -3960,6 +4565,21 @@
     "card_name": "Imprison",
     "abilities": [
       {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
         "Type": "Triggered",
         "Cost": null,
         "Effect": null,
@@ -3970,6 +4590,26 @@
         },
         "TargetSpec": null,
         "RawText": "Whenever enchanted creature attacks or blocks, you may pay {1}"
+      }
+    ]
+  },
+  {
+    "card_name": "Infinite Authority",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -3996,6 +4636,21 @@
     "card_name": "Instill Energy",
     "abilities": [
       {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "{0}",
@@ -4014,6 +4669,26 @@
           "Condition": "enchanted"
         },
         "RawText": "{0}: Untap enchanted creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Invisibility",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -4462,6 +5137,26 @@
     ]
   },
   {
+    "card_name": "Lance",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Land Leeches",
     "abilities": [
       {
@@ -4843,6 +5538,26 @@
     ]
   },
   {
+    "card_name": "Lure",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Mahamoti Djinn",
     "abilities": [
       {
@@ -5035,6 +5750,26 @@
           "Condition": ""
         },
         "RawText": "{T}: Destroy target creature with islandwalk"
+      }
+    ]
+  },
+  {
+    "card_name": "Merseine",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -5920,6 +6655,26 @@
     ]
   },
   {
+    "card_name": "Paralyze",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Pavel Maliki",
     "abilities": [
       {
@@ -6417,6 +7172,26 @@
     ]
   },
   {
+    "card_name": "Puppet Master",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Pyramids",
     "abilities": [
       {
@@ -6650,8 +7425,43 @@
     ]
   },
   {
+    "card_name": "Red Ward",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Regeneration",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -7200,6 +8010,26 @@
     ]
   },
   {
+    "card_name": "Seeker",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Segovian Leviathan",
     "abilities": [
       {
@@ -7647,6 +8477,26 @@
     ]
   },
   {
+    "card_name": "Spectral Cloak",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Spinal Villain",
     "abilities": [
       {
@@ -7668,6 +8518,46 @@
           "Condition": ""
         },
         "RawText": "{T}: Destroy target blue creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Spirit Link",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Spirit Shackle",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -7891,6 +8781,46 @@
     ]
   },
   {
+    "card_name": "Takklemaggot",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Tangle Kelp",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "Tetravus",
     "abilities": [
       {
@@ -7972,6 +8902,21 @@
   {
     "card_name": "The Brute",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Static",
         "Cost": null,
@@ -8086,6 +9031,21 @@
   {
     "card_name": "Thrull Retainer",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Static",
         "Cost": null,
@@ -8490,6 +9450,21 @@
       {
         "Type": "Static",
         "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
         "Effect": {
           "PowerBoost": 2,
           "ToughnessBoost": 1
@@ -8510,6 +9485,21 @@
   {
     "card_name": "Unstable Mutation",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
       {
         "Type": "Static",
         "Cost": null,
@@ -8831,6 +9821,46 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{B}: This creature gets +1/+0 until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Venarian Gold",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Venom",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -9585,6 +10615,26 @@
     ]
   },
   {
+    "card_name": "Wanderlust",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
     "card_name": "War Barge",
     "abilities": [
       {
@@ -9636,6 +10686,21 @@
       {
         "Type": "Static",
         "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
         "Effect": {
           "PowerBoost": -2,
           "ToughnessBoost": -1
@@ -9650,6 +10715,26 @@
           "Condition": "enchanted"
         },
         "RawText": "Enchanted creature gets -2/-1"
+      }
+    ]
+  },
+  {
+    "card_name": "Web",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },
@@ -9708,6 +10793,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Protection from black"
+      }
+    ]
+  },
+  {
+    "card_name": "White Ward",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant creature"
       }
     ]
   },

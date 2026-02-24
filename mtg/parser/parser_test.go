@@ -449,6 +449,54 @@ func TestParseCosts(t *testing.T) {
 	}
 }
 
+func TestParseEnchantCreature(t *testing.T) {
+	p := NewParser()
+
+	result := p.Parse("Burrowing", "Enchant creature")
+	if len(result.Abilities) == 0 {
+		t.Fatal("expected ability for 'Enchant creature'")
+	}
+	ability := result.Abilities[0]
+	if ability.Type != AbilityTypeStatic {
+		t.Errorf("expected Static ability, got %s", ability.Type)
+	}
+	if ability.TargetSpec == nil || ability.TargetSpec.Condition != "enchant" {
+		t.Errorf("expected target spec with condition 'enchant'")
+	}
+}
+
+func TestParseEnchantedCreatureHasKeyword(t *testing.T) {
+	tests := []struct {
+		name     string
+		cardName string
+		text     string
+		keyword  Keyword
+	}{
+		{"Burrowing mountainwalk", "Burrowing", "Enchanted creature has mountainwalk", KeywordLandwalk},
+		{"Flight flying", "Flight", "Enchanted creature has flying", KeywordFlying},
+	}
+
+	p := NewParser()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := p.Parse(tt.cardName, tt.text)
+			if len(result.Abilities) == 0 {
+				t.Fatalf("expected ability for %q", tt.text)
+			}
+			ability := result.Abilities[0]
+			if ability.Type != AbilityTypeStatic {
+				t.Errorf("expected Static ability, got %s", ability.Type)
+			}
+			if len(ability.Keywords) == 0 || ability.Keywords[0] != tt.keyword {
+				t.Errorf("expected keyword %v, got %v", tt.keyword, ability.Keywords)
+			}
+			if ability.TargetSpec == nil || ability.TargetSpec.Condition != "enchanted" {
+				t.Errorf("expected target spec with condition 'enchanted'")
+			}
+		})
+	}
+}
+
 func TestPreprocessCardNameReplacement(t *testing.T) {
 	p := NewParser()
 
