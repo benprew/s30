@@ -66,6 +66,13 @@ type DuelScreen struct {
 
 	handCardCache map[core.EntityID]handCardEntry
 
+	cardActions map[core.EntityID]core.PlayerAction
+
+	frameCount     int
+	lastClickFrame int
+	lastClickX     int
+	lastClickY     int
+
 	anteCard *domain.Card
 }
 
@@ -236,6 +243,9 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		return screenui.WorldScr, nil, nil
 	}
 
+	s.frameCount++
+	s.refreshCardActions()
+
 	mx, my := ebiten.CursorPosition()
 
 	if s.updateHandDrag(mx, my) {
@@ -275,6 +285,8 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 	}
 
+	s.handleDoubleClick(mx, my)
+
 	// Check win/loss
 	s.gameState.CheckWinConditions()
 	if s.opponent.core.HasLost {
@@ -288,6 +300,102 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 }
 
 const handCardOverlap = 20
+
+func (s *DuelScreen) refreshCardActions() {
+	s.cardActions = make(map[core.EntityID]core.PlayerAction)
+	for _, action := range s.gameState.AvailableActions(s.self.core) {
+		if action.Card == nil {
+			continue
+		}
+		s.cardActions[action.Card.ID] = action
+	}
+	for _, card := range s.self.core.Battlefield {
+		if _, exists := s.cardActions[card.ID]; exists {
+			continue
+		}
+		if !card.Tapped && card.GetManaAbility() != nil {
+			s.cardActions[card.ID] = core.PlayerAction{Type: "ActivateMana", Card: card}
+		}
+	}
+}
+
+const doubleClickFrames = 20
+
+func (s *DuelScreen) handleDoubleClick(mx, my int) {
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return
+	}
+
+	frame := s.frameCount
+	dx, dy := mx-s.lastClickX, my-s.lastClickY
+	if dx < 0 {
+		dx = -dx
+	}
+	if dy < 0 {
+		dy = -dy
+	}
+	dist := dx + dy
+	isDouble := frame-s.lastClickFrame < doubleClickFrames && dist < 10
+	s.lastClickFrame = frame
+	s.lastClickX = mx
+	s.lastClickY = my
+
+	if !isDouble {
+		return
+	}
+
+	// Reset so a third click doesn't trigger again
+	s.lastClickFrame = 0
+
+	// Check hand cards
+	handBgW, handBgH := 145, 51
+	if s.self.handBg != nil {
+		b := s.self.handBg.Bounds()
+		handBgW, handBgH = b.Dx(), b.Dy()
+	}
+	cardListY := s.self.handY + handBgH
+	if my >= cardListY && mx >= s.self.handX && mx < s.self.handX+handBgW {
+		cardIdx := (my - cardListY) / handCardOverlap
+		if cardIdx >= len(s.self.core.Hand) {
+			cardIdx = len(s.self.core.Hand) - 1
+		}
+		if cardIdx >= 0 && cardIdx < len(s.self.core.Hand) {
+			s.performCardAction(s.self.core.Hand[cardIdx])
+			return
+		}
+	}
+
+	// Check battlefield cards
+	startX := duelBoardX + 20
+	startY := duelPlayerBoardY + 80
+	for i, card := range s.self.core.Battlefield {
+		cx := startX + (i%8)*100
+		cy := startY + (i/8)*25
+		if mx >= cx && mx < cx+100 && my >= cy && my < cy+25 {
+			s.performCardAction(card)
+			return
+		}
+	}
+}
+
+func (s *DuelScreen) performCardAction(card *core.Card) {
+	action, ok := s.cardActions[card.ID]
+	if !ok {
+		return
+	}
+
+	if action.Type == "ActivateMana" {
+		s.gameState.ActivateManaAbility(s.self.core, card)
+		s.refreshCardActions()
+		return
+	}
+
+	select {
+	case s.self.core.InputChan <- action:
+	default:
+	}
+	s.refreshCardActions()
+}
 
 func (s *DuelScreen) getHandCardImg(card *core.Card, targetW int) *ebiten.Image {
 	artImg, err := card.CardImage(domain.CardViewArtOnly)
@@ -555,7 +663,11 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, player *core.Player, 
 		x := startX + (i%8)*100
 		y := startY + (i/8)*25
 
-		displayName := card.Name()
+		displayName := ""
+		if _, hasAction := s.cardActions[card.ID]; hasAction && player == s.self.core {
+			displayName = "* "
+		}
+		displayName += card.Name()
 		if card.Tapped {
 			displayName += " (T)"
 		}
@@ -602,6 +714,12 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer) {
 		cardOpts := &ebiten.DrawImageOptions{}
 		cardOpts.GeoM.Translate(float64(dp.handX), float64(y))
 		screen.DrawImage(cardImg, cardOpts)
+
+		if _, hasAction := s.cardActions[card.ID]; hasAction {
+			star := elements.NewText(14, "*", dp.handX+2, y+2)
+			star.Color = color.RGBA{255, 255, 0, 255}
+			star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		}
 	}
 }
 
