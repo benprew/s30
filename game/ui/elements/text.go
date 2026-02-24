@@ -38,19 +38,25 @@ func NewText(size float64, txt string, x, y int) *Text {
 
 func (t *Text) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale float64) {
 	R, G, B, A := t.Color.RGBA()
-	// Calculate position (anchor-based or legacy X,Y)
 	x, y := t.getPosition(screen, scale)
-	options := &text.DrawOptions{}
 
+	lineSpacing := 32.0
+	if t.LineSpacing != 0 {
+		lineSpacing = t.LineSpacing
+	}
+
+	shadow := &text.DrawOptions{}
+	shadow.GeoM.Concat(opts.GeoM)
+	shadow.GeoM.Translate(float64(x)+1, float64(y)+2)
+	shadow.ColorScale.Scale(0, 0, 0, float32(A))
+	shadow.LineSpacing = lineSpacing
+	text.Draw(screen, t.text, t.font, shadow)
+
+	options := &text.DrawOptions{}
 	options.GeoM.Concat(opts.GeoM)
 	options.GeoM.Translate(float64(x), float64(y))
 	options.ColorScale.Scale(float32(R), float32(G), float32(B), float32(A))
-	if t.LineSpacing == 0 {
-		options.LineSpacing = 32.0
-	} else {
-		options.LineSpacing = t.LineSpacing
-	}
-
+	options.LineSpacing = lineSpacing
 	text.Draw(screen, t.text, t.font, options)
 }
 
