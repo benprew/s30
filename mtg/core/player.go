@@ -25,6 +25,7 @@ const (
 	ActionPassPriority    = "PassPriority"
 	ActionDeclareAttacker = "DeclareAttacker"
 	ActionDeclareBlocker  = "DeclareBlocker"
+	ActionDiscard         = "Discard"
 )
 
 type Targetable = effects.Targetable
