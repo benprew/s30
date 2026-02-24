@@ -130,6 +130,7 @@ func chooseAction(game *core.GameState, player *core.Player, actions []core.Play
 	landActions := []core.PlayerAction{}
 	attackActions := []core.PlayerAction{}
 	blockActions := []core.PlayerAction{}
+	discardActions := []core.PlayerAction{}
 
 	for _, a := range actions {
 		switch a.Type {
@@ -143,9 +144,14 @@ func chooseAction(game *core.GameState, player *core.Player, actions []core.Play
 			attackActions = append(attackActions, a)
 		case core.ActionDeclareBlocker:
 			blockActions = append(blockActions, a)
+		case core.ActionDiscard:
+			discardActions = append(discardActions, a)
 		}
 	}
 
+	if len(discardActions) > 0 {
+		return discardActions[rand.Intn(len(discardActions))]
+	}
 	if len(castActions) > 0 {
 		return castActions[rand.Intn(len(castActions))]
 	}

@@ -244,7 +244,7 @@ func (g *GameState) NextTurn() {
 
 	fmt.Printf("\n=== %s's Turn (Life: %d) ===\n", player.Name(), player.LifeTotal)
 
-	for player.Turn.Phase != PhaseEnd {
+	for player.Turn.Phase != PhaseEndTurn {
 		switch player.Turn.Phase {
 		case PhaseUntap:
 			g.UntapPhase(player)
@@ -258,6 +258,8 @@ func (g *GameState) NextTurn() {
 			g.CombatPhase(player)
 		case PhaseEnd:
 			g.EndPhase(player)
+		case PhaseCleanup:
+			g.CleanupPhase(player)
 		}
 
 		// check for win at tne end of each phase
@@ -269,12 +271,25 @@ func (g *GameState) NextTurn() {
 		player.Turn.NextPhase()
 	}
 
-	g.CleanupEndOfTurnEffects()
 	g.printZoneStates()
 	g.CurrentPlayer = (g.CurrentPlayer + 1) % len(g.Players)
 }
 
-func (g *GameState) CleanupEndOfTurnEffects() {
+func (g *GameState) CleanupPhase(player *Player) {
+	// discard down to "max hand size", defaults to 7
+	maxHandSize := 7
+	if len(player.Hand) > maxHandSize {
+		player.Turn.Discarding = true
+		for len(player.Hand) > maxHandSize {
+			action := g.WaitForPlayerInput(player)
+			if action.Type == ActionDiscard && action.Card != nil {
+				player.MoveTo(action.Card, ZoneGraveyard)
+				fmt.Printf("  %s discards %s\n", player.Name(), action.Card.Name())
+			}
+		}
+		player.Turn.Discarding = false
+	}
+
 	for _, player := range g.Players {
 		for _, card := range player.Battlefield {
 			card.ClearEndOfTurnEffects()
@@ -639,6 +654,13 @@ func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
 func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 	actions := []PlayerAction{}
 	activePlayer := g.Players[g.ActivePlayer]
+
+	if player.Turn.Discarding {
+		for _, card := range player.Hand {
+			actions = append(actions, PlayerAction{Type: ActionDiscard, Card: card})
+		}
+		return actions
+	}
 
 	if player.Turn.Phase == PhaseMain1 || player.Turn.Phase == PhaseMain2 {
 		for _, card := range player.Hand {

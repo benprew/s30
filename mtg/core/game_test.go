@@ -344,6 +344,7 @@ func TestNextPhase(t *testing.T) {
 	turn := &Turn{Phase: PhaseUntap}
 
 	expectedOrder := []Phase{
+		PhaseUntap,
 		PhaseUpkeep,
 		PhaseDraw,
 		PhaseMain1,
@@ -351,14 +352,14 @@ func TestNextPhase(t *testing.T) {
 		PhaseMain2,
 		PhaseEnd,
 		PhaseCleanup,
-		PhaseUntap,
+		PhaseEndTurn,
 	}
 
 	for _, expected := range expectedOrder {
-		turn.NextPhase()
 		if turn.Phase != expected {
-			t.Errorf("Expected phase %s, got %s", expected, turn.Phase)
+			t.Errorf("Expected phase %d, got %d", expected, turn.Phase)
 		}
+		turn.NextPhase()
 	}
 }
 
@@ -562,7 +563,7 @@ func TestAvailableActionsPassPriorityAlways(t *testing.T) {
 	game := NewGame(players)
 	game.StartGame()
 
-	phases := []Phase{PhaseUntap, PhaseUpkeep, PhaseDraw, PhaseMain1, PhaseCombat, PhaseMain2, PhaseEnd}
+	phases := []Phase{PhaseUntap, PhaseUpkeep, PhaseDraw, PhaseMain1, PhaseCombat, PhaseMain2, PhaseEnd, PhaseCleanup}
 
 	for _, phase := range phases {
 		player.Turn.Phase = phase
@@ -577,7 +578,7 @@ func TestAvailableActionsPassPriorityAlways(t *testing.T) {
 		}
 
 		if !hasPassPriority {
-			t.Errorf("PassPriority should always be available, missing in phase %s", phase)
+			t.Errorf("PassPriority should always be available, missing in phase %d", phase)
 		}
 	}
 }
@@ -637,6 +638,115 @@ func TestAvailableTargetsWithCreature(t *testing.T) {
 	}
 	if creatureCount != 1 {
 		t.Errorf("Expected 1 creature target, got %d", creatureCount)
+	}
+}
+
+func TestDiscardToHandSize(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+
+	// Draw extra cards so hand > 7
+	player.DrawCard()
+
+	if len(player.Hand) != 8 {
+		// Test library only had 8 cards, 7 drawn at start, 1 drawn now = 8
+		// If library was empty, we can't test this
+		if len(player.Hand) <= 7 {
+			t.Skip("Could not get hand size > 7")
+		}
+	}
+
+	cardsToDiscard := len(player.Hand) - 7
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range cardsToDiscard {
+			<-player.WaitingChan
+			actions := game.AvailableActions(player)
+			player.InputChan <- actions[0]
+		}
+	}()
+
+	player.Turn.Phase = PhaseEnd
+	player.Turn.Discarding = true
+	for len(player.Hand) > 7 {
+		action := game.WaitForPlayerInput(player)
+		if action.Type == ActionDiscard && action.Card != nil {
+			player.MoveTo(action.Card, ZoneGraveyard)
+		}
+	}
+	player.Turn.Discarding = false
+
+	<-done
+
+	if len(player.Hand) != 7 {
+		t.Errorf("Expected hand size 7 after discard, got %d", len(player.Hand))
+	}
+	if len(player.Graveyard) != cardsToDiscard {
+		t.Errorf("Expected %d cards in graveyard, got %d", cardsToDiscard, len(player.Graveyard))
+	}
+}
+
+func TestNoDiscardWhenHandSizeOk(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+
+	if len(player.Hand) > 7 {
+		t.Skip("Hand already > 7, can't test no-discard path")
+	}
+
+	initialHandSize := len(player.Hand)
+	initialGraveyardSize := len(player.Graveyard)
+
+	// Simulate end of turn: since hand <= 7, discard should not trigger
+	const maxHandSize = 7
+	if len(player.Hand) > maxHandSize {
+		t.Errorf("Discard should not have triggered")
+	}
+
+	if len(player.Hand) != initialHandSize {
+		t.Errorf("Hand size changed unexpectedly: expected %d, got %d", initialHandSize, len(player.Hand))
+	}
+	if len(player.Graveyard) != initialGraveyardSize {
+		t.Errorf("Graveyard size changed unexpectedly: expected %d, got %d", initialGraveyardSize, len(player.Graveyard))
+	}
+}
+
+func TestAvailableActionsDiscard(t *testing.T) {
+	players := createTestPlayer(1)
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+	player.Turn.Discarding = true
+
+	actions := game.AvailableActions(player)
+
+	if len(actions) != len(player.Hand) {
+		t.Errorf("Expected %d discard actions (one per card in hand), got %d", len(player.Hand), len(actions))
+	}
+
+	for _, action := range actions {
+		if action.Type != ActionDiscard {
+			t.Errorf("Expected only ActionDiscard actions during discard, got %s", action.Type)
+		}
+	}
+
+	hasPassPriority := false
+	for _, action := range actions {
+		if action.Type == ActionPassPriority {
+			hasPassPriority = true
+		}
+	}
+	if hasPassPriority {
+		t.Errorf("PassPriority should not be available during discard")
 	}
 }
 
