@@ -183,10 +183,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, debugText)
 }
 
-// Layout is called when the Game's layout changes.
+// Layout returns the virtual screen resolution. Ebiten automatically scales
+// the rendered output to fit the actual window size.
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	g.ScreenW, g.ScreenH = outsideWidth, outsideHeight
-	return g.ScreenW, g.ScreenH
+	return 1024, 768
 }
 
 func (g *Game) SaveGame(saveName string) error {
