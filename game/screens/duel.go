@@ -6,6 +6,8 @@ import (
 	"image/color"
 	"math"
 	"math/rand"
+	"strings"
+	"time"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -17,6 +19,7 @@ import (
 	"github.com/benprew/s30/mtg/core"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 var phaseNames = []core.Phase{
@@ -62,22 +65,33 @@ type DuelScreen struct {
 	selectedCardIdx int
 	cardPreviewImg  *ebiten.Image
 
-	dragTargetX *int
-	dragTargetY *int
-	dragOffsetX int
-	dragOffsetY int
-
+	mouseState    mouseStateType
+	mouseStartX   int
+	mouseStartY   int
+	dragTargetX   *int
+	dragTargetY   *int
+	dragOffsetX   int
+	dragOffsetY   int
 	draggingCardID core.EntityID
 	cardPositions  map[core.EntityID]image.Point
 
 	cardImgCache map[cardImgKey]cardImgEntry
 
-	cardActions map[core.EntityID]core.PlayerAction
+	cardActions      map[core.EntityID]core.PlayerAction
+	pendingAttackers map[core.EntityID]bool
 
 	frameCount int
 
 	anteCard *domain.Card
 }
+
+type mouseStateType int
+
+const (
+	mouseIdle mouseStateType = iota
+	mousePotentialDrag
+	mouseDragging
+)
 
 type cardImgKey struct {
 	id    core.EntityID
@@ -93,14 +107,15 @@ func (s *DuelScreen) IsFramed() bool { return false }
 
 func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level, idx int, anteCard *domain.Card) *DuelScreen {
 	s := &DuelScreen{
-		player:          player,
-		enemy:           enemy,
-		lvl:             lvl,
-		idx:             idx,
-		selectedCardIdx: -1,
-		anteCard:        anteCard,
-		cardImgCache:    make(map[cardImgKey]cardImgEntry),
-		cardPositions:   make(map[core.EntityID]image.Point),
+		player:           player,
+		enemy:            enemy,
+		lvl:              lvl,
+		idx:              idx,
+		selectedCardIdx:  -1,
+		anteCard:         anteCard,
+		cardImgCache:     make(map[cardImgKey]cardImgEntry),
+		cardPositions:    make(map[core.EntityID]image.Point),
+		pendingAttackers: make(map[core.EntityID]bool),
 	}
 
 	s.initGameState()
@@ -174,7 +189,7 @@ func (s *DuelScreen) initGameState() {
 	s.self = &duelPlayer{core: corePlayer, name: "You"}
 	s.opponent = &duelPlayer{core: coreOpponent, name: s.enemy.Character.Name}
 
-	s.gameState = core.NewGame([]*core.Player{corePlayer, coreOpponent})
+	s.gameState = core.NewGame([]*core.Player{corePlayer, coreOpponent}, false)
 	s.gameState.StartGame()
 
 	s.gameDone = make(chan struct{})
@@ -258,31 +273,11 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 
 	mx, my := ebiten.CursorPosition()
 
-	if s.updateDrag(mx, my) {
-		return screenui.DuelScr, nil, nil
-	}
-
-	// Done button click (positioned at right of message bar)
-	doneBounds := s.doneBtn[0].Bounds()
-	doneX := duelBoardX + 2
-	doneY := duelMsgY
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		if mx >= doneX && mx < doneX+doneBounds.Dx() && my >= doneY && my < doneY+doneBounds.Dy() {
-			select {
-			case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
-			default:
-			}
-		}
-	}
-
+	s.updateMouse(mx, my)
 	s.updateHoverPreview(mx, my)
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		s.handleRightClick(mx, my)
-	}
-
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		s.handleCardClick(mx, my)
 	}
 
 	// Check win/loss
@@ -328,6 +323,13 @@ func (s *DuelScreen) fieldCardAtPoint(mx, my int, dp *duelPlayer) *core.Card {
 }
 
 func (s *DuelScreen) refreshCardActions() {
+	activePlayer := s.gameState.Players[s.gameState.ActivePlayer]
+	inDeclareAttackers := activePlayer == s.self.core &&
+		activePlayer.Turn.Phase == core.PhaseCombat &&
+		activePlayer.Turn.CombatStep == core.CombatStepDeclareAttackers
+	if !inDeclareAttackers && len(s.pendingAttackers) > 0 {
+		s.pendingAttackers = make(map[core.EntityID]bool)
+	}
 	s.cardActions = make(map[core.EntityID]core.PlayerAction)
 	for _, action := range s.gameState.AvailableActions(s.self.core) {
 		if action.Card == nil {
@@ -377,15 +379,30 @@ func (s *DuelScreen) cardIdxAtPoint(mx, my, panelX, panelY int, cards []*core.Ca
 }
 
 func (s *DuelScreen) handleCardClick(mx, my int) {
+	// hand cards
 	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
+		fmt.Printf("HAND CLICK: idx: %d\n", idx)
 		s.selectedCardIdx = idx
 		s.performCardAction(s.self.core.Hand[idx])
 		return
 	}
 
+	// battlefield cards
 	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
+		s.loadCardPreview(card)
+		fmt.Printf("CLICK: card: %s, actions: %v\n", card.Name(), s.cardActions[card.ID])
+		if action, ok := s.cardActions[card.ID]; ok && action.Type == core.ActionDeclareAttacker {
+			if s.pendingAttackers[card.ID] {
+				delete(s.pendingAttackers, card.ID)
+			} else {
+				s.pendingAttackers[card.ID] = true
+			}
+			return
+		}
 		s.performCardAction(card)
 		return
+	} else {
+		fmt.Printf("No card at %d, %d\n", mx, my)
 	}
 }
 
@@ -469,32 +486,18 @@ func (s *DuelScreen) panelHeaderBounds(dp *duelPlayer, px, py int) image.Rectang
 	return image.Rect(px, py, px+w, py+h)
 }
 
-func (s *DuelScreen) updateDrag(mx, my int) bool {
-	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
-		if s.dragTargetX != nil {
-			s.dragTargetX = nil
-			s.dragTargetY = nil
+const dragThreshold = 4
+
+func (s *DuelScreen) updateMouse(mx, my int) {
+	switch s.mouseState {
+	case mouseIdle:
+		if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+			return
 		}
-		s.draggingCardID = 0
-		return false
-	}
+		s.mouseStartX = mx
+		s.mouseStartY = my
 
-	if s.draggingCardID != 0 {
-		pos := s.cardPositions[s.draggingCardID]
-		pos.X = mx - s.dragOffsetX
-		pos.Y = my - s.dragOffsetY
-		s.cardPositions[s.draggingCardID] = pos
-		return true
-	}
-
-	if s.dragTargetX != nil {
-		*s.dragTargetX = mx - s.dragOffsetX
-		*s.dragTargetY = my - s.dragOffsetY
-		return true
-	}
-
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		// Check hand panel headers
+		// Hand panel headers start dragging immediately
 		pt := image.Pt(mx, my)
 		type dragTarget struct {
 			bounds image.Rectangle
@@ -510,24 +513,83 @@ func (s *DuelScreen) updateDrag(mx, my int) bool {
 				s.dragTargetY = t.y
 				s.dragOffsetX = mx - *t.x
 				s.dragOffsetY = my - *t.y
-				return true
+				s.mouseState = mouseDragging
+				return
 			}
 		}
 
-		// Check individual battlefield cards
+		// Battlefield cards enter potential drag state
 		for _, dp := range []*duelPlayer{s.self, s.opponent} {
 			if card := s.fieldCardAtPoint(mx, my, dp); card != nil {
-				pos := s.cardPositions[card.ID]
 				s.draggingCardID = card.ID
-				s.dragOffsetX = mx - pos.X
-				s.dragOffsetY = my - pos.Y
-				s.loadCardPreview(card)
-				return true
+				s.mouseState = mousePotentialDrag
+				return
 			}
 		}
+
+		// Everything else is an immediate click (hand cards, done button, etc.)
+		s.handleClick(mx, my)
+
+	case mousePotentialDrag:
+		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+			s.handleClick(s.mouseStartX, s.mouseStartY)
+			s.draggingCardID = 0
+			s.mouseState = mouseIdle
+			return
+		}
+		dx := mx - s.mouseStartX
+		dy := my - s.mouseStartY
+		if dx*dx+dy*dy >= dragThreshold*dragThreshold {
+			pos := s.cardPositions[s.draggingCardID]
+			s.dragOffsetX = s.mouseStartX - pos.X
+			s.dragOffsetY = s.mouseStartY - pos.Y
+			s.mouseState = mouseDragging
+		}
+
+	case mouseDragging:
+		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+			s.dragTargetX = nil
+			s.dragTargetY = nil
+			s.draggingCardID = 0
+			s.mouseState = mouseIdle
+			return
+		}
+		if s.draggingCardID != 0 {
+			pos := s.cardPositions[s.draggingCardID]
+			pos.X = mx - s.dragOffsetX
+			pos.Y = my - s.dragOffsetY
+			s.cardPositions[s.draggingCardID] = pos
+		}
+		if s.dragTargetX != nil {
+			*s.dragTargetX = mx - s.dragOffsetX
+			*s.dragTargetY = my - s.dragOffsetY
+		}
+	}
+}
+
+func (s *DuelScreen) handleClick(mx, my int) {
+	// Done button
+	doneBounds := s.doneBtn[0].Bounds()
+	doneX := duelBoardX + 2
+	doneY := duelMsgY
+	if mx >= doneX && mx < doneX+doneBounds.Dx() && my >= doneY && my < doneY+doneBounds.Dy() {
+		for id, action := range s.cardActions {
+			if action.Type == core.ActionDeclareAttacker && s.pendingAttackers[id] {
+				select {
+				case s.self.core.InputChan <- action:
+				default:
+				}
+			}
+		}
+		s.pendingAttackers = make(map[core.EntityID]bool)
+		select {
+		case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
+		default:
+		}
+		return
 	}
 
-	return false
+	s.handleCardClick(mx, my)
 }
 
 func (s *DuelScreen) runGameLoop() {
@@ -553,6 +615,11 @@ func (s *DuelScreen) runAutoPass() {
 		}
 
 		if onlyPass {
+			select {
+			case <-time.After(50 * time.Millisecond):
+			case <-s.gameDone:
+				return
+			}
 			select {
 			case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
 			case <-s.gameDone:
@@ -682,6 +749,21 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 	txt.Color = color.RGBA{200, 200, 200, 255}
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
+	if dp == s.self {
+		actions := s.gameState.AvailableActions(dp.core)
+		y := startY + 68
+		for _, a := range actions {
+			name := ""
+			if a.Card != nil {
+				name = a.Card.Name()
+			}
+			line := fmt.Sprintf("%s %s", a.Type, name)
+			at := elements.NewText(10, line, duelBoardX+10, y)
+			at.Color = color.RGBA{180, 180, 180, 255}
+			at.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+			y += 12
+		}
+	}
 }
 
 func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
@@ -729,6 +811,13 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 			star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
 			star.Color = color.RGBA{255, 255, 0, 255}
 			star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		}
+
+		if s.pendingAttackers[card.ID] && dp == s.self {
+			vector.StrokeRect(screen,
+				float32(pos.X), float32(pos.Y),
+				float32(fieldCardW), float32(fieldCardH),
+				2, color.RGBA{255, 255, 0, 255}, false)
 		}
 	}
 }
@@ -831,6 +920,23 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 	screen.DrawImage(s.cardPreviewImg, opts)
 }
 
+func (s *DuelScreen) stackDescription() string {
+	stack := s.gameState.Stack
+	if stack.IsEmpty() {
+		return ""
+	}
+	var names []string
+	for _, item := range stack.Items {
+		if item.Card != nil {
+			names = append(names, item.Card.Name())
+		}
+	}
+	if len(names) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("Respond to %s. ", strings.Join(names, ", "))
+}
+
 func (s *DuelScreen) statusMessage() string {
 	active := s.gameState.Players[s.gameState.ActivePlayer]
 	isMyTurn := active == s.self.core
@@ -840,8 +946,10 @@ func (s *DuelScreen) statusMessage() string {
 		return fmt.Sprintf("Hand size > max hand size. Choose a card to discard. (%d cards)", len(s.self.core.Hand))
 	}
 
+	stackMsg := s.stackDescription()
+
 	if phase == core.PhaseCombat {
-		return s.combatStatusMessage(active, isMyTurn)
+		return stackMsg + s.combatStatusMessage(active, isMyTurn)
 	}
 
 	prefix := "Your"
@@ -851,27 +959,27 @@ func (s *DuelScreen) statusMessage() string {
 
 	switch phase {
 	case core.PhaseUntap:
-		return fmt.Sprintf("%s turn - Untap", prefix)
+		return stackMsg + fmt.Sprintf("%s turn - Untap", prefix)
 	case core.PhaseUpkeep:
-		return fmt.Sprintf("%s turn - Upkeep", prefix)
+		return stackMsg + fmt.Sprintf("%s turn - Upkeep", prefix)
 	case core.PhaseDraw:
-		return fmt.Sprintf("%s turn - Draw", prefix)
+		return stackMsg + fmt.Sprintf("%s turn - Draw", prefix)
 	case core.PhaseMain1:
 		if isMyTurn {
-			return "Main phase: play a land or cast spells. Done to go to combat."
+			return stackMsg + "Main phase: play a land or cast spells. Done to go to combat."
 		}
-		return fmt.Sprintf("%s main phase. Cast instants or Done to pass.", prefix)
+		return stackMsg + fmt.Sprintf("%s main phase. Cast instants or Done to pass.", prefix)
 	case core.PhaseMain2:
 		if isMyTurn {
-			return "Main phase 2: play a land or cast spells. Done to end turn."
+			return stackMsg + "Main phase 2: play a land or cast spells. Done to end turn."
 		}
-		return fmt.Sprintf("%s main phase 2. Cast instants or Done to pass.", prefix)
+		return stackMsg + fmt.Sprintf("%s main phase 2. Cast instants or Done to pass.", prefix)
 	case core.PhaseEnd:
-		return fmt.Sprintf("%s turn - End step", prefix)
+		return stackMsg + fmt.Sprintf("%s turn - End step", prefix)
 	case core.PhaseCleanup:
-		return fmt.Sprintf("%s turn - Cleanup", prefix)
+		return stackMsg + fmt.Sprintf("%s turn - Cleanup", prefix)
 	default:
-		return ""
+		return stackMsg
 	}
 }
 
