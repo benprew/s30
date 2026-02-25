@@ -74,10 +74,7 @@ type DuelScreen struct {
 
 	cardActions map[core.EntityID]core.PlayerAction
 
-	frameCount     int
-	lastClickFrame int
-	lastClickX     int
-	lastClickY     int
+	frameCount int
 
 	anteCard *domain.Card
 }
@@ -278,11 +275,15 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 	}
 
+	s.updateHoverPreview(mx, my)
+
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+		s.handleRightClick(mx, my)
+	}
+
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		s.handleCardClick(mx, my)
 	}
-
-	s.handleDoubleClick(mx, my)
 
 	// Check win/loss
 	s.gameState.CheckWinConditions()
@@ -378,6 +379,18 @@ func (s *DuelScreen) cardIdxAtPoint(mx, my, panelX, panelY int, cards []*core.Ca
 func (s *DuelScreen) handleCardClick(mx, my int) {
 	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
 		s.selectedCardIdx = idx
+		s.performCardAction(s.self.core.Hand[idx])
+		return
+	}
+
+	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
+		s.performCardAction(card)
+		return
+	}
+}
+
+func (s *DuelScreen) handleRightClick(mx, my int) {
+	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
 		s.loadCardPreview(s.self.core.Hand[idx])
 		return
 	}
@@ -393,41 +406,19 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 	}
 }
 
-const doubleClickFrames = 20
-
-func (s *DuelScreen) handleDoubleClick(mx, my int) {
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		return
-	}
-
-	frame := s.frameCount
-	dx, dy := mx-s.lastClickX, my-s.lastClickY
-	if dx < 0 {
-		dx = -dx
-	}
-	if dy < 0 {
-		dy = -dy
-	}
-	dist := dx + dy
-	isDouble := frame-s.lastClickFrame < doubleClickFrames && dist < 10
-	s.lastClickFrame = frame
-	s.lastClickX = mx
-	s.lastClickY = my
-
-	if !isDouble {
-		return
-	}
-
-	// Reset so a third click doesn't trigger again
-	s.lastClickFrame = 0
-
+func (s *DuelScreen) updateHoverPreview(mx, my int) {
 	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
-		s.performCardAction(s.self.core.Hand[idx])
+		s.loadCardPreview(s.self.core.Hand[idx])
 		return
 	}
 
 	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
-		s.performCardAction(card)
+		s.loadCardPreview(card)
+		return
+	}
+
+	if card := s.fieldCardAtPoint(mx, my, s.opponent); card != nil {
+		s.loadCardPreview(card)
 		return
 	}
 }
@@ -708,9 +699,8 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 		screen.DrawImage(s.messageBg, opts)
 	}
 
-	// Phase description text
-	phaseDesc := phaseDescription(s.self.core.Turn.Phase)
-	txt := elements.NewText(14, phaseDesc, duelBoardX+60, duelMsgY+12)
+	msg := s.statusMessage()
+	txt := elements.NewText(14, msg, duelBoardX+60, duelMsgY+12)
 	txt.Color = color.RGBA{255, 255, 255, 255}
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
@@ -841,24 +831,79 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 	screen.DrawImage(s.cardPreviewImg, opts)
 }
 
-func phaseDescription(phase core.Phase) string {
+func (s *DuelScreen) statusMessage() string {
+	active := s.gameState.Players[s.gameState.ActivePlayer]
+	isMyTurn := active == s.self.core
+	phase := active.Turn.Phase
+
+	if s.self.core.Turn.Discarding {
+		return fmt.Sprintf("Hand size > max hand size. Choose a card to discard. (%d cards)", len(s.self.core.Hand))
+	}
+
+	if phase == core.PhaseCombat {
+		return s.combatStatusMessage(active, isMyTurn)
+	}
+
+	prefix := "Your"
+	if !isMyTurn {
+		prefix = s.opponent.name + "'s"
+	}
+
 	switch phase {
 	case core.PhaseUntap:
-		return "Untap phase: untap all permanents"
+		return fmt.Sprintf("%s turn - Untap", prefix)
 	case core.PhaseUpkeep:
-		return "Upkeep phase: upkeep triggers"
+		return fmt.Sprintf("%s turn - Upkeep", prefix)
 	case core.PhaseDraw:
-		return "Draw phase: draw a card"
+		return fmt.Sprintf("%s turn - Draw", prefix)
 	case core.PhaseMain1:
-		return "Main phase (before combat): cast spells, play land"
-	case core.PhaseCombat:
-		return "Combat phase: declare attackers and blockers"
+		if isMyTurn {
+			return "Main phase: play a land or cast spells. Done to go to combat."
+		}
+		return fmt.Sprintf("%s main phase. Cast instants or Done to pass.", prefix)
 	case core.PhaseMain2:
-		return "Main phase (after combat): cast spells, play land"
+		if isMyTurn {
+			return "Main phase 2: play a land or cast spells. Done to end turn."
+		}
+		return fmt.Sprintf("%s main phase 2. Cast instants or Done to pass.", prefix)
 	case core.PhaseEnd:
-		return "End phase: end of turn triggers"
+		return fmt.Sprintf("%s turn - End step", prefix)
+	case core.PhaseCleanup:
+		return fmt.Sprintf("%s turn - Cleanup", prefix)
 	default:
 		return ""
+	}
+}
+
+func (s *DuelScreen) combatStatusMessage(active *core.Player, isMyTurn bool) string {
+	step := active.Turn.CombatStep
+	switch step {
+	case core.CombatStepBeginning:
+		if isMyTurn {
+			return "Beginning of combat"
+		}
+		return fmt.Sprintf("%s declares combat", s.opponent.name)
+	case core.CombatStepDeclareAttackers:
+		if isMyTurn {
+			return "Choose creatures to attack with. Done when finished."
+		}
+		return fmt.Sprintf("%s is choosing attackers...", s.opponent.name)
+	case core.CombatStepDeclareBlockers:
+		if !isMyTurn {
+			return "Choose creatures to block with. Done when finished."
+		}
+		return fmt.Sprintf("%s is choosing blockers...", s.opponent.name)
+	case core.CombatStepFirstStrikeDamage:
+		return "First strike damage"
+	case core.CombatStepCombatDamage:
+		return "Combat damage resolves"
+	case core.CombatStepEndOfCombat:
+		return "End of combat"
+	default:
+		if isMyTurn {
+			return "Your combat phase"
+		}
+		return fmt.Sprintf("%s's combat phase", s.opponent.name)
 	}
 }
 
