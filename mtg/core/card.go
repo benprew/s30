@@ -63,6 +63,11 @@ func abilityToEvent(ability *domain.ParsedAbility) effects.Event {
 		return nil
 	}
 
+	// Static abilities are continuous effects, not one-shot stack events
+	if ability.Type == "Static" {
+		return nil
+	}
+
 	// Aura continuous effects are applied through attachments, not one-shot events
 	if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted {
 		return nil
