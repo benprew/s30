@@ -822,3 +822,35 @@ func TestCombatPhaseCastSpellAction(t *testing.T) {
 		t.Errorf("Expected Llanowar Elves to have 4 power after Giant Growth, got %d", elf.EffectivePower())
 	}
 }
+
+func TestManaDrainsAtEndOfPhase(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players, false)
+
+	p0 := game.Players[0]
+	p1 := game.Players[1]
+
+	p0.ManaPool.AddMana([]rune{'G'})
+	p0.ManaPool.AddMana([]rune{'R'})
+	p1.ManaPool.AddMana([]rune{'U'})
+
+	if len(p0.ManaPool) != 2 {
+		t.Fatalf("Expected player 0 to have 2 mana, got %d", len(p0.ManaPool))
+	}
+	if len(p1.ManaPool) != 1 {
+		t.Fatalf("Expected player 1 to have 1 mana, got %d", len(p1.ManaPool))
+	}
+
+	p0.Turn.Phase = PhaseUpkeep
+	game.UpkeepPhase(p0)
+	for _, p := range game.Players {
+		p.ManaPool.Drain()
+	}
+
+	if len(p0.ManaPool) != 0 {
+		t.Errorf("Expected player 0 mana pool to be empty after phase, got %d", len(p0.ManaPool))
+	}
+	if len(p1.ManaPool) != 0 {
+		t.Errorf("Expected player 1 mana pool to be empty after phase, got %d", len(p1.ManaPool))
+	}
+}

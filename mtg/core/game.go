@@ -270,7 +270,10 @@ func (g *GameState) NextTurn() {
 			g.CleanupPhase(player)
 		}
 
-		// check for win at tne end of each phase
+		for _, p := range g.Players {
+			p.ManaPool.Drain()
+		}
+
 		g.CheckWinConditions()
 		if g.hasLoser() {
 			return

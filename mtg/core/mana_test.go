@@ -312,6 +312,29 @@ func TestPayColorlessWithExcess(t *testing.T) {
 	}
 }
 
+func TestManaPool_Drain(t *testing.T) {
+	pool := ManaPool{{'W'}, {'U'}, {'B', 'R'}, {'G'}}
+	pool.Drain()
+
+	if len(pool) != 0 {
+		t.Errorf("Expected mana pool to be empty after drain, but got %d entries", len(pool))
+	}
+
+	pool.AddMana([]rune{'R'})
+	if len(pool) != 1 {
+		t.Errorf("Expected mana pool to work after drain, but got %d entries", len(pool))
+	}
+}
+
+func TestManaPool_DrainEmpty(t *testing.T) {
+	pool := ManaPool{}
+	pool.Drain()
+
+	if len(pool) != 0 {
+		t.Errorf("Expected empty mana pool to remain empty after drain, but got %d entries", len(pool))
+	}
+}
+
 func TestHybridManaParseBasic(t *testing.T) {
 	pool := ManaPool{}
 	cost := pool.ParseCost("{R/W}")

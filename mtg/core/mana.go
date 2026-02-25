@@ -14,6 +14,10 @@ import (
 
 type ManaPool [][]rune
 
+func (m *ManaPool) Drain() {
+	*m = (*m)[:0]
+}
+
 func (m *ManaPool) AddMana(manaType []rune) {
 	*m = append(*m, manaType)
 }
