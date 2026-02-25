@@ -13,6 +13,7 @@ import (
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
+	"github.com/benprew/s30/mtg/ai"
 	"github.com/benprew/s30/mtg/core"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -571,69 +572,7 @@ func (s *DuelScreen) runAutoPass() {
 }
 
 func (s *DuelScreen) runOpponentAI() {
-	for {
-		select {
-		case <-s.gameDone:
-			return
-		case <-s.opponent.core.WaitingChan:
-		}
-
-		if s.opponent.core.HasLost || s.self.core.HasLost {
-			return
-		}
-
-		actions := s.gameState.AvailableActions(s.opponent.core)
-		action := chooseAIAction(actions)
-
-		select {
-		case s.opponent.core.InputChan <- action:
-		case <-s.gameDone:
-			return
-		}
-	}
-}
-
-func chooseAIAction(actions []core.PlayerAction) core.PlayerAction {
-	castActions := []core.PlayerAction{}
-	landActions := []core.PlayerAction{}
-	attackActions := []core.PlayerAction{}
-	blockActions := []core.PlayerAction{}
-	discardActions := []core.PlayerAction{}
-
-	for _, a := range actions {
-		switch a.Type {
-		case core.ActionCastSpell:
-			if a.Card.CardType != domain.CardTypeLand {
-				castActions = append(castActions, a)
-			}
-		case core.ActionPlayLand:
-			landActions = append(landActions, a)
-		case core.ActionDeclareAttacker:
-			attackActions = append(attackActions, a)
-		case core.ActionDeclareBlocker:
-			blockActions = append(blockActions, a)
-		case core.ActionDiscard:
-			discardActions = append(discardActions, a)
-		}
-	}
-
-	if len(discardActions) > 0 {
-		return discardActions[rand.Intn(len(discardActions))]
-	}
-	if len(castActions) > 0 {
-		return castActions[rand.Intn(len(castActions))]
-	}
-	if len(landActions) > 0 {
-		return landActions[rand.Intn(len(landActions))]
-	}
-	if len(attackActions) > 0 {
-		return attackActions[rand.Intn(len(attackActions))]
-	}
-	if len(blockActions) > 0 {
-		return blockActions[rand.Intn(len(blockActions))]
-	}
-
-	return core.PlayerAction{Type: core.ActionPassPriority}
+	ai.RunAI(s.gameState, s.opponent.core, s.gameDone)
 }
 
 func (s *DuelScreen) loadCardPreview(card *core.Card) {
