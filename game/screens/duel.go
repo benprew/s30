@@ -74,10 +74,7 @@ type DuelScreen struct {
 
 	cardActions map[core.EntityID]core.PlayerAction
 
-	frameCount     int
-	lastClickFrame int
-	lastClickX     int
-	lastClickY     int
+	frameCount int
 
 	anteCard *domain.Card
 }
@@ -278,11 +275,15 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 	}
 
+	s.updateHoverPreview(mx, my)
+
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+		s.handleRightClick(mx, my)
+	}
+
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		s.handleCardClick(mx, my)
 	}
-
-	s.handleDoubleClick(mx, my)
 
 	// Check win/loss
 	s.gameState.CheckWinConditions()
@@ -378,6 +379,18 @@ func (s *DuelScreen) cardIdxAtPoint(mx, my, panelX, panelY int, cards []*core.Ca
 func (s *DuelScreen) handleCardClick(mx, my int) {
 	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
 		s.selectedCardIdx = idx
+		s.performCardAction(s.self.core.Hand[idx])
+		return
+	}
+
+	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
+		s.performCardAction(card)
+		return
+	}
+}
+
+func (s *DuelScreen) handleRightClick(mx, my int) {
+	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
 		s.loadCardPreview(s.self.core.Hand[idx])
 		return
 	}
@@ -393,41 +406,19 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 	}
 }
 
-const doubleClickFrames = 20
-
-func (s *DuelScreen) handleDoubleClick(mx, my int) {
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		return
-	}
-
-	frame := s.frameCount
-	dx, dy := mx-s.lastClickX, my-s.lastClickY
-	if dx < 0 {
-		dx = -dx
-	}
-	if dy < 0 {
-		dy = -dy
-	}
-	dist := dx + dy
-	isDouble := frame-s.lastClickFrame < doubleClickFrames && dist < 10
-	s.lastClickFrame = frame
-	s.lastClickX = mx
-	s.lastClickY = my
-
-	if !isDouble {
-		return
-	}
-
-	// Reset so a third click doesn't trigger again
-	s.lastClickFrame = 0
-
+func (s *DuelScreen) updateHoverPreview(mx, my int) {
 	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
-		s.performCardAction(s.self.core.Hand[idx])
+		s.loadCardPreview(s.self.core.Hand[idx])
 		return
 	}
 
 	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
-		s.performCardAction(card)
+		s.loadCardPreview(card)
+		return
+	}
+
+	if card := s.fieldCardAtPoint(mx, my, s.opponent); card != nil {
+		s.loadCardPreview(card)
 		return
 	}
 }
