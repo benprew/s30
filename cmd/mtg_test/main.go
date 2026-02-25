@@ -128,7 +128,7 @@ func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
 
 func main() {
 	players := createPlayers()
-	game := core.NewGame(players)
+	game := core.NewGame(players, true)
 	game.StartGame()
 
 	fmt.Println("=== MTG Test Game ===")

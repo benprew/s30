@@ -9,7 +9,7 @@ type Brawl struct {
 }
 
 func NewBrawl(players []*core.Player) *Brawl {
-	g := core.NewGame(players)
+	g := core.NewGame(players, false)
 	return &Brawl{game: g}
 }
 

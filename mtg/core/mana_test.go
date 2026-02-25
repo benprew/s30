@@ -74,7 +74,7 @@ func TestAvailableMana(t *testing.T) {
 	// test a player has 2 available mana with an untapped land and elf
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players)
+	game := NewGame(players, false)
 	game.StartGame()
 
 	// Find a Forest card and put it on the battlefield

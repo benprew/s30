@@ -19,9 +19,10 @@ type GameState struct {
 	CardMap           map[EntityID]*Card
 	Attackers         []*Card
 	BlockerMap        map[*Card][]*Card
+	DebugPrint        bool
 }
 
-func NewGame(players []*Player) *GameState {
+func NewGame(players []*Player, debug bool) *GameState {
 	return &GameState{
 		Players:           players,
 		CurrentPlayer:     0,
@@ -32,6 +33,13 @@ func NewGame(players []*Player) *GameState {
 		CardMap:           make(map[EntityID]*Card),
 		Attackers:         []*Card{},
 		BlockerMap:        make(map[*Card][]*Card),
+		DebugPrint:        debug,
+	}
+}
+
+func (g *GameState) debugf(format string, args ...any) {
+	if g.DebugPrint {
+		fmt.Printf(format, args...)
 	}
 }
 
@@ -66,7 +74,7 @@ func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
 	AITurnTimeout := 5 * time.Second
 
 	activePlayer := g.Players[g.ActivePlayer]
-	fmt.Printf("  [DEBUG] WaitForPlayerInput: waiting for %s, phase=%v, combat_step=%v, is_active=%v\n",
+	g.debugf("  [DEBUG] WaitForPlayerInput: waiting for %s, phase=%v, combat_step=%v, is_active=%v\n",
 		player.Name(), activePlayer.Turn.Phase, activePlayer.Turn.CombatStep, player == activePlayer)
 
 	if player.WaitingChan != nil {
@@ -79,9 +87,9 @@ func (g *GameState) WaitForPlayerInput(player *Player) (action PlayerAction) {
 	if player.IsAI {
 		select {
 		case action = <-player.InputChan:
-			fmt.Printf("  [DEBUG] WaitForPlayerInput: %s sent action %v\n", player.Name(), action.Type)
+			g.debugf("  [DEBUG] WaitForPlayerInput: %s sent action %v\n", player.Name(), action.Type)
 		case <-time.After(AITurnTimeout):
-			fmt.Printf("  [DEBUG] WaitForPlayerInput: %s TIMEOUT, defaulting to pass\n", player.Name())
+			g.debugf("  [DEBUG] WaitForPlayerInput: %s TIMEOUT, defaulting to pass\n", player.Name())
 			action = PlayerAction{Type: ActionPassPriority}
 		}
 	} else {
@@ -155,27 +163,27 @@ func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackRes
 	switch action.Type {
 	case ActionCastSpell:
 		if err := g.TapManaSourcesFor(player, action.Card.ManaCost); err != nil {
-			fmt.Println("error tapping mana:", err)
+			g.debugf("error tapping mana: %v\n", err)
 			return ActPlayerPriority, nil
 		}
 		if err := g.CastSpell(player, action.Card, action.Target); err != nil {
-			fmt.Println("error casting spell:", err)
+			g.debugf("error casting spell: %v\n", err)
 			return ActPlayerPriority, nil
 		}
 		if action.Target != nil {
-			fmt.Printf("  %s casts %s targeting %s\n", player.Name(), cardStr(action.Card), targetStr(action.Target))
+			g.debugf("  %s casts %s targeting %s\n", player.Name(), cardStr(action.Card), targetStr(action.Target))
 		} else {
-			fmt.Printf("  %s casts %s\n", player.Name(), cardStr(action.Card))
+			g.debugf("  %s casts %s\n", player.Name(), cardStr(action.Card))
 		}
 		g.Stack.ConsecutivePasses = 0
 		return ActPlayerPriority, nil
 	case ActionPlayLand:
 		g.PlayLand(player, action.Card)
-		fmt.Printf("  %s plays %s\n", player.Name(), cardStr(action.Card))
+		g.debugf("  %s plays %s\n", player.Name(), cardStr(action.Card))
 		return ActPlayerPriority, nil
 	case ActionPassPriority:
 		res, item := g.Stack.Next(EventPlayerPassesPriority, nil)
-		fmt.Printf("after pass: res: %d, item: %v\n", res, item)
+		g.debugf("after pass: res: %d, item: %v\n", res, item)
 		return res, item
 		// return g.Stack.Next(EventPlayerPassesPriority, nil)
 	}
@@ -185,7 +193,7 @@ func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackRes
 func (g *GameState) RunStack() bool {
 	for _, p := range g.Players {
 		if len(p.InputChan) > 0 {
-			fmt.Printf("  [WARN] RunStack: %s has %d pending actions in channel\n", p.Name(), len(p.InputChan))
+			g.debugf("  [WARN] RunStack: %s has %d pending actions in channel\n", p.Name(), len(p.InputChan))
 			for len(p.InputChan) > 0 {
 				<-p.InputChan
 			}
@@ -205,7 +213,7 @@ func (g *GameState) RunStack() bool {
 		if cnt > 100 {
 			break
 		}
-		fmt.Printf("RunStack: res: %d, item: %v\n", result, item)
+		g.debugf("RunStack: res: %d, item: %v\n", result, item)
 		switch result {
 		case ActPlayerPriority:
 			g.CheckStateBasedActions()
@@ -242,7 +250,7 @@ func (g *GameState) NextTurn() {
 	player.Turn.Phase = PhaseUntap
 	player.Turn.LandPlayed = false
 
-	fmt.Printf("\n=== %s's Turn (Life: %d) ===\n", player.Name(), player.LifeTotal)
+	g.debugf("\n=== %s's Turn (Life: %d) ===\n", player.Name(), player.LifeTotal)
 
 	for player.Turn.Phase != PhaseEndTurn {
 		switch player.Turn.Phase {
@@ -284,7 +292,7 @@ func (g *GameState) CleanupPhase(player *Player) {
 			action := g.WaitForPlayerInput(player)
 			if action.Type == ActionDiscard && action.Card != nil {
 				player.MoveTo(action.Card, ZoneGraveyard)
-				fmt.Printf("  %s discards %s\n", player.Name(), action.Card.Name())
+				g.debugf("  %s discards %s\n", player.Name(), action.Card.Name())
 			}
 		}
 		player.Turn.Discarding = false
@@ -307,24 +315,26 @@ func (g *GameState) UntapPhase(player *Player) {
 
 func (g *GameState) UpkeepPhase(player *Player) {
 	// TODO Process upkeep triggers
-	fmt.Println("UpkeepPhase: running stack")
+	g.debugf("UpkeepPhase: running stack\n")
 	g.RunStack()
 }
 
 func (g *GameState) DrawPhase(player *Player) {
 	if err := player.DrawCard(); err != nil {
-		fmt.Printf("  %s cannot draw - loses the game!\n", player.Name())
+		g.debugf("  %s cannot draw - loses the game!\n", player.Name())
 		player.HasLost = true
 		return
 	}
-	fmt.Printf("  %s draws a card. Hand: ", player.Name())
-	for i, c := range player.Hand {
-		if i > 0 {
-			fmt.Print(", ")
+	if g.DebugPrint {
+		g.debugf("  %s draws a card. Hand: ", player.Name())
+		for i, c := range player.Hand {
+			if i > 0 {
+				g.debugf(", ")
+			}
+			g.debugf("%s", c.Name())
 		}
-		fmt.Print(c.Name())
+		g.debugf("\n")
 	}
-	fmt.Println()
 }
 
 func (g *GameState) MainPhase(player *Player) {
@@ -343,7 +353,7 @@ func (g *GameState) CombatPhase(player *Player) {
 	player.Turn.CombatStep = CombatStepDeclareAttackers
 	availableAttackers := g.AvailableAttackers(player)
 	if len(availableAttackers) > 0 {
-		fmt.Printf("  Combat: Available attackers: %s\n", g.cardListString(availableAttackers))
+		g.debugf("  Combat: Available attackers: %s\n", g.cardListString(availableAttackers))
 	}
 	for {
 		action := g.WaitForPlayerInput(player)
@@ -355,7 +365,7 @@ func (g *GameState) CombatPhase(player *Player) {
 				continue
 			}
 			g.Attackers = append(g.Attackers, action.Card)
-			fmt.Printf("  %s attacks with %s (%d/%d)\n", player.Name(), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
+			g.debugf("  %s attacks with %s (%d/%d)\n", player.Name(), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
 		}
 	}
 	g.RunStack()
@@ -373,10 +383,10 @@ func (g *GameState) CombatPhase(player *Player) {
 			if action.Type == ActionDeclareBlocker {
 				if attacker, ok := action.Target.(*Card); ok {
 					if err := g.DeclareBlocker(action.Card, attacker); err != nil {
-						fmt.Printf("  error declaring blocker: %v\n", err)
+						g.debugf("  error declaring blocker: %v\n", err)
 						continue
 					}
-					fmt.Printf("  %s blocks %s with %s (%d/%d)\n", opponent.Name(), cardStr(attacker), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
+					g.debugf("  %s blocks %s with %s (%d/%d)\n", opponent.Name(), cardStr(attacker), cardStr(action.Card), action.Card.EffectivePower(), action.Card.EffectiveToughness())
 				}
 			}
 		}
@@ -418,9 +428,9 @@ func (g *GameState) EndPhase(player *Player) {
 
 func (g *GameState) TapManaSourcesFor(player *Player, cost string) error {
 	required := player.ManaPool.ParseCost(cost)
-	fmt.Printf("TapManaSourcesFor: required: %v - pool: %c\n", required, player.ManaPool)
+	g.debugf("TapManaSourcesFor: required: %v - pool: %c\n", required, player.ManaPool)
 
-	fmt.Printf("avail mana: %c\n", g.AvailableMana(player, player.ManaPool))
+	g.debugf("avail mana: %c\n", g.AvailableMana(player, player.ManaPool))
 	for color, needed := range required {
 		if color == 'C' {
 			continue
@@ -436,7 +446,7 @@ func (g *GameState) TapManaSourcesFor(player *Player, cost string) error {
 						if err := g.ActivateManaAbility(player, card); err != nil {
 							panic(err)
 						}
-						fmt.Printf("Tapping %s for color\n", card.CardName)
+						g.debugf("Tapping %s for color\n", card.CardName)
 						tapped++
 						break
 					}
@@ -448,7 +458,7 @@ func (g *GameState) TapManaSourcesFor(player *Player, cost string) error {
 		}
 	}
 
-	fmt.Printf("avail mana: %c\n", g.AvailableMana(player, player.ManaPool))
+	g.debugf("avail mana: %c\n", g.AvailableMana(player, player.ManaPool))
 
 	if required['C'] > 0 {
 		for _, card := range player.Battlefield {
@@ -456,11 +466,11 @@ func (g *GameState) TapManaSourcesFor(player *Player, cost string) error {
 				break
 			}
 			if !card.Tapped && (card.CardType == domain.CardTypeLand || len(card.ManaProduction) > 0) {
-				fmt.Printf("tapping %s\n", card.CardName)
+				g.debugf("tapping %s\n", card.CardName)
 				if err := g.ActivateManaAbility(player, card); err != nil {
 					panic(err)
 				}
-				fmt.Printf("cost: %s pool: %c, required: %v\n", cost, player.ManaPool, player.ManaPool.ParseCost(cost))
+				g.debugf("cost: %s pool: %c, required: %v\n", cost, player.ManaPool, player.ManaPool.ParseCost(cost))
 			}
 		}
 		if !player.ManaPool.CanPay(cost) {
@@ -489,12 +499,12 @@ func (g *GameState) hasLoser() bool {
 }
 
 func (g *GameState) printZoneStates() {
-	fmt.Println("\n--- End of Turn Zone States ---")
+	g.debugf("\n--- End of Turn Zone States ---\n")
 	for _, p := range g.Players {
-		fmt.Printf("%s (Life: %d):\n", p.Name(), p.LifeTotal)
-		fmt.Printf("  Hand: %s\n", g.cardListString(p.Hand))
-		fmt.Printf("  Battlefield: %s\n", g.cardListString(p.Battlefield))
-		fmt.Printf("  Graveyard: %s\n", g.cardListString(p.Graveyard))
+		g.debugf("%s (Life: %d):\n", p.Name(), p.LifeTotal)
+		g.debugf("  Hand: %s\n", g.cardListString(p.Hand))
+		g.debugf("  Battlefield: %s\n", g.cardListString(p.Battlefield))
+		g.debugf("  Graveyard: %s\n", g.cardListString(p.Graveyard))
 	}
 }
 
@@ -502,10 +512,10 @@ func (g *GameState) printCombatDamage(attacker, defender *Player) {
 	for _, card := range g.Attackers {
 		blockers := g.BlockerMap[card]
 		if len(blockers) == 0 {
-			fmt.Printf("  %s deals %d damage to %s\n", cardStr(card), card.EffectivePower(), defender.Name())
+			g.debugf("  %s deals %d damage to %s\n", cardStr(card), card.EffectivePower(), defender.Name())
 		} else {
 			for _, blocker := range blockers {
-				fmt.Printf("  %s and %s trade blows (%d vs %d)\n", cardStr(card), cardStr(blocker), card.EffectivePower(), blocker.EffectivePower())
+				g.debugf("  %s and %s trade blows (%d vs %d)\n", cardStr(card), cardStr(blocker), card.EffectivePower(), blocker.EffectivePower())
 			}
 		}
 	}

@@ -189,7 +189,7 @@ func TestAuraDetachOnCreatureDeath(t *testing.T) {
 	aura.AttachedTo = creature
 
 	creature.DamageTaken = 4
-	game := NewGame([]*Player{player})
+	game := NewGame([]*Player{player}, false)
 	game.CleanupDeadCreatures()
 
 	if len(player.Graveyard) != 2 {
@@ -251,7 +251,7 @@ func TestAuraDetachOnCreatureZoneChange(t *testing.T) {
 
 func TestAuraResolveAttaches(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players)
+	game := NewGame(players, false)
 	game.StartGame()
 
 	player := players[0]
@@ -304,7 +304,7 @@ func TestAuraResolveAttaches(t *testing.T) {
 
 func TestAuraResolveTargetGone(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players)
+	game := NewGame(players, false)
 	game.StartGame()
 
 	player := players[0]
@@ -434,7 +434,7 @@ func makeImmolation(id EntityID, owner *Player) *Card {
 
 func TestImmolationKillsGrizzlyBears(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players)
+	game := NewGame(players, false)
 	game.StartGame()
 
 	player := players[0]
@@ -478,7 +478,7 @@ func TestImmolationKillsGrizzlyBears(t *testing.T) {
 
 func TestImmolationOnWarMammoth(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players)
+	game := NewGame(players, false)
 	game.StartGame()
 
 	player := players[0]
@@ -525,7 +525,7 @@ func TestImmolationOnWarMammoth(t *testing.T) {
 
 func TestCantCastAuraWithoutCreatures(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players)
+	game := NewGame(players, false)
 	game.StartGame()
 
 	player := players[0]
