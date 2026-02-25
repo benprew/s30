@@ -133,7 +133,7 @@ func TestCardActionsStatBoost(t *testing.T) {
 	card := &Card{}
 	card.ParsedAbilities = []domain.ParsedAbility{
 		{
-			Type: "Static",
+			Type: "Triggered",
 			Effect: &domain.ParsedEffect{
 				PowerBoost:     2,
 				ToughnessBoost: 2,
@@ -144,6 +144,24 @@ func TestCardActionsStatBoost(t *testing.T) {
 	actions := card.CardActions()
 	if len(actions) != 1 {
 		t.Errorf("Expected 1 action, got %d", len(actions))
+	}
+}
+
+func TestStaticAbilityNotTriggeredOnCast(t *testing.T) {
+	card := &Card{}
+	card.ParsedAbilities = []domain.ParsedAbility{
+		{
+			Type: "Static",
+			Effect: &domain.ParsedEffect{
+				PowerBoost:     1,
+				ToughnessBoost: 0,
+			},
+		},
+	}
+
+	actions := card.CardActions()
+	if len(actions) != 0 {
+		t.Errorf("Static abilities should not trigger on cast, got %d actions", len(actions))
 	}
 }
 
