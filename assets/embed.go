@@ -171,6 +171,13 @@ var (
 	//go:embed art/ui/MapBttns_map.json
 	InfoBarMap_json []byte
 
+	//go:embed art/ui/Tradbut1.pic.png
+	Tradbut1_png []byte
+
+	// Random encounter backgrounds
+	//go:embed art/sprites/rand_encounter/*.png
+	RandEncounterFS embed.FS
+
 	// Card images
 	//go:embed art/blank-card.png
 	CardBlank_png []byte

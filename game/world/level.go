@@ -30,10 +30,11 @@ type Level struct {
 	encounterIndex   int
 	encounterPending bool
 
-	randomEncounters       []RandomEncounter
-	encounterSprites       [][]*ebiten.Image
-	randomEncounterPending bool
-	pendingEncounterSprite int
+	randomEncounters        []RandomEncounter
+	encounterSprites        [][]*ebiten.Image
+	randomEncounterPending  bool
+	pendingEncounterSprite  int
+	pendingEncounterTerrain int
 
 	ticksSinceLastInteraction int
 	totalTicks                int

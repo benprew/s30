@@ -27,6 +27,7 @@ const (
 type RandomEncounter struct {
 	Tile        image.Point
 	SpriteIndex int
+	TerrainType int
 }
 
 func (l *Level) LoadRandomEncounterSprites() error {
@@ -120,6 +121,7 @@ func (l *Level) SpawnEncounters(count int) {
 		re := RandomEncounter{
 			Tile:        image.Point{tileX, tileY},
 			SpriteIndex: spriteIdx,
+			TerrainType: t.TerrainType,
 		}
 		l.randomEncounters = append(l.randomEncounters, re)
 	}
@@ -134,9 +136,9 @@ func dist(p1, p2 image.Point) float64 {
 func (l *Level) UpdateEncounters() {
 	for i, re := range l.randomEncounters {
 		if dist(l.Player.Loc(), l.TileToPixel(re.Tile)) < EncounterTriggerDist {
-			// Trigger encounter
 			l.randomEncounterPending = true
 			l.pendingEncounterSprite = re.SpriteIndex
+			l.pendingEncounterTerrain = re.TerrainType
 			t := l.Tile(re.Tile)
 			t.RemoveRandomEncounter()
 			l.randomEncounters = append(l.randomEncounters[:i], l.randomEncounters[i+1:]...)
@@ -152,12 +154,33 @@ func (l *Level) RandomEncounterPending() bool {
 	return l.randomEncounterPending
 }
 
-func (l *Level) TakeRandomEncounter() (int, bool) {
+func (l *Level) TakeRandomEncounter() (spriteIdx int, terrainType int, ok bool) {
 	if !l.randomEncounterPending {
-		return -1, false
+		return -1, 0, false
 	}
 	l.randomEncounterPending = false
-	return l.pendingEncounterSprite, true
+	return l.pendingEncounterSprite, l.pendingEncounterTerrain, true
+}
+
+var basicLands = []string{"Plains", "Island", "Swamp", "Mountain", "Forest"}
+
+func TerrainToLandName(terrainType int) string {
+	switch terrainType {
+	case TerrainPlains:
+		return basicLands[0]
+	case TerrainForest:
+		return basicLands[4]
+	case TerrainMountains:
+		return basicLands[3]
+	case TerrainMarsh:
+		return basicLands[2]
+	case TerrainWater, TerrainSand:
+		return basicLands[1]
+	case TerrainSnow:
+		return basicLands[rand.Intn(len(basicLands))]
+	default:
+		return basicLands[0]
+	}
 }
 
 func (l *Level) GetEncounterSprite(index int) *ebiten.Image {
