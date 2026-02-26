@@ -675,7 +675,9 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 		return actions
 	}
 
-	if player.Turn.Phase == PhaseMain1 || player.Turn.Phase == PhaseMain2 {
+	stackActive := !g.Stack.IsEmpty()
+
+	if !stackActive && (player.Turn.Phase == PhaseMain1 || player.Turn.Phase == PhaseMain2) {
 		for _, card := range player.Hand {
 			if g.CanPlayLand(player, card) {
 				actions = append(actions, PlayerAction{Type: ActionPlayLand, Card: card})
@@ -688,7 +690,7 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 		}
 	} else {
 		for _, card := range player.Hand {
-			if g.CanCast(player, card) && card.CardType == domain.CardTypeInstant {
+			if g.CanCast(player, card) && (card.CardType == domain.CardTypeInstant || card.HasKeyword(effects.KeywordFlash)) {
 				actions = append(actions, g.castActionsForCard(card)...)
 			}
 		}
