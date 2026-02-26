@@ -271,6 +271,10 @@ const (
 )
 
 func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCard == nil {
+		s.submitPendingAndPass()
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		if s.targetingCard != nil {
 			if s.selectedTarget != nil {
@@ -766,43 +770,47 @@ func (s *DuelScreen) updateMouse(mx, my int) {
 	}
 }
 
+func (s *DuelScreen) submitPendingAndPass() {
+	for id, action := range s.cardActions {
+		if action.Type == core.ActionDeclareAttacker && s.pendingAttackers[id] {
+			select {
+			case s.self.core.InputChan <- action:
+			default:
+			}
+		}
+	}
+	s.pendingAttackers = make(map[core.EntityID]bool)
+
+	for blockerID, attackerID := range s.pendingBlockers {
+		blocker := s.findBattlefieldCard(s.self, blockerID)
+		attacker := s.findBattlefieldCard(s.opponent, attackerID)
+		if blocker != nil && attacker != nil {
+			select {
+			case s.self.core.InputChan <- core.PlayerAction{
+				Type:   core.ActionDeclareBlocker,
+				Card:   blocker,
+				Target: attacker,
+			}:
+			default:
+			}
+		}
+	}
+	s.pendingBlockers = make(map[core.EntityID]core.EntityID)
+	s.selectedBlocker = 0
+
+	select {
+	case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
+	default:
+	}
+}
+
 func (s *DuelScreen) handleClick(mx, my int) {
 	// Done button
 	doneBounds := s.doneBtn[0].Bounds()
 	doneX := duelBoardX + 2
 	doneY := duelMsgY
 	if mx >= doneX && mx < doneX+doneBounds.Dx() && my >= doneY && my < doneY+doneBounds.Dy() {
-		for id, action := range s.cardActions {
-			if action.Type == core.ActionDeclareAttacker && s.pendingAttackers[id] {
-				select {
-				case s.self.core.InputChan <- action:
-				default:
-				}
-			}
-		}
-		s.pendingAttackers = make(map[core.EntityID]bool)
-
-		for blockerID, attackerID := range s.pendingBlockers {
-			blocker := s.findBattlefieldCard(s.self, blockerID)
-			attacker := s.findBattlefieldCard(s.opponent, attackerID)
-			if blocker != nil && attacker != nil {
-				select {
-				case s.self.core.InputChan <- core.PlayerAction{
-					Type:   core.ActionDeclareBlocker,
-					Card:   blocker,
-					Target: attacker,
-				}:
-				default:
-				}
-			}
-		}
-		s.pendingBlockers = make(map[core.EntityID]core.EntityID)
-		s.selectedBlocker = 0
-
-		select {
-		case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
-		default:
-		}
+		s.submitPendingAndPass()
 		return
 	}
 
