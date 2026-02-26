@@ -605,7 +605,17 @@ func (g *GameState) hasTarget(card *Card) bool {
 }
 
 func (g *GameState) cardRequiresTarget(card *Card) bool {
-	return card.GetTargetSpec() != nil
+	if card.GetTargetSpec() == nil {
+		return false
+	}
+	switch card.CardType {
+	case domain.CardTypeInstant, domain.CardTypeSorcery:
+		return true
+	case domain.CardTypeEnchantment:
+		return card.IsAura()
+	default:
+		return false
+	}
 }
 
 func (g *GameState) castActionsForCard(card *Card) []PlayerAction {
