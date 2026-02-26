@@ -822,3 +822,56 @@ func TestCombatPhaseCastSpellAction(t *testing.T) {
 		t.Errorf("Expected Llanowar Elves to have 4 power after Giant Growth, got %d", elf.EffectivePower())
 	}
 }
+
+func TestProcessActionUnhandledTypeReturnsActPlayerPriority(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players, false)
+	game.StartGame()
+
+	player := players[0]
+
+	unhandledTypes := []string{
+		ActionDeclareAttacker,
+		ActionDeclareBlocker,
+		ActionDiscard,
+		"SomeUnknownAction",
+	}
+
+	for _, actionType := range unhandledTypes {
+		result, item := game.ProcessAction(player, PlayerAction{Type: actionType})
+		if result != ActPlayerPriority {
+			t.Errorf("ProcessAction(%q) returned result %d, want ActPlayerPriority (%d)", actionType, result, ActPlayerPriority)
+		}
+		if item != nil {
+			t.Errorf("ProcessAction(%q) returned non-nil item", actionType)
+		}
+	}
+}
+
+func TestRunStackWithUnhandledActionDoesNotPanic(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players, false)
+	game.StartGame()
+
+	player := players[0]
+	opponent := players[1]
+
+	player.Turn.Phase = PhaseCombat
+	player.Turn.CombatStep = CombatStepDeclareAttackers
+	game.ActivePlayer = 0
+	game.CurrentPlayer = 0
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		<-player.WaitingChan
+		player.InputChan <- PlayerAction{Type: ActionDeclareAttacker}
+		<-player.WaitingChan
+		player.InputChan <- PlayerAction{Type: ActionPassPriority}
+		<-opponent.WaitingChan
+		opponent.InputChan <- PlayerAction{Type: ActionPassPriority}
+	}()
+
+	game.RunStack()
+	<-done
+}

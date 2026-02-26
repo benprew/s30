@@ -65,13 +65,13 @@ type DuelScreen struct {
 	selectedCardIdx int
 	cardPreviewImg  *ebiten.Image
 
-	mouseState    mouseStateType
-	mouseStartX   int
-	mouseStartY   int
-	dragTargetX   *int
-	dragTargetY   *int
-	dragOffsetX   int
-	dragOffsetY   int
+	mouseState     mouseStateType
+	mouseStartX    int
+	mouseStartY    int
+	dragTargetX    *int
+	dragTargetY    *int
+	dragOffsetX    int
+	dragOffsetY    int
 	draggingCardID core.EntityID
 	cardPositions  map[core.EntityID]image.Point
 
@@ -470,7 +470,6 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 	// battlefield cards
 	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
 		s.loadCardPreview(card)
-		fmt.Printf("CLICK: card: %s, actions: %v\n", card.Name(), s.cardActions[card.ID])
 		if action, ok := s.cardActions[card.ID]; ok && action.Type == core.ActionDeclareAttacker {
 			if s.pendingAttackers[card.ID] {
 				delete(s.pendingAttackers, card.ID)
@@ -481,8 +480,6 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 		}
 		s.performCardAction(card)
 		return
-	} else {
-		fmt.Printf("No card at %d, %d\n", mx, my)
 	}
 }
 
@@ -523,8 +520,11 @@ func (s *DuelScreen) updateHoverPreview(mx, my int) {
 func (s *DuelScreen) performCardAction(card *core.Card) {
 	action, ok := s.cardActions[card.ID]
 	if !ok {
+		fmt.Printf("CLICK: %s (no action available)\n", card.Name())
 		return
 	}
+
+	fmt.Printf("CLICK: %s -> action=%s target=%v\n", card.Name(), action.Type, action.Target)
 
 	if action.Type == "ActivateMana" {
 		s.gameState.ActivateManaAbility(s.self.core, card)
@@ -857,7 +857,7 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 				name = a.Card.Name()
 			}
 			line := fmt.Sprintf("%s %s", a.Type, name)
-			at := elements.NewText(10, line, duelBoardX+10, y)
+			at := elements.NewText(14, line, duelBoardX+10, y)
 			at.Color = color.RGBA{180, 180, 180, 255}
 			at.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 			y += 12
