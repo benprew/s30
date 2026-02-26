@@ -185,9 +185,9 @@ func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackRes
 		res, item := g.Stack.Next(EventPlayerPassesPriority, nil)
 		g.debugf("after pass: res: %d, item: %v\n", res, item)
 		return res, item
-		// return g.Stack.Next(EventPlayerPassesPriority, nil)
 	}
-	return -1, nil
+	g.debugf("  [WARN] ProcessAction: ignoring unhandled action type %q from %s\n", action.Type, player.Name())
+	return ActPlayerPriority, nil
 }
 
 func (g *GameState) RunStack() bool {

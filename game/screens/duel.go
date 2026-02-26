@@ -79,6 +79,8 @@ type DuelScreen struct {
 
 	cardActions      map[core.EntityID]core.PlayerAction
 	pendingAttackers map[core.EntityID]bool
+	pendingBlockers  map[core.EntityID]core.EntityID
+	selectedBlocker  core.EntityID
 
 	frameCount int
 
@@ -116,6 +118,7 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[core.EntityID]image.Point),
 		pendingAttackers: make(map[core.EntityID]bool),
+		pendingBlockers:  make(map[core.EntityID]core.EntityID),
 	}
 
 	s.initGameState()
@@ -330,6 +333,10 @@ func (s *DuelScreen) refreshCardActions() {
 	if !inDeclareAttackers && len(s.pendingAttackers) > 0 {
 		s.pendingAttackers = make(map[core.EntityID]bool)
 	}
+	if !s.isInDeclareBlockers() && (len(s.pendingBlockers) > 0 || s.selectedBlocker != 0) {
+		s.pendingBlockers = make(map[core.EntityID]core.EntityID)
+		s.selectedBlocker = 0
+	}
 	s.cardActions = make(map[core.EntityID]core.PlayerAction)
 	for _, action := range s.gameState.AvailableActions(s.self.core) {
 		if action.Card == nil {
@@ -378,12 +385,85 @@ func (s *DuelScreen) cardIdxAtPoint(mx, my, panelX, panelY int, cards []*core.Ca
 	return idx
 }
 
+func (s *DuelScreen) isInDeclareBlockers() bool {
+	activePlayer := s.gameState.Players[s.gameState.ActivePlayer]
+	return activePlayer == s.opponent.core &&
+		activePlayer.Turn.Phase == core.PhaseCombat &&
+		activePlayer.Turn.CombatStep == core.CombatStepDeclareBlockers
+}
+
+func (s *DuelScreen) findBattlefieldCard(dp *duelPlayer, id core.EntityID) *core.Card {
+	for _, card := range dp.core.Battlefield {
+		if card.ID == id {
+			return card
+		}
+	}
+	return nil
+}
+
+func (s *DuelScreen) isValidBlock(blockerID, attackerID core.EntityID) bool {
+	for _, action := range s.gameState.AvailableActions(s.self.core) {
+		if action.Type != core.ActionDeclareBlocker || action.Card == nil {
+			continue
+		}
+		targetCard, ok := action.Target.(*core.Card)
+		if !ok {
+			continue
+		}
+		if action.Card.ID == blockerID && targetCard.ID == attackerID {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *DuelScreen) canBlockAnything(blockerID core.EntityID) bool {
+	for _, action := range s.gameState.AvailableActions(s.self.core) {
+		if action.Type == core.ActionDeclareBlocker && action.Card != nil && action.Card.ID == blockerID {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *DuelScreen) handleBlockerClick(mx, my int) {
+	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
+		s.loadCardPreview(card)
+		if _, assigned := s.pendingBlockers[card.ID]; assigned {
+			delete(s.pendingBlockers, card.ID)
+			return
+		}
+		if s.selectedBlocker == card.ID {
+			s.selectedBlocker = 0
+			return
+		}
+		if s.canBlockAnything(card.ID) {
+			s.selectedBlocker = card.ID
+		}
+		return
+	}
+
+	if card := s.fieldCardAtPoint(mx, my, s.opponent); card != nil {
+		s.loadCardPreview(card)
+		if s.selectedBlocker != 0 && s.isValidBlock(s.selectedBlocker, card.ID) {
+			s.pendingBlockers[s.selectedBlocker] = card.ID
+			s.selectedBlocker = 0
+		}
+		return
+	}
+}
+
 func (s *DuelScreen) handleCardClick(mx, my int) {
 	// hand cards
 	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
 		fmt.Printf("HAND CLICK: idx: %d\n", idx)
 		s.selectedCardIdx = idx
 		s.performCardAction(s.self.core.Hand[idx])
+		return
+	}
+
+	if s.isInDeclareBlockers() {
+		s.handleBlockerClick(mx, my)
 		return
 	}
 
@@ -582,6 +662,24 @@ func (s *DuelScreen) handleClick(mx, my int) {
 			}
 		}
 		s.pendingAttackers = make(map[core.EntityID]bool)
+
+		for blockerID, attackerID := range s.pendingBlockers {
+			blocker := s.findBattlefieldCard(s.self, blockerID)
+			attacker := s.findBattlefieldCard(s.opponent, attackerID)
+			if blocker != nil && attacker != nil {
+				select {
+				case s.self.core.InputChan <- core.PlayerAction{
+					Type:   core.ActionDeclareBlocker,
+					Card:   blocker,
+					Target: attacker,
+				}:
+				default:
+				}
+			}
+		}
+		s.pendingBlockers = make(map[core.EntityID]core.EntityID)
+		s.selectedBlocker = 0
+
 		select {
 		case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
 		default:
@@ -689,6 +787,7 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawSidebar(screen, W, H)
 	s.drawBattlefield(screen, s.opponent)
 	s.drawBattlefield(screen, s.self)
+	s.drawBlockerArrows(screen)
 	s.drawHandPanel(screen, s.opponent)
 	s.drawHandPanel(screen, s.self)
 	s.drawCardPreview(screen, H)
@@ -819,6 +918,66 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 				float32(fieldCardW), float32(fieldCardH),
 				2, color.RGBA{255, 255, 0, 255}, false)
 		}
+
+		if dp == s.self && (s.selectedBlocker == card.ID || s.pendingBlockers[card.ID] != 0) {
+			vector.StrokeRect(screen,
+				float32(pos.X), float32(pos.Y),
+				float32(fieldCardW), float32(fieldCardH),
+				2, color.RGBA{255, 0, 0, 255}, false)
+		}
+
+		if dp == s.opponent && s.isInDeclareBlockers() {
+			isAttacker := false
+			for _, atk := range s.gameState.Attackers {
+				if atk.ID == card.ID {
+					isAttacker = true
+					break
+				}
+			}
+			if isAttacker {
+				borderColor := color.RGBA{255, 255, 0, 255}
+				if s.selectedBlocker != 0 && s.isValidBlock(s.selectedBlocker, card.ID) {
+					borderColor = color.RGBA{0, 255, 0, 255}
+				}
+				vector.StrokeRect(screen,
+					float32(pos.X), float32(pos.Y),
+					float32(fieldCardW), float32(fieldCardH),
+					2, borderColor, false)
+			}
+		}
+	}
+}
+
+func (s *DuelScreen) drawBlockerArrows(screen *ebiten.Image) {
+	for blockerID, attackerID := range s.pendingBlockers {
+		blockerPos, bOK := s.cardPositions[blockerID]
+		attackerPos, aOK := s.cardPositions[attackerID]
+		if !bOK || !aOK {
+			continue
+		}
+
+		bx := float32(blockerPos.X) + float32(fieldCardW)/2
+		by := float32(blockerPos.Y)
+		ax := float32(attackerPos.X) + float32(fieldCardW)/2
+		ay := float32(attackerPos.Y) + float32(fieldCardH)
+
+		lineColor := color.RGBA{255, 0, 0, 255}
+		vector.StrokeLine(screen, bx, by, ax, ay, 2, lineColor, false)
+
+		dx := bx - ax
+		dy := by - ay
+		length := float32(math.Sqrt(float64(dx*dx + dy*dy)))
+		if length == 0 {
+			continue
+		}
+		dx /= length
+		dy /= length
+
+		arrowLen := float32(10)
+		px := -dy
+		py := dx
+		vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen+px*arrowLen*0.5, ay+dy*arrowLen+py*arrowLen*0.5, 2, lineColor, false)
+		vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen-px*arrowLen*0.5, ay+dy*arrowLen-py*arrowLen*0.5, 2, lineColor, false)
 	}
 }
 
