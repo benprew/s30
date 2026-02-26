@@ -82,6 +82,10 @@ type DuelScreen struct {
 	pendingBlockers  map[core.EntityID]core.EntityID
 	selectedBlocker  core.EntityID
 
+	targetingCard    *core.Card
+	targetingActions map[int]core.PlayerAction
+	selectedTarget   core.Targetable
+
 	frameCount int
 
 	anteCard *domain.Card
@@ -268,16 +272,34 @@ const (
 
 func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		return screenui.WorldScr, nil, nil
+		if s.targetingCard != nil {
+			if s.selectedTarget != nil {
+				s.selectedTarget = nil
+			} else {
+				s.exitTargetingMode()
+			}
+		} else {
+			return screenui.WorldScr, nil, nil
+		}
 	}
 
 	s.frameCount++
 	s.refreshCardActions()
 
+	if s.targetingCard != nil {
+		if _, ok := s.cardActions[s.targetingCard.ID]; !ok {
+			s.exitTargetingMode()
+		}
+	}
+
 	mx, my := ebiten.CursorPosition()
 
-	s.updateMouse(mx, my)
-	s.updateHoverPreview(mx, my)
+	if s.targetingCard != nil {
+		s.updateTargetingMouse(mx, my)
+	} else {
+		s.updateMouse(mx, my)
+		s.updateHoverPreview(mx, my)
+	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		s.handleRightClick(mx, my)
@@ -532,11 +554,108 @@ func (s *DuelScreen) performCardAction(card *core.Card) {
 		return
 	}
 
+	if card.GetTargetSpec() != nil {
+		s.enterTargetingMode(card)
+		return
+	}
+
 	select {
 	case s.self.core.InputChan <- action:
 	default:
 	}
 	s.refreshCardActions()
+}
+
+func (s *DuelScreen) enterTargetingMode(card *core.Card) {
+	targets := s.gameState.AvailableTargets(card)
+	s.targetingCard = card
+	s.targetingActions = make(map[int]core.PlayerAction)
+	for _, t := range targets {
+		s.targetingActions[t.EntityID()] = core.PlayerAction{
+			Type:   core.ActionCastSpell,
+			Card:   card,
+			Target: t,
+		}
+	}
+	s.selectedTarget = nil
+	s.loadCardPreview(card)
+}
+
+func (s *DuelScreen) exitTargetingMode() {
+	s.targetingCard = nil
+	s.targetingActions = nil
+	s.selectedTarget = nil
+}
+
+func (s *DuelScreen) updateTargetingMouse(mx, my int) {
+	if s.mouseState != mouseIdle {
+		s.dragTargetX = nil
+		s.dragTargetY = nil
+		s.draggingCardID = 0
+		s.mouseState = mouseIdle
+	}
+
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return
+	}
+
+	doneBounds := s.doneBtn[0].Bounds()
+	doneX := duelBoardX + 2
+	doneY := duelMsgY
+	if mx >= doneX && mx < doneX+doneBounds.Dx() && my >= doneY && my < doneY+doneBounds.Dy() {
+		if s.selectedTarget != nil {
+			if action, ok := s.targetingActions[s.selectedTarget.EntityID()]; ok {
+				select {
+				case s.self.core.InputChan <- action:
+				default:
+				}
+			}
+			s.exitTargetingMode()
+		} else {
+			s.exitTargetingMode()
+		}
+		return
+	}
+
+	msgBarTop := duelMsgY + 6
+	msgBarLeft := duelBoardX + 52
+	if s.selectedTarget != nil && mx >= msgBarLeft && my >= msgBarTop && my < msgBarTop+20 {
+		s.selectedTarget = nil
+		return
+	}
+
+	s.handleTargetClick(mx, my)
+}
+
+func (s *DuelScreen) handleTargetClick(mx, my int) {
+	for _, dp := range []*duelPlayer{s.opponent, s.self} {
+		if card := s.fieldCardAtPoint(mx, my, dp); card != nil {
+			if _, ok := s.targetingActions[card.EntityID()]; ok {
+				s.selectedTarget = card
+				s.loadCardPreview(card)
+				return
+			}
+		}
+	}
+
+	for _, dp := range []*duelPlayer{s.opponent, s.self} {
+		if s.isPlayerBoardClick(mx, my, dp) {
+			if _, ok := s.targetingActions[dp.core.EntityID()]; ok {
+				s.selectedTarget = dp.core
+				return
+			}
+		}
+	}
+}
+
+func (s *DuelScreen) isPlayerBoardClick(mx, my int, dp *duelPlayer) bool {
+	if mx < duelBoardX || mx >= duelBoardX+duelBoardW {
+		return false
+	}
+	if dp == s.self {
+		return my >= duelPlayerBoardY
+	}
+	return my >= duelOpponentBoardY && my < duelMsgY
 }
 
 func (s *DuelScreen) getCardArtImg(card *core.Card, targetW int) *ebiten.Image {
@@ -863,6 +982,19 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 			y += 12
 		}
 	}
+
+	if s.targetingCard != nil {
+		if _, isTarget := s.targetingActions[dp.core.EntityID()]; isTarget {
+			borderColor := color.RGBA{255, 255, 0, 255}
+			strokeW := float32(2)
+			if s.selectedTarget != nil && s.selectedTarget.EntityID() == dp.core.EntityID() {
+				borderColor = color.RGBA{0, 255, 0, 255}
+				strokeW = 3
+			}
+			vector.StrokeRect(screen, float32(duelBoardX), float32(startY),
+				float32(duelBoardW), float32(boardH), strokeW, borderColor, false)
+		}
+	}
 }
 
 func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
@@ -880,7 +1012,14 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 		screen.DrawImage(s.messageBg, opts)
 	}
 
-	msg := s.statusMessage()
+	var msg string
+	if s.targetingCard != nil && s.selectedTarget != nil {
+		msg = fmt.Sprintf("targeting %s (Cancel)", s.selectedTarget.Name())
+	} else if s.targetingCard != nil {
+		msg = fmt.Sprintf("Choose a target for %s", s.targetingCard.Name())
+	} else {
+		msg = s.statusMessage()
+	}
 	txt := elements.NewText(14, msg, duelBoardX+60, duelMsgY+12)
 	txt.Color = color.RGBA{255, 255, 255, 255}
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
@@ -906,7 +1045,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 		cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
 		screen.DrawImage(cardImg, cardOpts)
 
-		if _, hasAction := s.cardActions[card.ID]; hasAction && dp == s.self {
+		if _, hasAction := s.cardActions[card.ID]; hasAction && dp == s.self && s.targetingCard == nil {
 			star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
 			star.Color = color.RGBA{255, 255, 0, 255}
 			star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
@@ -943,6 +1082,19 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 					float32(pos.X), float32(pos.Y),
 					float32(fieldCardW), float32(fieldCardH),
 					2, borderColor, false)
+			}
+		}
+
+		if s.targetingCard != nil {
+			if _, isTarget := s.targetingActions[card.EntityID()]; isTarget {
+				borderColor := color.RGBA{255, 255, 0, 255}
+				strokeW := float32(2)
+				if s.selectedTarget != nil && s.selectedTarget.EntityID() == card.EntityID() {
+					borderColor = color.RGBA{0, 255, 0, 255}
+					strokeW = 3
+				}
+				vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
+					float32(fieldCardW), float32(fieldCardH), strokeW, borderColor, false)
 			}
 		}
 	}
