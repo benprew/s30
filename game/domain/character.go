@@ -117,29 +117,29 @@ func (c *Character) CalculateLifeFromLevel() int {
 		case 1:
 			return 10
 		case 2:
-			return 15
+			return 12
 		case 3:
-			return 20
+			return 14
 		case 4:
-			return 25
+			return 16
 		case 5:
-			return 35
+			return 18
 		case 6:
-			return 50
+			return 19
 		case 7:
-			return 70
+			return 20
 		case 8:
-			return 100
+			return 22
 		case 9:
-			return 150
+			return 24
 		case 10:
-			return 200
+			return 27
 		case 11:
-			return 250
+			return 30
 		case 12:
 			return 300
 		default:
-			return c.Level * 20 // Fallback for any missing cases
+			return 10 + (c.Level * 2) // Fallback for any missing cases
 		}
 	}
 	return c.Life // fallback to TOML-defined life if no level set
