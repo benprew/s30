@@ -842,7 +842,18 @@ func TestManaDrainsAtEndOfPhase(t *testing.T) {
 	}
 
 	p0.Turn.Phase = PhaseUpkeep
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		<-p0.WaitingChan
+		p0.InputChan <- PlayerAction{Type: ActionPassPriority}
+		<-p1.WaitingChan
+		p1.InputChan <- PlayerAction{Type: ActionPassPriority}
+	}()
+
 	game.UpkeepPhase(p0)
+	<-done
 	for _, p := range game.Players {
 		p.ManaPool.Drain()
 	}
