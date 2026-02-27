@@ -50,7 +50,7 @@ func setupAttackerTest() (*DuelScreen, *core.Player, *core.Player, *core.Card) {
 		self:             &duelPlayer{core: player},
 		opponent:         &duelPlayer{core: opponent},
 		pendingAttackers: make(map[core.EntityID]bool),
-		cardActions:      make(map[core.EntityID]core.PlayerAction),
+		cardActions:      make(map[core.EntityID][]core.PlayerAction),
 		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[core.EntityID]image.Point),
 	}
@@ -67,12 +67,12 @@ func setupAttackerTest() (*DuelScreen, *core.Player, *core.Player, *core.Card) {
 func TestPendingAttackers_ToggleOn(t *testing.T) {
 	s, _, _, creature := setupAttackerTest()
 
-	action, ok := s.cardActions[creature.ID]
-	if !ok {
+	actions, ok := s.cardActions[creature.ID]
+	if !ok || len(actions) == 0 {
 		t.Fatal("expected DeclareAttacker action for creature")
 	}
-	if action.Type != core.ActionDeclareAttacker {
-		t.Fatalf("expected action type %s, got %s", core.ActionDeclareAttacker, action.Type)
+	if !hasActionType(actions, core.ActionDeclareAttacker) {
+		t.Fatalf("expected action type %s in actions", core.ActionDeclareAttacker)
 	}
 
 	s.pendingAttackers[creature.ID] = true
@@ -98,12 +98,18 @@ func TestPendingAttackers_DoneButtonSendsActions(t *testing.T) {
 
 	s.pendingAttackers[creature.ID] = true
 
-	for id, action := range s.cardActions {
-		if action.Type == core.ActionDeclareAttacker && s.pendingAttackers[id] {
-			select {
-			case s.self.core.InputChan <- action:
-			default:
-				t.Fatal("failed to send action to InputChan")
+	for id, actions := range s.cardActions {
+		if !s.pendingAttackers[id] {
+			continue
+		}
+		for _, action := range actions {
+			if action.Type == core.ActionDeclareAttacker {
+				select {
+				case s.self.core.InputChan <- action:
+				default:
+					t.Fatal("failed to send action to InputChan")
+				}
+				break
 			}
 		}
 	}
@@ -140,11 +146,17 @@ func TestPendingAttackers_DoneButtonSendsActions(t *testing.T) {
 func TestPendingAttackers_DoneWithNoPendingOnlySendsPass(t *testing.T) {
 	s, player, _, _ := setupAttackerTest()
 
-	for id, action := range s.cardActions {
-		if action.Type == core.ActionDeclareAttacker && s.pendingAttackers[id] {
-			select {
-			case s.self.core.InputChan <- action:
-			default:
+	for id, cardActions := range s.cardActions {
+		if !s.pendingAttackers[id] {
+			continue
+		}
+		for _, action := range cardActions {
+			if action.Type == core.ActionDeclareAttacker {
+				select {
+				case s.self.core.InputChan <- action:
+				default:
+				}
+				break
 			}
 		}
 	}
@@ -207,11 +219,17 @@ func TestPendingAttackers_MultipleSentInOrder(t *testing.T) {
 		s.pendingAttackers[card.ID] = true
 	}
 
-	for id, action := range s.cardActions {
-		if action.Type == core.ActionDeclareAttacker && s.pendingAttackers[id] {
-			select {
-			case s.self.core.InputChan <- action:
-			default:
+	for id, cardActions := range s.cardActions {
+		if !s.pendingAttackers[id] {
+			continue
+		}
+		for _, action := range cardActions {
+			if action.Type == core.ActionDeclareAttacker {
+				select {
+				case s.self.core.InputChan <- action:
+				default:
+				}
+				break
 			}
 		}
 	}

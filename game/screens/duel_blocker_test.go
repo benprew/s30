@@ -57,7 +57,7 @@ func setupBlockerTest() (*DuelScreen, *core.Player, *core.Player, *core.Card, *c
 		opponent:         &duelPlayer{core: opponent},
 		pendingAttackers: make(map[core.EntityID]bool),
 		pendingBlockers:  make(map[core.EntityID]core.EntityID),
-		cardActions:      make(map[core.EntityID]core.PlayerAction),
+		cardActions:      make(map[core.EntityID][]core.PlayerAction),
 		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[core.EntityID]image.Point),
 	}

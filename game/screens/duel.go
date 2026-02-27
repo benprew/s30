@@ -77,7 +77,7 @@ type DuelScreen struct {
 
 	cardImgCache map[cardImgKey]cardImgEntry
 
-	cardActions      map[core.EntityID]core.PlayerAction
+	cardActions      map[core.EntityID][]core.PlayerAction
 	pendingAttackers map[core.EntityID]bool
 	pendingBlockers  map[core.EntityID]core.EntityID
 	selectedBlocker  core.EntityID
@@ -363,20 +363,12 @@ func (s *DuelScreen) refreshCardActions() {
 		s.pendingBlockers = make(map[core.EntityID]core.EntityID)
 		s.selectedBlocker = 0
 	}
-	s.cardActions = make(map[core.EntityID]core.PlayerAction)
+	s.cardActions = make(map[core.EntityID][]core.PlayerAction)
 	for _, action := range s.gameState.AvailableActions(s.self.core) {
 		if action.Card == nil {
 			continue
 		}
-		s.cardActions[action.Card.ID] = action
-	}
-	for _, card := range s.self.core.Battlefield {
-		if _, exists := s.cardActions[card.ID]; exists {
-			continue
-		}
-		if !card.Tapped && card.GetManaAbility() != nil {
-			s.cardActions[card.ID] = core.PlayerAction{Type: "ActivateMana", Card: card}
-		}
+		s.cardActions[action.Card.ID] = append(s.cardActions[action.Card.ID], action)
 	}
 }
 
@@ -496,7 +488,7 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 	// battlefield cards
 	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
 		s.loadCardPreview(card)
-		if action, ok := s.cardActions[card.ID]; ok && action.Type == core.ActionDeclareAttacker {
+		if actions, ok := s.cardActions[card.ID]; ok && hasActionType(actions, core.ActionDeclareAttacker) {
 			if s.pendingAttackers[card.ID] {
 				delete(s.pendingAttackers, card.ID)
 			} else {
@@ -544,25 +536,19 @@ func (s *DuelScreen) updateHoverPreview(mx, my int) {
 }
 
 func (s *DuelScreen) performCardAction(card *core.Card) {
-	action, ok := s.cardActions[card.ID]
-	if !ok {
+	actions, ok := s.cardActions[card.ID]
+	if !ok || len(actions) == 0 {
 		fmt.Printf("CLICK: %s (no action available)\n", card.Name())
 		return
 	}
 
-	fmt.Printf("CLICK: %s -> action=%s target=%v\n", card.Name(), action.Type, action.Target)
-
-	if action.Type == "ActivateMana" {
-		s.gameState.ActivateManaAbility(s.self.core, card)
-		s.refreshCardActions()
+	if len(actions) > 1 {
+		s.enterTargetingMode(card, actions)
 		return
 	}
 
-	if card.GetTargetSpec() != nil {
-		s.enterTargetingMode(card)
-		return
-	}
-
+	action := actions[0]
+	fmt.Printf("CLICK: %s -> action=%s\n", card.Name(), action.Type)
 	select {
 	case s.self.core.InputChan <- action:
 	default:
@@ -570,15 +556,12 @@ func (s *DuelScreen) performCardAction(card *core.Card) {
 	s.refreshCardActions()
 }
 
-func (s *DuelScreen) enterTargetingMode(card *core.Card) {
-	targets := s.gameState.AvailableTargets(card)
+func (s *DuelScreen) enterTargetingMode(card *core.Card, actions []core.PlayerAction) {
 	s.targetingCard = card
 	s.targetingActions = make(map[int]core.PlayerAction)
-	for _, t := range targets {
-		s.targetingActions[t.EntityID()] = core.PlayerAction{
-			Type:   core.ActionCastSpell,
-			Card:   card,
-			Target: t,
+	for _, a := range actions {
+		if a.Target != nil {
+			s.targetingActions[a.Target.EntityID()] = a
 		}
 	}
 	s.selectedTarget = nil
@@ -771,11 +754,17 @@ func (s *DuelScreen) updateMouse(mx, my int) {
 }
 
 func (s *DuelScreen) submitPendingAndPass() {
-	for id, action := range s.cardActions {
-		if action.Type == core.ActionDeclareAttacker && s.pendingAttackers[id] {
-			select {
-			case s.self.core.InputChan <- action:
-			default:
+	for id, actions := range s.cardActions {
+		if !s.pendingAttackers[id] {
+			continue
+		}
+		for _, action := range actions {
+			if action.Type == core.ActionDeclareAttacker {
+				select {
+				case s.self.core.InputChan <- action:
+				default:
+				}
+				break
 			}
 		}
 	}
@@ -1332,6 +1321,15 @@ func (s *DuelScreen) combatStatusMessage(active *core.Player, isMyTurn bool) str
 		}
 		return fmt.Sprintf("%s's combat phase", s.opponent.name)
 	}
+}
+
+func hasActionType(actions []core.PlayerAction, actionType string) bool {
+	for _, a := range actions {
+		if a.Type == actionType {
+			return true
+		}
+	}
+	return false
 }
 
 func countManaOfColor(pool core.ManaPool, c rune) int {
