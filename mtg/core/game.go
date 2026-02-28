@@ -20,6 +20,7 @@ type GameState struct {
 	Attackers         []*Card
 	BlockerMap        map[*Card][]*Card
 	DebugPrint        bool
+	FirstTurn         bool
 }
 
 func NewGame(players []*Player, debug bool) *GameState {
@@ -34,6 +35,7 @@ func NewGame(players []*Player, debug bool) *GameState {
 		Attackers:         []*Card{},
 		BlockerMap:        make(map[*Card][]*Card),
 		DebugPrint:        debug,
+		FirstTurn:         true,
 	}
 }
 
@@ -283,6 +285,7 @@ func (g *GameState) NextTurn() {
 	}
 
 	g.printZoneStates()
+	g.FirstTurn = false
 	g.CurrentPlayer = (g.CurrentPlayer + 1) % len(g.Players)
 }
 
@@ -323,6 +326,10 @@ func (g *GameState) UpkeepPhase(player *Player) {
 }
 
 func (g *GameState) DrawPhase(player *Player) {
+	if g.FirstTurn && g.CurrentPlayer == 0 {
+		g.debugf("  %s skips draw on first turn\n", player.Name())
+		return
+	}
 	if err := player.DrawCard(); err != nil {
 		g.debugf("  %s cannot draw - loses the game!\n", player.Name())
 		player.HasLost = true
@@ -687,19 +694,31 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 
 	stackActive := !g.Stack.IsEmpty()
 
+	hand := make([]*Card, len(player.Hand))
+	copy(hand, player.Hand)
+
 	if !stackActive && (player.Turn.Phase == PhaseMain1 || player.Turn.Phase == PhaseMain2) {
-		for _, card := range player.Hand {
+		for _, card := range hand {
+			if card == nil {
+				continue
+			}
 			if g.CanPlayLand(player, card) {
 				actions = append(actions, PlayerAction{Type: ActionPlayLand, Card: card})
 			}
 		}
-		for _, card := range player.Hand {
+		for _, card := range hand {
+			if card == nil {
+				continue
+			}
 			if g.CanCast(player, card) {
 				actions = append(actions, g.castActionsForCard(card)...)
 			}
 		}
 	} else {
-		for _, card := range player.Hand {
+		for _, card := range hand {
+			if card == nil {
+				continue
+			}
 			if g.CanCast(player, card) && (card.CardType == domain.CardTypeInstant || card.HasKeyword(effects.KeywordFlash)) {
 				actions = append(actions, g.castActionsForCard(card)...)
 			}

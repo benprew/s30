@@ -391,6 +391,7 @@ func TestDrawFromEmptyLibraryLoses(t *testing.T) {
 
 	player.Library = []*Card{}
 	player.Turn.Phase = PhaseDraw
+	game.FirstTurn = false
 
 	game.DrawPhase(player)
 
