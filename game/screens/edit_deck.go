@@ -11,13 +11,11 @@ import (
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/dragdrop"
 	"github.com/benprew/s30/game/ui/elements"
-	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/layout"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 const (
@@ -272,22 +270,14 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		if s.MagnifiedCard != nil {
 			salePrice := s.MagnifiedCard.SalePrice(s.City)
 			priceText := fmt.Sprintf("Sale Price: %d gold", salePrice)
-
-			fontFace := &text.GoTextFace{
-				Source: fonts.MtgFont,
-				Size:   20,
-			}
-
-			textOpts := &ebiten.DrawImageOptions{}
-			textOpts.GeoM.Scale(scale, scale)
 			textX := magX + 10
 			textY := magY - 25
 			if textY < 0 {
 				textY = magY + 430
 			}
-			textOpts.GeoM.Translate(textX*scale, textY*scale)
-			textOpts.ColorScale.Scale(1, 1, 1, 1)
-			fonts.DrawText(screen, priceText, fontFace, textOpts)
+			scaleOpts := &ebiten.DrawImageOptions{}
+			scaleOpts.GeoM.Scale(scale, scale)
+			elements.NewText(20, priceText, int(textX*scale), int(textY*scale)).Draw(screen, scaleOpts, scale)
 		}
 	}
 
@@ -897,17 +887,12 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 		}
 	}
 
-	mainFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 14}
-	smallFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 10}
+	scaleOpts := &ebiten.DrawImageOptions{}
+	scaleOpts.GeoM.Scale(scale, scale)
 
 	// Section 1: Card count
 	countX := float64(bounds.Min.X + 10)
-	countText := fmt.Sprintf("%d cards", totalCards)
-	countOpts := &ebiten.DrawImageOptions{}
-	countOpts.GeoM.Scale(scale, scale)
-	countOpts.GeoM.Translate(countX*scale, 16*scale)
-	countOpts.ColorScale.Scale(1, 1, 1, 1)
-	fonts.DrawText(screen, countText, mainFace, countOpts)
+	elements.NewText(14, fmt.Sprintf("%d cards", totalCards), int(countX*scale), int(16*scale)).Draw(screen, scaleOpts, scale)
 
 	// Section 2: Mana curve histogram
 	curveX := bounds.Min.X + 80
@@ -940,21 +925,13 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 			screen.DrawImage(bar, barOpts)
 		}
 
-		labelOpts := &ebiten.DrawImageOptions{}
-		labelOpts.GeoM.Scale(scale, scale)
-		labelOpts.GeoM.Translate(float64(bx+2)*scale, 1*scale)
-		labelOpts.ColorScale.Scale(1, 1, 1, 1)
-		fonts.DrawText(screen, strconv.Itoa(count), smallFace, labelOpts)
+		elements.NewText(10, strconv.Itoa(count), int(float64(bx+2)*scale), int(1*scale)).Draw(screen, scaleOpts, scale)
 
 		cmcLabel := strconv.Itoa(i)
 		if i == 7 {
 			cmcLabel = "7+"
 		}
-		cmcOpts := &ebiten.DrawImageOptions{}
-		cmcOpts.GeoM.Scale(scale, scale)
-		cmcOpts.GeoM.Translate(float64(bx+2)*scale, 43*scale)
-		cmcOpts.ColorScale.Scale(1, 1, 1, 1)
-		fonts.DrawText(screen, cmcLabel, smallFace, cmcOpts)
+		elements.NewText(10, cmcLabel, int(float64(bx+2)*scale), int(43*scale)).Draw(screen, scaleOpts, scale)
 	}
 
 	// Section 3: Color distribution
@@ -979,38 +956,22 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 		pipOpts.GeoM.Translate(float64(px)*scale, 18*scale)
 		screen.DrawImage(pip, pipOpts)
 
-		cOpts := &ebiten.DrawImageOptions{}
-		cOpts.GeoM.Scale(scale, scale)
-		cOpts.GeoM.Translate(float64(px+pipSize+2)*scale, 16*scale)
-		cOpts.ColorScale.Scale(1, 1, 1, 1)
-		fonts.DrawText(screen, strconv.Itoa(colorCounts[c]), mainFace, cOpts)
+		elements.NewText(14, strconv.Itoa(colorCounts[c]), int(float64(px+pipSize+2)*scale), int(16*scale)).Draw(screen, scaleOpts, scale)
 	}
 
 	// Section 4: Type counts
 	typeX := float64(colorX + 5*36 + 15)
 	typeText := fmt.Sprintf("L:%d C:%d S:%d", landCount, creatureCount, spellCount)
-	typeOpts := &ebiten.DrawImageOptions{}
-	typeOpts.GeoM.Scale(scale, scale)
-	typeOpts.GeoM.Translate(typeX*scale, 16*scale)
-	typeOpts.ColorScale.Scale(1, 1, 1, 1)
-	fonts.DrawText(screen, typeText, mainFace, typeOpts)
+	elements.NewText(14, typeText, int(typeX*scale), int(16*scale)).Draw(screen, scaleOpts, scale)
 }
 
 // drawCountOverlay draws a count overlay at the specified position
 func (s *EditDeckScreen) drawCountOverlay(screen *ebiten.Image, scale float64, x, y, width, height, count int) {
 	countStr := strconv.Itoa(count)
 
-	// Create font face
-	face := &text.GoTextFace{
-		Source: fonts.MtgFont,
-		Size:   24,
-	}
-
-	// Create background for count
 	countBgSize := 30
 	countBg := ebiten.NewImage(countBgSize, countBgSize)
 
-	// Draw semi-transparent black circle background
 	for bgY := 0; bgY < countBgSize; bgY++ {
 		for bgX := 0; bgX < countBgSize; bgX++ {
 			dx := bgX - countBgSize/2
@@ -1021,7 +982,6 @@ func (s *EditDeckScreen) drawCountOverlay(screen *ebiten.Image, scale float64, x
 		}
 	}
 
-	// Draw count background
 	bgOpts := &ebiten.DrawImageOptions{}
 	bgOpts.GeoM.Scale(scale, scale)
 	countX := float64(x + width - countBgSize - 5)
@@ -1029,13 +989,9 @@ func (s *EditDeckScreen) drawCountOverlay(screen *ebiten.Image, scale float64, x
 	bgOpts.GeoM.Translate(countX*scale, countY*scale)
 	screen.DrawImage(countBg, bgOpts)
 
-	// Draw count text
-	textOpts := &ebiten.DrawImageOptions{}
-	textOpts.GeoM.Scale(scale, scale)
-	// Center text in the circle
+	scaleOpts := &ebiten.DrawImageOptions{}
+	scaleOpts.GeoM.Scale(scale, scale)
 	textX := countX + float64(countBgSize/2) - 7
 	textY := countY + float64(countBgSize/2) - 12
-	textOpts.GeoM.Translate(textX*scale, textY*scale)
-	textOpts.ColorScale.Scale(1, 1, 1, 1) // White text
-	fonts.DrawText(screen, countStr, face, textOpts)
+	elements.NewText(24, countStr, int(textX*scale), int(textY*scale)).Draw(screen, scaleOpts, scale)
 }

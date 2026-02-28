@@ -131,22 +131,11 @@ func (s *RandomEncounterScreen) Draw(screen *ebiten.Image, W, H int, scale float
 		screen.DrawImage(s.CardImg, op)
 	}
 
-	fontFace := &text.GoTextFace{
-		Source: fonts.MtgFont,
-		Size:   48,
-	}
-
 	textStr := fmt.Sprintf("You found a %s!", s.LandName)
-	width, _ := text.Measure(textStr, fontFace, 0)
-
-	x := centerX - width/2
-	y := centerY + 200*scale
-
-	opts := &text.DrawOptions{}
-	opts.GeoM.Translate(x, y)
-	opts.ColorScale.ScaleWithColor(color.White)
-
-	text.Draw(screen, textStr, fontFace, opts)
+	foundText := elements.NewText(48, textStr, 0, int(centerY+200*scale))
+	foundText.HAlign = elements.AlignCenter
+	foundText.BoundsW = float64(W)
+	foundText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	btnOpts := &ebiten.DrawImageOptions{}
 	btnOpts.GeoM.Scale(scale, scale)

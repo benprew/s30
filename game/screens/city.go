@@ -107,28 +107,11 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 }
 
 func (c *CityScreen) drawCityName(screen *ebiten.Image) {
-	// Use the same font face as the buttons for consistency
-	fontFace := &text.GoTextFace{
-		Source: fonts.MtgFont,
-		Size:   30, // Adjust size as needed
-	}
-
-	// Position the text at the top center of the screen
-	// We need the screen width to center it. Assuming W is available.
-	// For now, let's hardcode a position or use a fixed offset.
-	// A better approach would be to pass screen dimensions to Draw.
-
-	textX := 512 - (len(c.City.Name) * 6) // Centered around the middle of the screen (adjust as needed)
-	textY := 100                          // Near the top
-
-	options := &ebiten.DrawImageOptions{}
-	options.GeoM.Translate(float64(textX), float64(textY))
-	R, G, B, A := color.White.RGBA()
-	options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
-
-	textOpts := text.DrawOptions{DrawImageOptions: *options}
-
-	text.Draw(screen, c.City.Name, fontFace, &textOpts)
+	W := screen.Bounds().Dx()
+	cityName := elements.NewText(30, c.City.Name, 0, 100)
+	cityName.HAlign = elements.AlignCenter
+	cityName.BoundsW = float64(W)
+	cityName.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
 // Make buttons for City screen

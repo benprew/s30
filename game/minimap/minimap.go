@@ -182,20 +182,14 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 			if col.IsCity && col.City.Name != "" {
 				cityNameLines := strings.ReplaceAll(col.City.Name, " ", "\n")
-
-				textWidth, _ := text.Measure(cityNameLines, m.fontFace, 0)
-				textOp := &text.DrawOptions{}
-				textOp.GeoM.Concat(opts.GeoM)
-				textOp.GeoM.Translate(-float64(textWidth)/2, 8)
-				textOp.LineSpacing = m.fontFace.Size
-
+				cityText := elements.NewText(14, cityNameLines, 0, 8)
+				cityText.LineSpacing = float64(m.fontFace.Size)
+				textWidth, _ := cityText.Measure()
+				cityText.X = -int(textWidth / 2)
 				if m.isQuestTarget(col.City.Name) && m.blinkCounter%10 < 7 {
-					textOp.ColorScale.ScaleWithColor(color.RGBA{R: 255, G: 215, B: 0, A: 255})
-				} else {
-					textOp.ColorScale.ScaleWithColor(color.White)
+					cityText.Color = color.RGBA{R: 255, G: 215, B: 0, A: 255}
 				}
-
-				text.Draw(screen, cityNameLines, m.fontFace, textOp)
+				cityText.Draw(screen, opts, 1.0)
 			}
 		}
 	}

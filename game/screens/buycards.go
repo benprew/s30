@@ -48,10 +48,7 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 	city.CardsForSale = domain.MkCards()
 
 	sprite := loadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
-	title := ebiten.NewImageFromImage(sprite[4])
-	txt := "Cards for Sale"
-	titleText := elements.NewText(16, txt, 0, 0)
-	titleText.Draw(title, &ebiten.DrawImageOptions{}, 1.0)
+	title := imageutil.ScaleImage(ebiten.NewImageFromImage(sprite[4]), SCALE)
 
 	// Use LoadSpriteSheet to extract the card frame from Buybuttons.spr.png (6x2 grid, frame at 0,0)
 	frames, err := imageutil.LoadSpriteSheet(6, 2, assets.BuyButtons_png)
@@ -80,12 +77,19 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.DrawImage(s.BgImage, cityOpts)
 
 	titleOpts := &ebiten.DrawImageOptions{}
-	titleOpts.GeoM.Scale(SCALE, SCALE)
-	// Center the ScreenTitle horizontally
-	titleWidth := float64(s.ScreenTitle.Bounds().Dx()) * SCALE
+	titleWidth := float64(s.ScreenTitle.Bounds().Dx())
+	titleHeight := float64(s.ScreenTitle.Bounds().Dy())
 	titleX := (float64(W) - titleWidth) / 2.0
-	titleOpts.GeoM.Translate(titleX, 100.0)
+	titleY := 100.0
+	titleOpts.GeoM.Translate(titleX, titleY)
 	screen.DrawImage(s.ScreenTitle, titleOpts)
+
+	titleText := elements.NewText(30, "Cards for Sale", int(titleX), int(titleY))
+	titleText.HAlign = elements.AlignCenter
+	titleText.VAlign = elements.AlignMiddle
+	titleText.BoundsW = titleWidth
+	titleText.BoundsH = titleHeight
+	titleText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	frameOpts := &ebiten.DrawImageOptions{}
 	frameOpts.GeoM.Scale(scale, scale)
@@ -104,7 +108,7 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 			return
 		}
 		fw, fh := s.CardFrame.Bounds().Dx(), s.CardFrame.Bounds().Dy()
-		cw, ch := cardImg.Bounds().Dx(), cardImg.Bounds().Dy()
+		cw := cardImg.Bounds().Dx()
 		centerX := (W - fw) / 2
 		centerY := (H - fh) / 2
 		frameOpts := &ebiten.DrawImageOptions{}
@@ -112,7 +116,7 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		screen.DrawImage(s.CardFrame, frameOpts)
 		// Draw card image inside frame (centered)
 		cardOpts := &ebiten.DrawImageOptions{}
-		cardOpts.GeoM.Translate(float64(centerX+(fw-cw)/2), float64(centerY+(fh-ch)/2))
+		cardOpts.GeoM.Translate(float64(centerX+(fw-cw)/2), float64(80))
 		screen.DrawImage(cardImg, cardOpts)
 		// Draw prompt using Text element
 		prompt := "Buy Card Y/N?"
