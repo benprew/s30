@@ -397,6 +397,7 @@ func TestParseTargetSpecs(t *testing.T) {
 		{"target land", TargetTypeLand, ControllerAny, 1},
 		{"target artifact", TargetTypeArtifact, ControllerAny, 1},
 		{"enchanted creature", TargetTypeCreature, ControllerAny, 1},
+		{"enchanted land", TargetTypeLand, ControllerAny, 1},
 	}
 
 	for _, tt := range tests {
@@ -462,6 +463,54 @@ func TestParseEnchantCreature(t *testing.T) {
 	}
 	if ability.TargetSpec == nil || ability.TargetSpec.Condition != "enchant" {
 		t.Errorf("expected target spec with condition 'enchant'")
+	}
+}
+
+func TestParseEnchantLand(t *testing.T) {
+	p := NewParser()
+
+	result := p.Parse("Wild Growth", "Enchant land")
+	if len(result.Abilities) == 0 {
+		t.Fatal("expected ability for 'Enchant land'")
+	}
+	ability := result.Abilities[0]
+	if ability.Type != AbilityTypeStatic {
+		t.Errorf("expected Static ability, got %s", ability.Type)
+	}
+	if ability.TargetSpec == nil {
+		t.Fatal("expected target spec")
+	}
+	if ability.TargetSpec.Type != TargetTypeLand {
+		t.Errorf("expected target type land, got %s", ability.TargetSpec.Type)
+	}
+	if ability.TargetSpec.Condition != "enchant" {
+		t.Errorf("expected condition 'enchant', got %s", ability.TargetSpec.Condition)
+	}
+}
+
+func TestParseEnchantedLandMana(t *testing.T) {
+	p := NewParser()
+
+	result := p.Parse("Wild Growth", "Whenever enchanted land is tapped for mana, its controller adds an additional {G}")
+	if len(result.Abilities) == 0 {
+		t.Fatal("expected ability for Wild Growth mana text")
+	}
+	ability := result.Abilities[0]
+	if ability.Type != AbilityTypeMana {
+		t.Errorf("expected Mana ability, got %s", ability.Type)
+	}
+	mana, ok := ability.Effect.(*effects.ManaAbility)
+	if !ok {
+		t.Fatalf("expected ManaAbility effect, got %T", ability.Effect)
+	}
+	if len(mana.ManaTypes) != 1 || mana.ManaTypes[0] != "G" {
+		t.Errorf("expected [G] mana types, got %v", mana.ManaTypes)
+	}
+	if ability.TargetSpec == nil || ability.TargetSpec.Type != TargetTypeLand {
+		t.Errorf("expected land target spec")
+	}
+	if ability.TargetSpec.Condition != "enchanted" {
+		t.Errorf("expected condition 'enchanted', got %s", ability.TargetSpec.Condition)
 	}
 }
 

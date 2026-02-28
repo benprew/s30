@@ -678,3 +678,97 @@ func TestCantCastLandAuraWithoutLands(t *testing.T) {
 		t.Error("should not be able to cast land aura when no lands on battlefield")
 	}
 }
+
+func TestLandAuraAvailableAction(t *testing.T) {
+	player := &Player{
+		ID:          0,
+		LifeTotal:   20,
+		ManaPool:    ManaPool{{'G'}},
+		Hand:        []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Turn:        &Turn{Phase: PhaseMain1},
+		InputChan:   make(chan PlayerAction, 100),
+		WaitingChan: make(chan struct{}, 1),
+	}
+	game := NewGame([]*Player{player}, false)
+
+	land := addCardToBattlefield(player, "Forest", 1)
+	aura := addCardToHand(player, "Wild Growth", 2)
+
+	actions := game.AvailableActions(player)
+
+	var castAction *PlayerAction
+	for i, action := range actions {
+		if action.Type == ActionCastSpell && action.Card == aura {
+			castAction = &actions[i]
+			break
+		}
+	}
+	if castAction == nil {
+		t.Fatal("expected CastSpell action for Wild Growth when land is on battlefield")
+	}
+	if castAction.Target.(*Card) != land {
+		t.Error("expected cast action target to be the land")
+	}
+}
+
+func TestLandAuraNoActionWithoutLand(t *testing.T) {
+	player := &Player{
+		ID:          0,
+		LifeTotal:   20,
+		ManaPool:    ManaPool{{'G'}},
+		Hand:        []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Turn:        &Turn{Phase: PhaseMain1},
+		InputChan:   make(chan PlayerAction, 100),
+		WaitingChan: make(chan struct{}, 1),
+	}
+	game := NewGame([]*Player{player}, false)
+
+	addCardToBattlefield(player, "Grizzly Bears", 1)
+	aura := addCardToHand(player, "Wild Growth", 2)
+
+	actions := game.AvailableActions(player)
+
+	for _, action := range actions {
+		if action.Type == ActionCastSpell && action.Card == aura {
+			t.Error("should not have CastSpell action for land aura when no lands on battlefield")
+		}
+	}
+}
+
+func TestWildGrowthAddsManaAfterResolve(t *testing.T) {
+	player := &Player{
+		ID:          0,
+		LifeTotal:   20,
+		ManaPool:    ManaPool{},
+		Hand:        []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Turn:        &Turn{},
+		InputChan:   make(chan PlayerAction, 100),
+		WaitingChan: make(chan struct{}, 1),
+	}
+	game := NewGame([]*Player{player}, false)
+
+	land := addCardToBattlefield(player, "Forest", 1)
+	aura := addCardToHand(player, "Wild Growth", 2)
+
+	err := game.Resolve(&StackItem{Card: aura, Player: player, Target: land})
+	if err != nil {
+		t.Fatalf("Resolve returned error: %v", err)
+	}
+
+	pool := game.AvailableMana(player, player.ManaPool)
+	greenCount := 0
+	for _, mana := range pool {
+		if len(mana) == 1 && mana[0] == 'G' {
+			greenCount++
+		}
+	}
+	if greenCount != 2 {
+		t.Errorf("expected 2 green mana (forest + wild growth), got %d", greenCount)
+	}
+}

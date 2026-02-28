@@ -157,6 +157,17 @@ func (p *Parser) registerAuraPatterns() {
 	)
 
 	p.RegisterPattern(
+		"enchant-land",
+		regexp.MustCompile(`(?i)^enchant land(?:\s+you\s+control)?$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:       AbilityTypeStatic,
+				TargetSpec: &TargetSpec{Type: TargetTypeLand, Count: 1, Condition: "enchant"},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
 		"enchanted-creature-has-keyword",
 		regexp.MustCompile(`(?i)^enchanted creature has (\w+)$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
@@ -176,6 +187,19 @@ func (p *Parser) registerAuraPatterns() {
 				Keywords:   keywords,
 				Effect:     effect,
 				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: 1, Condition: "enchanted"},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"enchanted-land-mana",
+		regexp.MustCompile(`(?i)^whenever enchanted land is tapped for mana,\s+its controller adds an additional\s+(\{[WUBRGC]\})$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			symbols := ParseManaSymbols(matches[1])
+			return &ParsedAbility{
+				Type:       AbilityTypeMana,
+				Effect:     &effects.ManaAbility{ManaTypes: symbols},
+				TargetSpec: &TargetSpec{Type: TargetTypeLand, Count: 1, Condition: "enchanted"},
 			}, nil
 		},
 	)

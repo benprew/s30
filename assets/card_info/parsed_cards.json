@@ -2647,6 +2647,26 @@
     ]
   },
   {
+    "card_name": "Equinox",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
+      }
+    ]
+  },
+  {
     "card_name": "Erhnam Djinn",
     "abilities": [
       {
@@ -2660,6 +2680,26 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, target non-Wall creature an opponent controls gains forestwalk until your next upkeep"
+      }
+    ]
+  },
+  {
+    "card_name": "Erosion",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
       }
     ]
   },
@@ -2778,6 +2818,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      }
+    ]
+  },
+  {
+    "card_name": "Farmstead",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
       }
     ]
   },
@@ -3706,6 +3766,26 @@
     ]
   },
   {
+    "card_name": "Goblin Caves",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
+      }
+    ]
+  },
+  {
     "card_name": "Goblin Flotilla",
     "abilities": [
       {
@@ -3812,6 +3892,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Trample"
+      }
+    ]
+  },
+  {
+    "card_name": "Goblin Shrine",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
       }
     ]
   },
@@ -5194,6 +5294,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Other Kobold creatures you control get +1/+0"
+      }
+    ]
+  },
+  {
+    "card_name": "Kudzu",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
       }
     ]
   },
@@ -6917,6 +7037,26 @@
     ]
   },
   {
+    "card_name": "Phantasmal Terrain",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
+      }
+    ]
+  },
+  {
     "card_name": "Phantom Monster",
     "abilities": [
       {
@@ -7248,6 +7388,26 @@
           "Condition": ""
         },
         "RawText": "Psychic Purge deals 1 damage to any target"
+      }
+    ]
+  },
+  {
+    "card_name": "Psychic Venom",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
       }
     ]
   },
@@ -9348,6 +9508,21 @@
     "card_name": "Tourach's Gate",
     "abilities": [
       {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land you control"
+      },
+      {
         "Type": "Triggered",
         "Cost": null,
         "Effect": null,
@@ -10920,7 +11095,8 @@
         "Effect": {
           "ManaTypes": [
             "G"
-          ]
+          ],
+          "AnyColor": false
         },
         "Keywords": null,
         "Trigger": null,

@@ -122,6 +122,12 @@ var targetPatterns = []struct {
 			return &TargetSpec{Type: TargetTypeCreature, Controller: ControllerAny, Count: 1, Condition: "enchanted"}
 		},
 	},
+	{
+		regexp.MustCompile(`(?i)enchanted land`),
+		func(m []string) *TargetSpec {
+			return &TargetSpec{Type: TargetTypeLand, Controller: ControllerAny, Count: 1, Condition: "enchanted"}
+		},
+	},
 }
 
 func ParseTarget(text string) *TargetSpec {
