@@ -919,3 +919,31 @@ func TestRunStackWithUnhandledActionDoesNotPanic(t *testing.T) {
 	game.RunStack()
 	<-done
 }
+
+func TestCanCastFarrelsZealotWithThreePlains(t *testing.T) {
+	players := createTestPlayer(2)
+	player := players[0]
+	game := NewGame(players, false)
+	game.StartGame()
+
+	player.Turn.Phase = PhaseMain1
+
+	for i := range 3 {
+		land := addCreatureToBattlefield(player, "Plains", true, false)
+		if land == nil {
+			t.Skip("Plains not found")
+		}
+		land.ID = EntityID(200 + i)
+	}
+
+	zealot := NewCardFromDomain(domain.FindCardByName("Farrel's Zealot"), 300, player)
+	if zealot == nil {
+		t.Skip("Farrel's Zealot not found")
+	}
+	zealot.CurrentZone = ZoneHand
+	player.Hand = append(player.Hand, zealot)
+
+	if !game.CanCast(player, zealot) {
+		t.Errorf("Should be able to cast Farrel's Zealot with 3 Plains, mana cost: %s", zealot.ManaCost)
+	}
+}

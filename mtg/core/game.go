@@ -604,8 +604,7 @@ func (g *GameState) CanCast(player *Player, card *Card) bool {
 }
 
 func (g *GameState) hasTarget(card *Card) bool {
-	spec := card.GetTargetSpec()
-	if spec == nil {
+	if !g.cardRequiresTarget(card) {
 		return true
 	}
 	return len(g.AvailableTargets(card)) > 0
