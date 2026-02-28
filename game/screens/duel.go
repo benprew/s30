@@ -339,9 +339,20 @@ func (s *DuelScreen) getFieldCardPos(card *core.Card, dp *duelPlayer, idx int) i
 	return pos
 }
 
+func (s *DuelScreen) fieldCardsExcludingAttached(dp *duelPlayer) []*core.Card {
+	var cards []*core.Card
+	for _, card := range dp.core.Battlefield {
+		if card != nil && card.AttachedTo == nil {
+			cards = append(cards, card)
+		}
+	}
+	return cards
+}
+
 func (s *DuelScreen) fieldCardAtPoint(mx, my int, dp *duelPlayer) *core.Card {
-	for i := len(dp.core.Battlefield) - 1; i >= 0; i-- {
-		card := dp.core.Battlefield[i]
+	cards := s.fieldCardsExcludingAttached(dp)
+	for i := len(cards) - 1; i >= 0; i-- {
+		card := cards[i]
 		pos := s.getFieldCardPos(card, dp, i)
 		if mx >= pos.X && mx < pos.X+fieldCardW && my >= pos.Y && my < pos.Y+fieldCardH {
 			return card
@@ -1022,11 +1033,21 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 }
 
 func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
-	for i, card := range dp.core.Battlefield {
-		if card == nil {
-			continue
-		}
+	cards := s.fieldCardsExcludingAttached(dp)
+	for i, card := range cards {
 		pos := s.getFieldCardPos(card, dp, i)
+
+		for j, aura := range card.Attachments {
+			auraImg := s.getCardArtImg(aura, fieldCardW)
+			if auraImg == nil {
+				continue
+			}
+			auraOpts := &ebiten.DrawImageOptions{}
+			auraY := pos.Y - (j+1)*14
+			auraOpts.GeoM.Translate(float64(pos.X), float64(auraY))
+			screen.DrawImage(auraImg, auraOpts)
+		}
+
 		cardImg := s.getCardArtImg(card, fieldCardW)
 		if cardImg == nil {
 			continue
