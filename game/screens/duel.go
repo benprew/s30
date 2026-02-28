@@ -326,23 +326,37 @@ const (
 	fieldCardH      = 83
 )
 
-func (s *DuelScreen) getFieldCardPos(card *core.Card, dp *duelPlayer, idx int) image.Point {
+func (s *DuelScreen) getFieldCardPos(card *core.Card, dp *duelPlayer, idx int, isLand bool) image.Point {
 	if pos, ok := s.cardPositions[card.ID]; ok {
 		return pos
 	}
-	baseY := duelPlayerBoardY + 20
+	var baseY int
 	if dp == s.opponent {
-		baseY = duelOpponentBoardY + 70
+		if isLand {
+			baseY = duelOpponentBoardY + 70
+		} else {
+			baseY = duelOpponentBoardY + 70 + fieldCardH + 10
+		}
+	} else {
+		if isLand {
+			baseY = duelPlayerBoardY + 20 + fieldCardH + 10
+		} else {
+			baseY = duelPlayerBoardY + 20
+		}
 	}
 	pos := image.Pt(duelBoardX+30+idx*35, baseY)
 	s.cardPositions[card.ID] = pos
 	return pos
 }
 
-func (s *DuelScreen) fieldCardsExcludingAttached(dp *duelPlayer) []*core.Card {
+func (s *DuelScreen) fieldCards(dp *duelPlayer, landsOnly bool) []*core.Card {
 	var cards []*core.Card
 	for _, card := range dp.core.Battlefield {
-		if card != nil && card.AttachedTo == nil {
+		if card == nil || card.AttachedTo != nil {
+			continue
+		}
+		isLand := card.CardType == domain.CardTypeLand
+		if isLand == landsOnly {
 			cards = append(cards, card)
 		}
 	}
@@ -350,12 +364,22 @@ func (s *DuelScreen) fieldCardsExcludingAttached(dp *duelPlayer) []*core.Card {
 }
 
 func (s *DuelScreen) fieldCardAtPoint(mx, my int, dp *duelPlayer) *core.Card {
-	cards := s.fieldCardsExcludingAttached(dp)
-	for i := len(cards) - 1; i >= 0; i-- {
-		card := cards[i]
-		pos := s.getFieldCardPos(card, dp, i)
-		if mx >= pos.X && mx < pos.X+fieldCardW && my >= pos.Y && my < pos.Y+fieldCardH {
-			return card
+	for _, landsOnly := range []bool{false, true} {
+		cards := s.fieldCards(dp, landsOnly)
+		for i := len(cards) - 1; i >= 0; i-- {
+			card := cards[i]
+			pos := s.getFieldCardPos(card, dp, i, landsOnly)
+			if mx >= pos.X && mx < pos.X+fieldCardW {
+				for j := len(card.Attachments) - 1; j >= 0; j-- {
+					auraY := pos.Y - (j+1)*14
+					if my >= auraY && my < auraY+14 {
+						return card.Attachments[j]
+					}
+				}
+				if my >= pos.Y && my < pos.Y+fieldCardH {
+					return card
+				}
+			}
 		}
 	}
 	return nil
@@ -1033,85 +1057,89 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 }
 
 func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
-	cards := s.fieldCardsExcludingAttached(dp)
-	for i, card := range cards {
-		pos := s.getFieldCardPos(card, dp, i)
+	for _, landsOnly := range []bool{true, false} {
+		cards := s.fieldCards(dp, landsOnly)
+		for i, card := range cards {
+			pos := s.getFieldCardPos(card, dp, i, landsOnly)
 
-		for j, aura := range card.Attachments {
-			auraImg := s.getCardArtImg(aura, fieldCardW)
-			if auraImg == nil {
+			n := len(card.Attachments)
+			for j := n - 1; j >= 0; j-- {
+				aura := card.Attachments[j]
+				auraImg := s.getCardArtImg(aura, fieldCardW)
+				if auraImg == nil {
+					continue
+				}
+				auraOpts := &ebiten.DrawImageOptions{}
+				auraY := pos.Y - (j+1)*14
+				auraOpts.GeoM.Translate(float64(pos.X), float64(auraY))
+				screen.DrawImage(auraImg, auraOpts)
+			}
+
+			cardImg := s.getCardArtImg(card, fieldCardW)
+			if cardImg == nil {
 				continue
 			}
-			auraOpts := &ebiten.DrawImageOptions{}
-			auraY := pos.Y - (j+1)*14
-			auraOpts.GeoM.Translate(float64(pos.X), float64(auraY))
-			screen.DrawImage(auraImg, auraOpts)
-		}
 
-		cardImg := s.getCardArtImg(card, fieldCardW)
-		if cardImg == nil {
-			continue
-		}
-
-		cardOpts := &ebiten.DrawImageOptions{}
-		if card.Tapped {
-			imgH := float64(cardImg.Bounds().Dy())
-			cardOpts.GeoM.Rotate(math.Pi / 2)
-			cardOpts.GeoM.Translate(imgH, 0)
-		}
-		cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
-		screen.DrawImage(cardImg, cardOpts)
-
-		if _, hasAction := s.cardActions[card.ID]; hasAction && dp == s.self && s.targetingCard == nil {
-			star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
-			star.Color = color.RGBA{255, 255, 0, 255}
-			star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-		}
-
-		if s.pendingAttackers[card.ID] && dp == s.self {
-			vector.StrokeRect(screen,
-				float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH),
-				2, color.RGBA{255, 255, 0, 255}, false)
-		}
-
-		if dp == s.self && (s.selectedBlocker == card.ID || s.pendingBlockers[card.ID] != 0) {
-			vector.StrokeRect(screen,
-				float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH),
-				2, color.RGBA{255, 0, 0, 255}, false)
-		}
-
-		if dp == s.opponent && s.isInDeclareBlockers() {
-			isAttacker := false
-			for _, atk := range s.gameState.Attackers {
-				if atk.ID == card.ID {
-					isAttacker = true
-					break
-				}
+			cardOpts := &ebiten.DrawImageOptions{}
+			if card.Tapped {
+				imgH := float64(cardImg.Bounds().Dy())
+				cardOpts.GeoM.Rotate(math.Pi / 2)
+				cardOpts.GeoM.Translate(imgH, 0)
 			}
-			if isAttacker {
-				borderColor := color.RGBA{255, 255, 0, 255}
-				if s.selectedBlocker != 0 && s.isValidBlock(s.selectedBlocker, card.ID) {
-					borderColor = color.RGBA{0, 255, 0, 255}
-				}
+			cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
+			screen.DrawImage(cardImg, cardOpts)
+
+			if _, hasAction := s.cardActions[card.ID]; hasAction && dp == s.self && s.targetingCard == nil {
+				star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
+				star.Color = color.RGBA{255, 255, 0, 255}
+				star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+			}
+
+			if s.pendingAttackers[card.ID] && dp == s.self {
 				vector.StrokeRect(screen,
 					float32(pos.X), float32(pos.Y),
 					float32(fieldCardW), float32(fieldCardH),
-					2, borderColor, false)
+					2, color.RGBA{255, 255, 0, 255}, false)
 			}
-		}
 
-		if s.targetingCard != nil {
-			if _, isTarget := s.targetingActions[card.EntityID()]; isTarget {
-				borderColor := color.RGBA{255, 255, 0, 255}
-				strokeW := float32(2)
-				if s.selectedTarget != nil && s.selectedTarget.EntityID() == card.EntityID() {
-					borderColor = color.RGBA{0, 255, 0, 255}
-					strokeW = 3
+			if dp == s.self && (s.selectedBlocker == card.ID || s.pendingBlockers[card.ID] != 0) {
+				vector.StrokeRect(screen,
+					float32(pos.X), float32(pos.Y),
+					float32(fieldCardW), float32(fieldCardH),
+					2, color.RGBA{255, 0, 0, 255}, false)
+			}
+
+			if dp == s.opponent && s.isInDeclareBlockers() {
+				isAttacker := false
+				for _, atk := range s.gameState.Attackers {
+					if atk.ID == card.ID {
+						isAttacker = true
+						break
+					}
 				}
-				vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
-					float32(fieldCardW), float32(fieldCardH), strokeW, borderColor, false)
+				if isAttacker {
+					borderColor := color.RGBA{255, 255, 0, 255}
+					if s.selectedBlocker != 0 && s.isValidBlock(s.selectedBlocker, card.ID) {
+						borderColor = color.RGBA{0, 255, 0, 255}
+					}
+					vector.StrokeRect(screen,
+						float32(pos.X), float32(pos.Y),
+						float32(fieldCardW), float32(fieldCardH),
+						2, borderColor, false)
+				}
+			}
+
+			if s.targetingCard != nil {
+				if _, isTarget := s.targetingActions[card.EntityID()]; isTarget {
+					borderColor := color.RGBA{255, 255, 0, 255}
+					strokeW := float32(2)
+					if s.selectedTarget != nil && s.selectedTarget.EntityID() == card.EntityID() {
+						borderColor = color.RGBA{0, 255, 0, 255}
+						strokeW = 3
+					}
+					vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
+						float32(fieldCardW), float32(fieldCardH), strokeW, borderColor, false)
+				}
 			}
 		}
 	}
