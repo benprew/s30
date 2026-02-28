@@ -32,6 +32,7 @@ def has_ability_type(card: dict, ability_type: str) -> bool:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Find cards with specific abilities")
+    parser.add_argument("--name", "-n", help="Find cards matching this name (case-insensitive substring)")
     parser.add_argument("--keyword", "-k", help="Find cards with this keyword (e.g., Flying, Reach)")
     parser.add_argument("--type", "-t", help="Find cards with this ability type (e.g., Keyword, Activated, Triggered)")
     parser.add_argument("--list-keywords", action="store_true", help="List all unique keywords")
@@ -69,11 +70,13 @@ def main() -> None:
     for card in cards:
         name = card.get("card_name", "Unknown")
         match = True
+        if args.name and args.name.lower() not in name.lower():
+            match = False
         if args.keyword and not has_keyword(card, args.keyword):
             match = False
         if args.type and not has_ability_type(card, args.type):
             match = False
-        if match and (args.keyword or args.type):
+        if match and (args.name or args.keyword or args.type):
             matches.append(name)
 
     for name in sorted(matches):
