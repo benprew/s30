@@ -10,11 +10,20 @@ import (
 func (g *GameState) AvailableAttackers(player *Player) []*Card {
 	attackers := []*Card{}
 	for _, card := range player.Battlefield {
-		if card.CardType == domain.CardTypeCreature && card.IsActive() {
+		if card.CardType == domain.CardTypeCreature && card.IsActive() && !g.isAlreadyAttacking(card) {
 			attackers = append(attackers, card)
 		}
 	}
 	return attackers
+}
+
+func (g *GameState) isAlreadyAttacking(card *Card) bool {
+	for _, a := range g.Attackers {
+		if a == card {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *GameState) DeclareAttacker(attacker *Card) error {

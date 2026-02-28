@@ -610,3 +610,29 @@ func TestClearCombatState(t *testing.T) {
 		t.Errorf("BlockerMap should be cleared")
 	}
 }
+
+func TestAvailableAttackers_ExcludesDeclaredVigilanceAttacker(t *testing.T) {
+	game, player, _ := setupCombatTest()
+
+	creature := addCreatureToBattlefield(player, "Serra Angel", true, false)
+	if creature == nil {
+		t.Skip("Serra Angel not found")
+	}
+
+	err := game.DeclareAttacker(creature)
+	if err != nil {
+		t.Fatalf("DeclareAttacker returned error: %v", err)
+	}
+	game.Attackers = append(game.Attackers, creature)
+
+	if creature.Tapped {
+		t.Errorf("Vigilance creature should not be tapped after declaring attack")
+	}
+
+	attackers := game.AvailableAttackers(player)
+	for _, a := range attackers {
+		if a == creature {
+			t.Errorf("Declared vigilance attacker should not appear in available attackers")
+		}
+	}
+}
