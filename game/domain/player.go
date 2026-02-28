@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/benprew/s30/game/ui"
@@ -15,11 +16,11 @@ import (
 type Player struct {
 	Character
 	CharacterInstance
-	Name        string
-	Gold        int
-	Food        int
-	Amulets     map[ColorMask]int
-	WorldMagics []*WorldMagic
+	Name            string
+	Gold            int
+	Food            int
+	Amulets         map[ColorMask]int
+	WorldMagics     []*WorldMagic
 	ActiveDeck      int
 	ActiveQuest     *Quest
 	Days            int
@@ -50,7 +51,9 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		}
 	}
 
-	deckGen := NewDeckGenerator(DifficultyEasy, ColorRed, time.Now().UnixNano())
+	colors := []ColorMask{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
+	color := colors[rand.Intn(len(colors))]
+	deckGen := NewDeckGenerator(DifficultyEasy, color, time.Now().UnixNano())
 	deck := deckGen.GenerateStartingDeck()
 
 	cardCollection := NewCardCollection()
