@@ -201,7 +201,6 @@ func (s *DuelScreen) initGameState() {
 
 	s.gameDone = make(chan struct{})
 	go s.runOpponentAI()
-	go s.runAutoPass()
 	go s.runGameLoop()
 }
 
