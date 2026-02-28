@@ -762,6 +762,26 @@
     ]
   },
   {
+    "card_name": "Blight",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
+      }
+    ]
+  },
+  {
     "card_name": "Blue Ward",
     "abilities": [
       {
@@ -1465,6 +1485,26 @@
     ]
   },
   {
+    "card_name": "Consecrate Land",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
+      }
+    ]
+  },
+  {
     "card_name": "Control Magic",
     "abilities": [
       {
@@ -1618,6 +1658,26 @@
           "Condition": ""
         },
         "RawText": "{T}: This creature deals 1 damage to any target and 1 damage to any target of an opponent's choice"
+      }
+    ]
+  },
+  {
+    "card_name": "Cursed Land",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
       }
     ]
   },
@@ -2642,6 +2702,26 @@
           "Condition": "enchanted"
         },
         "RawText": "Enchanted creature has vigilance"
+      }
+    ]
+  },
+  {
+    "card_name": "Evil Presence",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
       }
     ]
   },
@@ -10813,6 +10893,45 @@
           "Condition": "enchant"
         },
         "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Wild Growth",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchant"
+        },
+        "RawText": "Enchant land"
+      },
+      {
+        "Type": "Mana",
+        "Cost": null,
+        "Effect": {
+          "ManaTypes": [
+            "G"
+          ]
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "Whenever enchanted land is tapped for mana, its controller adds an additional {G}"
       }
     ]
   },

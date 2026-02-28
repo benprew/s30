@@ -643,6 +643,7 @@ func (g *GameState) AvailableTargets(card *Card) []Targetable {
 	}
 
 	creature_targets := []Targetable{}
+	land_targets := []Targetable{}
 	player_targets := []Targetable{}
 	for _, player := range g.Players {
 		player_targets = append(player_targets, player) // dead players are still valid targets
@@ -650,8 +651,11 @@ func (g *GameState) AvailableTargets(card *Card) []Targetable {
 
 	for _, player := range g.Players {
 		for _, c := range player.Battlefield {
-			if c.CardType == domain.CardTypeCreature {
+			switch c.CardType {
+			case domain.CardTypeCreature:
 				creature_targets = append(creature_targets, c)
+			case domain.CardTypeLand:
+				land_targets = append(land_targets, c)
 			}
 		}
 	}
@@ -659,6 +663,8 @@ func (g *GameState) AvailableTargets(card *Card) []Targetable {
 	switch spec.Type {
 	case "creature":
 		return creature_targets
+	case "land":
+		return land_targets
 	case "player":
 		return player_targets
 	default: // any

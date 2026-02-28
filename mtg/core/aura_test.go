@@ -553,3 +553,128 @@ func TestCantCastAuraWithoutCreatures(t *testing.T) {
 		t.Error("should not be able to cast aura when no creatures on battlefield")
 	}
 }
+
+func addCardToBattlefield(player *Player, name string, id EntityID) *Card {
+	card := NewCardFromDomain(domain.FindCardByName(name), id, player)
+	card.Active = true
+	card.CurrentZone = ZoneBattlefield
+	player.Battlefield = append(player.Battlefield, card)
+	return card
+}
+
+func addCardToHand(player *Player, name string, id EntityID) *Card {
+	card := NewCardFromDomain(domain.FindCardByName(name), id, player)
+	card.CurrentZone = ZoneHand
+	player.Hand = append(player.Hand, card)
+	return card
+}
+
+func TestLandAuraResolveAttaches(t *testing.T) {
+	player := &Player{
+		ID:          0,
+		LifeTotal:   20,
+		ManaPool:    ManaPool{},
+		Hand:        []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Turn:        &Turn{},
+		InputChan:   make(chan PlayerAction, 100),
+		WaitingChan: make(chan struct{}, 1),
+	}
+	game := NewGame([]*Player{player}, false)
+
+	land := addCardToBattlefield(player, "Forest", 1)
+	aura := addCardToHand(player, "Wild Growth", 2)
+
+	err := game.Resolve(&StackItem{Card: aura, Player: player, Target: land})
+	if err != nil {
+		t.Fatalf("Resolve returned error: %v", err)
+	}
+
+	if aura.AttachedTo != land {
+		t.Error("aura should be attached to land")
+	}
+	if len(land.Attachments) != 1 || land.Attachments[0] != aura {
+		t.Error("land should have aura in attachments")
+	}
+}
+
+func TestLandAuraAvailableTargets(t *testing.T) {
+	player := &Player{
+		ID:          0,
+		LifeTotal:   20,
+		ManaPool:    ManaPool{},
+		Hand:        []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Turn:        &Turn{},
+		InputChan:   make(chan PlayerAction, 100),
+		WaitingChan: make(chan struct{}, 1),
+	}
+	game := NewGame([]*Player{player}, false)
+
+	land := addCardToBattlefield(player, "Forest", 1)
+	addCardToBattlefield(player, "Grizzly Bears", 2)
+	aura := addCardToHand(player, "Wild Growth", 3)
+
+	targets := game.AvailableTargets(aura)
+	if len(targets) != 1 {
+		t.Fatalf("expected 1 land target, got %d", len(targets))
+	}
+	if targets[0].(*Card) != land {
+		t.Error("target should be the land, not the creature")
+	}
+}
+
+func TestLandAuraExtraMana(t *testing.T) {
+	player := &Player{
+		ID:          0,
+		LifeTotal:   20,
+		ManaPool:    ManaPool{},
+		Hand:        []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Turn:        &Turn{},
+		InputChan:   make(chan PlayerAction, 100),
+		WaitingChan: make(chan struct{}, 1),
+	}
+	game := NewGame([]*Player{player}, false)
+
+	land := addCardToBattlefield(player, "Forest", 1)
+	aura := addCardToBattlefield(player, "Wild Growth", 2)
+	aura.AttachedTo = land
+	land.Attachments = append(land.Attachments, aura)
+
+	pool := game.AvailableMana(player, player.ManaPool)
+	greenCount := 0
+	for _, mana := range pool {
+		if len(mana) == 1 && mana[0] == 'G' {
+			greenCount++
+		}
+	}
+	if greenCount != 2 {
+		t.Errorf("expected 2 green mana (forest + wild growth), got %d", greenCount)
+	}
+}
+
+func TestCantCastLandAuraWithoutLands(t *testing.T) {
+	player := &Player{
+		ID:          0,
+		LifeTotal:   20,
+		ManaPool:    ManaPool{{'G'}},
+		Hand:        []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Turn:        &Turn{Phase: PhaseMain1},
+		InputChan:   make(chan PlayerAction, 100),
+		WaitingChan: make(chan struct{}, 1),
+	}
+	game := NewGame([]*Player{player}, false)
+
+	addCardToBattlefield(player, "Grizzly Bears", 1)
+	aura := addCardToHand(player, "Wild Growth", 2)
+
+	if game.CanCast(player, aura) {
+		t.Error("should not be able to cast land aura when no lands on battlefield")
+	}
+}

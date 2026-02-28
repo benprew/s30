@@ -183,7 +183,7 @@ func (m ManaPool) CanPay(cost string) bool {
 
 func (g *GameState) AvailableMana(player *Player, pPool ManaPool) (pool ManaPool) {
 	for _, card := range player.Battlefield {
-		if !card.IsActive() {
+		if !card.IsActive() || card.AttachedTo != nil {
 			continue
 		}
 

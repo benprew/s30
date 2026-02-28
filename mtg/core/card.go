@@ -193,6 +193,11 @@ func (c *Card) GetTargetSpec() *domain.ParsedTargetSpec {
 		}
 	}
 	if c.IsAura() {
+		for _, ability := range c.ParsedAbilities {
+			if ability.TargetSpec != nil && (ability.TargetSpec.Condition == conditionEnchanted || ability.TargetSpec.Condition == conditionEnchant) {
+				return &domain.ParsedTargetSpec{Type: ability.TargetSpec.Type, Count: 1, Condition: ability.TargetSpec.Condition}
+			}
+		}
 		return &domain.ParsedTargetSpec{Type: "creature", Count: 1}
 	}
 	return nil
@@ -272,14 +277,27 @@ func (c *Card) HasKeyword(keyword effects.Keyword) bool {
 }
 
 func (c *Card) GetManaProduction() []string {
+	var result []string
 	for _, ability := range c.ParsedAbilities {
 		if ability.Type == "Mana" && ability.Cost != nil && ability.Cost.Tap {
 			if ability.Effect != nil && len(ability.Effect.ManaTypes) > 0 {
-				return ability.Effect.ManaTypes
+				result = append(result, ability.Effect.ManaTypes...)
 			}
 		}
 	}
-	return c.ManaProduction
+	if len(result) == 0 {
+		result = c.ManaProduction
+	}
+	for _, aura := range c.Attachments {
+		for _, ability := range aura.ParsedAbilities {
+			if ability.Type == "Mana" && ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted {
+				if ability.Effect != nil && len(ability.Effect.ManaTypes) > 0 {
+					result = append(result, ability.Effect.ManaTypes...)
+				}
+			}
+		}
+	}
+	return result
 }
 
 func (c *Card) GetManaAbility() *effects.ManaAbility {
