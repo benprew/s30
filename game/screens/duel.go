@@ -297,12 +297,16 @@ func (s *DuelScreen) getFieldCardPos(card *core.Card, dp *duelPlayer, idx int, i
 		}
 	} else {
 		if isLand {
-			baseY = duelPlayerBoardY + 20 + fieldCardH + 10
+			baseY = 600
 		} else {
 			baseY = duelPlayerBoardY + 20
 		}
 	}
-	pos := image.Pt(duelBoardX+30+idx*35, baseY)
+	spacing := 35
+	if !isLand {
+		spacing = 120
+	}
+	pos := image.Pt(duelBoardX+30+idx*spacing, baseY)
 	s.cardPositions[card.ID] = pos
 	return pos
 }
