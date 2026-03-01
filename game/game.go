@@ -11,6 +11,7 @@ import (
 	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
+	"github.com/benprew/s30/logging"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -160,27 +161,26 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.worldFrame.Draw(screen, g.camScale)
 	}
 
-	// Print game info.
-	charT := g.Level().CharacterTile()
-	charP := g.Level().Player.Loc()
-	closestCityTile, closestCityDistance := g.Level().FindClosestCity()
+	if logging.Enabled(logging.World) {
+		charT := g.Level().CharacterTile()
+		charP := g.Level().Player.Loc()
+		closestCityTile, closestCityDistance := g.Level().FindClosestCity()
 
-	// Get mouse cursor screen position
-	mouseX, mouseY := ebiten.CursorPosition()
+		mouseX, mouseY := ebiten.CursorPosition()
 
-	debugText := fmt.Sprintf(
-		"Screen: %s\nKEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
-		screenui.ScreenNameToString(g.currentScreenName), ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
-	)
+		debugText := fmt.Sprintf(
+			"Screen: %s\nKEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
+			screenui.ScreenNameToString(g.currentScreenName), ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
+		)
 
-	// Add closest city info if a city exists
-	if closestCityTile.X != -1 && closestCityTile.Y != -1 {
-		cityTile := g.Level().Tile(closestCityTile)
-		debugText += fmt.Sprintf("\nCLOSEST CITY: %s at (%d,%d) dist: %.0f",
-			cityTile.City.Name, closestCityTile.X, closestCityTile.Y, closestCityDistance)
+		if closestCityTile.X != -1 && closestCityTile.Y != -1 {
+			cityTile := g.Level().Tile(closestCityTile)
+			debugText += fmt.Sprintf("\nCLOSEST CITY: %s at (%d,%d) dist: %.0f",
+				cityTile.City.Name, closestCityTile.X, closestCityTile.Y, closestCityDistance)
+		}
+
+		ebitenutil.DebugPrint(screen, debugText)
 	}
-
-	ebitenutil.DebugPrint(screen, debugText)
 }
 
 // Layout returns the virtual screen resolution. Ebiten automatically scales

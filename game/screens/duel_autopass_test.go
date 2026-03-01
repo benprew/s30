@@ -61,7 +61,7 @@ func addTestCardToHand(player *core.Player, name string, id core.EntityID) *core
 // must not treat main phase 2 as a phase with no meaningful actions.
 func TestAutoPass_DoesNotPassMain2WithPlayableCards(t *testing.T) {
 	player, opponent := setupMain2Players()
-	gs := core.NewGame([]*core.Player{player, opponent}, false)
+	gs := core.NewGame([]*core.Player{player, opponent})
 	gs.ActivePlayer = 0
 	gs.CurrentPlayer = 0
 
@@ -125,7 +125,7 @@ func TestAutoPass_DoesNotPassMain2WithPlayableCards(t *testing.T) {
 // the autopass should NOT fire.
 func TestMain2_AutoPassDoesNotFireDuringFullTurn(t *testing.T) {
 	player, opponent := setupMain2Players()
-	gs := core.NewGame([]*core.Player{player, opponent}, false)
+	gs := core.NewGame([]*core.Player{player, opponent})
 
 	for i := range 10 {
 		card := core.NewCardFromDomain(domain.FindCardByName("Forest"), core.EntityID(300+i), player)
@@ -200,7 +200,7 @@ func TestMain2_AutoPassDoesNotFireDuringFullTurn(t *testing.T) {
 // so by main phase 2 they still have an unplayed land in hand.
 func TestMain2_PriorityDuringFullTurn(t *testing.T) {
 	player, opponent := setupMain2Players()
-	gs := core.NewGame([]*core.Player{player, opponent}, false)
+	gs := core.NewGame([]*core.Player{player, opponent})
 
 	for i := range 10 {
 		card := core.NewCardFromDomain(domain.FindCardByName("Forest"), core.EntityID(100+i), player)

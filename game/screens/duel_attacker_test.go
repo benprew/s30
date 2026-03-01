@@ -37,7 +37,7 @@ func setupAttackerTest() (*DuelScreen, *core.Player, *core.Player, *core.Card) {
 		IsAI:        true,
 	}
 
-	gs := core.NewGame([]*core.Player{player, opponent}, false)
+	gs := core.NewGame([]*core.Player{player, opponent})
 
 	domainCard := domain.FindCardByName("Llanowar Elves")
 	creature := core.NewCardFromDomain(domainCard, 100, player)

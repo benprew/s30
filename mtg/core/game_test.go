@@ -9,7 +9,7 @@ import (
 func TestNewGame(t *testing.T) {
 	// Create a new game
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	// Check player state
@@ -30,7 +30,7 @@ func TestPlayLand(t *testing.T) {
 	// Create a new game
 	players := createTestPlayer(2)
 
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 	var card *Card
 
@@ -80,7 +80,7 @@ func TestCastLlanowarElves(t *testing.T) {
 	// Create a new game
 	players := createTestPlayer(2)
 
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := game.Players[0]
@@ -175,7 +175,7 @@ func TestCastLightningBolt(t *testing.T) {
 	// Create a new game
 	players := createTestPlayer(2)
 
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -223,7 +223,7 @@ func TestCastArtifact(t *testing.T) {
 	// Create a new game
 	players := createTestPlayer(2)
 
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -294,7 +294,7 @@ func TestCastArtifact(t *testing.T) {
 
 func TestCheckWinConditions(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 
 	game.CheckWinConditions()
 	for _, p := range players {
@@ -315,7 +315,7 @@ func TestCheckWinConditions(t *testing.T) {
 
 func TestCheckWinConditionsNegativeLife(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 
 	players[0].LifeTotal = -10
 	game.CheckWinConditions()
@@ -326,7 +326,7 @@ func TestCheckWinConditionsNegativeLife(t *testing.T) {
 
 func TestCheckWinConditionsMultipleLosers(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 
 	players[0].LifeTotal = 0
 	players[1].LifeTotal = -5
@@ -365,7 +365,7 @@ func TestNextPhase(t *testing.T) {
 
 func TestTurnBasedPlayerSwitching(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 
 	if game.CurrentPlayer != 0 {
 		t.Errorf("Expected CurrentPlayer=0, got %d", game.CurrentPlayer)
@@ -387,7 +387,7 @@ func TestTurnBasedPlayerSwitching(t *testing.T) {
 func TestDrawFromEmptyLibraryLoses(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 
 	player.Library = []*Card{}
 	player.Turn.Phase = PhaseDraw
@@ -403,7 +403,7 @@ func TestDrawFromEmptyLibraryLoses(t *testing.T) {
 func TestPlayLandWhenLandPlayed(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player.Turn.Phase = PhaseMain1
@@ -422,7 +422,7 @@ func TestPlayLandWhenLandPlayed(t *testing.T) {
 func TestPlayLandWrongPhase(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player.Turn.Phase = PhaseCombat
@@ -441,7 +441,7 @@ func TestPlayLandWrongPhase(t *testing.T) {
 func TestAvailableActionsPlayLandMainPhase(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player.Turn.Phase = PhaseMain1
@@ -471,7 +471,7 @@ func TestAvailableActionsPlayLandMainPhase(t *testing.T) {
 func TestAvailableActionsNoPlayLandAfterLandPlayed(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player.Turn.Phase = PhaseMain1
@@ -489,7 +489,7 @@ func TestAvailableActionsNoPlayLandAfterLandPlayed(t *testing.T) {
 func TestAvailableActionsNoPlayLandWrongPhase(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player.Turn.Phase = PhaseUntap
@@ -507,7 +507,7 @@ func TestAvailableActionsNoPlayLandWrongPhase(t *testing.T) {
 func TestAvailableActionsCastSpellWithMana(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player.Turn.Phase = PhaseMain1
@@ -543,7 +543,7 @@ func TestAvailableActionsCastSpellWithMana(t *testing.T) {
 func TestAvailableActionsNoCastSpellWithoutMana(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player.Turn.Phase = PhaseMain1
@@ -561,7 +561,7 @@ func TestAvailableActionsNoCastSpellWithoutMana(t *testing.T) {
 func TestAvailableActionsPassPriorityAlways(t *testing.T) {
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	phases := []Phase{PhaseUntap, PhaseUpkeep, PhaseDraw, PhaseMain1, PhaseCombat, PhaseMain2, PhaseEnd, PhaseCleanup}
@@ -586,7 +586,7 @@ func TestAvailableActionsPassPriorityAlways(t *testing.T) {
 
 func TestAvailableTargetsLightningBolt(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	bolt := game.FindCard(FindArgs{Name: "Lightning Bolt"}, players[0].Hand)
@@ -612,7 +612,7 @@ func TestAvailableTargetsLightningBolt(t *testing.T) {
 
 func TestAvailableTargetsWithCreature(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	elf := game.FindCard(FindArgs{Name: "Llanowar Elves"}, players[0].Hand)
@@ -644,7 +644,7 @@ func TestAvailableTargetsWithCreature(t *testing.T) {
 
 func TestDiscardToHandSize(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -694,7 +694,7 @@ func TestDiscardToHandSize(t *testing.T) {
 
 func TestNoDiscardWhenHandSizeOk(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -722,7 +722,7 @@ func TestNoDiscardWhenHandSizeOk(t *testing.T) {
 
 func TestAvailableActionsDiscard(t *testing.T) {
 	players := createTestPlayer(1)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -753,7 +753,7 @@ func TestAvailableActionsDiscard(t *testing.T) {
 
 func TestCombatPhaseCastSpellAction(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -826,7 +826,7 @@ func TestCombatPhaseCastSpellAction(t *testing.T) {
 
 func TestManaDrainsAtEndOfPhase(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 
 	p0 := game.Players[0]
 	p1 := game.Players[1]
@@ -869,7 +869,7 @@ func TestManaDrainsAtEndOfPhase(t *testing.T) {
 
 func TestProcessActionUnhandledTypeReturnsActPlayerPriority(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -894,7 +894,7 @@ func TestProcessActionUnhandledTypeReturnsActPlayerPriority(t *testing.T) {
 
 func TestRunStackWithUnhandledActionDoesNotPanic(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -923,7 +923,7 @@ func TestRunStackWithUnhandledActionDoesNotPanic(t *testing.T) {
 func TestCanCastFarrelsZealotWithThreePlains(t *testing.T) {
 	players := createTestPlayer(2)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player.Turn.Phase = PhaseMain1

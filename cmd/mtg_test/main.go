@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/logging"
 	"github.com/benprew/s30/mtg/ai"
 	"github.com/benprew/s30/mtg/core"
 )
@@ -90,36 +91,36 @@ func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
 
 		activePlayer := game.Players[game.ActivePlayer]
 
-		fmt.Printf("  [AI %s] Getting actions, phase=%v, combat_step=%v\n",
+		logging.Printf(logging.Duel, "  [AI %s] Getting actions, phase=%v, combat_step=%v\n",
 			player.Name(), activePlayer.Turn.Phase, activePlayer.Turn.CombatStep)
 
 		actions := game.AvailableActions(player)
-		fmt.Printf("  [AI %s] Available actions: %d\n", player.Name(), len(actions))
+		logging.Printf(logging.Duel, "  [AI %s] Available actions: %d\n", player.Name(), len(actions))
 		for i, a := range actions {
 			if a.Card != nil {
-				fmt.Printf("    [%d] %v - %s\n", i, a.Type, a.Card.Name())
+				logging.Printf(logging.Duel, "    [%d] %v - %s\n", i, a.Type, a.Card.Name())
 			} else {
-				fmt.Printf("    [%d] %v\n", i, a.Type)
+				logging.Printf(logging.Duel, "    [%d] %v\n", i, a.Type)
 			}
 		}
 
 		action := ai.ChooseAction(actions)
 		if action.Type == core.ActionCastSpell && action.Card != nil {
 			if action.Target != nil {
-				fmt.Printf("  [AI %s] Chose action: %v - %s#%d -> %s#%d\n",
+				logging.Printf(logging.Duel, "  [AI %s] Chose action: %v - %s#%d -> %s#%d\n",
 					player.Name(), action.Type, action.Card.Name(), action.Card.ID,
 					action.Target.Name(), action.Target.EntityID())
 			} else {
-				fmt.Printf("  [AI %s] Chose action: %v - %s#%d\n",
+				logging.Printf(logging.Duel, "  [AI %s] Chose action: %v - %s#%d\n",
 					player.Name(), action.Type, action.Card.Name(), action.Card.ID)
 			}
 		} else {
-			fmt.Printf("  [AI %s] Chose action: %v\n", player.Name(), action.Type)
+			logging.Printf(logging.Duel, "  [AI %s] Chose action: %v\n", player.Name(), action.Type)
 		}
 
 		select {
 		case player.InputChan <- action:
-			fmt.Printf("  [AI %s] Sent action to channel\n", player.Name())
+			logging.Printf(logging.Duel, "  [AI %s] Sent action to channel\n", player.Name())
 		case <-done:
 			return
 		}
@@ -127,8 +128,10 @@ func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
 }
 
 func main() {
+	logging.Enable(logging.MTG)
+	logging.Enable(logging.Duel)
 	players := createPlayers()
-	game := core.NewGame(players, true)
+	game := core.NewGame(players)
 	game.StartGame()
 
 	fmt.Println("=== MTG Test Game ===")

@@ -8,7 +8,7 @@ import (
 
 func setupCombatTest() (*GameState, *Player, *Player) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 	return game, players[0], players[1]
 }

@@ -189,7 +189,7 @@ func TestAuraDetachOnCreatureDeath(t *testing.T) {
 	aura.AttachedTo = creature
 
 	creature.DamageTaken = 4
-	game := NewGame([]*Player{player}, false)
+	game := NewGame([]*Player{player})
 	game.CleanupDeadCreatures()
 
 	if len(player.Graveyard) != 2 {
@@ -251,7 +251,7 @@ func TestAuraDetachOnCreatureZoneChange(t *testing.T) {
 
 func TestAuraResolveAttaches(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -304,7 +304,7 @@ func TestAuraResolveAttaches(t *testing.T) {
 
 func TestAuraResolveTargetGone(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -434,7 +434,7 @@ func makeImmolation(id EntityID, owner *Player) *Card {
 
 func TestImmolationKillsGrizzlyBears(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -478,7 +478,7 @@ func TestImmolationKillsGrizzlyBears(t *testing.T) {
 
 func TestImmolationOnWarMammoth(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -525,7 +525,7 @@ func TestImmolationOnWarMammoth(t *testing.T) {
 
 func TestCantCastAuraWithoutCreatures(t *testing.T) {
 	players := createTestPlayer(2)
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	player := players[0]
@@ -581,7 +581,7 @@ func TestLandAuraResolveAttaches(t *testing.T) {
 		InputChan:   make(chan PlayerAction, 100),
 		WaitingChan: make(chan struct{}, 1),
 	}
-	game := NewGame([]*Player{player}, false)
+	game := NewGame([]*Player{player})
 
 	land := addCardToBattlefield(player, "Forest", 1)
 	aura := addCardToHand(player, "Wild Growth", 2)
@@ -611,7 +611,7 @@ func TestLandAuraAvailableTargets(t *testing.T) {
 		InputChan:   make(chan PlayerAction, 100),
 		WaitingChan: make(chan struct{}, 1),
 	}
-	game := NewGame([]*Player{player}, false)
+	game := NewGame([]*Player{player})
 
 	land := addCardToBattlefield(player, "Forest", 1)
 	addCardToBattlefield(player, "Grizzly Bears", 2)
@@ -638,7 +638,7 @@ func TestLandAuraExtraMana(t *testing.T) {
 		InputChan:   make(chan PlayerAction, 100),
 		WaitingChan: make(chan struct{}, 1),
 	}
-	game := NewGame([]*Player{player}, false)
+	game := NewGame([]*Player{player})
 
 	land := addCardToBattlefield(player, "Forest", 1)
 	aura := addCardToBattlefield(player, "Wild Growth", 2)
@@ -669,7 +669,7 @@ func TestCantCastLandAuraWithoutLands(t *testing.T) {
 		InputChan:   make(chan PlayerAction, 100),
 		WaitingChan: make(chan struct{}, 1),
 	}
-	game := NewGame([]*Player{player}, false)
+	game := NewGame([]*Player{player})
 
 	addCardToBattlefield(player, "Grizzly Bears", 1)
 	aura := addCardToHand(player, "Wild Growth", 2)
@@ -691,7 +691,7 @@ func TestLandAuraAvailableAction(t *testing.T) {
 		InputChan:   make(chan PlayerAction, 100),
 		WaitingChan: make(chan struct{}, 1),
 	}
-	game := NewGame([]*Player{player}, false)
+	game := NewGame([]*Player{player})
 
 	land := addCardToBattlefield(player, "Forest", 1)
 	aura := addCardToHand(player, "Wild Growth", 2)
@@ -725,7 +725,7 @@ func TestLandAuraNoActionWithoutLand(t *testing.T) {
 		InputChan:   make(chan PlayerAction, 100),
 		WaitingChan: make(chan struct{}, 1),
 	}
-	game := NewGame([]*Player{player}, false)
+	game := NewGame([]*Player{player})
 
 	addCardToBattlefield(player, "Grizzly Bears", 1)
 	aura := addCardToHand(player, "Wild Growth", 2)
@@ -751,7 +751,7 @@ func TestWildGrowthAddsManaAfterResolve(t *testing.T) {
 		InputChan:   make(chan PlayerAction, 100),
 		WaitingChan: make(chan struct{}, 1),
 	}
-	game := NewGame([]*Player{player}, false)
+	game := NewGame([]*Player{player})
 
 	land := addCardToBattlefield(player, "Forest", 1)
 	aura := addCardToHand(player, "Wild Growth", 2)

@@ -15,6 +15,7 @@ import (
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
+	"github.com/benprew/s30/logging"
 	"github.com/benprew/s30/mtg/ai"
 	"github.com/benprew/s30/mtg/core"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -151,9 +152,9 @@ func (s *DuelScreen) initGameState() {
 	})
 
 	s.self = &duelPlayer{core: corePlayer, name: "You"}
-	s.opponent = &duelPlayer{core: coreOpponent, name: s.enemy.Character.Name}
+	s.opponent = &duelPlayer{core: coreOpponent, name: s.enemy.Name()}
 
-	s.gameState = core.NewGame([]*core.Player{corePlayer, coreOpponent}, false)
+	s.gameState = core.NewGame([]*core.Player{corePlayer, coreOpponent})
 	s.gameState.StartGame()
 
 	s.gameDone = make(chan struct{})
@@ -465,7 +466,7 @@ func (s *DuelScreen) handleBlockerClick(mx, my int) {
 func (s *DuelScreen) handleCardClick(mx, my int) {
 	// hand cards
 	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
-		fmt.Printf("HAND CLICK: idx: %d\n", idx)
+		logging.Printf(logging.Duel, "HAND CLICK: idx: %d\n", idx)
 		s.selectedCardIdx = idx
 		s.performCardAction(s.self.core.Hand[idx])
 		return
@@ -529,7 +530,7 @@ func (s *DuelScreen) updateHoverPreview(mx, my int) {
 func (s *DuelScreen) performCardAction(card *core.Card) {
 	actions, ok := s.cardActions[card.ID]
 	if !ok || len(actions) == 0 {
-		fmt.Printf("CLICK: %s (no action available)\n", card.Name())
+		logging.Printf(logging.Duel, "CLICK: %s (no action available)\n", card.Name())
 		return
 	}
 
@@ -539,7 +540,7 @@ func (s *DuelScreen) performCardAction(card *core.Card) {
 	}
 
 	action := actions[0]
-	fmt.Printf("CLICK: %s -> action=%s\n", card.Name(), action.Type)
+	logging.Printf(logging.Duel, "CLICK: %s -> action=%s\n", card.Name(), action.Type)
 	select {
 	case s.self.core.InputChan <- action:
 	default:
@@ -856,9 +857,15 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 		s.player.ActiveQuest.IsCompleted = true
 	}
 
+	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())
+
 	enemyLevel := s.enemy.Character.Level
 	cardCount := getRewardCardCount(enemyLevel)
 	enemyDeck := s.enemy.Character.GetActiveDeck()
+	for c := range enemyDeck {
+		logging.Printf(logging.Duel, "enemyDeck: %s\n", c.Name())
+	}
+
 	wonCards := selectRewardCards(enemyDeck, cardCount)
 
 	for _, card := range wonCards {

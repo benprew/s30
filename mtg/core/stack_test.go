@@ -113,7 +113,7 @@ func TestRunStack(t *testing.T) {
 	players := createTestPlayer(2)
 	player := players[0]
 	player2 := players[1]
-	game := NewGame(players, false)
+	game := NewGame(players)
 
 	done := make(chan struct{})
 	go func() {
