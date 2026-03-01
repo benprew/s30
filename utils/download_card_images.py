@@ -99,7 +99,7 @@ def download_and_process_card(
             logger.info(f"Downloading from {png_url}")
             urllib.request.urlretrieve(png_url, original_path)
 
-            resize_size = "300x"
+            resize_size = "245x"
             logger.info(f"Resizing to {resize_size} width")
             convert_cmd = [
                 "convert",
