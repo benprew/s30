@@ -58,6 +58,32 @@ type Player struct {
 	IsAI        bool
 }
 
+func NewPlayer(id EntityID, life int, isAI bool) *Player {
+	return &Player{
+		ID:          id,
+		LifeTotal:   life,
+		ManaPool:    ManaPool{},
+		Hand:        []*Card{},
+		Library:     []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Exile:       []*Card{},
+		Turn:        &Turn{},
+		InputChan:   make(chan PlayerAction, 100),
+		WaitingChan: make(chan struct{}, 1),
+		IsAI:        isAI,
+	}
+}
+
+func (p *Player) AddDeck(deck domain.Deck) {
+	for card, count := range deck {
+		for range count {
+			coreCard := NewCardFromDomain(card, 0, p)
+			p.Library = append(p.Library, coreCard)
+		}
+	}
+}
+
 func (p *Player) DrawCard() error {
 	if len(p.Library) == 0 {
 		return fmt.Errorf("no cards in library")

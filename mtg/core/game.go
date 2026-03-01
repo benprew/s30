@@ -56,6 +56,10 @@ func (g *GameState) CheckWinConditions() {
 func (g *GameState) StartGame() {
 	eID := EntityID(1)
 	for _, player := range g.Players {
+		player.ID = eID
+		eID++
+	}
+	for _, player := range g.Players {
 		for j := range player.Library {
 			player.Library[j].ID = eID
 			g.CardMap[eID] = player.Library[j]

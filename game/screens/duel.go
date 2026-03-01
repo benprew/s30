@@ -137,58 +137,15 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 }
 
 func (s *DuelScreen) initGameState() {
-	entityID := core.EntityID(1)
-
-	corePlayer := &core.Player{
-		ID:          1,
-		LifeTotal:   20,
-		ManaPool:    core.ManaPool{},
-		Hand:        []*core.Card{},
-		Library:     []*core.Card{},
-		Battlefield: []*core.Card{},
-		Graveyard:   []*core.Card{},
-		Exile:       []*core.Card{},
-		Turn:        &core.Turn{Phase: core.PhaseMain1},
-		InputChan:   make(chan core.PlayerAction, 100),
-		WaitingChan: make(chan struct{}, 1),
-		IsAI:        false,
-	}
-
-	playerDeck := s.player.GetActiveDeck()
-	for card, count := range playerDeck {
-		for range count {
-			coreCard := core.NewCardFromDomain(card, entityID, corePlayer)
-			corePlayer.Library = append(corePlayer.Library, coreCard)
-			entityID++
-		}
-	}
+	corePlayer := core.NewPlayer(1, 20, false)
+	corePlayer.Turn.Phase = core.PhaseMain1
+	corePlayer.AddDeck(s.player.GetActiveDeck())
 	rand.Shuffle(len(corePlayer.Library), func(i, j int) {
 		corePlayer.Library[i], corePlayer.Library[j] = corePlayer.Library[j], corePlayer.Library[i]
 	})
 
-	coreOpponent := &core.Player{
-		ID:          2,
-		LifeTotal:   s.enemy.Character.CalculateLifeFromLevel(),
-		ManaPool:    core.ManaPool{},
-		Hand:        []*core.Card{},
-		Library:     []*core.Card{},
-		Battlefield: []*core.Card{},
-		Graveyard:   []*core.Card{},
-		Exile:       []*core.Card{},
-		Turn:        &core.Turn{},
-		InputChan:   make(chan core.PlayerAction, 100),
-		WaitingChan: make(chan struct{}, 1),
-		IsAI:        true,
-	}
-
-	enemyDeck := s.enemy.Character.GetActiveDeck()
-	for card, count := range enemyDeck {
-		for range count {
-			coreCard := core.NewCardFromDomain(card, entityID, coreOpponent)
-			coreOpponent.Library = append(coreOpponent.Library, coreCard)
-			entityID++
-		}
-	}
+	coreOpponent := core.NewPlayer(2, s.enemy.Character.CalculateLifeFromLevel(), true)
+	coreOpponent.AddDeck(s.enemy.Character.GetActiveDeck())
 	rand.Shuffle(len(coreOpponent.Library), func(i, j int) {
 		coreOpponent.Library[i], coreOpponent.Library[j] = coreOpponent.Library[j], coreOpponent.Library[i]
 	})
