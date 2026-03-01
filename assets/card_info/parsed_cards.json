@@ -5611,7 +5611,7 @@
         ],
         "Trigger": null,
         "TargetSpec": null,
-        "RawText": "{1}: Regenerate Living Wall"
+        "RawText": "{1}: Regenerate this creature"
       }
     ]
   },
