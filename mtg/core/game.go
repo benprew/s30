@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/logging"
 	"github.com/benprew/s30/mtg/effects"
 )
 
@@ -19,11 +20,10 @@ type GameState struct {
 	CardMap           map[EntityID]*Card
 	Attackers         []*Card
 	BlockerMap        map[*Card][]*Card
-	DebugPrint        bool
 	FirstTurn         bool
 }
 
-func NewGame(players []*Player, debug bool) *GameState {
+func NewGame(players []*Player) *GameState {
 	return &GameState{
 		Players:           players,
 		CurrentPlayer:     0,
@@ -34,15 +34,12 @@ func NewGame(players []*Player, debug bool) *GameState {
 		CardMap:           make(map[EntityID]*Card),
 		Attackers:         []*Card{},
 		BlockerMap:        make(map[*Card][]*Card),
-		DebugPrint:        debug,
 		FirstTurn:         true,
 	}
 }
 
 func (g *GameState) debugf(format string, args ...any) {
-	if g.DebugPrint {
-		fmt.Printf(format, args...)
-	}
+	logging.Printf(logging.MTG, format, args...)
 }
 
 func (g *GameState) CheckWinConditions() {
@@ -339,7 +336,7 @@ func (g *GameState) DrawPhase(player *Player) {
 		player.HasLost = true
 		return
 	}
-	if g.DebugPrint {
+	if logging.Enabled(logging.MTG) {
 		g.debugf("  %s draws a card. Hand: ", player.Name())
 		for i, c := range player.Hand {
 			if i > 0 {
@@ -454,7 +451,7 @@ func (g *GameState) TapManaSourcesFor(player *Player, cost string) error {
 			if tapped >= needed {
 				break
 			}
-			if card.CardType == domain.CardTypeLand && !card.Tapped {
+			if !card.Tapped && (card.CardType == domain.CardTypeLand || len(card.ManaProduction) > 0) {
 				for _, mana := range card.ManaProduction {
 					if len(mana) == 1 && rune(mana[0]) == color {
 						if err := g.ActivateManaAbility(player, card); err != nil {
@@ -479,7 +476,7 @@ func (g *GameState) TapManaSourcesFor(player *Player, cost string) error {
 			if player.ManaPool.CanPay(cost) {
 				break
 			}
-			if !card.Tapped && (card.CardType == domain.CardTypeLand || len(card.ManaProduction) > 0) {
+			if !card.Tapped && (card.CardType == domain.CardTypeLand || len(card.ManaProduction) > 0) && card.GetManaAbility() != nil {
 				g.debugf("tapping %s\n", card.CardName)
 				if err := g.ActivateManaAbility(player, card); err != nil {
 					panic(err)

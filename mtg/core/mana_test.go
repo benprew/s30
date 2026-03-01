@@ -3,6 +3,8 @@ package core
 import (
 	"slices"
 	"testing"
+
+	"github.com/benprew/s30/game/domain"
 )
 
 func TestManaPool_AddMana(t *testing.T) {
@@ -74,7 +76,7 @@ func TestAvailableMana(t *testing.T) {
 	// test a player has 2 available mana with an untapped land and elf
 	players := createTestPlayer(1)
 	player := players[0]
-	game := NewGame(players, false)
+	game := NewGame(players)
 	game.StartGame()
 
 	// Find a Forest card and put it on the battlefield
@@ -118,6 +120,35 @@ func TestAvailableMana(t *testing.T) {
 		if !slices.Equal(mana, manaPool[i]) {
 			t.Errorf("Expected green mana, got %v", string(mana))
 		}
+	}
+}
+
+func TestTapManaSourcesForArtifactMana(t *testing.T) {
+	players := createTestPlayer(1)
+	player := players[0]
+
+	domainSwamp := domain.FindCardByName("Swamp")
+	swamp := NewCardFromDomain(domainSwamp, 100, player)
+	swamp.CurrentZone = ZoneBattlefield
+	player.Battlefield = append(player.Battlefield, swamp)
+
+	domainMox := domain.FindCardByName("Mox Jet")
+	mox := NewCardFromDomain(domainMox, 101, player)
+	mox.CurrentZone = ZoneBattlefield
+	player.Battlefield = append(player.Battlefield, mox)
+
+	game := NewGame(players)
+
+	err := game.TapManaSourcesFor(player, "{B}{B}")
+	if err != nil {
+		t.Errorf("Should be able to tap Swamp + Mox Jet for {B}{B}: %v", err)
+	}
+
+	if !swamp.Tapped {
+		t.Errorf("Swamp should be tapped")
+	}
+	if !mox.Tapped {
+		t.Errorf("Mox Jet should be tapped")
 	}
 }
 
