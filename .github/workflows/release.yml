@@ -2,6 +2,10 @@ name: Release Builds
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v1.0.0)'
+        required: true
 
 permissions:
   contents: write
@@ -51,3 +55,24 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create ${{ inputs.version }} \
+            --title "${{ inputs.version }}" \
+            --generate-notes \
+            artifacts/s30_linux_amd64/s30_linux_amd64 \
+            artifacts/s30_mac_amd64/s30_mac_amd64 \
+            artifacts/s30_mac_arm64/s30_mac_arm64 \
+            artifacts/s30.exe/s30.exe
