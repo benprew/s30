@@ -163,8 +163,11 @@ var (
 	////////////////////////
 	// Edit Deck Screen
 	////////////////////////
-	//go:embed art/sprites/edit_deck/Winbk_Spellchain.pic.png
+	//go:embed art/sprites/edit_deck/Dekbar1.pic.png
 	EditDeckBg_png []byte
+
+	//go:embed art/sprites/edit_deck/Dektile4.pic.png
+	EditDeckTile_png []byte
 
 	//go:embed art/ui/MapBttns.png
 	InfoBar_png []byte

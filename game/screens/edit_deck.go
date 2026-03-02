@@ -35,6 +35,7 @@ type EditDeckScreen struct {
 	City                 *domain.City
 	CollectionList       *elements.ScrollableList
 	Background           *ebiten.Image
+	TiledBackground      *ebiten.Image
 	DeckButtons          []*elements.Button // Buttons for cards currently in the deck
 	lastClickTime        map[int]int        // Track click times for collection card double-click detection
 	clickFrame           int                // Current frame counter for double-click timing
@@ -72,10 +73,17 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 		return nil, fmt.Errorf("failed to load edit deck background: %w", err)
 	}
 
+	// Load and tile the background
+	tileImg, err := imageutil.LoadImage(assets.EditDeckTile_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load edit deck tile: %w", err)
+	}
+
 	screen := &EditDeckScreen{
 		Player:               player,
 		City:                 city,
 		Background:           collectionBg,
+		TiledBackground:      imageutil.TileImage(tileImg, 1024, 768),
 		DeckButtons:          make([]*elements.Button, 0),
 		lastClickTime:        make(map[int]int),
 		clickFrame:           0,
@@ -233,6 +241,11 @@ func (s *EditDeckScreen) reloadCollectionList() error {
 
 // Draw renders the edit deck screen
 func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
+	// Draw tiled background
+	bgOpts := &ebiten.DrawImageOptions{}
+	bgOpts.GeoM.Scale(scale, scale)
+	screen.DrawImage(s.TiledBackground, bgOpts)
+
 	// Calculate position for collection list at bottom of screen
 	collectionY := H - COLLECTION_HEIGHT
 
@@ -295,6 +308,12 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	deckOpts.GeoM.Scale(scale, scale)
 	deckOpts.GeoM.Translate(float64(deckBounds.Min.X)*scale, float64(deckBounds.Min.Y)*scale)
 	screen.DrawImage(deckOutline, deckOpts)
+
+	// Draw helper text above collection area
+	helpText := "[A] Add to Deck\n[D] Remove from Deck\n[S] Sell Card"
+	helpY := float64(collectionY) - 90
+	helpOpts := &ebiten.DrawImageOptions{}
+	elements.NewText(14, helpText, int(10*scale), int(helpY*scale)).Draw(screen, helpOpts, 1.0)
 
 	// Draw drag image if dragging
 	s.dragManager.Draw(screen)
@@ -621,7 +640,7 @@ func (s *EditDeckScreen) calculateDeckCardPositions() {
 
 	// Card dimensions (scaled)
 	cardWidth := 100  // Approximate width after 0.4 scale
-	cardHeight := 140 // Approximate height after 0.4 scale
+	cardHeight := 120 // Approximate height after 0.4 scale
 	padding := 10
 
 	// Calculate grid dimensions
@@ -961,7 +980,7 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 
 	// Section 4: Type counts
 	typeX := float64(colorX + 5*36 + 15)
-	typeText := fmt.Sprintf("L:%d C:%d S:%d", landCount, creatureCount, spellCount)
+	typeText := fmt.Sprintf("Land: %d Creatures: %d Spells: %d", landCount, creatureCount, spellCount)
 	elements.NewText(14, typeText, int(typeX*scale), int(16*scale)).Draw(screen, scaleOpts, scale)
 }
 
