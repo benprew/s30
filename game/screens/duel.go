@@ -63,8 +63,10 @@ type DuelScreen struct {
 
 	doneBtn [3]*ebiten.Image
 
-	selectedCardIdx int
-	cardPreviewImg  *ebiten.Image
+	selectedCardIdx        int
+	cardPreviewImg         *ebiten.Image
+	cardPreviewID          string
+	cardPreviewPlaceholder bool
 
 	mouseState     mouseStateType
 	mouseStartX    int
@@ -106,8 +108,8 @@ type cardImgKey struct {
 }
 
 type cardImgEntry struct {
-	source *ebiten.Image
-	scaled *ebiten.Image
+	scaled      *ebiten.Image
+	placeholder bool
 }
 
 func (s *DuelScreen) IsFramed() bool { return false }
@@ -642,20 +644,22 @@ func (s *DuelScreen) isPlayerBoardClick(mx, my int, dp *duelPlayer) bool {
 }
 
 func (s *DuelScreen) getCardArtImg(card *core.Card, targetW int) *ebiten.Image {
+	key := cardImgKey{id: card.ID, width: targetW}
+	if entry, ok := s.cardImgCache[key]; ok {
+		if !entry.placeholder || !card.ImageLoaded() {
+			return entry.scaled
+		}
+	}
+
 	artImg, err := card.CardImage(domain.CardViewArtOnly)
 	if err != nil || artImg == nil {
 		return nil
 	}
 
-	key := cardImgKey{id: card.ID, width: targetW}
-	entry, ok := s.cardImgCache[key]
-	if ok && entry.source == artImg {
-		return entry.scaled
-	}
-
+	loaded := card.ImageLoaded()
 	scale := float64(targetW) / float64(artImg.Bounds().Dx())
 	scaled := imageutil.ScaleImage(artImg, scale)
-	s.cardImgCache[key] = cardImgEntry{source: artImg, scaled: scaled}
+	s.cardImgCache[key] = cardImgEntry{scaled: scaled, placeholder: !loaded}
 	return scaled
 }
 
@@ -844,12 +848,20 @@ func (s *DuelScreen) runOpponentAI() {
 }
 
 func (s *DuelScreen) loadCardPreview(card *core.Card) {
+	cardID := card.CardID()
+	if s.cardPreviewID == cardID && (!s.cardPreviewPlaceholder || !card.ImageLoaded()) {
+		return
+	}
 	img, err := card.CardImage(domain.CardViewFull)
 	if err != nil || img == nil {
 		s.cardPreviewImg = nil
+		s.cardPreviewID = ""
+		s.cardPreviewPlaceholder = false
 		return
 	}
-	s.cardPreviewImg = imageutil.ScaleImage(img, 0.95)
+	s.cardPreviewImg = img
+	s.cardPreviewID = cardID
+	s.cardPreviewPlaceholder = !card.ImageLoaded()
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {

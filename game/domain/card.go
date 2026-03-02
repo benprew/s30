@@ -130,6 +130,11 @@ func (c *Card) CardID() string {
 	return c.cardID
 }
 
+func (c *Card) ImageLoaded() bool {
+	_, ok := cardImages.Load(c.cardID)
+	return ok
+}
+
 // FindCardByName searches for a card by name using binary search
 // Returns the first card found with the given name, or nil if not found
 func FindCardByName(name string) *Card {
