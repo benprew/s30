@@ -19,7 +19,7 @@ var fetchingSet sync.Map
 var blankCardOnce sync.Once
 var blankCardImage *ebiten.Image
 
-const cardTargetWidth = 300
+const cardTargetWidth = 250
 
 func blankCard() *ebiten.Image {
 	blankCardOnce.Do(func() {

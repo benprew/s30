@@ -150,14 +150,14 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	// Main description text - centered, positioned better
 	duelText := "Those who enter the stronghold of the Mighty Wizard\n will be met with the firmest resistance. You must..."
-	textElement := elements.NewText(26, duelText, W/2-250, 450)
+	textElement := elements.NewText(24, duelText, W/2-250, 450)
 	textElement.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	// Action buttons - centered, positioned better
-	duelBtnText := elements.NewText(28, "1. Duel the Enemy", s.duelBtn.Min.X, s.duelBtn.Min.Y)
+	duelBtnText := elements.NewText(24, "1. Duel the Enemy", s.duelBtn.Min.X, s.duelBtn.Min.Y)
 	duelBtnText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	bribeBtnText := elements.NewText(28, fmt.Sprintf("2. Bribe for %d gold", s.enemy.BribeAmount()), s.bribeBtn.Min.X, s.bribeBtn.Min.Y)
+	bribeBtnText := elements.NewText(24, fmt.Sprintf("2. Bribe for %d gold", s.enemy.BribeAmount()), s.bribeBtn.Min.X, s.bribeBtn.Min.Y)
 	bribeBtnText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	// Player stats UI background in lower-left
