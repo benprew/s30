@@ -33,6 +33,8 @@ const (
 	KeywordRegeneration = effects.KeywordRegeneration
 )
 
+const costPattern = `((?:\{[^}]+\}(?:,\s*)?)+)`
+
 func (p *Parser) registerPatterns() {
 	p.registerKeywordPatterns()
 	p.registerAuraPatterns()
@@ -259,13 +261,14 @@ func (p *Parser) registerDamagePatterns() {
 	)
 
 	p.RegisterPattern(
-		"tap-damage-any",
-		regexp.MustCompile(`(?i)^\{T\}\s*:\s*(?:[\w\s]+\s+)?deals?\s+(\d+)\s+damage\s+to\s+any\s+target$`),
+		"activated-damage-any",
+		regexp.MustCompile(`(?i)^`+costPattern+`\s*:\s*(?:[\w\s]+\s+)?deals?\s+(\d+)\s+damage\s+to\s+any\s+target$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
-			amount, _ := strconv.Atoi(matches[1])
+			cost := ParseCost(matches[1])
+			amount, _ := strconv.Atoi(matches[2])
 			return &ParsedAbility{
 				Type:       AbilityTypeActivated,
-				Cost:       &Cost{Tap: true},
+				Cost:       cost,
 				Effect:     &effects.DirectDamage{Amount: amount},
 				TargetSpec: &TargetSpec{Type: TargetTypeAny, Count: 1},
 			}, nil
@@ -273,13 +276,14 @@ func (p *Parser) registerDamagePatterns() {
 	)
 
 	p.RegisterPattern(
-		"tap-damage-creature-or-player",
-		regexp.MustCompile(`(?i)^\{T\}\s*:\s*(?:[\w\s]+\s+)?deals?\s+(\d+)\s+damage\s+to\s+target\s+creature\s+or\s+player$`),
+		"activated-damage-creature-or-player",
+		regexp.MustCompile(`(?i)^`+costPattern+`\s*:\s*(?:[\w\s]+\s+)?deals?\s+(\d+)\s+damage\s+to\s+target\s+creature\s+or\s+player$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
-			amount, _ := strconv.Atoi(matches[1])
+			cost := ParseCost(matches[1])
+			amount, _ := strconv.Atoi(matches[2])
 			return &ParsedAbility{
 				Type:       AbilityTypeActivated,
-				Cost:       &Cost{Tap: true},
+				Cost:       cost,
 				Effect:     &effects.DirectDamage{Amount: amount},
 				TargetSpec: &TargetSpec{Type: TargetTypeAny, Count: 1},
 			}, nil
@@ -318,7 +322,7 @@ func (p *Parser) registerStatBoostPatterns() {
 
 	p.RegisterPattern(
 		"activated-pump",
-		regexp.MustCompile(`(?i)^(\{[^}]+\}(?:\{[^}]+\})*)\s*:\s*(?:[\w\s]+\s+)?gets?\s+([+-]?\d+)/([+-]?\d+)(?:\s+until\s+end\s+of\s+turn)?$`),
+		regexp.MustCompile(`(?i)^`+costPattern+`\s*:\s*(?:[\w\s]+\s+)?gets?\s+([+-]?\d+)/([+-]?\d+)(?:\s+until\s+end\s+of\s+turn)?$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
 			cost := ParseCost(matches[1])
 			power, _ := strconv.Atoi(matches[2])
@@ -394,7 +398,7 @@ func (p *Parser) registerManaAbilityPatterns() {
 func (p *Parser) registerActivatedAbilityPatterns() {
 	p.RegisterPattern(
 		"generic-activated",
-		regexp.MustCompile(`(?i)^(\{[^}]+\}(?:\{[^}]+\})*)\s*:\s*(.+)$`),
+		regexp.MustCompile(`(?i)^`+costPattern+`\s*:\s*(.+)$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
 			cost := ParseCost(matches[1])
 			effectText := matches[2]

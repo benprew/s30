@@ -1,5 +1,30 @@
 [
   {
+    "card_name": "Adun Oakenshield",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{B}{R}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{B}{R}{G}, {T}: Return target creature card from your graveyard to your hand"
+      }
+    ]
+  },
+  {
     "card_name": "Air Elemental",
     "abilities": [
       {
@@ -17,6 +42,121 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      }
+    ]
+  },
+  {
+    "card_name": "Al-abara's Carpet",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{5}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{5}, {T}: Prevent all damage that would be dealt to you this turn by attacking creatures without flying"
+      }
+    ]
+  },
+  {
+    "card_name": "Aladdin",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}{R}{R}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{1}{R}{R}, {T}: Gain control of target artifact for as long as you control this creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Aladdin's Lamp",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{X}, {T}: The next time you would draw a card this turn, instead look at the top X cards of your library, put all but one of them on the bottom of your library in a random order, then draw a card"
+      }
+    ]
+  },
+  {
+    "card_name": "Aladdin's Ring",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{8}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": {
+          "Amount": 4
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "any",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{8}, {T}: This artifact deals 4 damage to any target"
+      }
+    ]
+  },
+  {
+    "card_name": "Alchor's Tomb",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "permanent",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Target permanent you control becomes the color of your choice"
       }
     ]
   },
@@ -57,6 +197,31 @@
     ]
   },
   {
+    "card_name": "Amulet of Kroog",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "any",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Prevent the next 1 damage that would be dealt to any target this turn"
+      }
+    ]
+  },
+  {
     "card_name": "Angry Mob",
     "abilities": [
       {
@@ -74,6 +239,25 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Trample"
+      }
+    ]
+  },
+  {
+    "card_name": "Angus Mackenzie",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{W}{U}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{G}{W}{U}, {T}: Prevent all combat damage that would be dealt this turn"
       }
     ]
   },
@@ -117,6 +301,25 @@
           "Condition": "enchant"
         },
         "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Apprentice Wizard",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{U}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{U}, {T}: Add {C}{C}{C}"
       }
     ]
   },
@@ -167,6 +370,56 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{W}: Arcades Sabboth gets +0/+1 until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Arena",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control"
+      }
+    ]
+  },
+  {
+    "card_name": "Argivian Archaeologist",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{W}{W}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{W}{W}, {T}: Return target artifact card from your graveyard to your hand"
       }
     ]
   },
@@ -247,6 +500,31 @@
     ]
   },
   {
+    "card_name": "Ashnod's Battle Gear",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Target creature you control gets +2/-2 for as long as this artifact remains tapped"
+      }
+    ]
+  },
+  {
     "card_name": "Aspect of Wolf",
     "abilities": [
       {
@@ -263,6 +541,31 @@
           "Condition": "enchant"
         },
         "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Aswan Jaguar",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{G}{G}, {T}: Bury target creature of the chosen type"
       }
     ]
   },
@@ -434,6 +737,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Haste"
+      }
+    ]
+  },
+  {
+    "card_name": "Banshee",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "any",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{X}, {T}: This creature deals half X damage, rounded down, to any target, and half X damage, rounded up, to you"
       }
     ]
   },
@@ -705,6 +1033,25 @@
     ]
   },
   {
+    "card_name": "Black Mana Battery",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Put a charge counter on this artifact"
+      }
+    ]
+  },
+  {
     "card_name": "Black Ward",
     "abilities": [
       {
@@ -782,6 +1129,25 @@
     ]
   },
   {
+    "card_name": "Blue Mana Battery",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Put a charge counter on this artifact"
+      }
+    ]
+  },
+  {
     "card_name": "Blue Ward",
     "abilities": [
       {
@@ -840,6 +1206,47 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Swampwalk"
+      }
+    ]
+  },
+  {
+    "card_name": "Bone Flute",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": {
+          "PowerBoost": -1,
+          "ToughnessBoost": 0
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: All creatures get -1/-0 until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Boris Devilboon",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}{B}{R}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}{B}{R}, {T}: Create a 1/1 black and red Demon creature token named Minor Demon"
       }
     ]
   },
@@ -936,6 +1343,25 @@
     ]
   },
   {
+    "card_name": "Bronze Tablet",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{4}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{4}, {T}: Exile this artifact and target nontoken permanent an opponent owns"
+      }
+    ]
+  },
+  {
     "card_name": "Brothers of Fire",
     "abilities": [
       {
@@ -1024,6 +1450,31 @@
     ]
   },
   {
+    "card_name": "Candelabra of Tawnos",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{X}, {T}: Untap X target lands"
+      }
+    ]
+  },
+  {
     "card_name": "Carnivorous Plant",
     "abilities": [
       {
@@ -1101,6 +1552,45 @@
         },
         "TargetSpec": null,
         "RawText": "Whenever this creature attacks, it gets +1/-2 until end of turn"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}{R}{R}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{1}{R}{R}, {T}: Target creature gains mountainwalk until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Celestial Prism",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Add one mana of any color"
       }
     ]
   },
@@ -1123,6 +1613,25 @@
           "Condition": ""
         },
         "RawText": "Chain Lightning deals 3 damage to any target"
+      }
+    ]
+  },
+  {
+    "card_name": "Chaos Orb",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{1}, {T}: If this artifact is on the battlefield, flip it onto the battlefield from a height of at least one foot"
       }
     ]
   },
@@ -1383,6 +1892,39 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{X}, {T}: Put up to X +1/+0 counters on this creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Clockwork Beast",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{X}, {T}: Put up to X +1/+0 counters on this creature"
       }
     ]
   },
@@ -1501,6 +2043,25 @@
           "Condition": "enchant"
         },
         "RawText": "Enchant land"
+      }
+    ]
+  },
+  {
+    "card_name": "Conservator",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{3}, {T}: Prevent the next 2 damage that would be dealt to you this turn"
       }
     ]
   },
@@ -1633,6 +2194,20 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{R}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{R}, {T}: This creature deals 1 damage to target attacking or blocking creature"
       }
     ]
   },
@@ -1695,6 +2270,25 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, put a wind counter on this enchantment, then sacrifice this enchantment unless you pay {G} for each wind counter on it"
+      }
+    ]
+  },
+  {
+    "card_name": "Cyclopean Tomb",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Put a mire counter on target non-Swamp land"
       }
     ]
   },
@@ -1837,6 +2431,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{U}: Until end of turn, if you tap a land you control for mana, it produces {U} instead of any other type"
+      }
+    ]
+  },
+  {
+    "card_name": "Delif's Cube",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: This turn, when target creature you control attacks and isn't blocked, it assigns no combat damage this turn and you put a cube counter on this artifact"
       }
     ]
   },
@@ -1985,6 +2604,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{3}: Regenerate this creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Disrupting Scepter",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "player",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{3}, {T}: Target player discards a card"
       }
     ]
   },
@@ -2424,6 +3068,31 @@
     ]
   },
   {
+    "card_name": "Ebony Horse",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "attacking"
+        },
+        "RawText": "{2}, {T}: Untap target attacking creature you control"
+      }
+    ]
+  },
+  {
     "card_name": "Elder Land Wurm",
     "abilities": [
       {
@@ -2612,6 +3281,56 @@
     ]
   },
   {
+    "card_name": "Elvish Hunter",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{1}{G}, {T}: Target creature doesn't untap during its controller's next untap step"
+      }
+    ]
+  },
+  {
+    "card_name": "Elvish Scout",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "attacking"
+        },
+        "RawText": "{G}, {T}: Untap target attacking creature you control"
+      }
+    ]
+  },
+  {
     "card_name": "Emerald Dragonfly",
     "abilities": [
       {
@@ -2762,6 +3481,31 @@
           "Condition": "enchant"
         },
         "RawText": "Enchant land"
+      }
+    ]
+  },
+  {
+    "card_name": "Exorcist",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}{W}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "black",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{1}{W}, {T}: Destroy target black creature"
       }
     ]
   },
@@ -3072,6 +3816,20 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{G}, {T}: Add {R}"
       }
     ]
   },
@@ -3266,6 +4024,31 @@
     ]
   },
   {
+    "card_name": "Flying Carpet",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Target creature gains flying until end of turn"
+      }
+    ]
+  },
+  {
     "card_name": "Flying Men",
     "abilities": [
       {
@@ -3376,6 +4159,25 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, sacrifice this artifact unless you pay {3}"
+      }
+    ]
+  },
+  {
+    "card_name": "Fountain of Youth",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: You gain 1 life"
       }
     ]
   },
@@ -3970,6 +4772,25 @@
     ]
   },
   {
+    "card_name": "Golgothian Sylex",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{1}, {T}: Each nontoken permanent with a name originally printed in the Antiquities expansion is sacrificed by its controller"
+      }
+    ]
+  },
+  {
     "card_name": "Gosta Dirk",
     "abilities": [
       {
@@ -4054,6 +4875,31 @@
     ]
   },
   {
+    "card_name": "Grave Robbers",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{B}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{B}, {T}: Exile target artifact card from a graveyard"
+      }
+    ]
+  },
+  {
     "card_name": "Greater Realm of Preservation",
     "abilities": [
       {
@@ -4069,6 +4915,25 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{1}{W}: The next time a black or red source of your choice would deal damage to you this turn, prevent that damage"
+      }
+    ]
+  },
+  {
+    "card_name": "Green Mana Battery",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Put a charge counter on this artifact"
       }
     ]
   },
@@ -4222,6 +5087,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Add {G}"
+      }
+    ]
+  },
+  {
+    "card_name": "Helm of Chatzuk",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{1}, {T}: Target creature gains banding until end of turn"
       }
     ]
   },
@@ -4393,6 +5283,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{U}: This creature gains shroud until end of turn and doesn't untap during your next untap step"
+      }
+    ]
+  },
+  {
+    "card_name": "Horn of Deafening",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Prevent all combat damage that would be dealt by target creature this turn"
       }
     ]
   },
@@ -4604,6 +5519,31 @@
     ]
   },
   {
+    "card_name": "Icatian Scout",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{1}, {T}: Target creature gains first strike until end of turn"
+      }
+    ]
+  },
+  {
     "card_name": "Icatian Skirmishers",
     "abilities": [
       {
@@ -4640,6 +5580,31 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, if this land is tapped, put a storage counter on it"
+      }
+    ]
+  },
+  {
+    "card_name": "Icy Manipulator",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{1}, {T}: Tap target artifact, creature, or land"
       }
     ]
   },
@@ -5021,6 +5986,69 @@
     ]
   },
   {
+    "card_name": "Jalum Tome",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Draw a card, then discard a card"
+      }
+    ]
+  },
+  {
+    "card_name": "Jandor's Saddlebags",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{3}, {T}: Untap target creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Jayemdae Tome",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{4}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{4}, {T}: Draw a card"
+      }
+    ]
+  },
+  {
     "card_name": "Jeweled Bird",
     "abilities": [
       {
@@ -5221,6 +6249,20 @@
       {
         "Type": "Activated",
         "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Exile the top card of your library face down"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
           "Mana": "{0}",
           "Tap": false,
           "Sacrifice": false,
@@ -5298,6 +6340,31 @@
     ]
   },
   {
+    "card_name": "Kry Shield",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Prevent all damage that would be dealt this turn by target creature you control"
+      }
+    ]
+  },
+  {
     "card_name": "Kudzu",
     "abilities": [
       {
@@ -5333,6 +6400,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Lady Caleria deals 3 damage to target attacking or blocking creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Lady Evangela",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{W}{B}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{W}{B}, {T}: Prevent all combat damage that would be dealt by target creature this turn"
       }
     ]
   },
@@ -5512,6 +6604,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Draw a card"
+      }
+    ]
+  },
+  {
+    "card_name": "Life Matrix",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{4}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{4}, {T}: Put a matrix counter on target creature and that creature gains \"Remove a matrix counter from this creature: Regenerate this creature"
       }
     ]
   },
@@ -5991,6 +7108,31 @@
     ]
   },
   {
+    "card_name": "Millstone",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "player",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Target player mills two cards"
+      }
+    ]
+  },
+  {
     "card_name": "Mindstab Thrull",
     "abilities": [
       {
@@ -6371,6 +7513,25 @@
     ]
   },
   {
+    "card_name": "Nebuchadnezzar",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{X}, {T}: Choose a card name"
+      }
+    ]
+  },
+  {
     "card_name": "Necrite",
     "abilities": [
       {
@@ -6461,6 +7622,50 @@
     ]
   },
   {
+    "card_name": "Nevinyrral's Disk",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{1}, {T}: Destroy all artifacts, creatures, and enchantments"
+      }
+    ]
+  },
+  {
+    "card_name": "Niall Silvain",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{G}{G}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{G}{G}{G}{G}, {T}: Regenerate target creature"
+      }
+    ]
+  },
+  {
     "card_name": "Nicol Bolas",
     "abilities": [
       {
@@ -6515,6 +7720,69 @@
     ]
   },
   {
+    "card_name": "North Star",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{4}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{4}, {T}: For one spell this turn, you may spend mana as though it were mana of any type to pay that spell's mana cost"
+      }
+    ]
+  },
+  {
+    "card_name": "Northern Paladin",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{W}{W}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{W}{W}, {T}: Destroy target black permanent"
+      }
+    ]
+  },
+  {
+    "card_name": "Nova Pentacle",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{3}, {T}: The next time a source of your choice would deal damage to you this turn, that damage is dealt to target creature of an opponent's choice instead"
+      }
+    ]
+  },
+  {
     "card_name": "Oasis",
     "abilities": [
       {
@@ -6536,6 +7804,31 @@
           "Condition": ""
         },
         "RawText": "{T}: Prevent the next 1 damage that would be dealt to target creature this turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Obelisk of Undoing",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{6}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "permanent",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{6}, {T}: Return target permanent you both own and control to your hand"
       }
     ]
   },
@@ -6855,6 +8148,25 @@
     ]
   },
   {
+    "card_name": "Pandora's Box",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{3}, {T}: Choose a random summon card from all players' decks"
+      }
+    ]
+  },
+  {
     "card_name": "Paralyze",
     "abilities": [
       {
@@ -7147,6 +8459,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{G}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{G}{G}{G}, {T}: Target creature gains flying until end of turn"
       }
     ]
   },
@@ -7196,6 +8528,28 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Add {R} or {W}"
+      }
+    ]
+  },
+  {
+    "card_name": "Pradesh Gypsies",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": {
+          "PowerBoost": -2,
+          "ToughnessBoost": 0
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{1}{G}, {T}: Target creature gets -2/-0 until end of turn"
       }
     ]
   },
@@ -7516,6 +8870,56 @@
     ]
   },
   {
+    "card_name": "Rag Man",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{B}{B}{B}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "player",
+          "Controller": "opponent",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{B}{B}{B}, {T}: Target opponent reveals their hand and discards a creature card at random"
+      }
+    ]
+  },
+  {
+    "card_name": "Ragnar",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{W}{U}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{G}{W}{U}, {T}: Regenerate target creature"
+      }
+    ]
+  },
+  {
     "card_name": "Rainbow Knights",
     "abilities": [
       {
@@ -7665,6 +9069,25 @@
     ]
   },
   {
+    "card_name": "Red Mana Battery",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Put a charge counter on this artifact"
+      }
+    ]
+  },
+  {
     "card_name": "Red Ward",
     "abilities": [
       {
@@ -7681,6 +9104,25 @@
           "Condition": "enchant"
         },
         "RawText": "Enchant creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Reflecting Mirror",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{X}, {T}: Change the target of target spell with a single target if that target is you"
       }
     ]
   },
@@ -7793,6 +9235,44 @@
     ]
   },
   {
+    "card_name": "Ring of Immortals",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{3}, {T}: Counter target instant or Aura spell that targets a permanent you control"
+      }
+    ]
+  },
+  {
+    "card_name": "Ring of Renewal",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{5}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{5}, {T}: Discard a card at random, then draw two cards"
+      }
+    ]
+  },
+  {
     "card_name": "Riven Turnbull",
     "abilities": [
       {
@@ -7900,17 +9380,46 @@
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "Amount": 1
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": {
           "Type": "any",
-          "Controller": "any",
+          "Controller": "",
           "Subtype": "",
           "Count": 1,
           "Condition": ""
         },
         "RawText": "{2}: This artifact deals 1 damage to any target"
+      }
+    ]
+  },
+  {
+    "card_name": "Rod of Ruin",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": {
+          "Amount": 1
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "any",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{3}, {T}: This artifact deals 1 damage to any target"
       }
     ]
   },
@@ -8006,8 +9515,50 @@
     ]
   },
   {
+    "card_name": "Runesword",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": {
+          "PowerBoost": 2,
+          "ToughnessBoost": 0
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{3}, {T}: Target attacking creature gets +2/+0 until end of turn"
+      }
+    ]
+  },
+  {
     "card_name": "Safe Haven",
     "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Exile target creature you control"
+      },
       {
         "Type": "Triggered",
         "Cost": null,
@@ -8065,6 +9616,50 @@
     ]
   },
   {
+    "card_name": "Sandals of Abdallah",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Target creature gains islandwalk until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Savaen Elves",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{G}{G}, {T}: Destroy target Aura attached to a land"
+      }
+    ]
+  },
+  {
     "card_name": "Savannah",
     "abilities": [
       {
@@ -8090,6 +9685,25 @@
     ]
   },
   {
+    "card_name": "Scarecrow",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{6}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{6}, {T}: Prevent all damage that would be dealt to you this turn by creatures with flying"
+      }
+    ]
+  },
+  {
     "card_name": "Scarwood Bandits",
     "abilities": [
       {
@@ -8107,12 +9721,52 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Forestwalk"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}{G}, {T}: Unless an opponent pays {2}, gain control of target artifact for as long as this creature remains on the battlefield"
       }
     ]
   },
   {
     "card_name": "Scarwood Hag",
     "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{G}{G}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{G}{G}{G}{G}, {T}: Target creature gains forestwalk until end of turn"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -8415,6 +10069,25 @@
     ]
   },
   {
+    "card_name": "Serpent Generator",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{4}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{4}, {T}: Create a 1/1 colorless Snake artifact creature token"
+      }
+    ]
+  },
+  {
     "card_name": "Serra Angel",
     "abilities": [
       {
@@ -8511,6 +10184,31 @@
           "Condition": ""
         },
         "RawText": "{T}: Target creature loses all \"bands with other\" abilities until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Shimian Night Stalker",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{B}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "attacking"
+        },
+        "RawText": "{B}, {T}: All damage that would be dealt to you this turn by target attacking creature is dealt to this creature instead"
       }
     ]
   },
@@ -8617,6 +10315,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{T}: Add {R}"
+      }
+    ]
+  },
+  {
+    "card_name": "Skull of Orm",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{5}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "enchantment",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{5}, {T}: Return target enchantment card from your graveyard to your hand"
       }
     ]
   },
@@ -8802,6 +10525,31 @@
     ]
   },
   {
+    "card_name": "Spirit Shield",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Target creature gets +0/+2 for as long as this artifact remains tapped"
+      }
+    ]
+  },
+  {
     "card_name": "Spore Flower",
     "abilities": [
       {
@@ -8815,6 +10563,28 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, put a spore counter on this creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Staff of Zegon",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": {
+          "PowerBoost": -2,
+          "ToughnessBoost": 0
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{3}, {T}: Target creature gets -2/-0 until end of turn"
       }
     ]
   },
@@ -8948,6 +10718,31 @@
     ]
   },
   {
+    "card_name": "Svyelunite Priest",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{U}{U}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{U}{U}, {T}: Target creature gains shroud until end of turn"
+      }
+    ]
+  },
+  {
     "card_name": "Svyelunite Temple",
     "abilities": [
       {
@@ -9061,6 +10856,81 @@
     ]
   },
   {
+    "card_name": "Tawnos's Coffin",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{3}, {T}: Exile target creature and all Auras attached to it"
+      }
+    ]
+  },
+  {
+    "card_name": "Tawnos's Wand",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Target creature with power 2 or less can't be blocked this turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Tawnos's Weaponry",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}, {T}: Target creature gets +1/+1 for as long as this artifact remains tapped"
+      }
+    ]
+  },
+  {
     "card_name": "Tetravus",
     "abilities": [
       {
@@ -9102,6 +10972,25 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, you may exile any number of tokens created with this creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Tetsuo Umezawa",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{U}{B}{B}{R}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{U}{B}{B}{R}, {T}: Destroy target tapped or blocking creature"
       }
     ]
   },
@@ -9212,6 +11101,25 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, this creature deals 1 damage to each opponent and planeswalker it has dealt damage to this game"
+      }
+    ]
+  },
+  {
+    "card_name": "The Hive",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{5}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{5}, {T}: Create a 1/1 colorless Insect artifact creature token with flying named Wasp"
       }
     ]
   },
@@ -9406,6 +11314,31 @@
     ]
   },
   {
+    "card_name": "Time Elemental",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}{U}{U}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "permanent",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{2}{U}{U}, {T}: Return target permanent that isn't enchanted to its owner's hand"
+      }
+    ]
+  },
+  {
     "card_name": "Time Vault",
     "abilities": [
       {
@@ -9562,6 +11495,50 @@
     ]
   },
   {
+    "card_name": "Tracker",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{G}{G}, {T}: This creature deals damage equal to its power to target creature"
+      }
+    ]
+  },
+  {
+    "card_name": "Triassic Egg",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{3}, {T}: Put a hatchling counter on this artifact"
+      }
+    ]
+  },
+  {
     "card_name": "Tropical Island",
     "abilities": [
       {
@@ -9604,6 +11581,23 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{R}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": {
+          "PowerBoost": 2,
+          "ToughnessBoost": 2
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{R}{G}, {T}: Target creature gets +2/+2 until end of turn"
       }
     ]
   },
@@ -10155,6 +12149,25 @@
     ]
   },
   {
+    "card_name": "Vodalian Mage",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{U}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{U}, {T}: Counter target spell unless its controller pays {1}"
+      }
+    ]
+  },
+  {
     "card_name": "Vodalian War Machine",
     "abilities": [
       {
@@ -10214,6 +12227,26 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, put a pin counter on this artifact"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "any",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{X}{X}, {T}: This artifact deals damage equal to the number of pin counters on it to any target"
       }
     ]
   },
@@ -10870,6 +12903,31 @@
     ]
   },
   {
+    "card_name": "Wand of Ith",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "player",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{3}, {T}: Target player reveals a card at random from their hand"
+      }
+    ]
+  },
+  {
     "card_name": "Wanderlust",
     "abilities": [
       {
@@ -10994,6 +13052,31 @@
     ]
   },
   {
+    "card_name": "Whippoorwill",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{G}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{G}{G}, {T}: Target creature can't be regenerated this turn"
+      }
+    ]
+  },
+  {
     "card_name": "Whirling Dervish",
     "abilities": [
       {
@@ -11048,6 +13131,25 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Protection from black"
+      }
+    ]
+  },
+  {
+    "card_name": "White Mana Battery",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{2}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "{2}, {T}: Put a charge counter on this artifact"
       }
     ]
   },
@@ -11221,6 +13323,26 @@
           "Condition": ""
         },
         "RawText": "{T}: This creature deals 1 damage to target player or planeswalker"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{1}{W}{W}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{1}{W}{W}, {T}: Return target creature an opponent controls to its owner's hand"
       }
     ]
   },
@@ -11333,6 +13455,26 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Flying"
+      },
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{B}{R}{G}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "player",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{B}{R}{G}, {T}: Target player draws a card"
       }
     ]
   },
@@ -11403,6 +13545,31 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "Vigilance"
+      }
+    ]
+  },
+  {
+    "card_name": "Zelyon Sword",
+    "abilities": [
+      {
+        "Type": "Activated",
+        "Cost": {
+          "Mana": "{3}",
+          "Tap": true,
+          "Sacrifice": false,
+          "LifePayment": 0
+        },
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "any",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "{3}, {T}: Target creature gets +2/+0 for as long as this artifact remains tapped"
       }
     ]
   },

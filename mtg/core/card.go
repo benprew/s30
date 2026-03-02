@@ -276,6 +276,16 @@ func (c *Card) HasKeyword(keyword effects.Keyword) bool {
 	return false
 }
 
+func (c *Card) GetActivatedAbilities() []int {
+	var indices []int
+	for i, ability := range c.ParsedAbilities {
+		if ability.Type == "Activated" && ability.Effect != nil && len(ability.Effect.ManaTypes) == 0 {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
 func (c *Card) GetManaProduction() []string {
 	var result []string
 	for _, ability := range c.ParsedAbilities {

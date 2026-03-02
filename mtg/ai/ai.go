@@ -13,6 +13,7 @@ func ChooseAction(actions []core.PlayerAction) core.PlayerAction {
 	attackActions := []core.PlayerAction{}
 	blockActions := []core.PlayerAction{}
 	discardActions := []core.PlayerAction{}
+	abilityActions := []core.PlayerAction{}
 
 	for _, a := range actions {
 		switch a.Type {
@@ -28,6 +29,8 @@ func ChooseAction(actions []core.PlayerAction) core.PlayerAction {
 			blockActions = append(blockActions, a)
 		case core.ActionDiscard:
 			discardActions = append(discardActions, a)
+		case core.ActionActivateAbility:
+			abilityActions = append(abilityActions, a)
 		}
 	}
 
@@ -39,6 +42,9 @@ func ChooseAction(actions []core.PlayerAction) core.PlayerAction {
 	}
 	if len(landActions) > 0 {
 		return landActions[rand.Intn(len(landActions))]
+	}
+	if len(abilityActions) > 0 {
+		return abilityActions[rand.Intn(len(abilityActions))]
 	}
 	if len(attackActions) > 0 {
 		return attackActions[rand.Intn(len(attackActions))]

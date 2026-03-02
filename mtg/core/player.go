@@ -25,7 +25,8 @@ const (
 	ActionPassPriority    = "PassPriority"
 	ActionDeclareAttacker = "DeclareAttacker"
 	ActionDeclareBlocker  = "DeclareBlocker"
-	ActionDiscard         = "Discard"
+	ActionDiscard          = "Discard"
+	ActionActivateAbility  = "ActivateAbility"
 )
 
 type Targetable = effects.Targetable
@@ -37,9 +38,10 @@ const (
 )
 
 type PlayerAction struct {
-	Type   string
-	Card   *Card
-	Target Targetable
+	Type         string
+	Card         *Card
+	Target       Targetable
+	AbilityIndex int
 }
 
 type Player struct {

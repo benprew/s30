@@ -108,13 +108,14 @@ func (g *GameState) Resolve(item *StackItem) error {
 	}
 
 	c := item.Card
-	if c == nil {
-		return fmt.Errorf("Resolve: nil card")
-	}
 	events := item.Events
 
 	for _, e := range events {
 		e.Resolve()
+	}
+
+	if c == nil {
+		return nil
 	}
 
 	if c.IsAura() {
@@ -183,6 +184,45 @@ func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackRes
 	case ActionPlayLand:
 		g.PlayLand(player, action.Card)
 		g.debugf("  %s plays %s\n", player.Name(), cardStr(action.Card))
+		return ActPlayerPriority, nil
+	case ActionActivateAbility:
+		ability := action.Card.ParsedAbilities[action.AbilityIndex]
+		if ability.Cost != nil && ability.Cost.Mana != "" {
+			if err := g.TapManaSourcesFor(player, ability.Cost.Mana); err != nil {
+				g.debugf("error tapping mana for ability: %v\n", err)
+				return ActPlayerPriority, nil
+			}
+			if err := player.ManaPool.Pay(ability.Cost.Mana); err != nil {
+				g.debugf("error paying mana for ability: %v\n", err)
+				return ActPlayerPriority, nil
+			}
+		}
+		if ability.Cost != nil && ability.Cost.Tap {
+			action.Card.Tapped = true
+		}
+		var event effects.Event
+		if ability.Effect.Amount > 0 {
+			event = &effects.DirectDamage{Amount: ability.Effect.Amount}
+		} else if ability.Effect.PowerBoost != 0 || ability.Effect.ToughnessBoost != 0 {
+			event = &effects.StatBoost{
+				PowerBoost:     ability.Effect.PowerBoost,
+				ToughnessBoost: ability.Effect.ToughnessBoost,
+			}
+		}
+		if event != nil {
+			target := action.Target
+			if target == nil {
+				target = action.Card
+			}
+			event.AddTarget(target)
+			g.Stack.Push(&StackItem{Events: []effects.Event{event}, Player: player, Card: nil, Target: target})
+		}
+		if action.Target != nil {
+			g.debugf("  %s activates %s ability targeting %s\n", player.Name(), cardStr(action.Card), targetStr(action.Target))
+		} else {
+			g.debugf("  %s activates %s ability\n", player.Name(), cardStr(action.Card))
+		}
+		g.Stack.ConsecutivePasses = 0
 		return ActPlayerPriority, nil
 	case ActionPassPriority:
 		res, item := g.Stack.Next(EventPlayerPassesPriority, nil)
@@ -587,21 +627,23 @@ func (g *GameState) CanTap(player *Player, card *Card) bool {
 	return false
 }
 
+func (g *GameState) canAffordMana(player *Player, cost string) bool {
+	pPool := make(ManaPool, len(player.ManaPool))
+	copy(pPool, player.ManaPool)
+	pool := g.AvailableMana(player, pPool)
+	return pool.CanPay(cost)
+}
+
 func (g *GameState) CanCast(player *Player, card *Card) bool {
 	if card.CardType == domain.CardTypeLand {
 		return false
 	}
 
-	cardInHand := slices.Contains(player.Hand, card)
-	if !cardInHand {
+	if !slices.Contains(player.Hand, card) {
 		return false
 	}
 
-	pPool := make(ManaPool, len(player.ManaPool))
-	copy(pPool, player.ManaPool)
-	pool := g.AvailableMana(player, pPool)
-
-	return pool.CanPay(card.ManaCost) && g.hasTarget(card)
+	return g.canAffordMana(player, card.ManaCost) && g.hasTarget(card)
 }
 
 func (g *GameState) hasTarget(card *Card) bool {
@@ -642,35 +684,94 @@ func (g *GameState) AvailableTargets(card *Card) []Targetable {
 	if spec == nil {
 		return []Targetable{}
 	}
+	return g.TargetsForSpec(spec)
+}
 
-	creature_targets := []Targetable{}
-	land_targets := []Targetable{}
-	player_targets := []Targetable{}
+func (g *GameState) TargetsForSpec(spec *domain.ParsedTargetSpec) []Targetable {
+	var creatureTargets, landTargets, playerTargets []Targetable
 	for _, player := range g.Players {
-		player_targets = append(player_targets, player) // dead players are still valid targets
+		playerTargets = append(playerTargets, player)
 	}
-
 	for _, player := range g.Players {
 		for _, c := range player.Battlefield {
 			switch c.CardType {
 			case domain.CardTypeCreature:
-				creature_targets = append(creature_targets, c)
+				creatureTargets = append(creatureTargets, c)
 			case domain.CardTypeLand:
-				land_targets = append(land_targets, c)
+				landTargets = append(landTargets, c)
 			}
 		}
 	}
 
 	switch spec.Type {
 	case "creature":
-		return creature_targets
+		return creatureTargets
 	case "land":
-		return land_targets
+		return landTargets
 	case "player":
-		return player_targets
-	default: // any
-		return append(creature_targets, player_targets...)
+		return playerTargets
+	default:
+		return append(creatureTargets, playerTargets...)
 	}
+}
+
+func (g *GameState) CanActivateAbility(player *Player, card *Card, abilityIndex int) bool {
+	if card.CurrentZone != ZoneBattlefield || card.AttachedTo != nil {
+		return false
+	}
+	if !slices.Contains(player.Battlefield, card) {
+		return false
+	}
+
+	ability := card.ParsedAbilities[abilityIndex]
+
+	if ability.Cost != nil && ability.Cost.Tap {
+		if card.Tapped {
+			return false
+		}
+		if card.CardType == domain.CardTypeCreature && !card.Active && !card.HasKeyword(effects.KeywordHaste) {
+			return false
+		}
+	}
+
+	if ability.Cost != nil && ability.Cost.Mana != "" {
+		if !g.canAffordMana(player, ability.Cost.Mana) {
+			return false
+		}
+	}
+
+	if ability.TargetSpec != nil && len(g.TargetsForSpec(ability.TargetSpec)) == 0 {
+		return false
+	}
+
+	return true
+}
+
+func (g *GameState) activatedAbilityActions(player *Player, card *Card) []PlayerAction {
+	var actions []PlayerAction
+	for _, idx := range card.GetActivatedAbilities() {
+		if !g.CanActivateAbility(player, card, idx) {
+			continue
+		}
+		spec := card.ParsedAbilities[idx].TargetSpec
+		if spec != nil {
+			for _, target := range g.TargetsForSpec(spec) {
+				actions = append(actions, PlayerAction{
+					Type:         ActionActivateAbility,
+					Card:         card,
+					Target:       target,
+					AbilityIndex: idx,
+				})
+			}
+		} else {
+			actions = append(actions, PlayerAction{
+				Type:         ActionActivateAbility,
+				Card:         card,
+				AbilityIndex: idx,
+			})
+		}
+	}
+	return actions
 }
 
 func (g *GameState) CanPlayLand(player *Player, card *Card) bool {
@@ -729,6 +830,10 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 				actions = append(actions, g.castActionsForCard(card)...)
 			}
 		}
+	}
+
+	for _, card := range player.Battlefield {
+		actions = append(actions, g.activatedAbilityActions(player, card)...)
 	}
 
 	if player == activePlayer && player.Turn.Phase == PhaseCombat {
