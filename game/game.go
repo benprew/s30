@@ -40,7 +40,7 @@ func (g *Game) Level() *world.Level {
 func NewGame() (*Game, error) {
 	startTime := time.Now()
 
-	player, err := domain.NewPlayer("Player", nil, false)
+	player, err := domain.NewPlayer("Player", nil, false, domain.DifficultyEasy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load player sprite: %s", err)
 	}

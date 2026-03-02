@@ -19,6 +19,8 @@ type Player struct {
 	Name            string
 	Gold            int
 	Food            int
+	Difficulty      Difficulty
+	MinDeckSize     int
 	Amulets         map[ColorMask]int
 	WorldMagics     []*WorldMagic
 	ActiveDeck      int
@@ -30,7 +32,7 @@ type Player struct {
 
 const TicksPerDay = 5000.0
 
-func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
+func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty) (*Player, error) {
 	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
 	if err != nil {
 		return nil, err
@@ -53,7 +55,7 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 
 	colors := []ColorMask{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
 	color := colors[rand.Intn(len(colors))]
-	deckGen := NewDeckGenerator(DifficultyEasy, color, time.Now().UnixNano())
+	deckGen := NewDeckGenerator(difficulty, color, time.Now().UnixNano())
 	deck := deckGen.GenerateStartingDeck()
 
 	cardCollection := NewCardCollection()
@@ -61,11 +63,31 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 		cardCollection.AddCardToDeck(card, 0, count)
 	}
 
+	var gold, food, minDeckSize int
+	switch difficulty {
+	case DifficultyEasy:
+		gold = 250
+		food = 50
+		minDeckSize = 30
+	case DifficultyMedium:
+		gold = 200
+		food = 50
+		minDeckSize = 35
+	case DifficultyHard:
+		gold = 150
+		food = 50
+		minDeckSize = 40
+	case DifficultyExpert:
+		gold = 100
+		food = 50
+		minDeckSize = 40
+	}
+
 	c := Character{
 		Visage:         visage,
 		WalkingSprite:  sprite,
 		ShadowSprite:   shadow,
-		Life:           8,
+		Life:           10,
 		CardCollection: cardCollection,
 	}
 
@@ -75,8 +97,10 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool) (*Player, error) {
 			MoveSpeed: 10,
 		},
 		Name:        string(name),
-		Gold:        1200,
-		Food:        30,
+		Gold:        gold,
+		Food:        food,
+		Difficulty:  difficulty,
+		MinDeckSize: minDeckSize,
 		Amulets:     make(map[ColorMask]int),
 		WorldMagics: make([]*WorldMagic, 0),
 		ActiveDeck:  0,
