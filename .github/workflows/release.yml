@@ -8,7 +8,26 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            artifact: s30_linux_amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            artifact: s30_mac_amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            artifact: s30_mac_arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            artifact: s30.exe
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -16,23 +35,14 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Build macOS AMD64
-        run: GOOS=darwin GOARCH=amd64 go build -o s30_mac_amd64
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
 
-      - name: Build macOS ARM64
-        run: GOOS=darwin GOARCH=arm64 go build -o s30_mac_arm64
-
-      - name: Build Windows AMD64
-        run: GOOS=windows GOARCH=amd64 go build -o s30.exe
-
-      - name: Build Linux AMD64
-        run: GOOS=linux GOARCH=amd64 go build -o s30_linux_amd64
+      - name: Build
+        run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o ${{ matrix.artifact }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: s30-builds
-          path: |
-            s30_mac_amd64
-            s30_mac_arm64
-            s30.exe
-            s30_linux_amd64
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
