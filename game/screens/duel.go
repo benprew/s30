@@ -531,6 +531,15 @@ func (s *DuelScreen) updateHoverPreview(mx, my int) {
 		s.loadCardPreview(card)
 		return
 	}
+
+	if !s.gameState.Stack.IsEmpty() {
+		for i := len(s.gameState.Stack.Items) - 1; i >= 0; i-- {
+			if item := s.gameState.Stack.Items[i]; item.Card != nil {
+				s.loadCardPreview(item.Card)
+				return
+			}
+		}
+	}
 }
 
 func (s *DuelScreen) performCardAction(card *core.Card) {
