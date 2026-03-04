@@ -2,7 +2,7 @@ package domain
 
 import (
 	"fmt"
-	"path/filepath"
+	"path"
 	"strconv"
 	"strings"
 
@@ -117,7 +117,7 @@ func loadRogues() map[string]*Character {
 			continue
 		}
 
-		data, err := assets.RogueCfgFS.ReadFile(filepath.Join("configs/rogues", f.Name()))
+		data, err := assets.RogueCfgFS.ReadFile(path.Join("configs/rogues", f.Name()))
 		if err != nil {
 			panic(fmt.Errorf("error reading embedded %s: %w", f.Name(), err))
 		}
