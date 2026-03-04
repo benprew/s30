@@ -18,19 +18,27 @@ jobs:
           - os: ubuntu-latest
             goos: linux
             goarch: amd64
-            artifact: s30_linux_amd64
+            artifact: s30_linux
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            artifact: s30_linux-arm
           - os: macos-latest
             goos: darwin
             goarch: amd64
-            artifact: s30_mac_amd64
+            artifact: s30_mac-intel
           - os: macos-latest
             goos: darwin
             goarch: arm64
-            artifact: s30_mac_arm64
+            artifact: s30_mac-apple-silicon
           - os: windows-latest
             goos: windows
             goarch: amd64
-            artifact: s30.exe
+            artifact: s30_windows.exe
+          - os: windows-latest
+            goos: windows
+            goarch: arm64
+            artifact: s30_windows-arm.exe
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -72,7 +80,9 @@ jobs:
           gh release create ${{ inputs.version }} \
             --title "${{ inputs.version }}" \
             --generate-notes \
-            artifacts/s30_linux_amd64/s30_linux_amd64 \
-            artifacts/s30_mac_amd64/s30_mac_amd64 \
-            artifacts/s30_mac_arm64/s30_mac_arm64 \
-            artifacts/s30.exe/s30.exe
+            artifacts/s30_linux/s30_linux \
+            artifacts/s30_linux-arm/s30_linux-arm \
+            artifacts/s30_mac-intel/s30_mac-intel \
+            artifacts/s30_mac-apple-silicon/s30_mac-apple-silicon \
+            artifacts/s30_windows.exe/s30_windows.exe \
+            artifacts/s30_windows-arm.exe/s30_windows-arm.exe

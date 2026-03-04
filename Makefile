@@ -1,11 +1,14 @@
 default:
-	go run .
+	go run . -v mtg,duel
 
 test:
 	go test -count=10 ./...
 
 winbuild:
 	GOOS=windows GOARCH=amd64 go build -o s30.exe
+
+winarmbuild:
+	GOOS=windows GOARCH=arm64 go build -o s30_arm64.exe
 
 macbuild:
 	GOOS=darwin GOARCH=amd64 go build -o s30_mac
