@@ -872,7 +872,7 @@ func (g *GameState) AvailableActions(player *Player) []PlayerAction {
 }
 
 func PlayGame(g *GameState, maxTurns int) []*Player {
-	for totalTurns := range maxTurns {
+	for range maxTurns {
 		g.CheckWinConditions()
 
 		nonLosingPlayers := []*Player{}
@@ -888,9 +888,13 @@ func PlayGame(g *GameState, maxTurns int) []*Player {
 
 		g.NextTurn()
 
-		if totalTurns > maxTurns {
-			return nonLosingPlayers
+	}
+	g.CheckWinConditions()
+	nonLosingPlayers := []*Player{}
+	for _, player := range g.Players {
+		if !player.HasLost {
+			nonLosingPlayers = append(nonLosingPlayers, player)
 		}
 	}
-	return nil
+	return nonLosingPlayers
 }

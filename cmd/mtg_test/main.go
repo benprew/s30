@@ -104,7 +104,7 @@ func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
 			}
 		}
 
-		action := ai.ChooseAction(actions)
+		action := ai.ChooseAction(actions, game)
 		if action.Type == core.ActionCastSpell && action.Card != nil {
 			if action.Target != nil {
 				logging.Printf(logging.Duel, "  [AI %s] Chose action: %v - %s#%d -> %s#%d\n",
