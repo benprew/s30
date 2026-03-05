@@ -18,6 +18,7 @@ import (
 	"github.com/benprew/s30/logging"
 	"github.com/benprew/s30/mtg/ai"
 	"github.com/benprew/s30/mtg/core"
+	"github.com/benprew/s30/mtg/effects"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -61,7 +62,8 @@ type DuelScreen struct {
 	messageBg       *ebiten.Image
 	manaPoolBg      *ebiten.Image
 
-	doneBtn [3]*ebiten.Image
+	doneBtn      [3]*ebiten.Image
+	abilityIcons []*ebiten.Image
 
 	selectedCardIdx        int
 	cardPreviewImg         *ebiten.Image
@@ -197,6 +199,17 @@ func (s *DuelScreen) loadImages() {
 		return
 	}
 	s.doneBtn = [3]*ebiten.Image{statbutt[0][11], statbutt[0][12], statbutt[0][13]}
+
+	abilityData, err := assets.DuelFS.ReadFile("art/sprites/duel/Abilities.pic.png")
+	if err == nil {
+		sprites, err := imageutil.LoadSpriteSheet(1, 18, abilityData)
+		if err == nil {
+			s.abilityIcons = make([]*ebiten.Image, 18)
+			for i := range 18 {
+				s.abilityIcons[i] = sprites[i][0]
+			}
+		}
+	}
 }
 
 func loadDuelImage(name string) *ebiten.Image {
@@ -211,6 +224,62 @@ func loadDuelImage(name string) *ebiten.Image {
 		return nil
 	}
 	return img
+}
+
+func (s *DuelScreen) getKeywordIcons(card *core.Card) []*ebiten.Image {
+	if len(s.abilityIcons) == 0 {
+		return nil
+	}
+	var icons []*ebiten.Image
+
+	type kwIcon struct {
+		keyword effects.Keyword
+		index   int
+	}
+	for _, ki := range []kwIcon{
+		{effects.KeywordFlying, 11},
+		{effects.KeywordTrample, 12},
+		{effects.KeywordBanding, 13},
+		{effects.KeywordFirstStrike, 14},
+		{effects.KeywordRegeneration, 15},
+		{effects.KeywordReach, 16},
+	} {
+		if card.HasKeyword(ki.keyword) {
+			icons = append(icons, s.abilityIcons[ki.index])
+		}
+	}
+
+	protectionColors := map[string]int{
+		"green": 5, "red": 6, "blue": 7, "black": 8, "white": 9, "artifacts": 10,
+	}
+	seen := map[int]bool{}
+	sources := [][]domain.ParsedAbility{card.ParsedAbilities}
+	for _, aura := range card.Attachments {
+		sources = append(sources, aura.ParsedAbilities)
+	}
+	for _, abilities := range sources {
+		for _, ability := range abilities {
+			if ability.TargetSpec != nil && ability.TargetSpec.Condition != "" &&
+				ability.TargetSpec.Condition != "enchanted" {
+				continue
+			}
+			for _, kw := range ability.Keywords {
+				if kw != "Protection" {
+					continue
+				}
+				if ability.Effect == nil {
+					continue
+				}
+				idx, ok := protectionColors[strings.ToLower(ability.Effect.Modifier)]
+				if ok && !seen[idx] {
+					seen[idx] = true
+					icons = append(icons, s.abilityIcons[idx])
+				}
+			}
+		}
+	}
+
+	return icons
 }
 
 func colorNameForDeck(primaryColor string) string {
@@ -1084,6 +1153,19 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 			}
 			cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
 			screen.DrawImage(cardImg, cardOpts)
+
+			if !card.Tapped {
+				icons := s.getKeywordIcons(card)
+				for idx, icon := range icons {
+					iconX := pos.X + idx*22
+					if iconX+22 > pos.X+fieldCardW {
+						break
+					}
+					iconOpts := &ebiten.DrawImageOptions{}
+					iconOpts.GeoM.Translate(float64(iconX), float64(pos.Y+fieldCardH-22))
+					screen.DrawImage(icon, iconOpts)
+				}
+			}
 
 			if _, hasAction := s.cardActions[card.ID]; hasAction && dp == s.self && s.targetingCard == nil {
 				star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
