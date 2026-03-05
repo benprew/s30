@@ -15,7 +15,8 @@ const (
 	TargetTypeLand      TargetType = "land"
 	TargetTypeArtifact  TargetType = "artifact"
 	TargetTypeEnchant   TargetType = "enchantment"
-	TargetTypeSpell     TargetType = "spell"
+	TargetTypeArtifactOrEnchantment TargetType = "artifact_or_enchantment"
+	TargetTypeSpell                TargetType = "spell"
 )
 
 type Controller string

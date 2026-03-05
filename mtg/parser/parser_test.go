@@ -214,6 +214,83 @@ func TestParseLordEffects(t *testing.T) {
 	}
 }
 
+func TestParseDestroySpells(t *testing.T) {
+	tests := []struct {
+		name       string
+		cardName   string
+		text       string
+		targetType TargetType
+		count      int
+		condition  string
+	}{
+		{"Destroy target creature", "Terror", "Destroy target creature", TargetTypeCreature, 1, ""},
+		{"Destroy target nonblack creature", "Terror", "Destroy target nonblack creature", TargetTypeCreature, 1, "nonblack"},
+		{"Destroy target land", "Stone Rain", "Destroy target land", TargetTypeLand, 1, ""},
+		{"Destroy target artifact", "Shatter", "Destroy target artifact", TargetTypeArtifact, 1, ""},
+		{"Destroy target enchantment", "Disenchant", "Destroy target enchantment", TargetTypeEnchant, 1, ""},
+		{"Destroy all creatures", "Wrath of God", "Destroy all creatures", TargetTypeCreature, -1, ""},
+		{"Destroy all nonblack creatures", "Pestilence", "Destroy all nonblack creatures", TargetTypeCreature, -1, "nonblack"},
+	}
+
+	p := NewParser()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := p.Parse(tt.cardName, tt.text)
+			if len(result.Abilities) == 0 {
+				t.Errorf("expected abilities, got none for %q", tt.text)
+				return
+			}
+			ability := result.Abilities[0]
+			destroy, ok := ability.Effect.(*effects.DestroyPermanent)
+			if !ok {
+				t.Errorf("expected DestroyPermanent effect, got %T", ability.Effect)
+				return
+			}
+			if !destroy.Destroy {
+				t.Error("expected Destroy=true")
+			}
+			if ability.TargetSpec == nil {
+				t.Fatal("expected target spec")
+			}
+			if ability.TargetSpec.Type != tt.targetType {
+				t.Errorf("expected target type %v, got %v", tt.targetType, ability.TargetSpec.Type)
+			}
+			if ability.TargetSpec.Count != tt.count {
+				t.Errorf("expected count %d, got %d", tt.count, ability.TargetSpec.Count)
+			}
+			if ability.TargetSpec.Condition != tt.condition {
+				t.Errorf("expected condition %q, got %q", tt.condition, ability.TargetSpec.Condition)
+			}
+		})
+	}
+}
+
+func TestParseActivatedDestroy(t *testing.T) {
+	p := NewParser()
+	result := p.Parse("Royal Assassin", "{T}: Destroy target creature")
+	if len(result.Abilities) == 0 {
+		t.Fatal("expected ability")
+	}
+	ability := result.Abilities[0]
+	if ability.Type != AbilityTypeActivated {
+		t.Errorf("expected Activated, got %s", ability.Type)
+	}
+	if ability.Cost == nil || !ability.Cost.Tap {
+		t.Error("expected tap cost")
+	}
+	destroy, ok := ability.Effect.(*effects.DestroyPermanent)
+	if !ok {
+		t.Errorf("expected DestroyPermanent, got %T", ability.Effect)
+		return
+	}
+	if !destroy.Destroy {
+		t.Error("expected Destroy=true")
+	}
+	if ability.TargetSpec == nil || ability.TargetSpec.Type != TargetTypeCreature {
+		t.Error("expected creature target spec")
+	}
+}
+
 func TestParseActivatedDamage(t *testing.T) {
 	tests := []struct {
 		name     string

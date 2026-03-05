@@ -208,6 +208,8 @@ func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackRes
 				PowerBoost:     ability.Effect.PowerBoost,
 				ToughnessBoost: ability.Effect.ToughnessBoost,
 			}
+		} else if ability.Effect.Destroy {
+			event = &effects.DestroyPermanent{Destroy: true}
 		}
 		if event != nil {
 			target := action.Target
@@ -688,7 +690,7 @@ func (g *GameState) AvailableTargets(card *Card) []Targetable {
 }
 
 func (g *GameState) TargetsForSpec(spec *domain.ParsedTargetSpec) []Targetable {
-	var creatureTargets, landTargets, playerTargets []Targetable
+	var creatureTargets, landTargets, artifactTargets, enchantmentTargets, playerTargets []Targetable
 	for _, player := range g.Players {
 		playerTargets = append(playerTargets, player)
 	}
@@ -699,6 +701,10 @@ func (g *GameState) TargetsForSpec(spec *domain.ParsedTargetSpec) []Targetable {
 				creatureTargets = append(creatureTargets, c)
 			case domain.CardTypeLand:
 				landTargets = append(landTargets, c)
+			case domain.CardTypeArtifact:
+				artifactTargets = append(artifactTargets, c)
+			case domain.CardTypeEnchantment:
+				enchantmentTargets = append(enchantmentTargets, c)
 			}
 		}
 	}
@@ -708,6 +714,19 @@ func (g *GameState) TargetsForSpec(spec *domain.ParsedTargetSpec) []Targetable {
 		return creatureTargets
 	case "land":
 		return landTargets
+	case "artifact":
+		return artifactTargets
+	case "enchantment":
+		return enchantmentTargets
+	case "artifact_or_enchantment":
+		return append(artifactTargets, enchantmentTargets...)
+	case "permanent":
+		var all []Targetable
+		all = append(all, creatureTargets...)
+		all = append(all, landTargets...)
+		all = append(all, artifactTargets...)
+		all = append(all, enchantmentTargets...)
+		return all
 	case "player":
 		return playerTargets
 	default:

@@ -56,6 +56,7 @@ type ParsedEffect struct {
 	Amount         int      `json:"Amount"`
 	ManaTypes      []string `json:"ManaTypes"`
 	AnyColor       bool     `json:"AnyColor"`
+	Destroy        bool     `json:"Destroy,omitempty"`
 }
 
 type ParsedTrigger struct {

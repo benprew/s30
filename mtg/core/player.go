@@ -129,6 +129,9 @@ func (p *Player) AddPowerBoost(int) {
 func (p *Player) AddToughnessBoost(int) {
 }
 
+func (p *Player) MarkDestroyed() {
+}
+
 func (p *Player) Notify() {
 }
 

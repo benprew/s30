@@ -25,6 +25,7 @@ type Card struct {
 	Active             bool
 	DamageTaken        int
 	DeathtouchDamaged  bool
+	Destroyed          bool
 	PowerBoost         int
 	ToughnessBoost     int
 	Attachments        []*Card
@@ -84,6 +85,10 @@ func abilityToEvent(ability *domain.ParsedAbility) effects.Event {
 		}
 	}
 
+	if ability.Effect.Destroy {
+		return &effects.DestroyPermanent{Destroy: true}
+	}
+
 	return nil
 }
 
@@ -119,10 +124,17 @@ func (c *Card) TargetType() effects.TargetType {
 }
 
 func (c *Card) IsDead() bool {
+	if c.Destroyed {
+		return true
+	}
 	if c.DeathtouchDamaged && c.DamageTaken > 0 {
 		return true
 	}
 	return c.DamageTaken >= c.EffectiveToughness()
+}
+
+func (c *Card) MarkDestroyed() {
+	c.Destroyed = true
 }
 
 func (c *Card) AddPowerBoost(amount int) {
@@ -352,6 +364,7 @@ func (c *Card) DeepCopy() *Card {
 		Active:            c.Active,
 		DamageTaken:       c.DamageTaken,
 		DeathtouchDamaged: c.DeathtouchDamaged,
+		Destroyed:         c.Destroyed,
 		PowerBoost:        c.PowerBoost,
 		ToughnessBoost:    c.ToughnessBoost,
 		Attachments:       nil,

@@ -15,6 +15,7 @@ type Targetable interface {
 	IsDead() bool
 	AddPowerBoost(int)
 	AddToughnessBoost(int)
+	MarkDestroyed()
 }
 
 type Event interface {

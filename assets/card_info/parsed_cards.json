@@ -1856,6 +1856,28 @@
     ]
   },
   {
+    "card_name": "Cleanse",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": -1,
+          "Condition": "black"
+        },
+        "RawText": "Destroy all black creatures"
+      }
+    ]
+  },
+  {
     "card_name": "Clergy of the Holy Nimbus",
     "abilities": [
       {
@@ -2212,6 +2234,28 @@
     ]
   },
   {
+    "card_name": "Crumble",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "Destroy target artifact"
+      }
+    ]
+  },
+  {
     "card_name": "Cuombajj Witches",
     "abilities": [
       {
@@ -2470,12 +2514,14 @@
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "Destroy": true
+        },
         "Keywords": null,
         "Trigger": null,
         "TargetSpec": {
           "Type": "land",
-          "Controller": "any",
+          "Controller": "",
           "Subtype": "",
           "Count": 1,
           "Condition": ""
@@ -2561,6 +2607,28 @@
     ]
   },
   {
+    "card_name": "Desert Twister",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "permanent",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "Destroy target permanent"
+      }
+    ]
+  },
+  {
     "card_name": "Devouring Deep",
     "abilities": [
       {
@@ -2608,6 +2676,28 @@
     ]
   },
   {
+    "card_name": "Disenchant",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact_or_enchantment",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "Destroy target artifact or enchantment"
+      }
+    ]
+  },
+  {
     "card_name": "Disrupting Scepter",
     "abilities": [
       {
@@ -2646,6 +2736,28 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, remove an intervention counter from this enchantment"
+      }
+    ]
+  },
+  {
+    "card_name": "Divine Offering",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "Destroy target artifact"
       }
     ]
   },
@@ -2867,10 +2979,18 @@
           "Sacrifice": false,
           "LifePayment": 0
         },
-        "Effect": null,
+        "Effect": {
+          "Destroy": true
+        },
         "Keywords": null,
         "Trigger": null,
-        "TargetSpec": null,
+        "TargetSpec": {
+          "Type": "wall",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
         "RawText": "{T}: Destroy target Wall"
       }
     ]
@@ -5097,6 +5217,28 @@
     ]
   },
   {
+    "card_name": "Hellfire",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": -1,
+          "Condition": "nonblack"
+        },
+        "RawText": "Destroy all nonblack creatures"
+      }
+    ]
+  },
+  {
     "card_name": "Helm of Chatzuk",
     "abilities": [
       {
@@ -5592,6 +5734,28 @@
         },
         "TargetSpec": null,
         "RawText": "At the beginning of your upkeep, if this land is tapped, put a storage counter on it"
+      }
+    ]
+  },
+  {
+    "card_name": "Ice Storm",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "Destroy target land"
       }
     ]
   },
@@ -10181,6 +10345,28 @@
     ]
   },
   {
+    "card_name": "Shatter",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "artifact",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "Destroy target artifact"
+      }
+    ]
+  },
+  {
     "card_name": "Shelkin Brownie",
     "abilities": [
       {
@@ -10309,6 +10495,28 @@
           "Condition": "attacking"
         },
         "RawText": "{T}: Target attacking creature has base power 0 until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Sinkhole",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "Destroy target land"
       }
     ]
   },
@@ -10651,6 +10859,28 @@
           "Condition": ""
         },
         "RawText": "{T}: Target creature you control with toughness less than this creature's power gains flying until end of turn"
+      }
+    ]
+  },
+  {
+    "card_name": "Stone Rain",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "land",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
+        "RawText": "Destroy target land"
       }
     ]
   },
@@ -13423,6 +13653,28 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{B}{B}: This creature gains swampwalk until end of turn and deals 2 damage to you"
+      }
+    ]
+  },
+  {
+    "card_name": "Wrath of God",
+    "abilities": [
+      {
+        "Type": "Spell",
+        "Cost": null,
+        "Effect": {
+          "Destroy": true
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": -1,
+          "Condition": ""
+        },
+        "RawText": "Destroy all creatures"
       }
     ]
   },

@@ -39,6 +39,7 @@ func (p *Parser) registerPatterns() {
 	p.registerKeywordPatterns()
 	p.registerAuraPatterns()
 	p.registerDamagePatterns()
+	p.registerDestroyPatterns()
 	p.registerStatBoostPatterns()
 	p.registerManaAbilityPatterns()
 	p.registerActivatedAbilityPatterns()
@@ -286,6 +287,109 @@ func (p *Parser) registerDamagePatterns() {
 				Cost:       cost,
 				Effect:     &effects.DirectDamage{Amount: amount},
 				TargetSpec: &TargetSpec{Type: TargetTypeAny, Count: 1},
+			}, nil
+		},
+	)
+}
+
+func (p *Parser) registerDestroyPatterns() {
+	p.RegisterPattern(
+		"destroy-all-creatures",
+		regexp.MustCompile(`(?i)^destroy all (\w+\s+)?creatures$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			condition := strings.TrimSpace(matches[1])
+			return &ParsedAbility{
+				Type:       AbilityTypeSpell,
+				Effect:     &effects.DestroyPermanent{Destroy: true},
+				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: -1, Condition: condition},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"destroy-target-creature",
+		regexp.MustCompile(`(?i)^destroy target (\w+\s+)?creature$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			condition := strings.TrimSpace(matches[1])
+			return &ParsedAbility{
+				Type:       AbilityTypeSpell,
+				Effect:     &effects.DestroyPermanent{Destroy: true},
+				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: 1, Condition: condition},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"destroy-target-land",
+		regexp.MustCompile(`(?i)^destroy target land$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:       AbilityTypeSpell,
+				Effect:     &effects.DestroyPermanent{Destroy: true},
+				TargetSpec: &TargetSpec{Type: TargetTypeLand, Count: 1},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"destroy-target-artifact",
+		regexp.MustCompile(`(?i)^destroy target artifact$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:       AbilityTypeSpell,
+				Effect:     &effects.DestroyPermanent{Destroy: true},
+				TargetSpec: &TargetSpec{Type: TargetTypeArtifact, Count: 1},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"destroy-target-enchantment",
+		regexp.MustCompile(`(?i)^destroy target enchantment$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:       AbilityTypeSpell,
+				Effect:     &effects.DestroyPermanent{Destroy: true},
+				TargetSpec: &TargetSpec{Type: TargetTypeEnchant, Count: 1},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"destroy-target-permanent",
+		regexp.MustCompile(`(?i)^destroy target (?:nonland )?permanent$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:       AbilityTypeSpell,
+				Effect:     &effects.DestroyPermanent{Destroy: true},
+				TargetSpec: &TargetSpec{Type: TargetTypePermanent, Count: 1},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"destroy-target-artifact-or-enchantment",
+		regexp.MustCompile(`(?i)^destroy target artifact or enchantment$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:       AbilityTypeSpell,
+				Effect:     &effects.DestroyPermanent{Destroy: true},
+				TargetSpec: &TargetSpec{Type: TargetTypeArtifactOrEnchantment, Count: 1},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"activated-destroy-target",
+		regexp.MustCompile(`(?i)^`+costPattern+`\s*:\s*destroy target (\w+)$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			cost := ParseCost(matches[1])
+			targetType := TargetType(strings.ToLower(matches[2]))
+			return &ParsedAbility{
+				Type:       AbilityTypeActivated,
+				Cost:       cost,
+				Effect:     &effects.DestroyPermanent{Destroy: true},
+				TargetSpec: &TargetSpec{Type: targetType, Count: 1},
 			}, nil
 		},
 	)
