@@ -874,8 +874,6 @@ func (s *DuelScreen) loadCardPreview(card *core.Card) {
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
-	s.lvl.RemoveEnemyAt(s.idx)
-
 	if s.player.ActiveQuest != nil &&
 		s.player.ActiveQuest.Type == domain.QuestTypeDefeatEnemy &&
 		s.player.ActiveQuest.EnemyName == s.enemy.Character.Name {
@@ -899,12 +897,12 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 		}
 	}
 
+	s.lvl.RemoveEnemyAt(s.idx)
+
 	return screenui.DuelWinScr, NewWinDuelScreen(wonCards), nil
 }
 
 func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) {
-	s.lvl.RemoveEnemyAt(s.idx)
-
 	if s.anteCard != nil {
 		_ = s.player.RemoveCard(s.anteCard)
 	}
@@ -912,6 +910,8 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 	if s.anteCard != nil {
 		lostCards = append(lostCards, s.anteCard)
 	}
+
+	s.lvl.RemoveEnemyAt(s.idx)
 
 	return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
 }
