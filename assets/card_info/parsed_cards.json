@@ -4398,7 +4398,13 @@
         },
         "Keywords": null,
         "Trigger": null,
-        "TargetSpec": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
         "RawText": "{T}: Target creature gets -1/-0 until end of turn"
       }
     ]
@@ -5513,7 +5519,13 @@
         },
         "Keywords": null,
         "Trigger": null,
-        "TargetSpec": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
         "RawText": "{1}{W}{W}: Target creature gets +1/+1 until end of turn"
       }
     ]
@@ -8548,7 +8560,13 @@
         },
         "Keywords": null,
         "Trigger": null,
-        "TargetSpec": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
         "RawText": "{1}{G}, {T}: Target creature gets -2/-0 until end of turn"
       }
     ]
@@ -10583,7 +10601,13 @@
         },
         "Keywords": null,
         "Trigger": null,
-        "TargetSpec": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
         "RawText": "{3}, {T}: Target creature gets -2/-0 until end of turn"
       }
     ]
@@ -11596,7 +11620,13 @@
         },
         "Keywords": null,
         "Trigger": null,
-        "TargetSpec": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
         "RawText": "{R}{G}, {T}: Target creature gets +2/+2 until end of turn"
       }
     ]
@@ -13413,7 +13443,13 @@
         },
         "Keywords": null,
         "Trigger": null,
-        "TargetSpec": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": ""
+        },
         "RawText": "{T}: Target creature gets +1/+1 until end of turn"
       }
     ]

@@ -321,6 +321,22 @@ func (p *Parser) registerStatBoostPatterns() {
 	)
 
 	p.RegisterPattern(
+		"activated-target-creature-pump",
+		regexp.MustCompile(`(?i)^`+costPattern+`\s*:\s*target\s+creature\s+gets?\s+([+-]?\d+)/([+-]?\d+)(?:\s+until\s+end\s+of\s+turn)?$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			cost := ParseCost(matches[1])
+			power, _ := strconv.Atoi(matches[2])
+			toughness, _ := strconv.Atoi(matches[3])
+			return &ParsedAbility{
+				Type:       AbilityTypeActivated,
+				Cost:       cost,
+				Effect:     &effects.StatBoost{PowerBoost: power, ToughnessBoost: toughness},
+				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: 1},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
 		"activated-pump",
 		regexp.MustCompile(`(?i)^`+costPattern+`\s*:\s*(?:[\w\s]+\s+)?gets?\s+([+-]?\d+)/([+-]?\d+)(?:\s+until\s+end\s+of\s+turn)?$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
