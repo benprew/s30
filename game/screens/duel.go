@@ -1015,6 +1015,13 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 				float32(duelBoardW), float32(boardH), strokeW, borderColor, false)
 		}
 	}
+
+	if s.targetingCard == nil {
+		if targets := s.stackTargetIDs(); targets[dp.core.EntityID()] {
+			vector.StrokeRect(screen, float32(duelBoardX), float32(startY),
+				float32(duelBoardW), float32(boardH), 2, color.RGBA{255, 255, 0, 255}, false)
+		}
+	}
 }
 
 func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
@@ -1128,6 +1135,13 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 					}
 					vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
 						float32(fieldCardW), float32(fieldCardH), strokeW, borderColor, false)
+				}
+			}
+
+			if s.targetingCard == nil {
+				if targets := s.stackTargetIDs(); targets[card.EntityID()] {
+					vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
+						float32(fieldCardW), float32(fieldCardH), 2, color.RGBA{255, 255, 0, 255}, false)
 				}
 			}
 		}
@@ -1274,12 +1288,28 @@ func (s *DuelScreen) stackDescription() string {
 	for _, item := range stack.Items {
 		if item.Card != nil {
 			names = append(names, item.Card.Name())
+		} else if item.SourceName != "" {
+			names = append(names, item.SourceName)
 		}
 	}
 	if len(names) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("Respond to %s. ", strings.Join(names, ", "))
+	return fmt.Sprintf("Responding to %s. ", strings.Join(names, ", "))
+}
+
+func (s *DuelScreen) stackTargetIDs() map[int]bool {
+	stack := s.gameState.Stack
+	if stack.IsEmpty() {
+		return nil
+	}
+	targets := map[int]bool{}
+	for _, item := range stack.Items {
+		if item.Target != nil {
+			targets[item.Target.EntityID()] = true
+		}
+	}
+	return targets
 }
 
 func (s *DuelScreen) statusMessage() string {

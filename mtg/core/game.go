@@ -215,7 +215,7 @@ func (g *GameState) ProcessAction(player *Player, action PlayerAction) (StackRes
 				target = action.Card
 			}
 			event.AddTarget(target)
-			g.Stack.Push(&StackItem{Events: []effects.Event{event}, Player: player, Card: nil, Target: target})
+			g.Stack.Push(&StackItem{Events: []effects.Event{event}, Player: player, Card: nil, Target: target, SourceName: action.Card.Name()})
 		}
 		if action.Target != nil {
 			g.debugf("  %s activates %s ability targeting %s\n", player.Name(), cardStr(action.Card), targetStr(action.Target))

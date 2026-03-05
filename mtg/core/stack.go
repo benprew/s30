@@ -13,10 +13,11 @@ type Stack struct {
 }
 
 type StackItem struct {
-	Events []effects.Event
-	Player *Player
-	Card   *Card
-	Target Targetable
+	Events     []effects.Event
+	Player     *Player
+	Card       *Card
+	Target     Targetable
+	SourceName string
 }
 
 // NewStack creates a new Stack instance
