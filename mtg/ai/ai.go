@@ -2,12 +2,13 @@ package ai
 
 import (
 	"math/rand"
+	"sort"
 
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/mtg/core"
 )
 
-func ChooseAction(actions []core.PlayerAction) core.PlayerAction {
+func ChooseAction(actions []core.PlayerAction, game *core.GameState) core.PlayerAction {
 	castActions := []core.PlayerAction{}
 	landActions := []core.PlayerAction{}
 	attackActions := []core.PlayerAction{}
@@ -50,10 +51,67 @@ func ChooseAction(actions []core.PlayerAction) core.PlayerAction {
 		return attackActions[rand.Intn(len(attackActions))]
 	}
 	if len(blockActions) > 0 {
-		return blockActions[rand.Intn(len(blockActions))]
+		return chooseProfitableBlock(blockActions, game)
 	}
 
 	return core.PlayerAction{Type: core.ActionPassPriority}
+}
+
+// chooseProfitableBlock only assigns a blocker if the combined blockers
+// (already assigned + available) can kill the attacker. Multiple blockers
+// can gang up on a single attacker.
+func chooseProfitableBlock(blockActions []core.PlayerAction, game *core.GameState) core.PlayerAction {
+	type attackerInfo struct {
+		attacker      *core.Card
+		neededPower   int
+		availablePool []core.PlayerAction
+	}
+
+	attackerMap := map[*core.Card]*attackerInfo{}
+	for _, a := range blockActions {
+		attacker := a.Target.(*core.Card)
+		info, ok := attackerMap[attacker]
+		if !ok {
+			existingPower := 0
+			for _, b := range game.BlockerMap[attacker] {
+				existingPower += b.EffectivePower()
+			}
+			info = &attackerInfo{
+				attacker:    attacker,
+				neededPower: attacker.EffectiveToughness() - existingPower,
+			}
+			attackerMap[attacker] = info
+		}
+		info.availablePool = append(info.availablePool, a)
+	}
+
+	var candidates []attackerInfo
+	for _, info := range attackerMap {
+		if info.neededPower <= 0 {
+			continue
+		}
+		totalAvailable := 0
+		for _, a := range info.availablePool {
+			totalAvailable += a.Card.EffectivePower()
+		}
+		if totalAvailable >= info.neededPower {
+			candidates = append(candidates, *info)
+		}
+	}
+
+	if len(candidates) == 0 {
+		return core.PlayerAction{Type: core.ActionPassPriority}
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		return len(candidates[i].availablePool) < len(candidates[j].availablePool)
+	})
+
+	best := candidates[0]
+	sort.Slice(best.availablePool, func(i, j int) bool {
+		return best.availablePool[i].Card.EffectivePower() > best.availablePool[j].Card.EffectivePower()
+	})
+	return best.availablePool[0]
 }
 
 func RunAI(game *core.GameState, player *core.Player, done <-chan struct{}) {
@@ -69,7 +127,7 @@ func RunAI(game *core.GameState, player *core.Player, done <-chan struct{}) {
 		}
 
 		actions := game.AvailableActions(player)
-		action := ChooseAction(actions)
+		action := ChooseAction(actions, game)
 
 		select {
 		case player.InputChan <- action:
