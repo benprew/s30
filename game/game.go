@@ -26,6 +26,7 @@ type Game struct {
 	currentScreenName    screenui.ScreenName
 	screenMap            map[screenui.ScreenName]screenui.Screen
 	player               *domain.Player
+	Difficulty           domain.Difficulty
 }
 
 func (g *Game) CurrentScreen() screenui.Screen {
@@ -75,7 +76,8 @@ func NewGame() (*Game, error) {
 			screenui.MiniMapScr:  m,
 			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
 		},
-		player: player,
+		player:     player,
+		Difficulty: domain.DifficultyEasy,
 	}
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)

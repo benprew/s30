@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"image"
+	"maps"
 	"math"
 	"math/rand"
 	"time"
@@ -19,7 +20,6 @@ type Player struct {
 	Name            string
 	Gold            int
 	Food            int
-	Difficulty      Difficulty
 	MinDeckSize     int
 	Amulets         map[ColorMask]int
 	WorldMagics     []*WorldMagic
@@ -99,7 +99,6 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 		Name:        string(name),
 		Gold:        gold,
 		Food:        food,
-		Difficulty:  difficulty,
 		MinDeckSize: minDeckSize,
 		Amulets:     make(map[ColorMask]int),
 		WorldMagics: make([]*WorldMagic, 0),
@@ -209,6 +208,31 @@ func (p *Player) Move(screenW, screenH int) (dirBits int) {
 // Pixel X,Y location of player (not tile)
 func (p *Player) Loc() image.Point {
 	return image.Point{X: p.X, Y: p.Y}
+}
+
+func (p *Player) GetDuelDeck() Deck {
+	deck := p.CardCollection.GetDeck(p.ActiveDeck)
+
+	deckSize := 0
+	for _, count := range deck {
+		deckSize += count
+	}
+
+	if deckSize >= p.MinDeckSize {
+		return deck
+	}
+
+	landsToAdd := p.MinDeckSize - deckSize
+	lands := []*Card{}
+	for l := range maps.Keys(basicLands) {
+		lands = append(lands, FindCardByName(l))
+	}
+	for range landsToAdd {
+		i := rand.Intn(len(lands))
+		deck[lands[i]] += 1
+	}
+
+	return deck
 }
 
 func (p *Player) RemoveCard(c *Card) error {

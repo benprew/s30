@@ -144,9 +144,9 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 }
 
 func (s *DuelScreen) initGameState() {
-	corePlayer := core.NewPlayer(1, 20, false)
+	corePlayer := core.NewPlayer(1, s.player.Life, false)
 	corePlayer.Turn.Phase = core.PhaseMain1
-	corePlayer.AddDeck(s.player.GetActiveDeck())
+	corePlayer.AddDeck(s.player.GetDuelDeck())
 	rand.Shuffle(len(corePlayer.Library), func(i, j int) {
 		corePlayer.Library[i], corePlayer.Library[j] = corePlayer.Library[j], corePlayer.Library[i]
 	})
