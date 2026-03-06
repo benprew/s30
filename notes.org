@@ -1,4 +1,167 @@
-* Loading cards from Scryfall
+* Card Pool
+** For cards that are VintageRestricted, don't show them in buycards, or give them as ante cards or use them in player's starting decks
+* Duel UI screen
+** TODO Duel UI - card parsing improvements
+Suggested Parsing Categories (by impact & frequency)
+
+Tier 1 — High-frequency, high-impact (would unlock the most cards)
+
+1. Destroy effects (44 unparsed) — "Destroy target creature", "Destroy target artifact", "Destroy all creatures". Core removal. Many instants/sorceries are just this.
+2. Draw cards (26 unparsed) — "Draw a card", "Target player draws X cards". Essential for card advantage spells like Ancestral Recall.
+3. Gain/Lose life (46 combined) — "You gain X life", "Target player loses X life". Simple number effects like healing salve.
+4. Tap/Untap (78 unparsed) — "Tap target creature", "Doesn't untap during untap step". Common control effects (e.g. Icy Manipulator, Winter Orb).
+5. Return/Bounce (27 unparsed) — "Return target creature to its owner's hand", "Return target creature card from your graveyard to your hand". Core blue mechanic.
+
+Tier 2 — Medium frequency, important for gameplay
+
+6. Counterspells (14 unparsed) — "Counter target spell". Needs stack interaction but critical for blue.
+7. Sacrifice effects (91 unparsed) — "Sacrifice a creature", "As an additional cost, sacrifice...". Many cards require this.
+8. Discard (20 unparsed) — "Target player discards a card". Common black mechanic (e.g. Hymn to Tourach, Mind Twist).
+9. Tokens (21 unparsed) — "Create X/Y creature tokens". Needs a token generation system.
+10. Restrictions/can't (102 unparsed) — "Can't be blocked", "Can't attack", "Can't be the target of spells". Large category but very varied text.
+
+Tier 3 — Less common but adds depth
+
+11. Prevent damage (37 unparsed) — "Prevent X damage", "Prevent all combat damage". Needs a damage replacement system.
+12. +1/+1 counters (26 unparsed) — Persistent stat modifications. Needs counter tracking on permanents.
+13. Exile/Remove (19 unparsed) — "Exile target creature". Needs the exile zone to be functional.
+14. Gain control (4 unparsed) — "Gain control of target creature". Needs controller-change logic.
+15. Tutor/Search (3 unparsed) — "Search your library for a card". Needs library browsing UI.
+
+Also worth noting: Keywords parsed but not enforced in the engine
+
+- Protection (16 cards in scryfall) — parsed, but no actual prevention/targeting logic
+- Banding (12 cards) — parsed, no combat logic
+- Fear/Intimidate — parsed, no blocking restriction
+- Shadow/Horsemanship — parsed, no evasion logic
+- Indestructible/Hexproof/Shroud — defined in effects but not enforced
+- Double Strike — parsed but combat doesn't handle it
+- Regeneration — parsed but no "save from death" logic
+
+My recommendation for biggest bang-for-buck
+
+Start with Destroy, Draw cards, and Gain/Lose life — they're simple effects (target + number), map cleanly to new Effect types like DirectDamage already works, and would unlock a huge chunk of instants/sorceries. After that, Tap/Untap and Bounce would open up most of the remaining common spells.
+** DONE Duel UI - support +1/+1 counters - see game/screens/duel.go
+CLOSED: [2026-03-05 Thu 18:43]
+Support adding counters to creatures.
+
+Counters can be different types (+1/+1, +0/-2, etc) and affect the creatures power and toughness.
+
+Track counters on each creature and use that when calculating creature power/toughness.
+
+
+Counter images are in
+assets/art/sprites/duel/Cardcounters.pic.png.
+
+** DONE Duel UI - support menace keyword, see mtg/effects/
+CLOSED: [2026-03-05 Thu 18:43]
+Menace means a creature can't be blocked except by two or more creatures. It forces the defending player to commit multiple blockers or take the damage, making it a strong evasion ability on aggressive creatures.
+
+There's only 1 card in the old school set that involves menace (Goblin War Drums)... this is very low priority.
+
+** DONE Duel UI Messages - see game/screens/duel.go
+CLOSED: [2026-02-24 Tue 23:54]
+Update the message as it changes phases and specify what actions the player needs to take. Ex, when discarding it should say something like "Hand size > max hand size, choose card to discard."
+** DONE Duel UI clicking vs double clicking - see game/screens/duel.go
+CLOSED: [2026-02-25 Wed 00:00]
+Instead of double-clicking on a card to perform an action, it should be a single click. And to view a card in the magnifier either hover over the card or double-click on it
+** DONE Duel UI Combat Attacking - see game/screens/duel.go
+CLOSED: [2026-02-25 Wed 14:37]
+When it's the players turn and they are selecting attackers, clicking on an available creature should change it's attacking status from either not-attacking or attacking based on it's previous status. When a creature is marked to attack it should have a yellow border around it.
+** DONE Duel UI Combat Blocking - see game/screens/duel.go
+CLOSED: [2026-02-27 Fri 00:15]
+When the player is selecting blockers clicking on a creature should mark it as blocking and the player should click on an opponent's creature to block it. When a creature is blocking it should have a red border around. clicking on a blocking creature should remove it as a blocker.
+Also draw an arrow from the blocker to the attacker to signify what creature is blocking which other creature
+** DONE Duel UI - Targeting - see game/screens/duel.go
+CLOSED: [2026-02-27 Fri 00:15]
+Many in-game actions require a target (casting a lightning bolt, playing an aura enchantment, etc). When performing an action that requires a target update the status message saying something like "Choose a target". Then highlight all possible targets with a yellow border.
+
+Once the player clicks on a target change the status message to "targeting X" and add a "cancel" button to the status message. If the player clicks cancel it reverts back to choose a target. If the player chooses cancel again, undo the action and return any spent mana to their mana pool.
+
+** DONE Duel UI - casting/spell information - see game/screens/duel.go
+CLOSED: [2026-03-04 Wed 22:14]
+Show the card associated with the active spell/ability on the stack in the magnifier. This should replace whatever card was previously in the magnifier and should also change based on players responding/adding new items to the stack.
+
+** DONE Duel UI - add creature keyword tokens - see game/screens/duel.go
+CLOSED: [2026-03-04 Wed 23:21]
+Add keyword images when creatures have appropriate keyword. Keyword images are in asserts/art/sprites/duel/Abilities.pic.png.
+
+1 column, has the following images in it (in order):
+
+Green
+Red
+Blue
+Black
+White
+Protection from Green
+Pro Red
+Pro Blue
+Pro Black
+Pro White
+Pro artifact
+Fly
+Trample
+banding
+First strike
+regeneration
+reach
+blank
+
+When a creature has a keyword (either from the card itself, or from an enchantment or other static ability) add the appropriate keyword to the bottom left of the card. Multiple keywords should have multiple images and shift over so the keyword images don't overlap each other, but still stay on the card itself.
+
+
+** DONE BUG Duel UI - wrong enemy rewards
+CLOSED: [2026-03-04 Wed 23:21]
+after winning a game against an Elementalist it said that I beat a merfork shaman, which is wrong:
+
+- you just beat: Merfolk Shaman
+
+I think there is an issue with the duel_ante/duel handoff, or it's a pointer issue or it's a race condition where the enemy list is getting modified.
+
+
+** DONE Card Parsing - parse destroy effects, support it in the engine
+CLOSED: [2026-03-05 Thu 15:48]
+Destroy effects (44 unparsed) — "Destroy target creature", "Destroy target artifact", "Destroy all creatures". Core removal. Many instants/sorceries are just this.
+
+see assets/card_info/scryfall_cards.json for the full list of cards
+and assets/card_info/parsed_cards.json for card parsing rules/format.
+
+* Rules
+** TODO When a card leaves the battlefield (goes to graveyard, library, exile, etc) all counters should be removed and all auras attached to it should be discarded.
+** DONE Enforce minimum deck size (flll with temporary random lands if below min size and starting a duel) and use player starting life in game/domain/player.go
+CLOSED: [2026-03-06 Fri 14:13]
+** DONE Mana drains at the end of each phase. Implement this in mtg/core and add a test.
+CLOSED: [2026-03-05 Thu 17:33]
+* Random tasks
+** DONE Move AI logic from cmd/mtg-test into mtg/ai/ai.go
+CLOSED: [2026-02-24 Tue 23:10]
+
+** DONE the random encounters should give the player a land associated with the color/terrain type of the encounter (ex. plains gives a plains land, swamp gives a swamp, etc)
+CLOSED: [2026-02-24 Tue 23:10]
+
+** LATER Build a card image from the card back, the card art (scryfall ArtURL), text, card name and casting cost (assert/card/Manasymbols.pic.png)
+
+Requires using mana symbols, which shouldn't be stored in the repo.
+
+* TODO AI opponent
+** TODO AI: board evaluation strategy
+https://claude.ai/share/14892337-d846-4ced-a18d-dee4222eb096
+
+** TODO AI: Define positive vs negative creature enchantments. Positive enchantments help a player, negatives hurt.
+
+** TODO AI: game representation strategy
+
+* DONE Duel_UI images
+CLOSED: [2026-02-24 Tue 23:11]
+255,255,255 should be black, but is white
+- Winbk_Manaburn.pic.png - some pixels are white that should be black
+- Winbk_Phase.pic.png - some pixels are white that should be black
+
+The Winbk_Phase.pic.png is a sprite, it has 2 columns the first column (black background) is the default and whatever the current phase we're in is the white background (column 2).
+
+Update the phase image to handle that.
+* DONE Loading cards from Scryfall
+CLOSED: [2026-02-24 Tue 23:11]
 Note: Moving to getting card images from scryfall.com instead of storing them in the repo: see https://claude.ai/chat/f1e34184-a73c-4598-9b3e-2f81ad49658d.
 
 When the game starts, in a separate go func, start loading card images for the players deck and enemy decks. Preallocate the space needed for all these cards.
@@ -11,58 +174,40 @@ If a card image hasn't been downloaded yet and needs to be shown on the screen, 
 * Polishing ideas
   Critical
 
-  1. Combat is faked — duel_ante.go resolves duels with rand.Float64() > 0.25 (flat 75% win
-  rate). The MTG rules engine exists in mtg/ but isn't wired up. This makes deck-building feel
-  pointless. This is by far the biggest issue.
-  2. No audio at all — Zero sound effects or music anywhere. Button clicks, card purchases,
-  combat, movement — all silent. Even simple click/hover sounds would make a big difference.
-  3. Debug prints left in — button.go prints "Pressed" and "Hover" to stdout on every
-  interaction. buycards.go prints button counts. These should be removed.
+  1. Combat is faked — duel_ante.go resolves duels with rand.Float64() > 0.25 (flat 75% win rate). The MTG rules engine exists in mtg/ but isn't wired up. This makes deck-building feel pointless. This is by far the biggest issue.
+  2. No audio at all — Zero sound effects or music anywhere. Button clicks, card purchases, combat, movement — all silent. Even simple click/hover sounds would make a big difference.
+  3. Debug prints left in — button.go prints "Pressed" and "Hover" to stdout on every interaction. buycards.go prints button counts. These should be removed.
 
   ---
   High Impact
 
-  4. Abrupt screen transitions — Every screen change is an instant cut (city entry, shop opening,
-   duel start/end). Fade-to-black or slide transitions would make navigation feel much smoother.
-  5. Camera snaps to player — The world map camera instantly locks to position with no smooth
-  follow, easing, or anticipation. Even basic lerp would help.
-  6. No quest HUD — Active quest and days remaining only show in the wiseman screen. The world
-  frame should display current quest progress so players don't forget what they're doing.
-  7. No visual feedback for actions — Buying/selling cards, accepting quests, winning duels — all
-   happen with minimal or no feedback. Needs success indicators, animations, or at least flash
-  effects.
+  4. Abrupt screen transitions — Every screen change is an instant cut (city entry, shop opening, duel start/end). Fade-to-black or slide transitions would make navigation feel much smoother.
+  5. Camera snaps to player — The world map camera instantly locks to position with no smooth follow, easing, or anticipation. Even basic lerp would help.
+  6. No quest HUD — Active quest and days remaining only show in the wiseman screen. The world frame should display current quest progress so players don't forget what they're doing.
+  7. No visual feedback for actions — Buying/selling cards, accepting quests, winning duels — all happen with minimal or no feedback. Needs success indicators, animations, or at least flash effects.
 
   ---
   Medium Impact
 
-  8. No card animations — Cards appear/disappear instantly in the deck editor and shop. Draw,
-  flip, shuffle, and slide animations would add a lot of feel.
-  9. Random encounter screen is a stub — Just shows a sprite and "Random Encounter" text, press
-  Escape to dismiss. No choices, text, or consequences.
-  10. Hardcoded screen dimensions — Magic numbers throughout (buycards.go even has a TODO about
-  it). Makes the game fragile at different resolutions.
-  11. Wiseman text pagination broken — Multi-page stories get truncated with "..." but there's no
-   way to advance pages.
-  12. No particle effects — The game is entirely static visually. Ambient particles, purchase
-  sparkles, or combat effects would add life.
+  8. No card animations — Cards appear/disappear instantly in the deck editor and shop. Draw, flip, shuffle, and slide animations would add a lot of feel.
+  9. Random encounter screen is a stub — Just shows a sprite and "Random Encounter" text, press Escape to dismiss. No choices, text, or consequences.
+  10. Hardcoded screen dimensions — Magic numbers throughout (buycards.go even has a TODO about it). Makes the game fragile at different resolutions.
+  11. Wiseman text pagination broken — Multi-page stories get truncated with "..." but there's no way to advance pages.
+  12. No particle effects — The game is entirely static visually. Ambient particles, purchase sparkles, or combat effects would add life.
 
   ---
   Low-Hanging Fruit (Quick Wins)
 
-  13. Smooth scrolling — The scrollable list jumps instantly; adding interpolation is
-  straightforward.
-  14. Number counting animations — Gold, food, and life changes are instant. Counting up/down is
-  simple and satisfying.
-  15. Button press animation — Buttons have states but no scale/bounce on click. A small scale
-  tween makes them feel tactile.
-  16. Minimap player pulse — Currently blinks on/off every few frames. A smooth alpha pulse would
-   look much better.
-  17. Deck stats in editor — No mana curve or color distribution display. The 872-line editor is
-  the most polished screen but still missing this.
+  13. Smooth scrolling — The scrollable list jumps instantly; adding interpolation is straightforward.
+  14. Number counting animations — Gold, food, and life changes are instant. Counting up/down is simple and satisfying.
+  15. Button press animation — Buttons have states but no scale/bounce on click. A small scale tween makes them feel tactile.
+  16. Minimap player pulse — Currently blinks on/off every few frames. A smooth alpha pulse would look much better.
+  17. Deck stats in editor — No mana curve or color distribution display. The 872-line editor is the most polished screen but still missing this.
 
 * MTG Engine
-** Duel UI screen
-** Add new card keywords
+
+** DONE Add new card keywords
+CLOSED: [2026-02-24 Tue 23:12]
 Implement this keyword in the mtg core engine see mtg/core/
 
 Also update AvailableActions to remove illegal blocks (ex. a create without reach or flying can't be assigned as a blocker to an attacker with flying)
@@ -404,7 +549,7 @@ See game/utils/httpzip/reader.go for a partial implementation
 
 
 
-* Starting screens
+* TODO Starting screens
 * TODO Saving the game
 Come up with a way to save the game state. You'll want to save the generated world (tiles and cities), the location of all current enements and the player object. Then implement a save function and write some tests.
 * DONE Antigravity CLI
