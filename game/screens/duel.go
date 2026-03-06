@@ -69,6 +69,7 @@ type DuelScreen struct {
 	cardPreviewImg         *ebiten.Image
 	cardPreviewID          string
 	cardPreviewPlaceholder bool
+	cardPreviewCard        *core.Card
 
 	mouseState     mouseStateType
 	mouseStartX    int
@@ -990,6 +991,7 @@ func (s *DuelScreen) loadCardPreview(card *core.Card) {
 	s.cardPreviewImg = img
 	s.cardPreviewID = cardID
 	s.cardPreviewPlaceholder = !card.ImageLoaded()
+	s.cardPreviewCard = card
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
@@ -1211,6 +1213,10 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 			cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
 			screen.DrawImage(cardImg, cardOpts)
 
+			if card.CardType == domain.CardTypeCreature {
+				s.drawCreatureStats(screen, card, pos)
+			}
+
 			if !card.Tapped {
 				icons := s.getKeywordIcons(card)
 				for idx, icon := range icons {
@@ -1288,6 +1294,24 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 			}
 		}
 	}
+}
+
+func (s *DuelScreen) drawCreatureStats(screen *ebiten.Image, card *core.Card, pos image.Point) {
+	statText := fmt.Sprintf("%d/%d", card.EffectivePower(), card.EffectiveToughness())
+	textX := pos.X + fieldCardW - len(statText)*8 - 2
+	textY := pos.Y + fieldCardH - 18
+	bg := elements.NewText(16, statText, textX-1, textY-1)
+	bg.Color = color.RGBA{0, 0, 0, 200}
+	bg.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+	stat := elements.NewText(16, statText, textX, textY)
+	if card.EffectivePower() > card.Power || card.EffectiveToughness() > card.Toughness {
+		stat.Color = color.RGBA{100, 255, 100, 255}
+	} else if card.EffectivePower() < card.Power || card.EffectiveToughness() < card.Toughness {
+		stat.Color = color.RGBA{255, 100, 100, 255}
+	} else {
+		stat.Color = color.RGBA{255, 255, 255, 255}
+	}
+	stat.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
 func (s *DuelScreen) drawBlockerArrows(screen *ebiten.Image) {
@@ -1414,11 +1438,32 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 	if s.cardPreviewImg == nil {
 		return
 	}
+	previewX := 0
+	previewY := 188
 	opts := &ebiten.DrawImageOptions{}
-	previewX := float64(0)
-	previewY := float64(188)
-	opts.GeoM.Translate(previewX, previewY)
+	opts.GeoM.Translate(float64(previewX), float64(previewY))
 	screen.DrawImage(s.cardPreviewImg, opts)
+
+	card := s.cardPreviewCard
+	if card != nil && card.CardType == domain.CardTypeCreature {
+		imgW := s.cardPreviewImg.Bounds().Dx()
+		imgH := s.cardPreviewImg.Bounds().Dy()
+		statText := fmt.Sprintf("%d/%d", card.EffectivePower(), card.EffectiveToughness())
+		textX := previewX + imgW - len(statText)*9 - 4
+		textY := previewY + imgH - 22
+		bg := elements.NewText(16, statText, textX-1, textY-1)
+		bg.Color = color.RGBA{0, 0, 0, 200}
+		bg.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		stat := elements.NewText(16, statText, textX, textY)
+		if card.EffectivePower() > card.Power || card.EffectiveToughness() > card.Toughness {
+			stat.Color = color.RGBA{100, 255, 100, 255}
+		} else if card.EffectivePower() < card.Power || card.EffectiveToughness() < card.Toughness {
+			stat.Color = color.RGBA{255, 100, 100, 255}
+		} else {
+			stat.Color = color.RGBA{255, 255, 255, 255}
+		}
+		stat.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+	}
 }
 
 func (s *DuelScreen) stackDescription() string {
