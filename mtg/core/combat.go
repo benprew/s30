@@ -185,14 +185,21 @@ func (g *GameState) resolveDamage(dealsDamage func(*Card) bool) {
 
 func (g *GameState) CleanupDeadCreatures() {
 	for _, player := range g.Players {
-		var deadCards []*Card
 		for _, card := range player.Battlefield {
-			if card.Destroyed || (card.CardType == domain.CardTypeCreature && card.IsDead()) {
-				deadCards = append(deadCards, card)
+			if card.CardType == domain.CardTypeCreature {
+				card.CancelCounters()
 			}
 		}
-		for _, card := range deadCards {
+
+		var deadCreatures []*Card
+		for _, card := range player.Battlefield {
+			if card.Destroyed || (card.CardType == domain.CardTypeCreature && card.IsDead()) {
+				deadCreatures = append(deadCreatures, card)
+			}
+		}
+		for _, card := range deadCreatures {
 			g.detachAuras(card)
+			card.Counters = nil
 			player.MoveTo(card, ZoneGraveyard)
 		}
 	}

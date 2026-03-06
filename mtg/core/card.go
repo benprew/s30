@@ -9,6 +9,15 @@ type EntityID int
 
 type Event = effects.Event
 
+type CounterType struct {
+	Power     int
+	Toughness int
+}
+
+var CounterPlusOnePlusOne = CounterType{1, 1}
+var CounterPlusOneZero = CounterType{1, 0}
+var CounterMinusOneMinusOne = CounterType{-1, -1}
+
 const cardNameKirdApe = "Kird Ape"
 
 const (
@@ -19,18 +28,19 @@ const (
 
 type Card struct {
 	domain.Card
-	ID                 EntityID
-	Owner              *Player
-	CurrentZone        Zone
-	Tapped             bool
-	Active             bool
-	DamageTaken        int
-	DeathtouchDamaged  bool
-	Destroyed          bool
-	PowerBoost         int
-	ToughnessBoost     int
-	Attachments        []*Card
-	AttachedTo         *Card
+	ID                EntityID
+	Owner             *Player
+	CurrentZone       Zone
+	Tapped            bool
+	Active            bool
+	DamageTaken       int
+	DeathtouchDamaged bool
+	Destroyed         bool
+	PowerBoost        int
+	ToughnessBoost    int
+	Attachments       []*Card
+	AttachedTo        *Card
+	Counters          map[CounterType]int
 }
 
 func (c *Card) Name() string {
@@ -147,11 +157,11 @@ func (c *Card) AddToughnessBoost(amount int) {
 }
 
 func (c *Card) EffectivePower() int {
-	return c.Power + c.PowerBoost + c.staticPowerBonus() + c.auraPowerBonus()
+	return c.Power + c.PowerBoost + c.staticPowerBonus() + c.auraPowerBonus() + c.counterPowerBonus()
 }
 
 func (c *Card) EffectiveToughness() int {
-	return c.Toughness + c.ToughnessBoost + c.staticToughnessBonus() + c.auraToughnessBonus()
+	return c.Toughness + c.ToughnessBoost + c.staticToughnessBonus() + c.auraToughnessBonus() + c.counterToughnessBonus()
 }
 
 func (c *Card) staticPowerBonus() int {
@@ -274,6 +284,66 @@ func (c *Card) ClearEndOfTurnEffects() {
 	c.ToughnessBoost = 0
 	c.DamageTaken = 0
 	c.DeathtouchDamaged = false
+}
+
+func (c *Card) AddCounters(ct CounterType, n int) {
+	if c.Counters == nil {
+		c.Counters = make(map[CounterType]int)
+	}
+	c.Counters[ct] += n
+}
+
+func (c *Card) RemoveCounters(ct CounterType, n int) {
+	if c.Counters == nil {
+		return
+	}
+	c.Counters[ct] -= n
+	if c.Counters[ct] <= 0 {
+		delete(c.Counters, ct)
+	}
+}
+
+func (c *Card) CounterCount(ct CounterType) int {
+	if c.Counters == nil {
+		return 0
+	}
+	return c.Counters[ct]
+}
+
+func (c *Card) counterPowerBonus() int {
+	bonus := 0
+	for ct, count := range c.Counters {
+		bonus += ct.Power * count
+	}
+	return bonus
+}
+
+func (c *Card) counterToughnessBonus() int {
+	bonus := 0
+	for ct, count := range c.Counters {
+		bonus += ct.Toughness * count
+	}
+	return bonus
+}
+
+// remove counters that cancel each other out (ex. +1/+1 and -1/-1)
+func (c *Card) CancelCounters() {
+	if c.Counters == nil {
+		return
+	}
+	plus := c.Counters[CounterPlusOnePlusOne]
+	minus := c.Counters[CounterMinusOneMinusOne]
+	if plus > 0 && minus > 0 {
+		remove := min(plus, minus)
+		c.Counters[CounterPlusOnePlusOne] -= remove
+		c.Counters[CounterMinusOneMinusOne] -= remove
+		if c.Counters[CounterPlusOnePlusOne] <= 0 {
+			delete(c.Counters, CounterPlusOnePlusOne)
+		}
+		if c.Counters[CounterMinusOneMinusOne] <= 0 {
+			delete(c.Counters, CounterMinusOneMinusOne)
+		}
+	}
 }
 
 func (c *Card) GetTargetSpec() *domain.ParsedTargetSpec {
@@ -471,6 +541,13 @@ func (c *Card) DeepCopy() *Card {
 		ToughnessBoost:    c.ToughnessBoost,
 		Attachments:       nil,
 		AttachedTo:        nil,
+	}
+
+	if c.Counters != nil {
+		newCard.Counters = make(map[CounterType]int, len(c.Counters))
+		for k, v := range c.Counters {
+			newCard.Counters[k] = v
+		}
 	}
 
 	newCard.ManaProduction = make([]string, len(c.ManaProduction))

@@ -1916,6 +1916,19 @@
         "RawText": "Flying"
       },
       {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "ETBCounters": 4,
+          "CounterPower": 1,
+          "CounterTough": 0
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "This creature enters with four +1/+0 counters on it"
+      },
+      {
         "Type": "Activated",
         "Cost": {
           "Mana": "",
@@ -1934,6 +1947,19 @@
   {
     "card_name": "Clockwork Beast",
     "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "ETBCounters": 7,
+          "CounterPower": 1,
+          "CounterTough": 0
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "This creature enters with seven +1/+0 counters on it"
+      },
       {
         "Type": "Activated",
         "Cost": {
@@ -11225,6 +11251,19 @@
         "RawText": "Flying"
       },
       {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "ETBCounters": 3,
+          "CounterPower": 1,
+          "CounterTough": 1
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "This creature enters with three +1/+1 counters on it"
+      },
+      {
         "Type": "Triggered",
         "Cost": null,
         "Effect": null,
@@ -11810,6 +11849,24 @@
         "Trigger": null,
         "TargetSpec": null,
         "RawText": "{3}, {T}: Put a hatchling counter on this artifact"
+      }
+    ]
+  },
+  {
+    "card_name": "Triskelion",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "ETBCounters": 3,
+          "CounterPower": 1,
+          "CounterTough": 1
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "This creature enters with three +1/+1 counters on it"
       }
     ]
   },

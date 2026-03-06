@@ -138,6 +138,15 @@ func (g *GameState) Resolve(item *StackItem) error {
 		if err := c.Owner.MoveTo(c, ZoneBattlefield); err != nil {
 			return fmt.Errorf("unable to move card to battlefield: %w", err)
 		}
+		for _, ability := range c.ParsedAbilities {
+			if ability.Effect != nil && ability.Effect.ETBCounters > 0 {
+				ct := CounterType{ability.Effect.CounterPower, ability.Effect.CounterTough}
+				if ct.Power == 0 && ct.Toughness == 0 {
+					ct = CounterPlusOnePlusOne
+				}
+				c.AddCounters(ct, ability.Effect.ETBCounters)
+			}
+		}
 	} else {
 		if err := c.Owner.MoveTo(c, ZoneGraveyard); err != nil {
 			return fmt.Errorf("unable to move card to graveyard: %w", err)

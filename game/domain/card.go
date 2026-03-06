@@ -49,19 +49,21 @@ type ParsedCost struct {
 }
 
 type ParsedEffect struct {
-	Keywords       []string `json:"Keywords"`
-	Modifier       string   `json:"Modifier"`
-	PowerBoost     int      `json:"PowerBoost"`
-	ToughnessBoost int      `json:"ToughnessBoost"`
-	Amount         int      `json:"Amount"`
-	ManaTypes      []string `json:"ManaTypes"`
-	AnyColor       bool     `json:"AnyColor"`
-	Destroy        bool     `json:"Destroy,omitempty"`
-
-	Subtype         string `json:"Subtype,omitempty"`
-	GrantedKeyword  string `json:"GrantedKeyword,omitempty"`
-	GrantedModifier string `json:"GrantedModifier,omitempty"`
-	ExcludeSelf     bool   `json:"ExcludeSelf,omitempty"`
+	Keywords        []string `json:"Keywords"`
+	Modifier        string   `json:"Modifier"`
+	PowerBoost      int      `json:"PowerBoost"`
+	ToughnessBoost  int      `json:"ToughnessBoost"`
+	Amount          int      `json:"Amount"`
+	ManaTypes       []string `json:"ManaTypes"`
+	AnyColor        bool     `json:"AnyColor"`
+	Destroy         bool     `json:"Destroy,omitempty"`
+	Subtype         string   `json:"Subtype,omitempty"`
+	GrantedKeyword  string   `json:"GrantedKeyword,omitempty"`
+	GrantedModifier string   `json:"GrantedModifier,omitempty"`
+	ExcludeSelf     bool     `json:"ExcludeSelf,omitempty"`
+	ETBCounters     int      `json:"ETBCounters"`
+	CounterPower    int      `json:"CounterPower"`
+	CounterTough    int      `json:"CounterTough"`
 }
 
 type ParsedTrigger struct {

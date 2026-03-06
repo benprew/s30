@@ -203,6 +203,10 @@ func (p *Player) MoveTo(card *Card, destZone Zone) error {
 		card.Active = false
 	}
 
+	if destZone != ZoneBattlefield {
+		card.Counters = nil
+	}
+
 	if destZone != ZoneBattlefield && len(card.Attachments) > 0 {
 		for _, aura := range card.Attachments {
 			aura.AttachedTo = nil

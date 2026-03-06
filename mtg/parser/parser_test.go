@@ -660,6 +660,48 @@ func TestParseEnchantedCreatureHasKeyword(t *testing.T) {
 	}
 }
 
+func TestParseETBCounters(t *testing.T) {
+	tests := []struct {
+		name     string
+		cardName string
+		text     string
+		count    int
+		power    int
+		tough    int
+	}{
+		{"Tetravus", "Tetravus", "This creature enters with three +1/+1 counters on it", 3, 1, 1},
+		{"numeric", "Test", "This creature enters with 2 +1/+1 counters on it", 2, 1, 1},
+		{"enters battlefield", "Test", "Test enters the battlefield with four +1/+1 counters on it", 4, 1, 1},
+		{"Clockwork Avian", "Clockwork Avian", "This creature enters with four +1/+0 counters on it", 4, 1, 0},
+	}
+
+	p := NewParser()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := p.Parse(tt.cardName, tt.text)
+			if len(result.Abilities) == 0 {
+				t.Errorf("expected abilities, got none for %q", tt.text)
+				return
+			}
+			ability := result.Abilities[0]
+			etb, ok := ability.Effect.(*effects.ETBCounters)
+			if !ok {
+				t.Errorf("expected ETBCounters effect, got %T", ability.Effect)
+				return
+			}
+			if etb.ETBCounters != tt.count {
+				t.Errorf("expected %d counters, got %d", tt.count, etb.ETBCounters)
+			}
+			if etb.CounterPower != tt.power {
+				t.Errorf("expected counter power %d, got %d", tt.power, etb.CounterPower)
+			}
+			if etb.CounterTough != tt.tough {
+				t.Errorf("expected counter toughness %d, got %d", tt.tough, etb.CounterTough)
+			}
+		})
+	}
+}
+
 func TestPreprocessCardNameReplacement(t *testing.T) {
 	p := NewParser()
 

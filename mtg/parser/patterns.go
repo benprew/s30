@@ -46,6 +46,7 @@ func (p *Parser) registerPatterns() {
 	p.registerManaAbilityPatterns()
 	p.registerActivatedAbilityPatterns()
 	p.registerLordPatterns()
+	p.registerCounterPatterns()
 	p.registerTriggeredPatterns()
 }
 
@@ -613,6 +614,38 @@ func (p *Parser) registerLordPatterns() {
 				Effect: &effects.LordEffect{
 					GrantedKeyword: &kw,
 					ExcludeSelf:    false,
+				},
+			}, nil
+		},
+	)
+}
+
+var numberWords = map[string]int{
+	"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+	"six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+}
+
+func (p *Parser) registerCounterPatterns() {
+	p.RegisterPattern(
+		"etb-counters",
+		regexp.MustCompile(`(?i)^(?:this creature|[\w\s]+)\s+enters\s+(?:the\s+battlefield\s+)?with\s+(\w+)\s+\+(\d+)/\+(\d+)\s+counters?\s+on\s+it$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			countStr := strings.ToLower(matches[1])
+			count, ok := numberWords[countStr]
+			if !ok {
+				count, _ = strconv.Atoi(countStr)
+			}
+			if count <= 0 {
+				return nil, fmt.Errorf("invalid counter count: %s", countStr)
+			}
+			power, _ := strconv.Atoi(matches[2])
+			toughness, _ := strconv.Atoi(matches[3])
+			return &ParsedAbility{
+				Type: AbilityTypeStatic,
+				Effect: &effects.ETBCounters{
+					ETBCounters:  count,
+					CounterPower: power,
+					CounterTough: toughness,
 				},
 			}, nil
 		},
