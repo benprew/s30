@@ -26,6 +26,7 @@ const (
 	KeywordProtection   Keyword = "Protection"
 	KeywordLandwalk     Keyword = "Landwalk"
 	KeywordRegeneration Keyword = "Regeneration"
+	KeywordMenace       Keyword = "Menace"
 )
 
 var KeywordMap = map[string]Keyword{
@@ -55,6 +56,7 @@ var KeywordMap = map[string]Keyword{
 	"mountainwalk":  KeywordLandwalk,
 	"islandwalk":    KeywordLandwalk,
 	"plainswalk":    KeywordLandwalk,
+	"menace":        KeywordMenace,
 }
 
 type KeywordAbility struct {

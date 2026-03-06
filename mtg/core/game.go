@@ -443,6 +443,7 @@ func (g *GameState) CombatPhase(player *Player) {
 				}
 			}
 		}
+		g.ValidateMenaceBlocks()
 		g.RunStack()
 		if g.hasLoser() {
 			return

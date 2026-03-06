@@ -4844,6 +4844,27 @@
     ]
   },
   {
+    "card_name": "Goblin War Drums",
+    "abilities": [
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "Subtype": "",
+          "PowerBoost": 0,
+          "ToughnessBoost": 0,
+          "GrantedKeyword": "Menace",
+          "GrantedModifier": "",
+          "ExcludeSelf": false
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "Creatures you control have menace"
+      }
+    ]
+  },
+  {
     "card_name": "Goblin Wizard",
     "abilities": [
       {

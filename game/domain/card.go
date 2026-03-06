@@ -57,6 +57,11 @@ type ParsedEffect struct {
 	ManaTypes      []string `json:"ManaTypes"`
 	AnyColor       bool     `json:"AnyColor"`
 	Destroy        bool     `json:"Destroy,omitempty"`
+
+	Subtype         string `json:"Subtype,omitempty"`
+	GrantedKeyword  string `json:"GrantedKeyword,omitempty"`
+	GrantedModifier string `json:"GrantedModifier,omitempty"`
+	ExcludeSelf     bool   `json:"ExcludeSelf,omitempty"`
 }
 
 type ParsedTrigger struct {
@@ -178,7 +183,7 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 		if _, alreadyFetching := fetchingSet.LoadOrStore(card.cardID, true); !alreadyFetching {
 			go fetchAndCacheCardImage(card)
 		}
-		fullImg = blankCard()
+		fullImg = labeledBlankCard(card.CardName)
 	}
 
 	if view == CardViewArtOnly {

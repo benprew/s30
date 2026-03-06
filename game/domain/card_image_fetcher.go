@@ -4,17 +4,21 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"net/http"
 	"sync"
 
 	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/image/draw"
 )
 
 var cardImages sync.Map
 var fetchingSet sync.Map
+var labeledBlankCards sync.Map
 
 var blankCardOnce sync.Once
 var blankCardImage *ebiten.Image
@@ -30,6 +34,31 @@ func blankCard() *ebiten.Image {
 		blankCardImage = ebiten.NewImageFromImage(img)
 	})
 	return blankCardImage
+}
+
+func labeledBlankCard(name string) *ebiten.Image {
+	if cached, ok := labeledBlankCards.Load(name); ok {
+		return cached.(*ebiten.Image)
+	}
+
+	base := blankCard()
+	bounds := base.Bounds()
+	img := ebiten.NewImage(bounds.Dx(), bounds.Dy())
+	img.DrawImage(base, nil)
+
+	face := &text.GoTextFace{Source: fonts.MtgFont, Size: 14}
+	w, h := text.Measure(name, face, 0)
+
+	x := (float64(bounds.Dx()) - w) / 2
+	y := (float64(bounds.Dy()) - h) / 2
+
+	opts := text.DrawOptions{}
+	opts.GeoM.Translate(x, y)
+	opts.ColorScale.ScaleWithColor(color.Black)
+	text.Draw(img, name, face, &opts)
+
+	labeledBlankCards.Store(name, img)
+	return img
 }
 
 func resizeToWidth(src image.Image, targetWidth int) image.Image {

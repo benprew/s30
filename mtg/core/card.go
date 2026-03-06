@@ -14,6 +14,7 @@ const cardNameKirdApe = "Kird Ape"
 const (
 	conditionEnchanted = "enchanted"
 	conditionEnchant   = "enchant"
+	abilityTypeStatic  = "Static"
 )
 
 type Card struct {
@@ -65,7 +66,7 @@ func abilityToEvent(ability *domain.ParsedAbility) effects.Event {
 	}
 
 	// Static abilities are continuous effects, not one-shot stack events
-	if ability.Type == "Static" {
+	if ability.Type == abilityTypeStatic {
 		return nil
 	}
 
@@ -154,17 +155,94 @@ func (c *Card) EffectiveToughness() int {
 }
 
 func (c *Card) staticPowerBonus() int {
+	bonus := 0
 	if c.Name() == cardNameKirdApe && c.Owner != nil && c.Owner.ControlsLandType("Forest") {
-		return 1
+		bonus += 1
 	}
-	return 0
+	bonus += c.lordPowerBonus()
+	return bonus
 }
 
 func (c *Card) staticToughnessBonus() int {
+	bonus := 0
 	if c.Name() == cardNameKirdApe && c.Owner != nil && c.Owner.ControlsLandType("Forest") {
-		return 2
+		bonus += 2
 	}
-	return 0
+	bonus += c.lordToughnessBonus()
+	return bonus
+}
+
+func (c *Card) lordPowerBonus() int {
+	if c.Owner == nil || c.CardType != domain.CardTypeCreature {
+		return 0
+	}
+	bonus := 0
+	for _, perm := range c.Owner.Battlefield {
+		if perm == c {
+			continue
+		}
+		for _, ability := range perm.ParsedAbilities {
+			if ability.Type != "Static" || ability.Effect == nil {
+				continue
+			}
+			if !c.matchesLordEffect(perm, &ability) {
+				continue
+			}
+			bonus += ability.Effect.PowerBoost
+		}
+	}
+	return bonus
+}
+
+func (c *Card) lordToughnessBonus() int {
+	if c.Owner == nil || c.CardType != domain.CardTypeCreature {
+		return 0
+	}
+	bonus := 0
+	for _, perm := range c.Owner.Battlefield {
+		if perm == c {
+			continue
+		}
+		for _, ability := range perm.ParsedAbilities {
+			if ability.Type != "Static" || ability.Effect == nil {
+				continue
+			}
+			if !c.matchesLordEffect(perm, &ability) {
+				continue
+			}
+			bonus += ability.Effect.ToughnessBoost
+		}
+	}
+	return bonus
+}
+
+func (c *Card) matchesLordEffect(source *Card, ability *domain.ParsedAbility) bool {
+	if ability.TargetSpec != nil && (ability.TargetSpec.Condition == conditionEnchanted || ability.TargetSpec.Condition == conditionEnchant) {
+		return false
+	}
+	if source.AttachedTo != nil {
+		return false
+	}
+	eff := ability.Effect
+	if eff.Subtype == "" && eff.GrantedKeyword == "" && eff.PowerBoost == 0 && eff.ToughnessBoost == 0 {
+		return false
+	}
+	if eff.ExcludeSelf && source == c {
+		return false
+	}
+	if eff.Subtype != "" {
+		found := false
+		for _, st := range c.Subtypes {
+			if st == eff.Subtype {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *Card) auraPowerBonus() int {
@@ -282,6 +360,30 @@ func (c *Card) HasKeyword(keyword effects.Keyword) bool {
 						return true
 					}
 				}
+			}
+		}
+	}
+	return c.hasLordKeyword(keyword)
+}
+
+func (c *Card) hasLordKeyword(keyword effects.Keyword) bool {
+	if c.Owner == nil || c.CardType != domain.CardTypeCreature {
+		return false
+	}
+	kw := string(keyword)
+	for _, perm := range c.Owner.Battlefield {
+		if perm == c {
+			continue
+		}
+		for _, ability := range perm.ParsedAbilities {
+			if ability.Type != "Static" || ability.Effect == nil {
+				continue
+			}
+			if !c.matchesLordEffect(perm, &ability) {
+				continue
+			}
+			if ability.Effect.GrantedKeyword == kw {
+				return true
 			}
 		}
 	}

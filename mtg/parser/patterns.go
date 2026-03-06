@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -31,6 +32,7 @@ const (
 	KeywordShroud       = effects.KeywordShroud
 	KeywordFlash        = effects.KeywordFlash
 	KeywordRegeneration = effects.KeywordRegeneration
+	KeywordMenace       = effects.KeywordMenace
 )
 
 const costPattern = `((?:\{[^}]+\}(?:,\s*)?)+)`
@@ -69,6 +71,7 @@ func (p *Parser) registerKeywordPatterns() {
 		{"horsemanship", KeywordHorsemanship},
 		{"shroud", KeywordShroud},
 		{"flash", KeywordFlash},
+		{"menace", KeywordMenace},
 	}
 
 	for _, kw := range simpleKeywords {
@@ -88,7 +91,7 @@ func (p *Parser) registerKeywordPatterns() {
 
 	p.RegisterPattern(
 		"keyword-list",
-		regexp.MustCompile(`(?i)^(flying|first strike|trample|haste|vigilance|banding|fear|reach|shadow|defender),\s*(flying|first strike|trample|haste|vigilance|banding|fear|reach|shadow|defender)$`),
+		regexp.MustCompile(`(?i)^(flying|first strike|trample|haste|vigilance|banding|fear|reach|shadow|defender|menace),\s*(flying|first strike|trample|haste|vigilance|banding|fear|reach|shadow|defender|menace)$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
 			var keywords []Keyword
 			for i := 1; i < len(matches); i++ {
@@ -590,6 +593,25 @@ func (p *Parser) registerLordPatterns() {
 				Effect: &effects.LordEffect{
 					PowerBoost:     power,
 					ToughnessBoost: toughness,
+					ExcludeSelf:    false,
+				},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"creatures-you-control-have-keyword",
+		regexp.MustCompile(`(?i)^creatures?\s+you\s+control\s+have\s+(\w+(?:\s+\w+)?)$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			keyword := matches[1]
+			kw, ok := effects.KeywordMap[strings.ToLower(keyword)]
+			if !ok {
+				return nil, fmt.Errorf("unknown keyword: %s", keyword)
+			}
+			return &ParsedAbility{
+				Type: AbilityTypeStatic,
+				Effect: &effects.LordEffect{
+					GrantedKeyword: &kw,
 					ExcludeSelf:    false,
 				},
 			}, nil

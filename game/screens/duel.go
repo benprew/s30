@@ -92,6 +92,7 @@ type DuelScreen struct {
 	selectedTarget   core.Targetable
 
 	frameCount int
+	warningMsg string
 
 	anteCard *domain.Card
 }
@@ -243,6 +244,7 @@ func (s *DuelScreen) getKeywordIcons(card *core.Card) []*ebiten.Image {
 		{effects.KeywordFirstStrike, 14},
 		{effects.KeywordRegeneration, 15},
 		{effects.KeywordReach, 16},
+		{effects.KeywordMenace, 17},
 	} {
 		if card.HasKeyword(ki.keyword) {
 			icons = append(icons, s.abilityIcons[ki.index])
@@ -512,6 +514,7 @@ func (s *DuelScreen) canBlockAnything(blockerID core.EntityID) bool {
 }
 
 func (s *DuelScreen) handleBlockerClick(mx, my int) {
+	s.warningMsg = ""
 	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
 		s.loadCardPreview(card)
 		if _, assigned := s.pendingBlockers[card.ID]; assigned {
@@ -831,6 +834,47 @@ func (s *DuelScreen) updateMouse(mx, my int) {
 	}
 }
 
+func (s *DuelScreen) hasPendingMenaceViolation() bool {
+	blockerCount := map[core.EntityID]int{}
+	for _, attackerID := range s.pendingBlockers {
+		blockerCount[attackerID]++
+	}
+	for attackerID, count := range blockerCount {
+		if count >= 2 {
+			continue
+		}
+		for _, atk := range s.gameState.Attackers {
+			if atk.ID == attackerID && atk.HasKeyword(effects.KeywordMenace) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s *DuelScreen) removePendingMenaceViolations() {
+	blockerCount := map[core.EntityID]int{}
+	for _, attackerID := range s.pendingBlockers {
+		blockerCount[attackerID]++
+	}
+	menaceAttackers := map[core.EntityID]bool{}
+	for attackerID, count := range blockerCount {
+		if count >= 2 {
+			continue
+		}
+		for _, atk := range s.gameState.Attackers {
+			if atk.ID == attackerID && atk.HasKeyword(effects.KeywordMenace) {
+				menaceAttackers[attackerID] = true
+			}
+		}
+	}
+	for blockerID, attackerID := range s.pendingBlockers {
+		if menaceAttackers[attackerID] {
+			delete(s.pendingBlockers, blockerID)
+		}
+	}
+}
+
 func (s *DuelScreen) submitPendingAndPass() {
 	for id, actions := range s.cardActions {
 		if !s.pendingAttackers[id] {
@@ -877,6 +921,12 @@ func (s *DuelScreen) handleClick(mx, my int) {
 	doneX := duelBoardX + 2
 	doneY := duelMsgY
 	if mx >= doneX && mx < doneX+doneBounds.Dx() && my >= doneY && my < doneY+doneBounds.Dy() {
+		if s.isInDeclareBlockers() && s.hasPendingMenaceViolation() {
+			s.warningMsg = "Menace: must be blocked by 2 or more creatures!"
+			s.removePendingMenaceViolations()
+			return
+		}
+		s.warningMsg = ""
 		s.submitPendingAndPass()
 		return
 	}
@@ -1109,15 +1159,22 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 	}
 
 	var msg string
-	if s.targetingCard != nil && s.selectedTarget != nil {
+	var msgColor color.RGBA
+	if s.warningMsg != "" {
+		msg = s.warningMsg
+		msgColor = color.RGBA{255, 100, 100, 255}
+	} else if s.targetingCard != nil && s.selectedTarget != nil {
 		msg = fmt.Sprintf("targeting %s (Cancel)", s.selectedTarget.Name())
+		msgColor = color.RGBA{255, 255, 255, 255}
 	} else if s.targetingCard != nil {
 		msg = fmt.Sprintf("Choose a target for %s", s.targetingCard.Name())
+		msgColor = color.RGBA{255, 255, 255, 255}
 	} else {
 		msg = s.statusMessage()
+		msgColor = color.RGBA{255, 255, 255, 255}
 	}
 	txt := elements.NewText(14, msg, duelBoardX+60, duelMsgY+12)
-	txt.Color = color.RGBA{255, 255, 255, 255}
+	txt.Color = msgColor
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
@@ -1188,15 +1245,18 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 			}
 
 			if dp == s.opponent && s.isInDeclareBlockers() {
-				isAttacker := false
+				var attackerCard *core.Card
 				for _, atk := range s.gameState.Attackers {
 					if atk.ID == card.ID {
-						isAttacker = true
+						attackerCard = atk
 						break
 					}
 				}
-				if isAttacker {
+				if attackerCard != nil {
 					borderColor := color.RGBA{255, 255, 0, 255}
+					if attackerCard.HasKeyword(effects.KeywordMenace) {
+						borderColor = color.RGBA{255, 140, 0, 255}
+					}
 					if s.selectedBlocker != 0 && s.isValidBlock(s.selectedBlocker, card.ID) {
 						borderColor = color.RGBA{0, 255, 0, 255}
 					}

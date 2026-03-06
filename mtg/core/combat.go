@@ -72,6 +72,14 @@ func (g *GameState) DeclareBlocker(blocker *Card, attacker *Card) error {
 	return nil
 }
 
+func (g *GameState) ValidateMenaceBlocks() {
+	for attacker, blockers := range g.BlockerMap {
+		if attacker.HasKeyword(effects.KeywordMenace) && len(blockers) == 1 {
+			delete(g.BlockerMap, attacker)
+		}
+	}
+}
+
 func (g *GameState) isAlreadyBlocking(blocker *Card) bool {
 	for _, blockers := range g.BlockerMap {
 		for _, b := range blockers {

@@ -182,7 +182,7 @@ var (
 	RandEncounterFS embed.FS
 
 	// Card images
-	//go:embed art/blank-card.png
+	//go:embed art/card/Cardbk_Gold.pic.png
 	CardBlank_png []byte
 
 	// Text

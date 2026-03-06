@@ -214,6 +214,43 @@ func TestParseLordEffects(t *testing.T) {
 	}
 }
 
+func TestParseCreaturesYouControlHaveKeyword(t *testing.T) {
+	tests := []struct {
+		name    string
+		text    string
+		keyword effects.Keyword
+	}{
+		{"menace", "Creatures you control have menace", effects.KeywordMenace},
+		{"flying", "Creatures you control have flying", effects.KeywordFlying},
+		{"first strike", "Creatures you control have first strike", effects.KeywordFirstStrike},
+	}
+
+	p := NewParser()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := p.Parse("Test Card", tt.text)
+			if len(result.Abilities) == 0 {
+				t.Errorf("expected abilities, got none for %q", tt.text)
+				return
+			}
+			ability := result.Abilities[0]
+			lord, ok := ability.Effect.(*effects.LordEffect)
+			if !ok {
+				t.Errorf("expected LordEffect, got %T", ability.Effect)
+				return
+			}
+			if lord.GrantedKeyword == nil {
+				t.Error("expected granted keyword, got nil")
+			} else if *lord.GrantedKeyword != tt.keyword {
+				t.Errorf("expected granted keyword %q, got %q", tt.keyword, *lord.GrantedKeyword)
+			}
+			if lord.ExcludeSelf {
+				t.Error("expected ExcludeSelf false for global enchantment")
+			}
+		})
+	}
+}
+
 func TestParseDestroySpells(t *testing.T) {
 	tests := []struct {
 		name       string
