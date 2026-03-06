@@ -1,0 +1,1657 @@
+******************************************************************************
+*                       MicroProse Magic: The Gathering FAQ                  *
+*                            Version 1.2 [5/7/97]                            *
+*         (c)1997 by Dana Huyler [coedana@everest.cclabs.missouri.edu]       *
+******************************************************************************
+NOTE: This information may be reproduced in whole or in part as long as
+      credit is given. If you use this FAQ on a webpage/ftp site, or as part
+      of other documents, please e-mail me so I know that you did this. I
+      want to know where this FAQ goes.
+
+******************************************************************************
+*                            0 - Preliminary Stuff                           *
+******************************************************************************
+==============================================================================
+0.0 Table of Contents
+==============================================================================
+
+0 - Preliminary Stuff
+---------------------
+  0.0 Table of Contents
+  0.1 Personal Notes
+  0.2 Things to add
+  0.3 Other Sources
+  0.4 Thanks
+{ 0.5 Official News from MicroProse}
+{ 0.6 From The Grapevine }
+{ 0.7 Planned Expansion/Patches}
+{ 0.8 Terminology}
+
+1 - Shandalar
+-------------
+{ 1.0 WHY CAN'T I LOAD MY OLD SAME GAME FROM VERSION 1.0? }
+  1.1 What are the differences in each level of difficulty?
+  1.2 When I entered into a Duel, the creature had some special ability!
+  1.3 Why can't I have 4 cards of the same type in my deck?
+  1.4 How can I switch decks?
+  1.5 Why do the cards I can purchase change in towns when I load?
+{ 1.6 How can I turn off the animations? }
+  1.7 Where do these extra lands come from?
+{ 1.8 How come the computer never antes Restricted Cards? }
+  1.9 Why don't I ante basic lands?
+  1.10 What kind of quests are there?
+  1.11 I've been given a quest to defeat a creature. Where is it?
+  1.12 What happens if I fail a quest?
+  1.13 What do these Wise Men do?
+  1.14 Why do the prices change for cards?
+{ 1.15 How can you get advantages from creatures? }
+  1.16 Ak! I got a disadvantage from a creature instead of a advantage.
+  1.17 How can I find Dungeons?
+  1.18 I left a dungeon because I was low on life, and now it's gone??
+  1.19 Help I can't bring in White cards into this dungeon!
+  1.20 So what are the restrictions of Castles/Dungeons?
+  1.21 What are these dice things in the Castles/Dungeons?
+  1.22 What are Lairs?
+  1.23 What are World Magics?
+  1.24 There are Invisible creatures?
+  1.25 What's a good way to beat a dungeon?
+
+  2 - The Duel
+  ------------
+  2.1 I've shrunk the combat/spell resolution boxes! Where are they?
+{ 2.2 Does the computer know what cards are in your deck?}
+  2.3 How can I band correctly?
+  2.4 How can I use stops?
+  2.5 What are mulligans?
+{ 2.6 Does the computer cheat?}
+{ 2.7 How do I use cards that don't HAVE to untap?}
+
+{ 3 - Bugs}
+  --------
+{ 3.1 Shandalar Bugs }
+{ 3.2 Duel Bugs}
+{ 3.3 A.I. Bugs}
+{ 3.4 Card Specific Bugs}
+{ 3.5 Problems/Limitations}
+  3.6 NOT A Bug.
+
+  4 - Cards
+  ---------
+  4.1 What are the cards in the Astral Set?
+  4.2 What expansion are in the game?
+  4.3 Where are the multilands?
+  4.4 I can't use this card properly!
+  4.5 Are there any hidden cards?
+
+  5. Everything else, and the kitchen sink.
+  -----------------------------------------
+  5.1 Tips
+  5.2 Quirks
+  5.3 That wacky A.I.
+  5.4 The files in the game
+
+  6. Version Control
+  ------------------
+  6.1 What's new in this FAQ!
+  6.2 Old versions
+
+==============================================================================
+0.1 Personal Notes
+==============================================================================
+
+  I'm sorry that I didn't quote all the sources that I have for this FAQ, if
+  you did send me something and want credit please mail me and we can talk.
+
+  Also I assume that you know how to play the game. I don't want to go through
+  explaining what the game is, or some of the finer details. If I glaze over
+  something too complex, mail me and I'll fix it.
+
+  This FAQ is NOT for strategy for the duel. You can get that all over the net
+  or by the strategy guide. I don't want to list the myriad of possibilities
+  for this game. Instead, I want to give a listing of things UNIQUE to the
+  MicroProse game, the good and the bad.
+
+  NOTE: My computer is hosed right now, and until I scrap up the cash to
+        replace the motherboard, I can't play the game. I'm going to have to
+        rely on the you, the readers, to help me out with the FAQ.
+
+  All Bugs listed are for the CURRENT version only.
+
+==============================================================================
+0.2 Things to add
+==============================================================================
+Creatures
+    Card listing (maybe)
+    Speed
+Breakdown of a few interesting files in the game
+    cards.dat
+
+==============================================================================
+0.3 Other Sources
+==============================================================================
+
+  MicroProse Homepage
+    <http://www.microprose.com>
+
+  MicroProse Technical FAQ - to get your game running right...
+    <http://www.microprose.com/corporatedesign/techsupport/hot/magicfaq.txt>
+
+  Wizards of the Coast Home Page
+    <http://www.wizards.com>
+
+  Steven D'Angelo's Card List Page
+    Spoilers, and full cards listings for all expansions up to 5th
+    edition.
+    <http://www.activesw.com/~sdangelo/magiclist.html>
+
+  Bug List for Magic: the Gathering from MicroProse
+    Run by WiSK
+    <http://www.xs4all.nl/~bpm/mtgbugs.html>
+
+==============================================================================
+0.4 Thanks!
+==============================================================================
+
+  Thanks to Beth Moursund, Coyote Tex, Sid Meyer, and Wizards of the
+  Coast, Microprose, Richard Garfield, for Magic and the PC game! Don't
+  forget the entire Microprose gang!
+
+==============================================================================
+0.5 News from MicroProse
+==============================================================================
+
+THIS IS THE README.TXT in the patch!
+===========================================================
+         MAGIC: THE GATHERING
+             Version 1.1
+
+             Readme File
+            15 April 1997
+===========================================================
+
+
+How to Update If You Downloaded the Update Files
+================================================
+1.  Copy the update files to your Windows desktop.
+
+2.  Double-click on the first update file labeled "MTGV11A.EXE."
+
+3.  Follow the directions on the pop-up dialog box.
+
+4.  After the files have been extracted, click on the "Close"
+    button.
+
+5.  Now double-click on the second update file labeled
+    "MTGV11B.EXE."
+
+6.  Follow the directions on the pop-up dialog box.
+
+7.  After the files have been extracted, click on the "Close"
+    button.
+
+8.  All the update files have been correctly installed, and your
+    copy of Magic: The Gathering is now updated to version 1.1.
+
+
+Note: Changes made in version 1.1 have rendered the original
+save game formats obsolete. Once you install the update to
+version 1.1, you will not be able to load old save games for
+either Shandalar or for the stand-alone Duel.
+
+
+General
+=======
+*  The AI now considers more possibilities in a shorter time.
+   This allows it to find better card combinations and generally
+   improves its play throughout the game.
+
+*  Several memory-related lockups have been found and fixed.
+   Lockups in general should be far less frequent on machines
+   without compatibility problems.
+
+*  New coin flip animation files have been added to fix lockups
+   that occurred during the coin flip animations.
+
+*  The game now handles long filenames correctly.
+
+*  The font used for card names has been improved so that names
+   fit better.
+
+
+Shandalar
+=========
+
+Enhancements
+------------
+*  You can now play in Shandalar without a sound card.
+
+*  The crash problem caused by more than 500 cards in your deck
+   has been fixed. 500 is now a limit, and warnings will appear
+   as you get closer to this total number.
+
+*  The Help file now works in the Duel while in Shandalar.
+
+*  Lockups associated with quests to duel a creature have been fixed.
+
+*  Crashes when entering the Wizard Status screen have been fixed.
+
+*  In the Deck Builder, attempting to sell more cards than you have
+   of a given type no longer has an adverse effect.
+
+*  You can now save the game in a town by right-clicking on the
+   town screen. (Note that you cannot save if you are talking to
+   the Wise Man, buying cards or using the Deck Builder.)
+
+*  The number of wandering creatures has been reduced.
+
+*  Bronze Tablet no longer causes multiple cards to appear in
+   players' decks after use in a duel.
+
+*  Your win/loss record in the Status screen now includes creatures
+   quested against, but not creatures you defeated in dungeons or
+   castles.
+
+*  After you defeat one of the five major Wizards, you must pick
+   three different cards as rewards instead of being allowed to
+   pick multiples of the same card.
+
+*  If you lose in a duel to free a beseiged city, all ante cards
+   are now taken from you.
+
+*  There is now a sound effect associated with blocking.
+
+*  The text for Wise Man hints have been corrected.
+
+*  You no longer hear a faint sound in the background while in
+   the main map of Shandalar.
+
+Dungeon
+-------
+*  Draws against creatures in a dungeon will no longer kick you
+   out of the dungeon.
+
+*  Riddles in dungeons work properly.
+
+*  Crashes caused by random treasures in dungeons have been fixed.
+
+*  Free cards in play in dungeons no longer show up as ante.
+
+Lairs
+-----
+*  Intermittent lockups when collecting a riddle scroll in lairs
+   have been fixed.
+
+*  Spectral Arena encounters now work correctly.
+
+
+AI Enhancements
+===============
+*  The AI will avoid casting second enchantments on the same target
+   when they repeat the same effect (such as Flight, etc.).
+
+*  The AI will not use Sylvan Library, Greed or other life-spending
+   cards to kill or nearly kill itself.
+
+*  The AI has better logic for using Mind Twist and Twiddle.
+
+*  The AI will use Fellwar Stones more intelligently.
+
+*  The AI will now activate Island Sanctuary even if the player
+   doesn't have a wall in play.
+
+*  The AI will now use Land Tax correctly.
+
+*  The AI will not use Oasis to attempt to prevent damage to itself.
+
+*  The AI will use better judgment when paying costs for Power Leak.
+
+*  The AI will cast Web on Walls when appropriate.
+
+
+Card-Specific Fixes
+===================
+*  Preventing damage now prevents side effects of damage (such as
+   Drain Life, Hypnotic Specter, etc.).
+
+*  Triggered effects on casting (such as for Ivory Cup, other lucky
+   charms and Verduran Enchantress) now resolve before the resolution
+   of the spell triggering them as they should.
+
+*  The combination of Mana Vault, Animated Artifact and Giant
+   Strength no longer locks the game.
+
+*  Smoke or Winter Orb no longer allows illegal cards to be untapped
+   (such as creatures under a Meekstone, etc.).
+
+*  Swords to Plowshares and Ashes to Ashes no longer trigger graveyard
+   effects (such as for Personal Incarnation).
+
+*  Brothers of Fire no longer untap when their ability is used.
+
+*  Candelabra of Tawnos now shows the proper "X" value when activated.
+
+*  The problem caused by the infinite loop of the Carrion Ants pumping
+   and then cancelling is now fixed.
+
+*  Cave People now correctly reflects Magical Hack in its effect card.
+
+*  Counterspell now works consistently for Eye for an Eye, Fireball
+   and Armageddon.
+
+*  Crumble now buries targets correctly.
+
+*  Lockups associated with Fellwar Stone have been fixed.
+
+*  The AI can no longer target the same target twice with Fireball.
+
+*  Gaseous Form is now implemented so that creatures neither deal
+   nor receive damage.
+
+*  Instill Energy can now be used even if the enchanted creature is
+   untapped.
+
+*  Island Sanctuary can now only be activated once per draw phase.
+
+*  Island Sanctuary now correctly reflects Sleight of Mind in its
+   effect card.
+
+*  The crash occuring when the AI had to sacrifice a creature to its
+   Lord of the Pit has been fixed.
+
+*  The AI will no longer be able to sacrifice a Lord of the Pit to
+   itself.
+
+*  Manabarbs will no longer do damage while it is being cast.
+
+*  Manaflare and Manabarbs only trigger for lands now.
+
+*  Strip Mining a Mishra's Factory no longer leaves an invincible
+   Mishra's Factory in play.
+
+*  Enchant Creature cards on an Assembly Worker are now buried when
+   the Assembly Worker reverts to a Mishra's Factory at the end of the
+   turn. No effects of the enchantments linger once they are gone.
+
+*  Disenchanting an Assembly Worker now destroys it properly.
+
+*  The Assembly Worker effect card now has name text.
+
+*  The Necropolis of Azaar now has "Husk" counters as the text on the
+   card indicates instead of "Corpse" counters.
+
+*  Power Sink doesn't draw mana from Mishra's Workshop anymore.
+
+*  Primal Clay now selects its shape at proper time.
+
+*  Psychic Venom now has a targeting prompt.
+
+*  The intermittent problem of not being able to use the
+   Regeneration card has been fixed.
+
+*  Reverse Damage no longer counts damage from previous turns.
+
+*  Simulacrum is now available during the damage prevention step and
+   will redirect all damage done to the caster during the current
+   turn.
+
+*  Soul Net no longer allows life gain for counterspelled summon
+   cards.
+
+*  The counters for Spirit Shackle now appear at the correct time.
+
+*  Sunglasses of Urza now handles red mana sources as if they were
+   white, in addition to handling red mana in the pool this way.
+
+*  The prompt for Sylvan Library now correctly says "Pay 4 Life"
+   instead of "Lose 4 Life."
+
+*  Only one counter is now removed from a Tetravus per activation.
+
+*  Time Elemental now always damages its controller when assigned as
+   a blocker.
+
+*  If the AI has a Time Walk in its hand, the game no longer puts
+   "skip turn" hash marks on the Phase Bar.
+
+*  Uncle Istvan is no longer invulnerable to some types of non-combat
+   damage.
+
+*  Verduran Enchantress no longer triggers on non-enchantments.
+
+
+Duel
+====
+*  Add Card and Scan Card errors have been largely eliminated.
+
+*  Conceding a duel will no longer causes page faults.
+
+*  Lockups in the Pre-Combat phase in which the AI ended up in a
+   thinking loop have been addressed.
+
+*  You can no longer tap the AI's lands during its upkeep.
+
+*  Creatures statistics refresh correctly in the Main Pre-Combat
+   phase (such as playing a Castle before the Combat phase).
+
+*  The "Assign X damage" prompt in the Advanced layout now displays the
+   correct damage.
+
+
+Deck Builder
+============
+*  You can no longer make decks with token cards in them (such as
+   Wasps).
+
+*  The Statistics screen now counts Birds of Paradise and the Moxes
+   as correct Mana Types.
+
+*  The given rarity information for Amulet of Kroog and Abomination
+   has been corrected.
+
+*  Right shift-clicking to move cards in the Deck Builder is now fixed.
+
+*  The Deck Builder now considers basic lands as having the same color
+   as the color of mana they produce for the purpose of deck stats. (For
+   example, 5 Islands count as 5 Blue cards.)
+
+
+Gauntlet
+========
+*  The Next Opponent screen displays the correct name for the next
+   opponent.
+
+*  The typo in the Next Draw screen has been fixed.
+
+*  The random selection of opponents in the Gauntlet is now fixed.
+
+============================================================================
+0.6 From the Grapevine
+============================================================================
+
+  Nothing new, aside from the patch coming out!
+
+============================================================================
+0.7 Planned Expansion/Patches
+============================================================================
+
+  There is one patch and one expansion planned as of right now.
+
+  April: OUT! Patch to improve game in all areas. OUT!
+  December: Expansion planned for multiplayer support.
+
+  Other modifications will be made when available.
+
+============================================================================
+0.8 Terminology
+============================================================================
+
+  [p##]: page references for the manual.
+  Restricted: Out-Of-Print/restricted cards. Only found in dungeons.
+  {}: Things new to this section.
+
+******************************************************************************
+*                     1 -  General Shandalar Questions                       *
+******************************************************************************
+==============================================================================
+1.0 WHY CAN'T I LOAD MY OLD SAME GAME FROM VERSION 1.0?
+==============================================================================
+
+  Becuase you can't. Read the 'README' file earlier in this FAQ....
+  Sorry. Microprose had to rearrange things for the new version.
+
+==============================================================================
+1.1 What are the differences in each level of difficulty?
+==============================================================================
+
+  There are four level of difficulties:
+    Apprentice, Magician, Sorcerer, and Wizard. [p19]
+
+  With each higher level tougher creatures come out earlier,
+  computer sends out creatures to take towns faster, dungeons/castles
+  are more populated, and the AI makes less mistakes.
+
+  The next sections contain a breakdown the differences in each level of
+  difficulty
+
+------------------------------------------------------------------------------
+1.1.1 Apprentice
+------------------------------------------------------------------------------
+    1 Color deck
+    250 Gold
+    50 Food
+    start with 2 amulets in major color, 1 in all others
+    Arzakon has 100 life
+    Minimum deck size 30
+    Evil wizards have 30 Life
+
+------------------------------------------------------------------------------
+1.1.2 Magician
+------------------------------------------------------------------------------
+    2 Color Deck
+    200 Gold
+    50 Food
+    Creatures have +2 life
+    start with ? amulets
+    Arzakon has 200 life
+    Minimum deck size 35
+    Evil wizards have 35 Life
+
+------------------------------------------------------------------------------
+1.1.3 Sorcerer
+------------------------------------------------------------------------------
+    3 Color Deck
+    150 Gold
+    50 Food
+    Creatures have +4 life
+    start with ? Amulets
+    Arzakon has 300 Life
+    Minimum deck size 40
+    Evil wizards have 40 Life
+
+------------------------------------------------------------------------------
+1.1.4 Wizard
+------------------------------------------------------------------------------
+    5 color deck
+    100 gold
+    50 food
+    Creatures have +6 life
+    start with 1 amulet in picked color
+    Arzakon has 400 life
+    Minimum deck size 40
+    Evil wizards have 45 Life
+
+==============================================================================
+1.2 When I entered into a Duel, the creature had some special ability!
+==============================================================================
+
+  Sometimes when you start a duel, and decide NOT to pay the creature that
+  creature might start with some ability. A box appears saying that the
+  creature HAS a special ability and the computer plays a laugh noise, you
+  then have to click again to start the duel.
+
+  Starts with X in play:
+    Start with an untapped card already in play. If it is a creature, it does
+    NOT have summoning sickness.
+
+  Mind Control:
+    Plays with a copy of your deck. Starting hands are exact, but after that
+    the decks are shuffled differently. Ante still comes from the deck of the
+    original deck that the monster has, not ante from your copied deck.
+
+  "Why don't you try this deck?":
+    The computer GIVES you a deck to play with, usually a good one.  Ante
+    comes from YOUR deck, NOT from the new deck. I don't know if it is a copy
+    of the deck that the computer plays with.
+
+  Summons a/an X:
+    You fight a different creature than the one currently fighting. This
+    happens AFTER choosing to bribe the creature/answer a question.
+
+==============================================================================
+1.3 Why can't I have 4 cards of the same type in my deck?
+==============================================================================
+
+  In tournament rules, you can have up to 4 duplicates of a single card in
+  your deck. This is not the same in Shandalar. You can have a particular
+  amount of card depending on your deck size and if you have the Tome of
+  Knowledge. [p139]
+
+    Cards in Deck	Duplicates	With Tome
+    1-19~		1		2
+    20-39~		2		3
+    40-59		3		4
+    60-500		4		Unlimited.
+
+  ~Depending on the level that you start on, basic lands will be inserted
+  to get your deck to the minimum deck size required.
+
+  With the Tome and 60+ cards, you can create any 'degenerate' decks you
+  want. A degenerate deck is one with more than 4 of a single type of
+  card.
+
+==============================================================================
+1.4 How can I switch decks?
+==============================================================================
+
+  When editing your deck in a town/village if you click either of the
+  other deck buttons, then you then use that deck in the next duel. ALWAYS
+  remember that the last deck you clicked on is the deck that you fight
+  with. If you use an empty deck then it will be filled with basic lands,
+  and you can't win until you get back to a town or edit your deck. You
+  can tell the size of the deck you are using by looking at the book icon
+  in the lower section of the screen it has two number. One of them is the
+  size of the current deck, the other is the total cards you own. If you
+  are using an empty deck it will show 0/XIX, where XIX is the number of
+  cards you own.
+
+  Note: The Black World Magic lets you edit your deck at any time, except
+        when dueling. You cannot sell your cards when using it though.
+
+==============================================================================
+1.5 Why do the cards I can purchase change in towns when I load?
+==============================================================================
+
+  Oddly enough, when you save a game, then quit, and reload the game
+  the villages have different cards for sale. I don't know why the game
+  designers decided to do this. I'm going to ask them some questions
+  about this.
+
+==============================================================================
+1.6 How can I turn off the animation?
+==============================================================================
+
+{  The Patch makes it easier to turn off all animations.
+
+  Help: How can you do this with the new patch? }
+
+==============================================================================
+1.7 Where do these extra lands come from?
+==============================================================================
+
+  If you have a deck with less than the minimum amount of cards for your
+  difficulty level, then during a duel the computer throws in basic
+  lands into your deck to bring you to the minimum amount. After the
+  duel is over, the computer removes those extra lands. To fix this
+  problem, just bring the number of cards back to the required amount.
+  (see 1.4)
+
+  Note: This only works in Shandalar. This has no effect in the Duel
+  program.
+
+==============================================================================
+1.8 How come the computer never antes Restricted cards?
+==============================================================================
+
+  Note: According to Beth Moursund, the creatures SHOULD ante
+  Restricted cards, so this might get fixed in the upcoming patch.
+
+==============================================================================
+1.9 Why don't I ante basic lands?
+==============================================================================
+
+  Basic lands are too weak a card to ante. In fact, you can actually LOSE
+  the game if you only have basic lands in your deck!
+
+==============================================================================
+1.10 What kind of quests can I go on?
+==============================================================================
+
+  There are three types of quests.
+    Deliver a message - Just walk to the town.
+    Deliver a card - Bring a card of a certain type to the town.
+                     (Red Sorcery, Colorless Creature, Blue land)
+                     When you arrive at the town, you lose a random
+             card from the types that you own. If you don't
+             currently own that type of card you must find
+             it.
+    Defeat a Creature - You must find and kill a creature. (see 1.11)
+
+   There are four prizes for completing a quest
+     Gain 1 or more amulets
+     Gain a mana link
+     Gain an amulet and a mana link
+     Pick a card of a certain type
+
+   The first three prizes come from villages, while towns only give the
+   fourth prize.
+
+==============================================================================
+1.11 I've been given a quest to defeat a creature. Where is it?
+==============================================================================
+
+  Unfortunately, these quests just want you to find and defeat a
+  creature of that type. It does not have a particular creature in mind.
+  This means that you have to go to the terrain of that color and wait
+  until you find a creature of that type.
+
+  Another problem is that you might not know what type of color that
+  creature is!
+
+  NOTE: the creature should already be around the area of the town in
+  the correct terrain type.
+
+==============================================================================
+1.12 What happens if I fail a quest?
+==============================================================================
+
+  You cannot get quests from that town/village any more.
+
+==============================================================================
+1.13 What do these Wise Men do?
+==============================================================================
+
+  If you are currently on a quest, you can talk to the wise men in
+  the villages/towns. On the rare occasion you will get a nice gift. The
+  following is a listing of what you can get from wise men.
+
+  1. A story (taken from the introduction) There are about 5 of these..
+  2. +2 lives in the next duel
+  3. A dungeon clue
+  4. A deck of a creature from a particular color
+  5. Tell you where a world magic is.
+  6. Give you a card for the next duel.
+
+==============================================================================
+1.14 Why do the prices change for cards?
+==============================================================================
+
+  It seems that each town or village has a different rate for cards.
+  There are 6 different types of cards: the 5 colors and colorless. Each
+  card has a fixed rate, for example, basic lands are 20 gold. The
+  easiest way to find out the rate at which a color is going for is to
+  attempt to sell a basic land when you are editing you deck at that
+  town/village. Here is a short table which I think works.
+
+    Rate	Land Price Colorless Land
+        ----    ---------- --------------
+        50%     10         50
+        75%     15         75
+        100%    20         100
+        150%    25         125
+    200%    30         150
+
+  Usually Towns have a higher rate than villages. It also seems that the
+  buying price is exactly the same as the selling price.
+  I don't know if table is correct. It seems like the colorless land
+  prices are not right at all. Also, the card prices are rounded to the
+  nearest 5 gold.
+
+  Note: You can combine this knowledge with the Negative Card Bug. Go to
+  a village where the rate for that card is 50% and sell -50 of that
+  card. Then go to a town where the rate is 200% and sell those cards.
+  Instant Free Cash!
+
+  Note: Beth Moursund says that there should be a difference between the
+  buying price and the selling price, but I've never seen a difference.
+
+==============================================================================
+1.15 How can you get advantages from creatures?
+==============================================================================
+
+  Sometimes after defeating a creature you can get an advantage or a
+  disadvantage. Exactly how to get this is hard to nail down. It seems
+  that you need to lose only a little bit of life, or kill the creature
+  as fast as possible. I assumed that if you took combat damage, then
+  you didn't get an advantage when you won. Sometimes I did get an
+  advantage when I took combat damage.
+
+  Here are a few of the advantages:
+
+{ Won an Amulet: Receive one amulet of the color of the creature
+  +X Lives: Between 1 and 5, depending on both the level or the
+    difficulty.
+  Pick a card from my Deck: Displays the opponents deck and you get the
+    pick one card from his hand.
+  Duplicate Card: The computer lets you pick one card to duplicate in
+    your deck. This is one of two ways to get additional Restricted cards.
+    A few of the more powerful high powered blue creatures give this to
+    you. (Sorceror, Elementalist, Mind Stealer, or Shapeshifter)
+  You get a card in the next duel: You start with a card in play in the
+    next duel. If it is a creature, then it starts with out summoning
+    sickness. Usually given by the lower level creatures.
+  Teleport: The Winged Pegasus randomly Teleports you to a location on the
+    map, like using the Leap Of Fate world magic.
+
+  If you leave a dungeon/castle, advantages given to you from the dice in a
+  dungeon/castle are GONE. You can bring advantages into a dungeon or a
+  castle just fine.
+
+  It appears that what advantage you get is creature specific, If you get
+  an advantage, send them to me. I'll add them to the list. }
+
+==============================================================================
+1.16 Ak! I got a disadvantage from a creature instead of an advantage!
+==============================================================================
+
+  On the higher difficulties you can get disadvantages instead of normal
+  advantages. I have only see two types of disadvantages.
+
+  -X Lives in the next Duel
+  Life Carries over the the next duel (like in dungeons)
+
+==============================================================================
+1.17 How can I find Dungeons?
+==============================================================================
+
+  You can gain information about dungeons from creatures, Wise Men, or from
+  Lairs. Three clues are given for each dungeon, the position on the map, what
+  size/color of creatures it contains, and what effects are in play for the
+  given dungeon.
+
+==============================================================================
+1.18 I left a dungeon because I was low on life, and now it's gone!?
+==============================================================================
+
+  If you do not get all the cards from the dungeon, then it moves to a
+  random location on the map. To find it again, you have to get another
+  dungeon clue for that dungeon.
+
+  In a Castle, the wizard just gets annoyed and sends a creature to take
+  a town.
+
+==============================================================================
+1.19 Help! I can't bring in White cards into this dungeon!
+==============================================================================
+
+  At the more difficult levels, you might not be able to bring a type of
+  card or a certain color into a dungeon. This is very very annoying.
+
+==============================================================================
+1.20 So what are the restrictions of Castles/Dungeons?
+==============================================================================
+
+  Each dungeon/castle will have one card in play when you enter a duel.
+  This card is an enchantment of the color of the dungeon/castle or
+  non-creature artifact without upkeep. There will also be an additional
+  effect on high levels that forbid you from bringing in certain types
+  of cards.
+
+  Note: If a dungeon forbids a certain type of card (like fast effects,
+  or white) then it forbids you from drawing that type of card from your
+  deck. BUT if that brings your deck below the minimum required for your
+  level it does not fill your deck up to the minimum with basic lands.
+
+==============================================================================
+1.21 What are these dice things in the Castles/Dungeons?
+==============================================================================
+
+    There are four major events in dungeons/castles.
+
+  1) Creatures
+    The dungeon will give you a clue as to what the dungeon/castle
+  is populated by, this can be either large or small creatures of a given
+  color. The higher levels have more creatures. You do NOT get ante from
+  creatures in dungeons, and if you lose a duel in the dungeon you lose
+  your ante card AND get booted from the dungeon/castle. If you are in a
+  dungeon, and you did not get all the Restricted cards from the dungeon, then
+  the dungeon moves to a random location on the map.
+
+  2) Treasure chests
+    Treasure chests either hold Restricted cards or gold+amulets. In
+  castles there are NO Restricted cards.
+
+  3) Dice
+    These dice are give either advantages or disadvantages for the
+  next duel ONLY in the current dungeon/castle. If you get an advantage
+  and then leave, you lose the advantage. On the apprentance level you can
+  never get a disadvantage from dice. On higher levels you might get a
+  disadvantage.
+
+    There are two types of advantages
+      1) +X lives. This is additive(?) you get to keep this live
+    while in the dungeon/castle. In dungeons where life carries over, this
+    is necessary. the easier levels give you around 3-4, while the harder
+    ones give 1-2.
+      2) Start with a card. This can be anything from creatures, to
+    mana sources. On easier levels the cards given are usually powerful
+    creatures, while the harder levels give weaker creatures or moxes/mana
+    creatures.
+
+    There is one type of disadvantage
+      1) -X lives.
+
+  NOTE: if you leave the dungeon/castle any -vantanges you have are GONE.
+  You can bring -vantages into a dungeon or a castle just fine.
+
+  4) Scrolls
+    Scrolls are question given based on the cards in the game. If
+  the question is wrong, a creature appears in its place. On the easier
+  levels the questions have 5 possible choices, while harder ones usually
+  have more choices. NOTE: question take into account ONLY the starting
+  abilities of a creature. Goblin Balloon Brigade does not have flying for
+  the purposes of the scroll.
+
+  Examples of questions
+    1) which of these creatures has flying ability?
+    2) What special ability does this creature have?
+    3) what is the casting cost/power/toughness of this creature?
+
+==============================================================================
+1.22 What are Lairs?
+==============================================================================
+
+  Lairs are one of five different buildings that appear on the world map.
+  All you need to do is walk onto the lair and you get the prize in question.
+  'named' areas are lairs that put up a dialog box that say something
+  like 'You Found a Thieves Hideout!'.
+
+  Unnamed areas:
+    Gain one land of the appropriate color (island/plains...etc)
+    Gain a card of the appropriate color (usually a rare)
+    Gain an artifact
+
+  Named areas: Sometimes you can also gain a card or artifact from these.
+    Thieves Hideout: +500 Gold
+    Oasis of Mouldoon: Trade a card in your deck for +5 lives in the
+        next duel
+    Ruined Tower: Gain a Dungeon Clue.
+    Diamond Mine: trade random amulets for cards.
+    Gem Cutter Guild: Buy amulets for 200 gold each.
+    Guardian Ghost: Trade a random amulet for a look at a random color
+    Spectral Arena: Duel a creature for rare/astral cards.
+    Lost City of El'Arkan: Gain 1 amulet of each color
+    Nomad's Bazaar: Purchase cards at normal cost.
+
+  The Lost City and Thieves Hideout have a chance of taking gold/amulets
+  depending on the level of difficulty.
+
+==============================================================================
+1.23 What are World Magics?
+==============================================================================
+
+  There are two types of World Magics: Usable and Permanent. Usable
+  require at least one magic amulet to use, while Permanent are always
+  in effect. You can purchase World Magics in towns for in between
+  150-600 gold. You can get knowledge for where the World Magics are by
+  leaving towns that do not have world magics, or from wise men. You can
+  purchase these world magics by leaving the town. As you leave, you are
+  prompted to purchase the world magic.
+
+  There are 12 different world magics in the game:
+
+  Usable*: [p26]
+    Conjurer's Will: Risk one black amulet to edit your deck in the
+                     open. You cannot sell your cards.(400 Gold)
+    Leap of Fate: Risk one blue amulet to teleport to a random
+                  location.(300 Gold)
+    Quickening: Risk one green amulet to double your land speed.
+                (300 Gold)
+    Thunderstaff: Risk one red amulet to banish one creature in the
+                  open. (500 Gold)
+    Sword of Restance: Risk one white amulet to teleport to a town
+                       that is under siege. (400 Gold)
+
+  Permanent:
+    Slight of Hand: Switch Ante ONCE before duel. (500 Gold)
+    Tome of Knowledge: Increases the amount of duplicates cards in
+                       your deck by one. (400 Gold) (see 1.3)
+    Haggler's Coin: Increases the amount of cards sold in
+                    towns/villages. (500 Gold)
+    Fruit of Sustance: In Forests, you gain food instead of losing
+               food. (300 Gold)
+    Dwarven's Pick: Move faster in Mountains. (150 Gold)
+    Amulet of Swampwalk: Move faster in Swamps. (150 Gold)
+    Ring of the Guardian: Wizards need 5 mana taps to win. (600 Gold)
+
+
+  *Note: The Usable World Magics Have "Risk an amulet" because there is
+  a chance that the world magic will consume an amulet. The higher the
+  difficulty the greater the chance that an amulet will be used.
+
+==============================================================================
+1.24 There are Invisible creatures?
+==============================================================================
+
+  Yes, I was informed by Beth Moursund, that some creatures have the
+  ability to be invisible.
+
+==============================================================================
+1.25 What's a good way to beat a dungeon?
+==============================================================================
+
+  Explore *every* darkened opening, do NOT run into any symbols
+  (creatures, dice, etc.) except treasure chests :-).  Map as much as
+  you can.  Watch for intersections on the map, it is difficult to see
+  the "cross streets" sometimes.  Take every possible path you can,
+  without running into the symbols.  With luck, you will see a few
+  treasure chests in the distance, behind creatures.  Go back and grab
+  dice until you find a decent effect, but don't take all the dice.  You
+  should have discovered a large amount of dice when you were mapping.
+  Don't use all the dice, because you might need an unused dice to
+  replace a bad effect you got from a previous dice.  Now, fight the
+  creatures directly in the way of the treasure chest.
+  If you don't see a treasure, they're usually hidden at the edge of the
+  map.  Look at the black unexplored areas.  Choose what looks like the
+  weakest creature blocking the largest unexplored area.  Fight as
+  before.  Always choose the weakest creature to fight that is guarding
+  unexplored area.
+
+  Never fight a creature unless it is blocking your way, and you need to
+  fight it to continue.  Never fight a creature unless you are
+  powered-up by dice effects, unless you have used up all the dice.
+  Prefer creatures leading towards the edge of the map, and creatures
+  with large amounts of unexplored space behind them.  The key here is
+  to find the OOP cards, grab them, and leave, before you get killed, so
+  you must minimize the amount of fighting you do (especially with life
+  losses carrying over).
+
+   JoSH Lehan <krellan@netgate.net>
+******************************************************************************
+*                            2 -  The Duel                                   *
+******************************************************************************
+==============================================================================
+2.1 Help! I shrunk the Combat/Spell Resolution boxes! Where are they?
+==============================================================================
+
+  You can shrink the Combat/Spell Resolution boxes just like normal
+  windows. When shrunken, icons appear on the left side of the screen in
+  the divider between the playing area and information section (where
+  the mana pool/life area is). The combat screen looks like a sword, and
+  the Spell Resolution box looks like a star.
+
+==============================================================================
+2.2 Does the Computer know what cards are in your deck?
+==============================================================================
+
+  NO! The computer only knows what is in play, and the PRIMARY color that
+  you use in your deck. The AI does not cheat.
+
+  The computer DOES know your primary color, and has a sideboard of 2-5
+  cards (depending on the creature) that it inserts into its deck.
+
+  The sideboard has no effect outside of Shandalar.
+
+==============================================================================
+2.3 How can I band correctly?
+==============================================================================
+
+  To band, just attack with all NON banders first, then attack with the
+  banders. When attacking with a bander you have a choice of banding it
+  with a current attacker, or if you don't want to band with another creature
+  just click 'Done'.
+
+==============================================================================
+2.4 How do I use stops?
+==============================================================================
+
+  Stop are makers to tell the computer not to continue when the end of
+  that phase is reached. At that time you can use optional effects. To
+  place or remove stops, right click on the phase you want to add a stop
+  to.
+
+  The best places to use stops are in the following places:
+
+  Your Draw Phase: For Sylvan Library
+  Your Upkeep Phase: For cards that have optional upkeep, and to use
+                 the Upkeep Bug.
+  Opponents Pre-Combat Phase: for Strip Mine
+  Opponents Discard Phase: for anything you want to do before your
+                           turn.
+
+==============================================================================
+2.5 What are mulligans?
+==============================================================================
+
+  Originally 'Mulligans' where a widely accepted house rule. In 5th
+  edition and this game it works like this.
+
+  Both players draw seven cards. A mulligan can be declared by a player
+  if they have either all land, or no land in their initial seven card
+  draw. If a mulligan is declared, both players may choose to
+  'take a mulligan' and draw seven new cards. After that initial
+  mulligan, no more mulligans may be declared. Even if that new draw
+  produces a mulligan.
+
+  Note: as stated above, if Player A gets a mulligan and opts to take
+  the mulligan. Player B may mulligan also, just to get a different
+  initial hand.
+
+==============================================================================
+2.6 Does the Computer cheat?
+==============================================================================
+
+{  According to CoyoteTex, the computer does NOT cheat. It does not know what
+  particular cards are in your deck, or in your hand. It only knows what is
+  in play. Nothing more.
+
+  NOTE: This is also true for Sinbad. The computer does not know when land
+        cards are coming next, nor does it force the Sinbad draw to be a
+        land.}
+
+==============================================================================
+2.7 How do I use cards that don't HAVE to untap?
+==============================================================================
+
+{ Cards like Tawnos's Weaponry give you the option of untapping to remove
+  the effects of the artifact. To untap this card, place a stop on your
+  untap phase. When your untap occurs, it will prompt you with "Untap
+  Effects? DONE?". To untap the card, just click on the card, other click
+  done to keep the card tapped. }
+
+******************************************************************************
+*                         3 -  Bugs and 'features'                           *
+*                                                                            *
+*  NOTE: I will only keep track of bugs for the current version of the game. *
+******************************************************************************
+==============================================================================
+3.1 Shandalar Bugs
+==============================================================================
+------------------------------------------------------------------------------
+3.1.1 Memory Leak Bug
+------------------------------------------------------------------------------
+
+  There is a memory leak that only happens on machines running the older
+  version of the kernel. If the machine slows down after playing the game,
+  download the kernel update from the Windows 95 homepage.
+
+  <http://www.windows95.com>
+
+------------------------------------------------------------------------------
+3.1.2 Sound Always There Bug
+------------------------------------------------------------------------------
+
+  Music and sounds can not be turned off via the menu in the deck
+  editor in Shandalar.
+  Note: See TIPS section on how to turn off sounds.
+
+------------------------------------------------------------------------------
+3.1.3 No Profit Bug
+------------------------------------------------------------------------------
+
+  It seems that there is not a difference in the selling vs. buying price
+  of cards in the game. According to Beth Moursund, there should be a
+  difference depending on the level of difficulty.
+
+------------------------------------------------------------------------------
+3.1.4 "No Fast Effects" Bug
+------------------------------------------------------------------------------
+
+  When you enter a dungeon on higher difficulties, some of them forbid a
+  certain type of card. The game does this by preventing you from
+  drawing that type of card. Unfortunately, if you have a 60 card deck
+  and 50 of them are illegal, then you are playing with a 10 card deck.
+  The computer will not add basic lands to your deck to bring it to a
+  minimum.
+
+------------------------------------------------------------------------------
+3.1.5 Confused Quest Bug
+------------------------------------------------------------------------------
+
+  If you kill a wizard, sometimes you can get a quest to kill a creature
+  of the color that has been banished.
+
+------------------------------------------------------------------------------
+3.1.6 Quest Scroll Bug
+------------------------------------------------------------------------------
+
+  Sometimes during quests, the quest displayed is incorrect.
+
+------------------------------------------------------------------------------
+3.1.7 Journal/Stats Stops Working Bug
+------------------------------------------------------------------------------
+
+  This bug still exists from version 1.0. Basically, both the Journal and
+  the stats stop working when you enter a dungeon for the first time.
+
+------------------------------------------------------------------------------
+3.1.8 Tribute Bug
+------------------------------------------------------------------------------
+
+  After obtaining Tribute from a particular creature, the next time you
+  encounter that creature, you are again offered to get Tribute, but instead
+  you go into a duel.
+
+==============================================================================
+3.2 Duel Bugs
+==============================================================================
+------------------------------------------------------------------------------
+3.2.2 Never Ending Upkeep Bug
+------------------------------------------------------------------------------
+
+  If you die during upkeep from cards like wanderlust, the duel does not
+  end. There is no way around this once it happens.
+
+------------------------------------------------------------------------------
+3.2.3 The "Sid" Bug
+------------------------------------------------------------------------------
+
+  While playing in a duel, you may get an "Assertion Error" from the
+  duel, the error box says:
+
+    "File->g:\NewMagic\Sources\sid\Minit.c, Line 1598"
+    "AddCard Error"
+    "Please call MPS Customer Support 1-510-522-1163"
+
+  You will have to click this box multiple times. After about 10 or so
+  boxes, the game usually proceeds normally. More Sid Bugs usually
+  appear more frequently until the game is exited and reloaded
+
+  NOTE: The "Sid" bug is a generic bug, it can happen from multiple
+
+        situations. In the new patch, this bug is MUCH rarer.
+
+------------------------------------------------------------------------------
+3.2.5 Trampling Spirit Link
+------------------------------------------------------------------------------
+
+  Spirit Link has a bunch of problems. It does not give life from some
+  non-combat damages. Also if you with a trampling spirit linked creatures
+  extra life is added. For instance if you attack with a 6/6 trampling,
+  spirit linked creature, and it is blocked by a 2/2. The computer assignes
+  6 damage to the 2/2 blocked creature, and 6 life is added to the controller
+  of the trampler. Then 4 damage is assigned to the controller of the
+  blocking creature (due to trampling). From this 4 damage to the controller,
+  ANOTHER 4 life is given. Therefore double life is assigned on the damage
+  that spills through the trample.
+
+==============================================================================
+3.3 A.I. Bugs
+==============================================================================
+
+  In general, there are times when the A.I. can do illegal things, like
+  casting spells into the graveyard with no valid targets, casting spells
+  on creatures that are not in play, and then cast the creature.
+
+==============================================================================
+3.4 Card specific Bugs (In Alphabetical Order)
+==============================================================================
+NOTE: * represents bugs I am not 100% assured of yet.
+
+  Aladdin's Lamp: Casting cost is 1. It is incorrect.
+
+  Animate Dead: Cannot be used to get creatures from opponents graveyard,
+    but the computer uses it correctly.
+
+  Apprentice Wizard: Cannot be used during an interrupt phase.
+
+  Assembly Worker: Listed in the Deck Builder, but you may not use it as
+                   a card during the duel.
+
+  Black Mana Battery: Cannot be tapped when casting a card.
+
+  Control Magic: If you target this on of your creatures, the machine locks.
+
+  Gem Bazaar: Does not change mana color if tapped during opponents turn.
+
+  Flight: Cannot target fliers or Assembly Workers.
+
+  Hurkyl's Recall: If you recall a pump artifact (like Tawnos's Weaponry)
+    then the effect does not go away if the artifact is effecting a
+    creature.
+
+  Laces: You can lace Effect Cards. Like "Power Up Effect" from Tawnos's
+    Weaponry. The cards do not change colors, but they are valid targets!
+
+  Library of Alexandria: Seems to have problems if the hand size goes above
+    seven. If it gets above 7 then it can never be tapped to draw a card at
+    when there are 7 cards in hand.
+
+  Magical Hack: Does not show the modified text on the card that was Hacked
+    the worked in version 1.0, but it is broken now.
+
+  Rainbow Knights: You can only use the first strike option once. After that
+    initial usage, you cannot use it again.
+
+  Slight of Mind: You cannot slight creatures that have 'protection from
+    color' on their card. If you do slight them, the protection does not
+    change how it is supposed to.  I don't not know if this bug exists
+    when a Ward is slighted.
+
+  Spirit Link: Only works for combat damage. It does not work for damage
+    from upkeep (Lord of the Pit), Fast Effects (Prodigal Sorcerer), or
+    Legacy Effects (Nafs Asp)
+
+  Visions: Locks up the machine in version 1.1. DO NOT USE THIS CARD.
+
+  Volcanic Eruption: Creatures killed still do not go to the graveyard. This
+    bug existed in version 1.0.
+
+  Wild Growth: A Wild Growthed Oasis generates 1 green mana when tapped to
+    prevent damage.
+
+==============================================================================
+3.5 Problems/Limitations
+==============================================================================
+------------------------------------------------------------------------------
+3.5.1 500 maximum cards/80 unique limitation
+------------------------------------------------------------------------------
+
+  You cannot have more than 500 cards in a deck, or more than 80 different
+  cards in the deck that you are loading. In the patch it fixes this problem
+  you can't have more than 500 cards, but you get warning before this
+  happens.
+
+------------------------------------------------------------------------------
+3.5.2 Mixed up authors
+------------------------------------------------------------------------------
+
+  In version 1.1, The authors get mixed up if the last name is past 'L'.
+  For instance Tom Wänerstrand's cards now show 'Unknown'.
+
+==============================================================================
+3.6 NOT a bug
+==============================================================================
+------------------------------------------------------------------------------
+3.6.1 Nafs Asp
+------------------------------------------------------------------------------
+
+ The Legacy Effect of a Nafs Asp stays UNTIL you pay the 1 mana to
+ remove it. It does not go away on it's own at the end of the turn.
+
+******************************************************************************
+*                              4 - Cards                                     *
+******************************************************************************
+==============================================================================
+4.1 What is the Astral Set?
+==============================================================================
+
+  There are 12 cards in the astral set. I will give the spoilers for these
+  cards and also give a tiny bit of strategy for them.
+
+  Call From the Grave, 2B, Sorcery
+    Random creature is selected from either player's graveyard, and
+    brought into play. Caster then loses X life where X is the casting cost
+    of the raised creature.
+  Strategy: seemingly useless, its loss of life is harsh. If you need a
+    creature, animate dead is better.
+
+  Prismatic Dragon, 2WW, Summon Dragon (2/3)
+  Flying
+    Becomes a random color during upkeep
+    1: Target color becomes permanent
+  Strategy: Great for getting around most CoP's. It's random color ability
+    is very useful against anti color decks.
+
+  Knights of the Rainbow Vale, WW, Summon Knights (2/2)
+  Gains a protection from a random color when brought into play
+    1: gain first strike until end of turn
+    WW: add +0-2/+0 until end of turn.
+  Strategy: Great pumping ability, although not as cheap as a White Knight,
+    the Knights outweigh having to pump first strike with the chance for
+    extra power. Good against most decks due to random protection.
+
+  Pandora's Box, 5, Artifact
+    3+tap: Brings a token creature randomly selected from each players deck
+           into control of both players.
+  Strategy: Great for large creature decks. I think creatures come into
+    play untapped, even if they don't normally do. Useful before blocking to
+    get a creature to block with.
+
+  Whimsy, XUU, Sorcery
+    Produce X random fast effects
+  Strategy: Good for a few laughs. Likes to produce the Hive and Bottle of
+    Suliman Effects more than others.
+
+  Faerie Dragon, 2GG, Summon Dragon (1/3)
+  Flying
+    1GG: Produce a random fast effect
+  Strategy: Rather useless card, mostly because the fast effects usually
+    target your cards. There seems to be more bad fast effects than good
+    ones.
+
+  Goblin Polka Band, RR, Summon Goblins (1/1)
+    X+T: tap X random creatures. If Goblins are tapped in this way
+         they do not untap as normal during their next phase.
+  Strategy: Good for using BEFORE the opponents combat, or before yours
+    just to see what gets tapped. Generally a useful card. This card can tap
+    itself, and if it does so it does not untap next turn, due to the fact
+    that it is a goblin.
+
+  Power Struggle, 2XUU, Enchantment
+    Swap either lands, creatures, or artifacts between players
+    during any upkeep (see Bugs)
+  Strategy: totally chaotic card. Artifact Creatures seems to be the worst
+    off, being that they are both artifacts AND creatures. Be sure that your
+    lands are tapped and when Power Struggle activates, it could swap a land
+    for the opponents. Note that if it chooses to swap a type of card that
+    one player does not control, nothing happens.
+
+  Aswan Jaguar, 1GG, Summon Jaguar (2/2)
+    When put into play pick a random type of creature that they player has
+    in deck or graveyard.
+    GG+T: kill a creature in play of the type that Jaguar is hunting.
+  Strategy: Most useful of the Astral Cards, save the Necropolis. Works
+    well in groups.
+
+  Orcish Catapult, XRR, Instant
+    Distribute X -1/0 counters to random creatures of target player.
+  Strategy: Another useful card, great for generally weakening the opponents
+    creatures.
+
+  Gem Bazaar, Land
+    T: add a random color to controllers mana pool (see bugs)
+  Strategy: Useful in multiple color decks
+
+  Necropolis of Azar, 2BB, Enchantment
+  Whenever a creature goes to the graveyard from play add a Counter to
+  Necropolis. (see bugs)
+    5+remove a counter: Put into play a spawn Token into play on
+    controllers side. a Spawn Token is a black creature having a power and
+    toughness randomly picked between 1 and 3.
+  Strategy: Wonderful card, a little expensive to bring into play and use.
+
+==============================================================================
+4.2 What expansions are in Magic: The Gathering?
+==============================================================================
+
+  The only 'expansions' that can be used in this game are the Astral Set
+  and the Restricted cards, (and 4th Edition)
+
+  From the files in the directory (see 5.4) There are some following card
+  sets already set up: Alpha/Beta/Unlimited, Arabian Nights, Antiquities,
+  Legends, and the Dark. The plans to add other expansions are yet unknown.
+
+==============================================================================
+4.3 Where are the Multi-Lands?
+==============================================================================
+
+  The Multi-lands are not in Magic the Gathering because they were
+  removed from the 4th edition set, and they are not considered
+  Restricted.
+
+==============================================================================
+4.4 I can't use this card properly!
+==============================================================================
+
+  Certain cards are difficult to use with the interface. Here is an easy
+  method to properly use these cards. The interface DOES NOT stop for
+  some optional effects during Draw or Upkeep.
+
+------------------------------------------------------------------------------
+4.4.1 Land Tax
+------------------------------------------------------------------------------
+
+  First put a lock on your Upkeep phase. If you have fewer lands in play
+  than your opponent, Land Tax will have the name of the card in yellow.
+  Click on Land Tax to draw 3 basic lands from your deck.
+
+------------------------------------------------------------------------------
+4.4.2 Shapeshifter
+------------------------------------------------------------------------------
+
+  The computer does not prompt you every upkeep to change the
+  shapeshifter's power/toughness. To do this you must put a lock on
+  Upkeep BEFORE the turn you want to change the power/toughness. During
+  Upkeep, click on the shapeshifter.
+
+------------------------------------------------------------------------------
+4.4.3 Sylvan Library
+------------------------------------------------------------------------------
+
+  When your draw phase rolls around, you will get the face down card in your
+  hand (with the orange line:draw a card) and your Sylvan Library should
+  have a yellow name now, indicating that it can be used currently.
+
+  Do not click DONE!
+
+  Click on the face down card, indicating that you want to use your normal
+  draw. The game will ask for fast effects, you decline and the card will
+  appear in your hand face up.
+  Now click on the Sylvan Library, two cards will appear in your hand and
+  you will be prompted which of the three cards you want to put back/pay life.
+
+  Ingo Warnke <ingo.warnke@mathematik.uni-rostock.de>
+==============================================================================
+4.5 Are there any hidden cards?
+==============================================================================
+
+  Yes. There are in fact... Taking a look at the files (see FILES) shows
+  that extra astral cards exist.
+
+  There are 9 Land Cards hidden in the game:
+  Red Guild, Blue Guild, White Guild, Green Guild, Black Guild,
+  Artificer's Guild, Bright Society, Grey Society, and Dark Society.
+
+    I know that the Guilds are for multiplayer, and I assume the Societies
+    are also.
+
+  There are 4 'other' cards in the same section:
+  Gladiator, Master, Royalty, and Veteran.
+
+  Also included is the 5 cards for the MTG books:
+  Arena, Mana Crypt, Nalathni Dragon, Sewers of Estark, Windseeker
+  Centaur, and Giant Badger.
+
+  Finally, there are some very strange cards!
+  MPS Logo, Across The Rhine, CivNet, Terror from the Deep (24/24
+  Creature!), and World Card!
+
+  I don't know how to get these cards, or if they are ever going to be
+  made playable.
+
+******************************************************************************
+*             5 - Everything else, and the Kitchen Sink.                     *
+******************************************************************************
+==============================================================================
+5.1 Tips
+==============================================================================
+
+  1) To turn off the sound in the duel (it goes faster) Rename the directory
+     DuelSounds to something else. To remove unnecessary overland sound
+     files, go to the Sounds directory and change all but following files:
+     rwalkl.wav, rwalkr.wav, bwalkl.wav, bwalkr.wav, kwalkl.wav,
+     kwalkr.wav, gwalkl.wav, gwalkr.wav, wwalkl.wav, wwalkr.wav.
+
+     Don't delete the files just incase there are other files needed,
+
+  2) Playing without the CD in the drive will reduce the number of crashes.
+     This is also the only way to turn off the music.
+
+  3) When more creatures are involved in an attack than can fit in the attack
+     window, you can use the white rat on the bone pile in the middle of the
+     attack window to scroll right/left.
+
+==============================================================================
+5.2 Quirks in the game
+==============================================================================
+
+  You cannot receive Mana Batteries or Celestial Prisms from the selection
+  screen in towns or from certain lairs..
+
+  What are Unique colorless cards? (Gem Bazaar?) Why is it there when
+  purchasing/receiving cards?
+
+  If the computer starts with a Keldon Warlord already in play, and they do
+  NOT go first, then the Keldon Warlord starts in the graveyard.
+
+==============================================================================
+5.3 That Wacky A.I.
+==============================================================================
+
+  The AI in general does lots of very strange, and sometimes illegal things.
+  Here is just a tiny sampling of interesting things it does.
+
+  Computer will pump creatures for 0 mana multiple times.
+
+  Computer will tap Mishra's Factory to get the mana to turn itself into
+  a creature .
+
+  Computer does not see Mishra's Factories or pumpable blockers as
+  potential block material. Instead it will go on attacking willy nilly.
+
+  Computer can't handle having two mana vaults in play. If one is tapped
+  and the other is not a strange thing happens. It sees that it can untap a
+  mana vault. So to save land, it tap a mana vault for 3 and one land for
+  a total of four mana. It uses that mana to untap the vault. Then it
+  checks again as sees that there still is another mana vault tapped. It
+  does this until it is out of land. The net result is that the computer
+  has no untapped lands, one tapped mana vault, one untapped vault, and 1
+  damage.
+
+  Computer will destroy an enchantment just to cast another of the same
+  type.
+
+  Computer will activate fast effects on cards that he has not casted yet.
+  The cards will be cast during his turn though. (example: computer used
+  Tawnos's Wand on an El-Hajjaj when there was no creature of that type in
+  play. After the effect resolves the computer casts the El-Hajjaj, and
+  the effect is on the card when it enters play)
+
+  Computer does not seem to know how to use Stone Giant properly. It
+  attempts to use it on random permenants, which fail.
+
+  Computer can cast enchantments on his graveyard...
+
+==============================================================================
+5.4 the files in the game
+==============================================================================
+
+  master.csv holds the artist name, rule text and quote for all the cards.
+    NOTE: this file is not correct for some of the Astral cards! Is this
+    file even used?
+
+  legacy.csv holds the 'legacy' effect cards generate when they are used or
+    go to the graveyard.
+
+  info.csv has the type, color, expansion, and casting cost of the cards.
+
+  There is one more .csv file, but it looks like garbage. Here is the format
+
+    0 1 59
+    a b c
+
+    a) this is the ID of the cards that are valid in this version of magic.
+
+    b) I have no idea, it ranges from 1 to 3.
+
+    c) I also have no idea, it might be an offset from a file for data or
+    picture information. It's probably for cards.dat.
+
+  Here is a breakdown of the cards.
+  cards 0-291 are Alpha/Beta/Unlimited cards. They have been fixed for 5th
+    edition.
+  292-390 are cards from the Dark Expansion.
+  391-465 are cards from the Arabian Nights Expansion.
+  466-550 are cards from the Antiquities expansion.
+  551-859 are cards from the Legends expansion.
+  860-871 are the 12 Astral Cards.
+  873-884 are unknown cards.
+  885-892 are token creatures.
+  893-898 are cards from the 'book' expansion
+  899-929 are null cards.
+  930-952 are duplicates of cards, probably used for testing.
+  953 is the MPS LOGO card. It is a 0 casting cost artifact.
+  954-959 are null cards.
+  960-962 are 'program' cards. If you have Across the Rhine, CivNet, or
+      X-Com Terror of the Deep then these cards might activate.
+  963 is the World Card. What is it?
+  964-997 are null cards.
+  998-1249 are legacy effect cards.
+
+******************************************************************************
+*                          6 - Version Control                               *
+******************************************************************************
+==============================================================================
+6.1 What's New in this FAQ?
+==============================================================================
+
+  Most of the new information concerns the new patch. The only things that
+  are NOT new is section 4, and parts of section 1.
+
+==============================================================================
+6.2 Old Versions
+==============================================================================
+
+  1.3  [upcoming] will contain bugs from the patch.
+  1.2  FAQ for the new patch. Includes ALL fixes/problems from the Patch.
+  1.1  Fixed:
+    1.6  Removing CD to turn off animations
+    1.15 Teminalogy
+    1.24 Added New Section.
+    1.25 Added New Section.
+    3.1  Got the right page for the memory leak bug. Added new
+             sections.
+    3.1  Modified No Stats Bug, added new bug
+    3.2  Added new Bug
+    3.4  Morale not a bug, added Mana Flare.
+    3.6  Added new section.
+       changed OOP to Restricted, makes more sence.
+  1.0  Added Section 6 and send it out on the Internet.
+  0.3a Added sections 3 through 5
+  0.2a Added sections 1 and 2
+  0.1a Just a quick hack. Only had bugs.
+
+  Have questions? Want to see something in this FAQ? Mail me at
+     coedana@everest.cclabs.missouri.edu.
+
+  -Dana Huyler

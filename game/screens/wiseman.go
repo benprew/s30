@@ -45,6 +45,21 @@ func (s *WisemanScreen) IsFramed() bool {
 	return false
 }
 
+// ==============================================================================
+// 1.13 What do these Wise Men do?
+// ==============================================================================
+//
+//   If you are currently on a quest, you can talk to the wise men in
+//   the villages/towns. On the rare occasion you will get a nice gift. The
+//   following is a listing of what you can get from wise men.
+//
+//   1. A story (taken from the introduction) There are about 5 of these..
+//   2. +2 lives in the next duel
+//   3. A dungeon clue
+//   4. A deck of a creature from a particular color
+//   5. Tell you where a world magic is.
+//   6. Give you a card for the next duel.
+
 func NewWisemanScreen(city *domain.City, player *domain.Player, level *world.Level) *WisemanScreen {
 	bgImg, err := imageutil.LoadImage(assets.Wiseman_png)
 	if err != nil {

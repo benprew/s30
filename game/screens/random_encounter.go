@@ -42,6 +42,35 @@ type RandomEncounterScreen struct {
 	DoneButton *elements.Button
 }
 
+// ==============================================================================
+// 1.22 What are Lairs?
+// ==============================================================================
+//
+//   Lairs are one of five different buildings that appear on the world map.
+//   All you need to do is walk onto the lair and you get the prize in question.
+//   'named' areas are lairs that put up a dialog box that say something
+//   like 'You Found a Thieves Hideout!'.
+//
+//   Unnamed areas:
+//     Gain one land of the appropriate color (island/plains...etc)
+//     Gain a card of the appropriate color (usually a rare)
+//     Gain an artifact
+//
+//   Named areas: Sometimes you can also gain a card or artifact from these.
+//     Thieves Hideout: +500 Gold
+//     Oasis of Mouldoon: Trade a card in your deck for +5 lives in the
+//         next duel
+//     Ruined Tower: Gain a Dungeon Clue.
+//     Diamond Mine: trade random amulets for cards.
+//     Gem Cutter Guild: Buy amulets for 200 gold each.
+//     Guardian Ghost: Trade a random amulet for a look at a random color
+//     Spectral Arena: Duel a creature for rare/astral cards.
+//     Lost City of El'Arkan: Gain 1 amulet of each color
+//     Nomad's Bazaar: Purchase cards at normal cost.
+//
+//   The Lost City and Thieves Hideout have a chance of taking gold/amulets
+//   depending on the level of difficulty.
+
 func NewRandomEncounterScreen(player *domain.Player, landName string, terrainType int) *RandomEncounterScreen {
 	card := domain.FindCardByName(landName)
 	if card != nil {
