@@ -191,7 +191,6 @@ func (cj *CardJSON) ToCard() *Card {
 		CardType:          parseCardType(cj.TypeLine),
 		TypeLine:          cj.TypeLine,
 		Subtypes:          cj.Subtypes,
-		Abilities:         cj.Abilities,
 		Text:              cj.Text,
 		Power:             power,
 		Toughness:         toughness,

@@ -102,7 +102,6 @@ type Card struct {
 	CardType          CardType
 	TypeLine          string
 	Subtypes          []string
-	Abilities         []string
 	Text              string
 	Power             int // -1 means variable
 	Toughness         int // -1 means variable

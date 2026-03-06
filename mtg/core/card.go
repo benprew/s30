@@ -559,9 +559,6 @@ func (c *Card) DeepCopy() *Card {
 	newCard.Subtypes = make([]string, len(c.Subtypes))
 	copy(newCard.Subtypes, c.Subtypes)
 
-	newCard.Abilities = make([]string, len(c.Abilities))
-	copy(newCard.Abilities, c.Abilities)
-
 	newCard.ParsedAbilities = make([]domain.ParsedAbility, len(c.ParsedAbilities))
 	copy(newCard.ParsedAbilities, c.ParsedAbilities)
 
