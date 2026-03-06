@@ -23,7 +23,7 @@ var labeledBlankCards sync.Map
 var blankCardOnce sync.Once
 var blankCardImage *ebiten.Image
 
-const cardTargetWidth = 250
+const cardTargetWidth = 228
 
 func blankCard() *ebiten.Image {
 	blankCardOnce.Do(func() {
