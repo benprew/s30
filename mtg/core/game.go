@@ -110,6 +110,15 @@ func (g *GameState) Resolve(item *StackItem) error {
 	c := item.Card
 	events := item.Events
 
+	if len(events) == 0 && c != nil {
+		for _, a := range c.CardActions() {
+			if item.Target != nil {
+				a.AddTarget(item.Target)
+			}
+			events = append(events, a)
+		}
+	}
+
 	for _, e := range events {
 		e.Resolve()
 	}
@@ -366,15 +375,52 @@ func (g *GameState) CleanupPhase(player *Player) {
 func (g *GameState) UntapPhase(player *Player) {
 	for i := range player.Battlefield {
 		card := player.Battlefield[i]
+		if !card.canUntap() {
+			g.debugf("  %s doesn't untap\n", card.Name())
+			card.Active = true
+			continue
+		}
 		card.Tapped = false
 		card.Active = true
 	}
 }
 
 func (g *GameState) UpkeepPhase(player *Player) {
-	// TODO Process upkeep triggers
 	g.debugf("UpkeepPhase: running stack\n")
+	g.processUntapCosts(player)
 	g.RunStack()
+}
+
+func (g *GameState) processUntapCosts(player *Player) {
+	for _, card := range player.Battlefield {
+		untapCost := card.getUntapCost()
+		if untapCost == "" {
+			continue
+		}
+		if !g.canAffordMana(player, untapCost) {
+			continue
+		}
+
+		shouldPay := false
+		if player.IsAI {
+			shouldPay = true
+		} else {
+			g.debugf("  %s: offering to pay %s to untap %s\n", player.Name(), untapCost, card.Name())
+			action := g.WaitForPlayerInput(player)
+			shouldPay = action.Type == ActionActivateAbility
+		}
+
+		if shouldPay {
+			if err := g.TapManaSourcesFor(player, untapCost); err != nil {
+				continue
+			}
+			if err := player.ManaPool.Pay(untapCost); err != nil {
+				continue
+			}
+			card.Tapped = false
+			g.debugf("  %s paid %s to untap %s\n", player.Name(), untapCost, card.Name())
+		}
+	}
 }
 
 func (g *GameState) DrawPhase(player *Player) {

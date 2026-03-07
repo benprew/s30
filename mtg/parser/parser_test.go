@@ -721,3 +721,55 @@ func TestPreprocessCardNameReplacement(t *testing.T) {
 		t.Errorf("expected 1 damage, got %d", dmg.Amount)
 	}
 }
+
+func TestParseParalyze(t *testing.T) {
+	p := NewParser()
+	text := "Enchant creature\nWhen this Aura enters, tap enchanted creature.\nEnchanted creature doesn't untap during its controller's untap step.\nAt the beginning of the upkeep of enchanted creature's controller, that player may pay {4}. If the player does, untap the creature."
+	result := p.Parse("Paralyze", text)
+
+	if len(result.Unparsed) != 0 {
+		t.Errorf("expected no unparsed text, got %v", result.Unparsed)
+	}
+	if len(result.Abilities) != 5 {
+		t.Fatalf("expected 5 abilities, got %d", len(result.Abilities))
+	}
+
+	etb := result.Abilities[1]
+	if etb.Type != AbilityTypeTriggered {
+		t.Errorf("expected Triggered for ETB tap, got %s", etb.Type)
+	}
+	tapEffect, ok := etb.Effect.(*effects.TapEffect)
+	if !ok {
+		t.Fatalf("expected TapEffect for ETB, got %T", etb.Effect)
+	}
+	if !tapEffect.TapTarget {
+		t.Error("expected TapTarget to be true")
+	}
+
+	doesNotUntap := result.Abilities[2]
+	if doesNotUntap.Type != AbilityTypeStatic {
+		t.Errorf("expected Static for doesn't untap, got %s", doesNotUntap.Type)
+	}
+	dnu, ok := doesNotUntap.Effect.(*effects.TapEffect)
+	if !ok {
+		t.Fatalf("expected TapEffect for doesn't untap, got %T", doesNotUntap.Effect)
+	}
+	if !dnu.DoesNotUntap {
+		t.Error("expected DoesNotUntap to be true")
+	}
+
+	upkeep := result.Abilities[3]
+	if upkeep.Type != AbilityTypeTriggered {
+		t.Errorf("expected Triggered for upkeep payment, got %s", upkeep.Type)
+	}
+	if upkeep.Trigger == nil || upkeep.Trigger.Type != TriggerUpkeep {
+		t.Error("expected Upkeep trigger")
+	}
+	uc, ok := upkeep.Effect.(*effects.TapEffect)
+	if !ok {
+		t.Fatalf("expected TapEffect for upkeep, got %T", upkeep.Effect)
+	}
+	if uc.UntapCost != "{4}" {
+		t.Errorf("expected UntapCost {4}, got %s", uc.UntapCost)
+	}
+}

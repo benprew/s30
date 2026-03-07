@@ -175,6 +175,31 @@ func (p *Parser) registerAuraPatterns() {
 	)
 
 	p.RegisterPattern(
+		"aura-etb-tap",
+		regexp.MustCompile(`(?i)^when\s+this\s+aura\s+enters,?\s+tap\s+enchanted\s+creature$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:    AbilityTypeTriggered,
+				Trigger: &Trigger{Type: TriggerETB},
+				Effect:  &effects.TapEffect{TapTarget: true},
+				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: 1, Condition: "enchanted"},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"enchanted-doesnt-untap",
+		regexp.MustCompile(`(?i)^enchanted\s+creature\s+doesn'?t\s+untap\s+during\s+its\s+controller'?s\s+untap\s+step$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:   AbilityTypeStatic,
+				Effect: &effects.TapEffect{DoesNotUntap: true},
+				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: 1, Condition: "enchanted"},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
 		"enchanted-creature-has-keyword",
 		regexp.MustCompile(`(?i)^enchanted creature has (\w+)$`),
 		func(matches []string, cardName string) (*ParsedAbility, error) {
@@ -692,6 +717,30 @@ func (p *Parser) registerTriggeredPatterns() {
 				Trigger:    &Trigger{Type: TriggerCombatDmg, Condition: "attacks"},
 				TargetSpec: targetSpec,
 				RawText:    effectText,
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"upkeep-may-pay-untap",
+		regexp.MustCompile(`(?i)^at\s+the\s+beginning\s+of\s+(?:the\s+)?upkeep\s+of\s+enchanted\s+creature'?s\s+controller,?\s+that\s+player\s+may\s+pay\s+`+costPattern),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type:    AbilityTypeTriggered,
+				Trigger: &Trigger{Type: TriggerUpkeep, Condition: "enchanted"},
+				Effect:  &effects.TapEffect{UntapCost: matches[1]},
+				TargetSpec: &TargetSpec{Type: TargetTypeCreature, Count: 1, Condition: "enchanted"},
+			}, nil
+		},
+	)
+
+	p.RegisterPattern(
+		"if-player-does-untap",
+		regexp.MustCompile(`(?i)^if\s+the\s+player\s+does,?\s+untap\s+the\s+creature$`),
+		func(matches []string, cardName string) (*ParsedAbility, error) {
+			return &ParsedAbility{
+				Type: AbilityTypeStatic,
+				RawText: "if the player does, untap the creature",
 			}, nil
 		},
 	)

@@ -132,6 +132,9 @@ func (p *Player) AddToughnessBoost(int) {
 func (p *Player) MarkDestroyed() {
 }
 
+func (p *Player) SetTapped(bool) {
+}
+
 func (p *Player) Notify() {
 }
 

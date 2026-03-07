@@ -16,6 +16,7 @@ type Targetable interface {
 	AddPowerBoost(int)
 	AddToughnessBoost(int)
 	MarkDestroyed()
+	SetTapped(bool)
 }
 
 type Event interface {

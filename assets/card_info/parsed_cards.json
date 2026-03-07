@@ -8406,6 +8406,78 @@
           "Condition": "enchant"
         },
         "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Triggered",
+        "Cost": null,
+        "Effect": {
+          "TapTarget": true,
+          "DoesNotUntap": false,
+          "UntapCost": ""
+        },
+        "Keywords": null,
+        "Trigger": {
+          "Type": "EntersTheBattlefield",
+          "Condition": ""
+        },
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "When this Aura enters, tap enchanted creature"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": {
+          "TapTarget": false,
+          "DoesNotUntap": true,
+          "UntapCost": ""
+        },
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "Enchanted creature doesn't untap during its controller's untap step"
+      },
+      {
+        "Type": "Triggered",
+        "Cost": null,
+        "Effect": {
+          "TapTarget": false,
+          "DoesNotUntap": false,
+          "UntapCost": "{4}"
+        },
+        "Keywords": null,
+        "Trigger": {
+          "Type": "Upkeep",
+          "Condition": "enchanted"
+        },
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "At the beginning of the upkeep of enchanted creature's controller, that player may pay {4}"
+      },
+      {
+        "Type": "Static",
+        "Cost": null,
+        "Effect": null,
+        "Keywords": null,
+        "Trigger": null,
+        "TargetSpec": null,
+        "RawText": "If the player does, untap the creature"
       }
     ]
   },
@@ -11153,6 +11225,28 @@
           "Condition": "enchant"
         },
         "RawText": "Enchant creature"
+      },
+      {
+        "Type": "Triggered",
+        "Cost": null,
+        "Effect": {
+          "TapTarget": true,
+          "DoesNotUntap": false,
+          "UntapCost": ""
+        },
+        "Keywords": null,
+        "Trigger": {
+          "Type": "EntersTheBattlefield",
+          "Condition": ""
+        },
+        "TargetSpec": {
+          "Type": "creature",
+          "Controller": "",
+          "Subtype": "",
+          "Count": 1,
+          "Condition": "enchanted"
+        },
+        "RawText": "When this Aura enters, tap enchanted creature"
       }
     ]
   },

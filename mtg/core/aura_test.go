@@ -772,3 +772,155 @@ func TestWildGrowthAddsManaAfterResolve(t *testing.T) {
 		t.Errorf("expected 2 green mana (forest + wild growth), got %d", greenCount)
 	}
 }
+
+func makeParalyze(id EntityID, owner *Player) *Card {
+	return makeAura(id, "Paralyze", owner, []domain.ParsedAbility{
+		{
+			Type:       "Static",
+			TargetSpec: &domain.ParsedTargetSpec{Type: targetTypeCreature, Count: 1, Condition: "enchant"},
+			RawText:    "Enchant creature",
+		},
+		{
+			Type:    "Triggered",
+			Trigger: &domain.ParsedTrigger{Type: "EntersTheBattlefield"},
+			Effect:  &domain.ParsedEffect{TapTarget: true},
+			TargetSpec: &domain.ParsedTargetSpec{Type: targetTypeCreature, Count: 1, Condition: "enchanted"},
+		},
+		{
+			Type:   "Static",
+			Effect: &domain.ParsedEffect{DoesNotUntap: true},
+			TargetSpec: &domain.ParsedTargetSpec{Type: targetTypeCreature, Count: 1, Condition: "enchanted"},
+		},
+		{
+			Type:    "Triggered",
+			Trigger: &domain.ParsedTrigger{Type: "Upkeep", Condition: "enchanted"},
+			Effect:  &domain.ParsedEffect{UntapCost: "{4}"},
+			TargetSpec: &domain.ParsedTargetSpec{Type: targetTypeCreature, Count: 1, Condition: "enchanted"},
+		},
+	})
+}
+
+func TestParalyzeTapsOnResolve(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+	creature := makeCreature(100, "Grizzly Bears", 2, 2, player)
+	creature.CurrentZone = ZoneHand
+	player.Hand = append(player.Hand, creature)
+	player.MoveTo(creature, ZoneBattlefield)
+
+	paralyze := makeParalyze(101, players[1])
+	players[1].Hand = append(players[1].Hand, paralyze)
+
+	item := &StackItem{Player: players[1], Card: paralyze, Target: creature}
+	if err := game.Resolve(item); err != nil {
+		t.Fatalf("Resolve failed: %v", err)
+	}
+
+	if !creature.Tapped {
+		t.Error("expected creature to be tapped after Paralyze resolves")
+	}
+	if paralyze.AttachedTo != creature {
+		t.Error("expected Paralyze attached to creature")
+	}
+}
+
+func TestParalyzeDoesNotUntap(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+	creature := makeCreature(100, "Grizzly Bears", 2, 2, player)
+	creature.CurrentZone = ZoneBattlefield
+	creature.Tapped = true
+	player.Battlefield = append(player.Battlefield, creature)
+
+	paralyze := makeParalyze(101, players[1])
+	paralyze.CurrentZone = ZoneBattlefield
+	players[1].Battlefield = append(players[1].Battlefield, paralyze)
+	paralyze.AttachedTo = creature
+	creature.Attachments = append(creature.Attachments, paralyze)
+
+	game.UntapPhase(player)
+
+	if !creature.Tapped {
+		t.Error("expected creature to remain tapped during untap phase (Paralyze effect)")
+	}
+}
+
+func TestParalyzePayToUntap(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+	creature := makeCreature(100, "Grizzly Bears", 2, 2, player)
+	creature.CurrentZone = ZoneBattlefield
+	creature.Tapped = true
+	player.Battlefield = append(player.Battlefield, creature)
+
+	paralyze := makeParalyze(101, players[1])
+	paralyze.CurrentZone = ZoneBattlefield
+	players[1].Battlefield = append(players[1].Battlefield, paralyze)
+	paralyze.AttachedTo = creature
+	creature.Attachments = append(creature.Attachments, paralyze)
+
+	for range 4 {
+		addCardToBattlefield(player, "Forest", EntityID(200+len(player.Battlefield)))
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		// AI auto-pays, so no Paralyze prompt — just handle RunStack priority
+		<-player.WaitingChan
+		player.InputChan <- PlayerAction{Type: ActionPassPriority}
+		<-players[1].WaitingChan
+		players[1].InputChan <- PlayerAction{Type: ActionPassPriority}
+	}()
+
+	game.UpkeepPhase(player)
+	<-done
+
+	if creature.Tapped {
+		t.Error("expected creature to be untapped after AI auto-pays {4}")
+	}
+}
+
+func TestParalyzeCannotPayNoUntap(t *testing.T) {
+	players := createTestPlayer(2)
+	game := NewGame(players)
+	game.StartGame()
+
+	player := players[0]
+	creature := makeCreature(100, "Grizzly Bears", 2, 2, player)
+	creature.CurrentZone = ZoneBattlefield
+	creature.Tapped = true
+	player.Battlefield = append(player.Battlefield, creature)
+
+	paralyze := makeParalyze(101, players[1])
+	paralyze.CurrentZone = ZoneBattlefield
+	players[1].Battlefield = append(players[1].Battlefield, paralyze)
+	paralyze.AttachedTo = creature
+	creature.Attachments = append(creature.Attachments, paralyze)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		// No lands, can't pay — AI skips, then RunStack priority
+		<-player.WaitingChan
+		player.InputChan <- PlayerAction{Type: ActionPassPriority}
+		<-players[1].WaitingChan
+		players[1].InputChan <- PlayerAction{Type: ActionPassPriority}
+	}()
+
+	game.UpkeepPhase(player)
+	<-done
+
+	if !creature.Tapped {
+		t.Error("expected creature to remain tapped when cannot afford {4}")
+	}
+}

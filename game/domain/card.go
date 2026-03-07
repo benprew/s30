@@ -64,6 +64,9 @@ type ParsedEffect struct {
 	ETBCounters     int      `json:"ETBCounters"`
 	CounterPower    int      `json:"CounterPower"`
 	CounterTough    int      `json:"CounterTough"`
+	TapTarget       bool     `json:"TapTarget,omitempty"`
+	DoesNotUntap    bool     `json:"DoesNotUntap,omitempty"`
+	UntapCost       string   `json:"UntapCost,omitempty"`
 }
 
 type ParsedTrigger struct {

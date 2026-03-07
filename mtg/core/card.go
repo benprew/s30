@@ -81,8 +81,15 @@ func abilityToEvent(ability *domain.ParsedAbility) effects.Event {
 	}
 
 	// Aura continuous effects are applied through attachments, not one-shot events
+	// But triggered ETB effects on auras (like Paralyze's tap) should still resolve
 	if ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted {
-		return nil
+		if ability.Trigger == nil || ability.Trigger.Type != "EntersTheBattlefield" {
+			return nil
+		}
+	}
+
+	if ability.Effect.TapTarget {
+		return &effects.TapEffect{TapTarget: true}
 	}
 
 	if ability.Effect.Amount > 0 {
@@ -124,6 +131,10 @@ func (c *Card) specialCaseAction() []effects.Event {
 		return []effects.Event{}
 	}
 	return nil
+}
+
+func (c *Card) SetTapped(tapped bool) {
+	c.Tapped = tapped
 }
 
 func (c *Card) ReceiveDamage(amount int) {
@@ -277,6 +288,28 @@ func (c *Card) auraToughnessBonus() int {
 		}
 	}
 	return bonus
+}
+
+func (c *Card) canUntap() bool {
+	for _, aura := range c.Attachments {
+		for _, ability := range aura.ParsedAbilities {
+			if ability.Effect != nil && ability.Effect.DoesNotUntap {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (c *Card) getUntapCost() string {
+	for _, aura := range c.Attachments {
+		for _, ability := range aura.ParsedAbilities {
+			if ability.Trigger != nil && ability.Trigger.Type == "Upkeep" && ability.Effect != nil && ability.Effect.UntapCost != "" {
+				return ability.Effect.UntapCost
+			}
+		}
+	}
+	return ""
 }
 
 func (c *Card) ClearEndOfTurnEffects() {
