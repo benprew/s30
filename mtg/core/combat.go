@@ -10,7 +10,7 @@ import (
 func (g *GameState) AvailableAttackers(player *Player) []*Card {
 	attackers := []*Card{}
 	for _, card := range player.Battlefield {
-		if card.CardType == domain.CardTypeCreature && card.IsActive() && !g.isAlreadyAttacking(card) {
+		if card.CardType == domain.CardTypeCreature && card.IsActive() && !g.isAlreadyAttacking(card) && !card.HasKeyword(effects.KeywordDefender) {
 			attackers = append(attackers, card)
 		}
 	}
@@ -32,6 +32,9 @@ func (g *GameState) DeclareAttacker(attacker *Card) error {
 	}
 	if !attacker.IsActive() {
 		return fmt.Errorf("creature cannot attack: tapped or inactive")
+	}
+	if attacker.HasKeyword(effects.KeywordDefender) {
+		return fmt.Errorf("creatures with defender cannot attack")
 	}
 	if !attacker.HasKeyword(effects.KeywordVigilance) {
 		attacker.Tapped = true
