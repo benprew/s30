@@ -470,12 +470,20 @@ func (c *Card) GetActivatedAbilities() []int {
 	return indices
 }
 
+func joinManaTypes(types []string) string {
+	var r []rune
+	for _, t := range types {
+		r = append(r, []rune(t)...)
+	}
+	return string(r)
+}
+
 func (c *Card) GetManaProduction() []string {
 	var result []string
 	for _, ability := range c.ParsedAbilities {
 		if ability.Type == "Mana" && ability.Cost != nil && ability.Cost.Tap {
 			if ability.Effect != nil && len(ability.Effect.ManaTypes) > 0 {
-				result = append(result, ability.Effect.ManaTypes...)
+				result = append(result, joinManaTypes(ability.Effect.ManaTypes))
 			}
 		}
 	}
@@ -486,7 +494,7 @@ func (c *Card) GetManaProduction() []string {
 		for _, ability := range aura.ParsedAbilities {
 			if ability.Type == "Mana" && ability.TargetSpec != nil && ability.TargetSpec.Condition == conditionEnchanted {
 				if ability.Effect != nil && len(ability.Effect.ManaTypes) > 0 {
-					result = append(result, ability.Effect.ManaTypes...)
+					result = append(result, joinManaTypes(ability.Effect.ManaTypes))
 				}
 			}
 		}

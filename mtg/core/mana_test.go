@@ -366,6 +366,46 @@ func TestManaPool_DrainEmpty(t *testing.T) {
 	}
 }
 
+func TestBirdsOfParadiseProducesOneMana(t *testing.T) {
+	player := &Player{
+		ID:          0,
+		LifeTotal:   20,
+		Hand:        []*Card{},
+		Battlefield: []*Card{},
+		Graveyard:   []*Card{},
+		Turn:        &Turn{Phase: PhaseMain1},
+		InputChan:   make(chan PlayerAction, 100),
+	}
+	game := NewGame([]*Player{player})
+
+	birds := addCardToBattlefield(player, "Birds of Paradise", 1)
+	addCardToBattlefield(player, "Forest", 2)
+
+	bolt := NewCardFromDomain(domain.FindCardByName("Lightning Bolt"), 3, player)
+	ogre := NewCardFromDomain(domain.FindCardByName("Gray Ogre"), 4, player)
+
+	pool := game.AvailableMana(player, player.ManaPool)
+	if len(pool) != 2 {
+		t.Fatalf("expected 2 mana sources (birds + forest), got %d: %c", len(pool), pool)
+	}
+
+	if !pool.CanPay(bolt.ManaCost) {
+		t.Errorf("should be able to pay for Lightning Bolt (%s) with Birds + Forest", bolt.ManaCost)
+	}
+	if pool.CanPay(ogre.ManaCost) {
+		t.Errorf("should not be able to pay for Gray Ogre (%s) with only 2 mana", ogre.ManaCost)
+	}
+
+	err := game.TapManaSourcesFor(player, bolt.ManaCost)
+	if err != nil {
+		t.Errorf("should be able to tap Birds for {R}: %v", err)
+	}
+
+	if !birds.Tapped {
+		t.Errorf("expected at least one source tapped")
+	}
+}
+
 func TestHybridManaParseBasic(t *testing.T) {
 	pool := ManaPool{}
 	cost := pool.ParseCost("{R/W}")

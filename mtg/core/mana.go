@@ -37,24 +37,40 @@ func (m *ManaPool) RemoveMana(manaType rune) bool {
 				return true
 			}
 		}
-		// If no explicit colorless source, try to remove any single-color source
-		colors := []rune{'W', 'U', 'B', 'R', 'G'}
+		// Try digit sources (e.g. ['2'] from Sol Ring) - decrement the digit
 		for i, mt := range *m {
-			if len(mt) == 1 {
-				for _, color := range colors {
-					if mt[0] == color {
-						*m = slices.Delete((*m), i, i+1)
-						return true
-					}
+			if len(mt) == 1 && unicode.IsDigit(mt[0]) && mt[0] > '0' {
+				if mt[0] == '1' {
+					*m = slices.Delete((*m), i, i+1)
+				} else {
+					(*m)[i] = []rune{mt[0] - 1}
 				}
+				return true
+			}
+		}
+		// If no colorless source, try to remove any colored source
+		for i, mt := range *m {
+			if len(mt) >= 1 && slices.ContainsFunc(mt, func(r rune) bool {
+				return r == 'W' || r == 'U' || r == 'B' || r == 'R' || r == 'G'
+			}) {
+				*m = slices.Delete((*m), i, i+1)
+				return true
 			}
 		}
 		// Could not find any source for colorless
 		return false
 	} else {
 		// If the requested manaType is a specific color (W, U, B, R, G)
+		// First try exact single-color sources
 		for i, mt := range *m {
 			if len(mt) == 1 && mt[0] == manaType {
+				*m = slices.Delete((*m), i, i+1)
+				return true
+			}
+		}
+		// Then try multi-color sources that include this color
+		for i, mt := range *m {
+			if len(mt) > 1 && slices.Contains(mt, manaType) {
 				*m = slices.Delete((*m), i, i+1)
 				return true
 			}
@@ -106,79 +122,9 @@ func (m ManaPool) ParseCost(cost string) map[rune]int {
 }
 
 func (m ManaPool) CanPay(cost string) bool {
-	requiredMana := m.ParseCost(cost)
-
-	availableColored := make(map[rune]int)
-	availableColorlessFromSources := 0 // Mana from sources like Sol Ring ("2")
-	requiredColorless := requiredMana['C']
-
-	// Count available mana from sources in the pool
-	for _, manaType := range m {
-		if len(manaType) == 1 {
-			r := manaType[0]
-			switch r {
-			case 'W', 'U', 'B', 'R', 'G':
-				availableColored[r]++
-			case 'C': // Source produces explicit colorless mana
-				availableColorlessFromSources++
-			default:
-				if r >= '0' && r <= '9' {
-					digitValue := int(r - '0')
-					availableColorlessFromSources += digitValue
-				}
-
-				// Ignore other single-rune types?
-			}
-		} else {
-			// This is a multi-rune source (like ['B', 'W']) or a digit string like []rune{'2'}.
-			// Let's handle digit strings here.
-			digitValue := 0
-			isDigitString := true
-			// Multi-rune sources like ['B', 'W'] are not counted for specific colors
-			// in this simplified model. They could potentially contribute to generic,
-			// but the current structure makes this hard to model correctly without
-			// a combinatorial check. Let's ignore them for now in the counts.
-			for _, r := range manaType {
-				if r < '0' || r > '9' {
-					isDigitString = false
-					break
-				}
-				digitValue = digitValue*10 + int(r-'0')
-			}
-			if isDigitString && len(manaType) > 0 {
-				availableColorlessFromSources += digitValue
-			}
-		}
-	}
-
-	// Check if available colored mana is sufficient for required colored mana
-	for manaType, required := range requiredMana {
-		if manaType == 'C' {
-			continue
-		}
-		if availableColored[manaType] < required {
-			return false
-		}
-	}
-
-	// Calculate mana available to pay for colorless
-	// This includes dedicated colorless sources and any excess colored mana
-	availableForColorless := availableColorlessFromSources
-	for manaType, available := range availableColored {
-		required := requiredMana[manaType] // requiredColored[manaType] will be 0 if not required
-		excess := available - required
-		if excess > 0 {
-			availableForColorless += excess // Excess colored mana can pay for colorless
-		}
-	}
-
-	// Check if available for colorless is sufficient for required colorless
-	if availableForColorless < requiredColorless {
-		return false
-	}
-
-	// If we passed all checks, we can pay
-	return true
+	poolCopy := make(ManaPool, len(m))
+	copy(poolCopy, m)
+	return poolCopy.tryPay(cost) == nil
 }
 
 func (g *GameState) AvailableMana(player *Player, pPool ManaPool) (pool ManaPool) {
@@ -196,17 +142,13 @@ func (g *GameState) AvailableMana(player *Player, pPool ManaPool) (pool ManaPool
 	return pool
 }
 
-func (m *ManaPool) Pay(cost string) error {
-	if !m.CanPay(cost) {
-		return fmt.Errorf("not enough mana to pay the cost")
-	}
-
+func (m *ManaPool) tryPay(cost string) error {
 	requiredMana := m.ParseCost(cost)
 
 	// First, pay for specific colored mana requirements
 	for manaType, count := range requiredMana {
 		if manaType == 'C' {
-			continue // Handle colorless separately
+			continue
 		}
 		for i := 0; i < count; i++ {
 			if !m.RemoveMana(manaType) {
@@ -224,4 +166,11 @@ func (m *ManaPool) Pay(cost string) error {
 	}
 
 	return nil
+}
+
+func (m *ManaPool) Pay(cost string) error {
+	if !m.CanPay(cost) {
+		return fmt.Errorf("not enough mana to pay the cost")
+	}
+	return m.tryPay(cost)
 }

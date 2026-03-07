@@ -62,9 +62,11 @@ func (g *GameState) ActivateManaAbility(player *Player, card *Card) error {
 
 	card.Tapped = true
 
+	var allTypes []rune
 	for _, manaType := range manaAbility.ManaTypes {
-		player.ManaPool.AddMana([]rune(manaType))
+		allTypes = append(allTypes, []rune(manaType)...)
 	}
+	player.ManaPool.AddMana(allTypes)
 
 	return nil
 }
