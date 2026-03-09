@@ -1,3 +1,7 @@
+* Fix cards like Basal Thrull that tap for mana
+
+*
+
 * Card Pool
 ** For cards that are VintageRestricted, don't show them in buycards, or give them as ante cards or use them in player's starting decks
 * Duel UI screen
@@ -551,6 +555,10 @@ See game/utils/httpzip/reader.go for a partial implementation
 
 * TODO Starting screens
 * TODO Saving the game
+Need a way to save and load the game. Includes building menus for saving/loading and a way to load/continue the game at start.
+
+** DONE Saved state in JSON
+CLOSED: [2026-03-08 Sun 15:28]
 Come up with a way to save the game state. You'll want to save the generated world (tiles and cities), the location of all current enements and the player object. Then implement a save function and write some tests.
 * DONE Antigravity CLI
 User provides prompt file and worktree name
@@ -673,6 +681,85 @@ List of world magics and gold cost:
 - After defeating an enemy select cards based on rarity. Common and uncommon cards should be given as rewards more often and rare cards should be less frequent. Reserved cards (Black Lotus, Moxen, etc) should never be given as rewards.
 
 * TODO dungeons
+In the original Shandalar there were dungeons hidden across the map/level, similar to random encounters, but there are a fixed number of dungeons for the game.
+
+Players can gain information about dungeons from creatures, Wise Men, or from Lairs. Three clues are given for each dungeon, the position on the map, what size/color of creatures it contains, and what effects are in play for the given dungeon.
+
+Dungeons contain the most powerful restricted cards as rewards.
+
+On entering the dungeon the game changed from an openworld game to a turn-based movement game where the enemies are static and the player walks in narrow hallways either being forced to fight the enemy or walk down a different hallway. At the end of some of these hallways would be rewards. Rewards could be a restricted card, or some gems and money
+
+With each higher level dungeons/castles are more populated.
+
+    There are four major events in dungeons/castles.
+
+  1) Creatures
+    The dungeon will give you a clue as to what the dungeon/castle
+  is populated by, this can be either large or small creatures of a given
+  color. The higher levels have more creatures. You do NOT get ante from
+  creatures in dungeons, and if you lose a duel in the dungeon you lose
+  your ante card AND get booted from the dungeon/castle. If you are in a
+  dungeon, and you did not get all the Restricted cards from the dungeon, then
+  the dungeon moves to a random location on the map.
+
+  2) Treasure chests
+    Treasure chests either hold Restricted cards or gold+amulets. In
+  castles there are NO Restricted cards.
+
+  3) Dice
+    These dice are give either advantages or disadvantages for the
+  next duel ONLY in the current dungeon/castle. If you get an advantage
+  and then leave, you lose the advantage. On the apprentance level you can
+  never get a disadvantage from dice. On higher levels you might get a
+  disadvantage.
+
+    There are two types of advantages
+      1) +X lives. This is additive(?) you get to keep this live
+    while in the dungeon/castle. In dungeons where life carries over, this
+    is necessary. the easier levels give you around 3-4, while the harder
+    ones give 1-2.
+      2) Start with a card. This can be anything from creatures, to
+    mana sources. On easier levels the cards given are usually powerful
+    creatures, while the harder levels give weaker creatures or moxes/mana
+    creatures.
+
+    There is one type of disadvantage
+      1) -X lives.
+
+  NOTE: if you leave the dungeon/castle any -vantanges you have are GONE.
+  You can bring -vantages into a dungeon or a castle just fine.
+
+  4) Scrolls
+    Scrolls are question given based on the cards in the game. If
+  the question is wrong, a creature appears in its place. On the easier
+  levels the questions have 5 possible choices, while harder ones usually
+  have more choices. NOTE: question take into account ONLY the starting
+  abilities of a creature. Goblin Balloon Brigade does not have flying for
+  the purposes of the scroll.
+
+  Examples of questions
+    1) which of these creatures has flying ability?
+    2) What special ability does this creature have?
+    3) what is the casting cost/power/toughness of this creature?
+
+
+If you leave a dungeon/castle, advantages given to you from the dice in a dungeon/castle are GONE. You can bring advantages into a dungeon or a castle just fine.
+
+Each dungeon/castle will have one card in play when you enter a duel.
+  This card is an enchantment of the color of the dungeon/castle or
+  non-creature artifact without upkeep. There will also be an additional
+  effect on high levels that forbid you from bringing in certain types
+  of cards.
+
+Note: If a dungeon forbids a certain type of card (like fast effects,
+  or white) then it forbids you from drawing that type of card from your
+  deck. BUT if that brings your deck below the minimum required for your
+  level it does not fill your deck up to the minimum with basic lands.
+
+Also, if you do not get all the cards from the dungeon, then it moves to a random location on the map. To find it again, you have to get another dungeon clue for that dungeon.
+
+
+
 -   make harder, fix life loss bug
 -   magic/chess puzzles? (Ex win this turn)
 
