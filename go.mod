@@ -3,8 +3,10 @@ module github.com/benprew/s30
 go 1.25.1
 
 require (
+	git.sr.ht/~cdcarter/mage-go v0.0.0-00010101000000-000000000000
 	github.com/BurntSushi/toml v1.5.0
 	github.com/aquilax/go-perlin v1.1.0
+	github.com/google/uuid v1.6.0
 	github.com/hajimehoshi/ebiten/v2 v2.8.6
 	github.com/klauspost/compress v1.18.0
 	golang.org/x/image v0.26.0
@@ -17,6 +19,8 @@ require (
 	github.com/go-text/typesetting v0.3.0 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
 	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 )
+
+replace git.sr.ht/~cdcarter/mage-go => ../mage-go

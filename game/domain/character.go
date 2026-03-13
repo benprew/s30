@@ -111,7 +111,7 @@ func directionToSpriteIndex(dirBits int) int {
 	}
 }
 
-func (c *Character) CalculateLifeFromLevel() int {
+func (c *Character) calculateLifeFromLevel() int {
 	if c.Level > 0 {
 		switch c.Level {
 		case 1:

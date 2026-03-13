@@ -167,6 +167,8 @@ func loadRogues() map[string]*Character {
 		r.PrimaryColor = primaryColor
 		r.ColorIdentity = colorIdentity
 
+		r.Life = r.calculateLifeFromLevel()
+
 		rogues[r.Name] = &r
 	}
 

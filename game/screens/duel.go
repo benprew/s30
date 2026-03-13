@@ -5,10 +5,13 @@ import (
 	"image"
 	"image/color"
 	"math"
-	"math/rand"
 	"strings"
 	"time"
 
+	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
+	_ "git.sr.ht/~cdcarter/mage-go/cards"
+	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
+	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai"
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
@@ -16,26 +19,20 @@ import (
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/benprew/s30/logging"
-	"github.com/benprew/s30/mtg/ai"
-	"github.com/benprew/s30/mtg/core"
-	"github.com/benprew/s30/mtg/effects"
+	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-var phaseNames = []core.Phase{
-	core.PhaseUntap,
-	core.PhaseUpkeep,
-	core.PhaseDraw,
-	core.PhaseMain1,
-	core.PhaseCombat,
-	core.PhaseMain2,
-	core.PhaseEnd,
-}
+const (
+	stepDeclareAttackers = "Declare Attackers"
+	stepDeclareBlockers  = "Declare Blockers"
+	stepCombatDamage     = "Combat Damage"
+	playerNameYou        = "You"
+)
 
 type duelPlayer struct {
-	core         *core.Player
 	name         string
 	boardBg      *ebiten.Image
 	handBg       *ebiten.Image
@@ -50,10 +47,13 @@ type DuelScreen struct {
 	lvl    *world.Level
 	idx    int
 
-	gameState *core.GameState
-	self      *duelPlayer
-	opponent  *duelPlayer
-	gameDone  chan struct{}
+	game     *mage.Game
+	human    *interactive.HumanPlayer
+	aiPlayer *ai.AIPlayer
+	lastMsg  *interactive.GameMsg
+
+	self     *duelPlayer
+	opponent *duelPlayer
 
 	phaseDefaultBg  *ebiten.Image
 	phaseActiveImgs []*ebiten.Image
@@ -69,7 +69,8 @@ type DuelScreen struct {
 	cardPreviewImg         *ebiten.Image
 	cardPreviewID          string
 	cardPreviewPlaceholder bool
-	cardPreviewCard        *core.Card
+	cardPreviewName        string
+	cardPreviewPerm        *interactive.PermanentState
 
 	mouseState     mouseStateType
 	mouseStartX    int
@@ -78,24 +79,28 @@ type DuelScreen struct {
 	dragTargetY    *int
 	dragOffsetX    int
 	dragOffsetY    int
-	draggingCardID core.EntityID
-	cardPositions  map[core.EntityID]image.Point
+	draggingCardID uuid.UUID
+	cardPositions  map[uuid.UUID]image.Point
 
 	cardImgCache map[cardImgKey]cardImgEntry
 
-	cardActions      map[core.EntityID][]core.PlayerAction
-	pendingAttackers map[core.EntityID]bool
-	pendingBlockers  map[core.EntityID]core.EntityID
-	selectedBlocker  core.EntityID
+	cardActions      map[uuid.UUID][]interactive.ActionOption
+	pendingAttackers map[uuid.UUID]bool
+	pendingBlockers  map[uuid.UUID]uuid.UUID
+	selectedBlocker  uuid.UUID
 
-	targetingCard    *core.Card
-	targetingActions map[int]core.PlayerAction
-	selectedTarget   core.Targetable
+	targetingCardID  uuid.UUID
+	targetingActions map[uuid.UUID]interactive.ActionOption
+	selectedTargetID uuid.UUID
+
+	cardImageMap map[string]*domain.Card
 
 	frameCount int
 	warningMsg string
 
 	anteCard *domain.Card
+
+	choiceRequest *interactive.ChoiceRequest
 }
 
 type mouseStateType int
@@ -107,7 +112,7 @@ const (
 )
 
 type cardImgKey struct {
-	id    core.EntityID
+	name  string
 	width int
 }
 
@@ -127,9 +132,10 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		selectedCardIdx:  -1,
 		anteCard:         anteCard,
 		cardImgCache:     make(map[cardImgKey]cardImgEntry),
-		cardPositions:    make(map[core.EntityID]image.Point),
-		pendingAttackers: make(map[core.EntityID]bool),
-		pendingBlockers:  make(map[core.EntityID]core.EntityID),
+		cardPositions:    make(map[uuid.UUID]image.Point),
+		pendingAttackers: make(map[uuid.UUID]bool),
+		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
+		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
 	}
 
 	s.initGameState()
@@ -143,29 +149,101 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 	return s
 }
 
+func buildCardImageMap(decks ...domain.Deck) map[string]*domain.Card {
+	m := make(map[string]*domain.Card)
+	for _, deck := range decks {
+		for card := range deck {
+			m[card.CardName] = card
+		}
+	}
+	return m
+}
+
 func (s *DuelScreen) initGameState() {
-	corePlayer := core.NewPlayer(1, s.player.Life, false)
-	corePlayer.Turn.Phase = core.PhaseMain1
-	corePlayer.AddDeck(s.player.GetDuelDeck())
-	rand.Shuffle(len(corePlayer.Library), func(i, j int) {
-		corePlayer.Library[i], corePlayer.Library[j] = corePlayer.Library[j], corePlayer.Library[i]
-	})
+	s.human = interactive.NewHumanPlayer("You")
+	s.human.SetLife(s.player.Life)
+	s.aiPlayer = ai.NewAIPlayer(s.enemy.Name())
+	s.aiPlayer.SetLife(s.enemy.Character.Life)
 
-	coreOpponent := core.NewPlayer(2, s.enemy.Character.CalculateLifeFromLevel(), true)
-	coreOpponent.AddDeck(s.enemy.Character.GetActiveDeck())
-	rand.Shuffle(len(coreOpponent.Library), func(i, j int) {
-		coreOpponent.Library[i], coreOpponent.Library[j] = coreOpponent.Library[j], coreOpponent.Library[i]
-	})
+	for card, count := range s.player.GetDuelDeck() {
+		for range count {
+			c, err := mage.CreateCard(card.CardName)
+			if err != nil {
+				logging.Printf(logging.Duel, "Failed to create card %s: %v\n", card.CardName, err)
+				continue
+			}
+			s.human.AddToLibrary(c)
+		}
+	}
+	for card, count := range s.enemy.Character.GetActiveDeck() {
+		for range count {
+			c, err := mage.CreateCard(card.CardName)
+			if err != nil {
+				logging.Printf(logging.Duel, "Failed to create card %s: %v\n", card.CardName, err)
+				continue
+			}
+			s.aiPlayer.AddToLibrary(c)
+		}
+	}
+	s.human.ShuffleLibrary()
+	s.aiPlayer.ShuffleLibrary()
 
-	s.self = &duelPlayer{core: corePlayer, name: "You"}
-	s.opponent = &duelPlayer{core: coreOpponent, name: s.enemy.Name()}
+	s.game = mage.NewGame(s.human, s.aiPlayer)
 
-	s.gameState = core.NewGame([]*core.Player{corePlayer, coreOpponent})
-	s.gameState.StartGame()
+	logging.Printf(logging.Duel, "Drawing cards\n")
 
-	s.gameDone = make(chan struct{})
-	go s.runOpponentAI()
-	go s.runGameLoop()
+	for range 7 {
+		s.human.DrawCard()
+	}
+	for range 7 {
+		s.aiPlayer.DrawCard()
+	}
+	logging.Printf(logging.Duel, "Cards drawn\n")
+
+	s.cardImageMap = buildCardImageMap(s.player.GetDuelDeck(), s.enemy.Character.GetActiveDeck())
+
+	s.self = &duelPlayer{name: "You"}
+	s.opponent = &duelPlayer{name: s.enemy.Name()}
+
+	logging.Printf(logging.Duel, "Game init: human library=%d hand=%d, ai library=%d hand=%d, human life=%d, ai life=%d\n",
+		len(s.human.Library()), len(s.human.Hand()),
+		len(s.aiPlayer.Library()), len(s.aiPlayer.Hand()),
+		s.human.Life(), s.aiPlayer.Life())
+	logging.Printf(logging.Duel, "Game init: IsGameOver=%v Winner=%q\n", s.game.IsGameOver(), s.game.Winner())
+
+	go interactive.RunGameLoop(s.game, 0, 300*time.Millisecond)
+}
+
+func (s *DuelScreen) drainMessages() {
+	for {
+		select {
+		case msg, ok := <-s.human.ToTUI():
+			if !ok {
+				return
+			}
+			s.lastMsg = &msg
+		default:
+			return
+		}
+	}
+}
+
+func (s *DuelScreen) drainChoiceRequests() {
+	for {
+		select {
+		case req, ok := <-s.human.ChoiceRequests():
+			if !ok {
+				return
+			}
+			s.choiceRequest = &req
+		default:
+			return
+		}
+	}
+}
+
+func (s *DuelScreen) getDomainCard(name string) *domain.Card {
+	return s.cardImageMap[name]
 }
 
 func (s *DuelScreen) loadImages() {
@@ -228,55 +306,40 @@ func loadDuelImage(name string) *ebiten.Image {
 	return img
 }
 
-func (s *DuelScreen) getKeywordIcons(card *core.Card) []*ebiten.Image {
+func (s *DuelScreen) getKeywordIcons(perm interactive.PermanentState) []*ebiten.Image {
 	if len(s.abilityIcons) == 0 {
 		return nil
 	}
 	var icons []*ebiten.Image
 
-	type kwIcon struct {
-		keyword effects.Keyword
-		index   int
+	keywordIndex := map[string]int{
+		"Flying":       11,
+		"Trample":      12,
+		"Banding":      13,
+		"First Strike": 14,
+		"Regeneration": 15,
+		"Reach":        16,
+		"Menace":       17,
 	}
-	for _, ki := range []kwIcon{
-		{effects.KeywordFlying, 11},
-		{effects.KeywordTrample, 12},
-		{effects.KeywordBanding, 13},
-		{effects.KeywordFirstStrike, 14},
-		{effects.KeywordRegeneration, 15},
-		{effects.KeywordReach, 16},
-		{effects.KeywordMenace, 17},
-	} {
-		if card.HasKeyword(ki.keyword) {
-			icons = append(icons, s.abilityIcons[ki.index])
-		}
-	}
-
 	protectionColors := map[string]int{
 		"green": 5, "red": 6, "blue": 7, "black": 8, "white": 9, "artifacts": 10,
 	}
 	seen := map[int]bool{}
-	sources := [][]domain.ParsedAbility{card.ParsedAbilities}
-	for _, aura := range card.Attachments {
-		sources = append(sources, aura.ParsedAbilities)
+	for _, kw := range perm.Keywords {
+		if idx, ok := keywordIndex[kw]; ok && !seen[idx] {
+			seen[idx] = true
+			icons = append(icons, s.abilityIcons[idx])
+		}
 	}
-	for _, abilities := range sources {
-		for _, ability := range abilities {
-			if ability.TargetSpec != nil && ability.TargetSpec.Condition != "" &&
-				ability.TargetSpec.Condition != "enchanted" {
-				continue
-			}
-			for _, kw := range ability.Keywords {
-				if kw != "Protection" {
-					continue
-				}
-				if ability.Effect == nil {
-					continue
-				}
-				idx, ok := protectionColors[strings.ToLower(ability.Effect.Modifier)]
-				if ok && !seen[idx] {
-					seen[idx] = true
-					icons = append(icons, s.abilityIcons[idx])
+
+	if p := s.game.FindPermanent(perm.ID); p != nil {
+		for _, ability := range p.Card.Abilities() {
+			if pa, ok := ability.(*mage.ProtectionAbility); ok {
+				for _, c := range pa.FromColors {
+					if idx, ok := protectionColors[strings.ToLower(c.String())]; ok && !seen[idx] {
+						seen[idx] = true
+						icons = append(icons, s.abilityIcons[idx])
+					}
 				}
 			}
 		}
@@ -302,14 +365,21 @@ const (
 )
 
 func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCard == nil {
+	s.drainMessages()
+	s.drainChoiceRequests()
+
+	if s.lastMsg == nil {
+		return screenui.DuelScr, nil, nil
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil {
 		s.submitPendingAndPass()
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		if s.targetingCard != nil {
-			if s.selectedTarget != nil {
-				s.selectedTarget = nil
+		if s.targetingCardID != uuid.Nil {
+			if s.selectedTargetID != uuid.Nil {
+				s.selectedTargetID = uuid.Nil
 			} else {
 				s.exitTargetingMode()
 			}
@@ -319,17 +389,23 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	s.frameCount++
+
+	if s.choiceRequest != nil {
+		s.handleChoiceRequest()
+		return screenui.DuelScr, nil, nil
+	}
+
 	s.refreshCardActions()
 
-	if s.targetingCard != nil {
-		if _, ok := s.cardActions[s.targetingCard.ID]; !ok {
+	if s.targetingCardID != uuid.Nil {
+		if _, ok := s.cardActions[s.targetingCardID]; !ok {
 			s.exitTargetingMode()
 		}
 	}
 
 	mx, my := ebiten.CursorPosition()
 
-	if s.targetingCard != nil {
+	if s.targetingCardID != uuid.Nil {
 		s.updateTargetingMouse(mx, my)
 	} else {
 		s.updateMouse(mx, my)
@@ -340,12 +416,14 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		s.handleRightClick(mx, my)
 	}
 
-	// Check win/loss
-	s.gameState.CheckWinConditions()
-	if s.opponent.core.HasLost {
-		return s.handleWin()
-	}
-	if s.self.core.HasLost {
+	if s.lastMsg.GameOver {
+		logging.Printf(logging.Duel, "GameOver! Winner=%q Step=%q Turn=%d YouLife=%d OppLife=%d YouLib=%d OppLib=%d\n",
+			s.lastMsg.Winner, s.lastMsg.State.Step, s.lastMsg.State.Turn,
+			s.lastMsg.State.You.Life, s.lastMsg.State.Opponent.Life,
+			s.lastMsg.State.You.LibraryCount, s.lastMsg.State.Opponent.LibraryCount)
+		if s.lastMsg.Winner == playerNameYou {
+			return s.handleWin()
+		}
 		return s.handleLoss()
 	}
 
@@ -358,8 +436,8 @@ const (
 	fieldCardH      = 83
 )
 
-func (s *DuelScreen) getFieldCardPos(card *core.Card, dp *duelPlayer, idx int, isLand bool) image.Point {
-	if pos, ok := s.cardPositions[card.ID]; ok {
+func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPlayer, idx int, isLand bool) image.Point {
+	if pos, ok := s.cardPositions[perm.ID]; ok {
 		return pos
 	}
 	var baseY int
@@ -381,64 +459,74 @@ func (s *DuelScreen) getFieldCardPos(card *core.Card, dp *duelPlayer, idx int, i
 		spacing = 120
 	}
 	pos := image.Pt(duelBoardX+30+idx*spacing, baseY)
-	s.cardPositions[card.ID] = pos
+	s.cardPositions[perm.ID] = pos
 	return pos
 }
 
-func (s *DuelScreen) fieldCards(dp *duelPlayer, landsOnly bool) []*core.Card {
-	var cards []*core.Card
-	for _, card := range dp.core.Battlefield {
-		if card == nil || card.AttachedTo != nil {
-			continue
-		}
-		isLand := card.CardType == domain.CardTypeLand
+func (s *DuelScreen) fieldPerms(ps interactive.PlayerState, landsOnly bool) []interactive.PermanentState {
+	var perms []interactive.PermanentState
+	for _, perm := range ps.Battlefield {
+		isLand := perm.IsLand
 		if isLand == landsOnly {
-			cards = append(cards, card)
+			perms = append(perms, perm)
 		}
 	}
-	return cards
+	return perms
 }
 
-func (s *DuelScreen) fieldCardAtPoint(mx, my int, dp *duelPlayer) *core.Card {
+func (s *DuelScreen) fieldPermAtPoint(mx, my int, dp *duelPlayer) *interactive.PermanentState {
+	ps := s.playerState(dp)
+	if ps == nil {
+		return nil
+	}
 	for _, landsOnly := range []bool{false, true} {
-		cards := s.fieldCards(dp, landsOnly)
-		for i := len(cards) - 1; i >= 0; i-- {
-			card := cards[i]
-			pos := s.getFieldCardPos(card, dp, i, landsOnly)
-			if mx >= pos.X && mx < pos.X+fieldCardW {
-				for j := len(card.Attachments) - 1; j >= 0; j-- {
-					auraY := pos.Y - (j+1)*14
-					if my >= auraY && my < auraY+14 {
-						return card.Attachments[j]
-					}
-				}
-				if my >= pos.Y && my < pos.Y+fieldCardH {
-					return card
-				}
+		perms := s.fieldPerms(*ps, landsOnly)
+		for i := len(perms) - 1; i >= 0; i-- {
+			perm := perms[i]
+			pos := s.getFieldCardPos(perm, dp, i, landsOnly)
+			if mx >= pos.X && mx < pos.X+fieldCardW && my >= pos.Y && my < pos.Y+fieldCardH {
+				return &perms[i]
 			}
 		}
 	}
 	return nil
 }
 
+func (s *DuelScreen) playerState(dp *duelPlayer) *interactive.PlayerState {
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return nil
+	}
+	if dp == s.self {
+		return &s.lastMsg.State.You
+	}
+	return &s.lastMsg.State.Opponent
+}
+
 func (s *DuelScreen) refreshCardActions() {
-	activePlayer := s.gameState.Players[s.gameState.ActivePlayer]
-	inDeclareAttackers := activePlayer == s.self.core &&
-		activePlayer.Turn.Phase == core.PhaseCombat &&
-		activePlayer.Turn.CombatStep == core.CombatStepDeclareAttackers
+	if s.lastMsg == nil {
+		return
+	}
+
+	step := s.lastMsg.State.Step
+	inDeclareAttackers := s.lastMsg.State.ActivePlayer == playerNameYou &&
+		step == stepDeclareAttackers
 	if !inDeclareAttackers && len(s.pendingAttackers) > 0 {
-		s.pendingAttackers = make(map[core.EntityID]bool)
+		s.pendingAttackers = make(map[uuid.UUID]bool)
 	}
-	if !s.isInDeclareBlockers() && (len(s.pendingBlockers) > 0 || s.selectedBlocker != 0) {
-		s.pendingBlockers = make(map[core.EntityID]core.EntityID)
-		s.selectedBlocker = 0
+	if !s.isInDeclareBlockers() && (len(s.pendingBlockers) > 0 || s.selectedBlocker != uuid.Nil) {
+		s.pendingBlockers = make(map[uuid.UUID]uuid.UUID)
+		s.selectedBlocker = uuid.Nil
 	}
-	s.cardActions = make(map[core.EntityID][]core.PlayerAction)
-	for _, action := range s.gameState.AvailableActions(s.self.core) {
-		if action.Card == nil {
+	s.cardActions = make(map[uuid.UUID][]interactive.ActionOption)
+	for _, opt := range s.lastMsg.Options {
+		id := opt.CardID
+		if id == uuid.Nil {
+			id = opt.PermanentID
+		}
+		if id == uuid.Nil {
 			continue
 		}
-		s.cardActions[action.Card.ID] = append(s.cardActions[action.Card.ID], action)
+		s.cardActions[id] = append(s.cardActions[id], opt)
 	}
 }
 
@@ -456,7 +544,7 @@ func (s *DuelScreen) panelCardH(dp *duelPlayer) int {
 	return 51
 }
 
-func (s *DuelScreen) cardIdxAtPoint(mx, my, panelX, panelY int, cards []*core.Card, dp *duelPlayer) int {
+func (s *DuelScreen) handCardIdxAtPoint(mx, my, panelX, panelY int, count int, dp *duelPlayer) int {
 	headerH := s.panelCardH(dp)
 	w := s.panelCardW(dp)
 	cardListY := panelY + headerH
@@ -464,8 +552,8 @@ func (s *DuelScreen) cardIdxAtPoint(mx, my, panelX, panelY int, cards []*core.Ca
 		return -1
 	}
 	idx := (my - cardListY) / handCardOverlap
-	if idx >= len(cards) {
-		idx = len(cards) - 1
+	if idx >= count {
+		idx = count - 1
 	}
 	if idx < 0 {
 		return -1
@@ -474,80 +562,77 @@ func (s *DuelScreen) cardIdxAtPoint(mx, my, panelX, panelY int, cards []*core.Ca
 }
 
 func (s *DuelScreen) isInDeclareBlockers() bool {
-	activePlayer := s.gameState.Players[s.gameState.ActivePlayer]
-	return activePlayer == s.opponent.core &&
-		activePlayer.Turn.Phase == core.PhaseCombat &&
-		activePlayer.Turn.CombatStep == core.CombatStepDeclareBlockers
-}
-
-func (s *DuelScreen) findBattlefieldCard(dp *duelPlayer, id core.EntityID) *core.Card {
-	for _, card := range dp.core.Battlefield {
-		if card.ID == id {
-			return card
-		}
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return false
 	}
-	return nil
+	return s.lastMsg.Prompt == interactive.PromptDeclareBlockers
 }
 
-func (s *DuelScreen) isValidBlock(blockerID, attackerID core.EntityID) bool {
-	for _, action := range s.gameState.AvailableActions(s.self.core) {
-		if action.Type != core.ActionDeclareBlocker || action.Card == nil {
+func (s *DuelScreen) isValidBlock(blockerID, attackerID uuid.UUID) bool {
+	if s.lastMsg == nil {
+		return false
+	}
+	for _, opt := range s.lastMsg.Options {
+		if opt.Type != interactive.ActionSelectBlockers {
 			continue
 		}
-		targetCard, ok := action.Target.(*core.Card)
-		if !ok {
-			continue
-		}
-		if action.Card.ID == blockerID && targetCard.ID == attackerID {
+		if opt.PermanentID == blockerID {
 			return true
 		}
 	}
-	return false
+	return true
 }
 
-func (s *DuelScreen) canBlockAnything(blockerID core.EntityID) bool {
-	for _, action := range s.gameState.AvailableActions(s.self.core) {
-		if action.Type == core.ActionDeclareBlocker && action.Card != nil && action.Card.ID == blockerID {
+func (s *DuelScreen) canBlockAnything(blockerID uuid.UUID) bool {
+	if s.lastMsg == nil {
+		return false
+	}
+	for _, opt := range s.lastMsg.Options {
+		if opt.Type == interactive.ActionSelectBlockers && opt.PermanentID == blockerID {
 			return true
 		}
 	}
-	return false
+	return s.isInDeclareBlockers()
 }
 
 func (s *DuelScreen) handleBlockerClick(mx, my int) {
 	s.warningMsg = ""
-	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
-		s.loadCardPreview(card)
-		if _, assigned := s.pendingBlockers[card.ID]; assigned {
-			delete(s.pendingBlockers, card.ID)
+	if perm := s.fieldPermAtPoint(mx, my, s.self); perm != nil {
+		s.loadCardPreview(perm.Name, perm)
+		if _, assigned := s.pendingBlockers[perm.ID]; assigned {
+			delete(s.pendingBlockers, perm.ID)
 			return
 		}
-		if s.selectedBlocker == card.ID {
-			s.selectedBlocker = 0
+		if s.selectedBlocker == perm.ID {
+			s.selectedBlocker = uuid.Nil
 			return
 		}
-		if s.canBlockAnything(card.ID) {
-			s.selectedBlocker = card.ID
+		if s.canBlockAnything(perm.ID) {
+			s.selectedBlocker = perm.ID
 		}
 		return
 	}
 
-	if card := s.fieldCardAtPoint(mx, my, s.opponent); card != nil {
-		s.loadCardPreview(card)
-		if s.selectedBlocker != 0 && s.isValidBlock(s.selectedBlocker, card.ID) {
-			s.pendingBlockers[s.selectedBlocker] = card.ID
-			s.selectedBlocker = 0
+	if perm := s.fieldPermAtPoint(mx, my, s.opponent); perm != nil {
+		s.loadCardPreview(perm.Name, perm)
+		if s.selectedBlocker != uuid.Nil && perm.Attacking && s.isValidBlock(s.selectedBlocker, perm.ID) {
+			s.pendingBlockers[s.selectedBlocker] = perm.ID
+			s.selectedBlocker = uuid.Nil
 		}
 		return
 	}
 }
 
 func (s *DuelScreen) handleCardClick(mx, my int) {
-	// hand cards
-	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
+	if s.lastMsg == nil {
+		return
+	}
+	hand := s.lastMsg.State.You.Hand
+	if idx := s.handCardIdxAtPoint(mx, my, s.self.handX, s.self.handY, len(hand), s.self); idx >= 0 {
 		logging.Printf(logging.Duel, "HAND CLICK: idx: %d\n", idx)
 		s.selectedCardIdx = idx
-		s.performCardAction(s.self.core.Hand[idx])
+		card := hand[idx]
+		s.performCardAction(card.ID, card.Name)
 		return
 	}
 
@@ -556,109 +641,126 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 		return
 	}
 
-	// battlefield cards
-	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
-		s.loadCardPreview(card)
-		if actions, ok := s.cardActions[card.ID]; ok && hasActionType(actions, core.ActionDeclareAttacker) {
-			if s.pendingAttackers[card.ID] {
-				delete(s.pendingAttackers, card.ID)
+	if perm := s.fieldPermAtPoint(mx, my, s.self); perm != nil {
+		s.loadCardPreview(perm.Name, perm)
+		if actions, ok := s.cardActions[perm.ID]; ok && hasActionType(actions, interactive.ActionSelectAttackers) {
+			if s.pendingAttackers[perm.ID] {
+				delete(s.pendingAttackers, perm.ID)
 			} else {
-				s.pendingAttackers[card.ID] = true
+				s.pendingAttackers[perm.ID] = true
 			}
 			return
 		}
-		s.performCardAction(card)
+		s.performCardAction(perm.ID, perm.Name)
 		return
 	}
 }
 
 func (s *DuelScreen) handleRightClick(mx, my int) {
-	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
-		s.loadCardPreview(s.self.core.Hand[idx])
+	if s.lastMsg == nil {
+		return
+	}
+	hand := s.lastMsg.State.You.Hand
+	if idx := s.handCardIdxAtPoint(mx, my, s.self.handX, s.self.handY, len(hand), s.self); idx >= 0 {
+		s.loadCardPreviewByName(hand[idx].Name)
 		return
 	}
 
-	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
-		s.loadCardPreview(card)
+	if perm := s.fieldPermAtPoint(mx, my, s.self); perm != nil {
+		s.loadCardPreview(perm.Name, perm)
 		return
 	}
 
-	if card := s.fieldCardAtPoint(mx, my, s.opponent); card != nil {
-		s.loadCardPreview(card)
+	if perm := s.fieldPermAtPoint(mx, my, s.opponent); perm != nil {
+		s.loadCardPreview(perm.Name, perm)
 		return
 	}
 }
 
 func (s *DuelScreen) updateHoverPreview(mx, my int) {
-	if idx := s.cardIdxAtPoint(mx, my, s.self.handX, s.self.handY, s.self.core.Hand, s.self); idx >= 0 {
-		s.loadCardPreview(s.self.core.Hand[idx])
+	if s.lastMsg == nil {
+		return
+	}
+	hand := s.lastMsg.State.You.Hand
+	if idx := s.handCardIdxAtPoint(mx, my, s.self.handX, s.self.handY, len(hand), s.self); idx >= 0 {
+		s.loadCardPreviewByName(hand[idx].Name)
 		return
 	}
 
-	if card := s.fieldCardAtPoint(mx, my, s.self); card != nil {
-		s.loadCardPreview(card)
+	if perm := s.fieldPermAtPoint(mx, my, s.self); perm != nil {
+		s.loadCardPreview(perm.Name, perm)
 		return
 	}
 
-	if card := s.fieldCardAtPoint(mx, my, s.opponent); card != nil {
-		s.loadCardPreview(card)
+	if perm := s.fieldPermAtPoint(mx, my, s.opponent); perm != nil {
+		s.loadCardPreview(perm.Name, perm)
 		return
 	}
 
-	if !s.gameState.Stack.IsEmpty() {
-		for i := len(s.gameState.Stack.Items) - 1; i >= 0; i-- {
-			if item := s.gameState.Stack.Items[i]; item.Card != nil {
-				s.loadCardPreview(item.Card)
-				return
-			}
-		}
+	if len(s.lastMsg.State.StackItems) > 0 {
+		item := s.lastMsg.State.StackItems[len(s.lastMsg.State.StackItems)-1]
+		s.loadCardPreviewByName(item.Name)
 	}
 }
 
-func (s *DuelScreen) performCardAction(card *core.Card) {
-	actions, ok := s.cardActions[card.ID]
+func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
+	actions, ok := s.cardActions[id]
 	if !ok || len(actions) == 0 {
-		logging.Printf(logging.Duel, "CLICK: %s (no action available)\n", card.Name())
+		logging.Printf(logging.Duel, "CLICK: %s (no action available)\n", name)
 		return
 	}
 
-	if len(actions) > 1 {
-		s.enterTargetingMode(card, actions)
+	if len(actions) > 1 || actions[0].NeedsTarget {
+		s.enterTargetingMode(id, name, actions)
 		return
 	}
 
 	action := actions[0]
-	logging.Printf(logging.Duel, "CLICK: %s -> action=%s\n", card.Name(), action.Type)
+	logging.Printf(logging.Duel, "CLICK: %s -> action=%v\n", name, action.Type)
+	pa := actionOptionToPriorityAction(action)
 	select {
-	case s.self.core.InputChan <- action:
+	case s.human.FromTUI() <- pa:
 	default:
 	}
-	s.refreshCardActions()
 }
 
-func (s *DuelScreen) enterTargetingMode(card *core.Card, actions []core.PlayerAction) {
-	s.targetingCard = card
-	s.targetingActions = make(map[int]core.PlayerAction)
+func actionOptionToPriorityAction(opt interactive.ActionOption) interactive.PriorityAction {
+	return interactive.PriorityAction{
+		Type:         opt.Type,
+		CardID:       opt.CardID,
+		CardName:     opt.CardName,
+		PermanentID:  opt.PermanentID,
+		AbilityIndex: opt.AbilityIndex,
+	}
+}
+
+func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []interactive.ActionOption) {
+	s.targetingCardID = id
+	s.targetingActions = make(map[uuid.UUID]interactive.ActionOption)
+
 	for _, a := range actions {
-		if a.Target != nil {
-			s.targetingActions[a.Target.EntityID()] = a
+		if !a.NeedsTarget {
+			continue
+		}
+		for _, tid := range a.ValidTargets {
+			s.targetingActions[tid] = a
 		}
 	}
-	s.selectedTarget = nil
-	s.loadCardPreview(card)
+	s.selectedTargetID = uuid.Nil
+	s.loadCardPreviewByName(name)
 }
 
 func (s *DuelScreen) exitTargetingMode() {
-	s.targetingCard = nil
+	s.targetingCardID = uuid.Nil
 	s.targetingActions = nil
-	s.selectedTarget = nil
+	s.selectedTargetID = uuid.Nil
 }
 
 func (s *DuelScreen) updateTargetingMouse(mx, my int) {
 	if s.mouseState != mouseIdle {
 		s.dragTargetX = nil
 		s.dragTargetY = nil
-		s.draggingCardID = 0
+		s.draggingCardID = uuid.Nil
 		s.mouseState = mouseIdle
 	}
 
@@ -670,10 +772,12 @@ func (s *DuelScreen) updateTargetingMouse(mx, my int) {
 	doneX := duelBoardX + 2
 	doneY := duelMsgY
 	if mx >= doneX && mx < doneX+doneBounds.Dx() && my >= doneY && my < doneY+doneBounds.Dy() {
-		if s.selectedTarget != nil {
-			if action, ok := s.targetingActions[s.selectedTarget.EntityID()]; ok {
+		if s.selectedTargetID != uuid.Nil {
+			if action, ok := s.targetingActions[s.selectedTargetID]; ok {
+				pa := actionOptionToPriorityAction(action)
+				pa.Targets = []uuid.UUID{s.selectedTargetID}
 				select {
-				case s.self.core.InputChan <- action:
+				case s.human.FromTUI() <- pa:
 				default:
 				}
 			}
@@ -686,8 +790,8 @@ func (s *DuelScreen) updateTargetingMouse(mx, my int) {
 
 	msgBarTop := duelMsgY + 6
 	msgBarLeft := duelBoardX + 52
-	if s.selectedTarget != nil && mx >= msgBarLeft && my >= msgBarTop && my < msgBarTop+20 {
-		s.selectedTarget = nil
+	if s.selectedTargetID != uuid.Nil && mx >= msgBarLeft && my >= msgBarTop && my < msgBarTop+20 {
+		s.selectedTargetID = uuid.Nil
 		return
 	}
 
@@ -696,19 +800,20 @@ func (s *DuelScreen) updateTargetingMouse(mx, my int) {
 
 func (s *DuelScreen) handleTargetClick(mx, my int) {
 	for _, dp := range []*duelPlayer{s.opponent, s.self} {
-		if card := s.fieldCardAtPoint(mx, my, dp); card != nil {
-			if _, ok := s.targetingActions[card.EntityID()]; ok {
-				s.selectedTarget = card
-				s.loadCardPreview(card)
+		if perm := s.fieldPermAtPoint(mx, my, dp); perm != nil {
+			if _, ok := s.targetingActions[perm.ID]; ok {
+				s.selectedTargetID = perm.ID
+				s.loadCardPreview(perm.Name, perm)
 				return
 			}
 		}
 	}
 
 	for _, dp := range []*duelPlayer{s.opponent, s.self} {
-		if s.isPlayerBoardClick(mx, my, dp) {
-			if _, ok := s.targetingActions[dp.core.EntityID()]; ok {
-				s.selectedTarget = dp.core
+		ps := s.playerState(dp)
+		if ps != nil && s.isPlayerBoardClick(mx, my, dp) {
+			if _, ok := s.targetingActions[ps.ID]; ok {
+				s.selectedTargetID = ps.ID
 				return
 			}
 		}
@@ -725,20 +830,25 @@ func (s *DuelScreen) isPlayerBoardClick(mx, my int, dp *duelPlayer) bool {
 	return my >= duelOpponentBoardY && my < duelMsgY
 }
 
-func (s *DuelScreen) getCardArtImg(card *core.Card, targetW int) *ebiten.Image {
-	key := cardImgKey{id: card.ID, width: targetW}
+func (s *DuelScreen) getCardArtImg(name string, targetW int) *ebiten.Image {
+	key := cardImgKey{name: name, width: targetW}
 	if entry, ok := s.cardImgCache[key]; ok {
-		if !entry.placeholder || !card.ImageLoaded() {
+		if !entry.placeholder {
 			return entry.scaled
 		}
 	}
 
-	artImg, err := card.CardImage(domain.CardViewArtOnly)
+	domainCard := s.getDomainCard(name)
+	if domainCard == nil {
+		return nil
+	}
+
+	artImg, err := domainCard.CardImage(domain.CardViewArtOnly)
 	if err != nil || artImg == nil {
 		return nil
 	}
 
-	loaded := card.ImageLoaded()
+	loaded := domainCard.ImageLoaded()
 	scale := float64(targetW) / float64(artImg.Bounds().Dx())
 	scaled := imageutil.ScaleImage(artImg, scale)
 	s.cardImgCache[key] = cardImgEntry{scaled: scaled, placeholder: !loaded}
@@ -765,7 +875,6 @@ func (s *DuelScreen) updateMouse(mx, my int) {
 		s.mouseStartX = mx
 		s.mouseStartY = my
 
-		// Hand panel headers start dragging immediately
 		pt := image.Pt(mx, my)
 		type dragTarget struct {
 			bounds image.Rectangle
@@ -786,22 +895,20 @@ func (s *DuelScreen) updateMouse(mx, my int) {
 			}
 		}
 
-		// Battlefield cards enter potential drag state
 		for _, dp := range []*duelPlayer{s.self, s.opponent} {
-			if card := s.fieldCardAtPoint(mx, my, dp); card != nil {
-				s.draggingCardID = card.ID
+			if perm := s.fieldPermAtPoint(mx, my, dp); perm != nil {
+				s.draggingCardID = perm.ID
 				s.mouseState = mousePotentialDrag
 				return
 			}
 		}
 
-		// Everything else is an immediate click (hand cards, done button, etc.)
 		s.handleClick(mx, my)
 
 	case mousePotentialDrag:
 		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
 			s.handleClick(s.mouseStartX, s.mouseStartY)
-			s.draggingCardID = 0
+			s.draggingCardID = uuid.Nil
 			s.mouseState = mouseIdle
 			return
 		}
@@ -818,11 +925,11 @@ func (s *DuelScreen) updateMouse(mx, my int) {
 		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
 			s.dragTargetX = nil
 			s.dragTargetY = nil
-			s.draggingCardID = 0
+			s.draggingCardID = uuid.Nil
 			s.mouseState = mouseIdle
 			return
 		}
-		if s.draggingCardID != 0 {
+		if s.draggingCardID != uuid.Nil {
 			pos := s.cardPositions[s.draggingCardID]
 			pos.X = mx - s.dragOffsetX
 			pos.Y = my - s.dragOffsetY
@@ -836,7 +943,10 @@ func (s *DuelScreen) updateMouse(mx, my int) {
 }
 
 func (s *DuelScreen) hasPendingMenaceViolation() bool {
-	blockerCount := map[core.EntityID]int{}
+	if s.lastMsg == nil {
+		return false
+	}
+	blockerCount := map[uuid.UUID]int{}
 	for _, attackerID := range s.pendingBlockers {
 		blockerCount[attackerID]++
 	}
@@ -844,8 +954,8 @@ func (s *DuelScreen) hasPendingMenaceViolation() bool {
 		if count >= 2 {
 			continue
 		}
-		for _, atk := range s.gameState.Attackers {
-			if atk.ID == attackerID && atk.HasKeyword(effects.KeywordMenace) {
+		for _, perm := range s.lastMsg.State.Opponent.Battlefield {
+			if perm.ID == attackerID && perm.Attacking && hasKeyword(perm.Keywords, "Menace") {
 				return true
 			}
 		}
@@ -854,17 +964,20 @@ func (s *DuelScreen) hasPendingMenaceViolation() bool {
 }
 
 func (s *DuelScreen) removePendingMenaceViolations() {
-	blockerCount := map[core.EntityID]int{}
+	if s.lastMsg == nil {
+		return
+	}
+	blockerCount := map[uuid.UUID]int{}
 	for _, attackerID := range s.pendingBlockers {
 		blockerCount[attackerID]++
 	}
-	menaceAttackers := map[core.EntityID]bool{}
+	menaceAttackers := map[uuid.UUID]bool{}
 	for attackerID, count := range blockerCount {
 		if count >= 2 {
 			continue
 		}
-		for _, atk := range s.gameState.Attackers {
-			if atk.ID == attackerID && atk.HasKeyword(effects.KeywordMenace) {
+		for _, perm := range s.lastMsg.State.Opponent.Battlefield {
+			if perm.ID == attackerID && perm.Attacking && hasKeyword(perm.Keywords, "Menace") {
 				menaceAttackers[attackerID] = true
 			}
 		}
@@ -876,48 +989,59 @@ func (s *DuelScreen) removePendingMenaceViolations() {
 	}
 }
 
-func (s *DuelScreen) submitPendingAndPass() {
-	for id, actions := range s.cardActions {
-		if !s.pendingAttackers[id] {
-			continue
-		}
-		for _, action := range actions {
-			if action.Type == core.ActionDeclareAttacker {
-				select {
-				case s.self.core.InputChan <- action:
-				default:
-				}
-				break
-			}
+func hasKeyword(keywords []string, kw string) bool {
+	for _, k := range keywords {
+		if k == kw {
+			return true
 		}
 	}
-	s.pendingAttackers = make(map[core.EntityID]bool)
+	return false
+}
 
-	for blockerID, attackerID := range s.pendingBlockers {
-		blocker := s.findBattlefieldCard(s.self, blockerID)
-		attacker := s.findBattlefieldCard(s.opponent, attackerID)
-		if blocker != nil && attacker != nil {
-			select {
-			case s.self.core.InputChan <- core.PlayerAction{
-				Type:   core.ActionDeclareBlocker,
-				Card:   blocker,
-				Target: attacker,
-			}:
-			default:
-			}
+func (s *DuelScreen) submitPendingAndPass() {
+	if s.lastMsg != nil && s.lastMsg.Prompt == interactive.PromptDeclareAttackers {
+		var attackerIDs []uuid.UUID
+		for id := range s.pendingAttackers {
+			attackerIDs = append(attackerIDs, id)
 		}
+		s.pendingAttackers = make(map[uuid.UUID]bool)
+		select {
+		case s.human.FromTUI() <- interactive.PriorityAction{
+			Type:      interactive.ActionSelectAttackers,
+			Attackers: attackerIDs,
+		}:
+		default:
+		}
+		return
 	}
-	s.pendingBlockers = make(map[core.EntityID]core.EntityID)
-	s.selectedBlocker = 0
+
+	if s.lastMsg != nil && s.lastMsg.Prompt == interactive.PromptDeclareBlockers {
+		var blockers []mage.BlockAssignment
+		for blockerID, attackerID := range s.pendingBlockers {
+			blockers = append(blockers, mage.BlockAssignment{
+				BlockerID:  blockerID,
+				AttackerID: attackerID,
+			})
+		}
+		s.pendingBlockers = make(map[uuid.UUID]uuid.UUID)
+		s.selectedBlocker = uuid.Nil
+		select {
+		case s.human.FromTUI() <- interactive.PriorityAction{
+			Type:     interactive.ActionSelectBlockers,
+			Blockers: blockers,
+		}:
+		default:
+		}
+		return
+	}
 
 	select {
-	case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
+	case s.human.FromTUI() <- interactive.PriorityAction{Type: interactive.ActionPass}:
 	default:
 	}
 }
 
 func (s *DuelScreen) handleClick(mx, my int) {
-	// Done button
 	doneBounds := s.doneBtn[0].Bounds()
 	doneX := duelBoardX + 2
 	doneY := duelMsgY
@@ -935,63 +1059,82 @@ func (s *DuelScreen) handleClick(mx, my int) {
 	s.handleCardClick(mx, my)
 }
 
-func (s *DuelScreen) runGameLoop() {
-	core.PlayGame(s.gameState, 100)
-	close(s.gameDone)
-}
-
-func (s *DuelScreen) runAutoPass() {
-	for {
-		select {
-		case <-s.gameDone:
-			return
-		case <-s.self.core.WaitingChan:
-		}
-
-		actions := s.gameState.AvailableActions(s.self.core)
-		onlyPass := true
-		for _, a := range actions {
-			if a.Type != core.ActionPassPriority {
-				onlyPass = false
-				break
-			}
-		}
-
-		if onlyPass {
-			select {
-			case <-time.After(50 * time.Millisecond):
-			case <-s.gameDone:
-				return
-			}
-			select {
-			case s.self.core.InputChan <- core.PlayerAction{Type: core.ActionPassPriority}:
-			case <-s.gameDone:
-				return
-			}
-		}
-	}
-}
-
-func (s *DuelScreen) runOpponentAI() {
-	ai.RunAI(s.gameState, s.opponent.core, s.gameDone)
-}
-
-func (s *DuelScreen) loadCardPreview(card *core.Card) {
-	cardID := card.CardID()
-	if s.cardPreviewID == cardID && (!s.cardPreviewPlaceholder || !card.ImageLoaded()) {
+func (s *DuelScreen) handleChoiceRequest() {
+	if s.choiceRequest == nil {
 		return
 	}
-	img, err := card.CardImage(domain.CardViewFull)
+
+	req := s.choiceRequest
+
+	switch req.Type {
+	case interactive.ChoiceMay:
+		s.human.ChoiceResponses() <- interactive.ChoiceResponse{Accepted: false}
+		s.choiceRequest = nil
+	case interactive.ChoiceManaColor:
+		if len(req.Options) > 0 {
+			s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedColor: req.Options[0].Color}
+		}
+		s.choiceRequest = nil
+	case interactive.ChoiceMode:
+		s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedIndex: 0}
+		s.choiceRequest = nil
+	case interactive.ChoicePermanent:
+		if len(req.Options) > 0 {
+			s.human.ChoiceResponses() <- interactive.ChoiceResponse{
+				SelectedIDs: []uuid.UUID{req.Options[0].ID},
+			}
+		}
+		s.choiceRequest = nil
+	case interactive.ChoiceCardsFromHand:
+		var ids []uuid.UUID
+		for i, opt := range req.Options {
+			if i >= req.Amount {
+				break
+			}
+			ids = append(ids, opt.ID)
+		}
+		s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedIDs: ids}
+		s.choiceRequest = nil
+	default:
+		if len(req.Options) > 0 {
+			s.human.ChoiceResponses() <- interactive.ChoiceResponse{
+				SelectedIDs: []uuid.UUID{req.Options[0].ID},
+			}
+		}
+		s.choiceRequest = nil
+	}
+}
+
+func (s *DuelScreen) loadCardPreviewByName(name string) {
+	s.loadCardPreview(name, nil)
+}
+
+func (s *DuelScreen) loadCardPreview(name string, perm *interactive.PermanentState) {
+	if s.cardPreviewID == name {
+		s.cardPreviewPerm = perm
+		return
+	}
+	domainCard := s.getDomainCard(name)
+	if domainCard == nil {
+		s.cardPreviewImg = nil
+		s.cardPreviewID = ""
+		s.cardPreviewName = ""
+		s.cardPreviewPerm = nil
+		return
+	}
+	img, err := domainCard.CardImage(domain.CardViewFull)
 	if err != nil || img == nil {
 		s.cardPreviewImg = nil
 		s.cardPreviewID = ""
-		s.cardPreviewPlaceholder = false
+		s.cardPreviewName = ""
+		s.cardPreviewPerm = nil
 		return
 	}
 	s.cardPreviewImg = img
-	s.cardPreviewID = cardID
-	s.cardPreviewPlaceholder = !card.ImageLoaded()
-	s.cardPreviewCard = card
+	s.cardPreviewID = name
+	s.cardPreviewPlaceholder = !domainCard.ImageLoaded()
+	s.cardPreviewName = name
+	s.cardPreviewPerm = perm
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
@@ -1040,16 +1183,20 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.Fill(color.RGBA{30, 30, 30, 255})
 
+	if s.lastMsg == nil {
+		return
+	}
+
 	s.drawPhasePanel(screen)
-	s.drawBoard(screen, s.opponent, duelOpponentBoardY, duelMsgY)
-	s.drawBoard(screen, s.self, duelPlayerBoardY, H-duelPlayerBoardY)
+	s.drawBoard(screen, s.opponent, &s.lastMsg.State.Opponent, duelOpponentBoardY, duelMsgY)
+	s.drawBoard(screen, s.self, &s.lastMsg.State.You, duelPlayerBoardY, H-duelPlayerBoardY)
 	s.drawMessageBar(screen)
 	s.drawSidebar(screen, W, H)
-	s.drawBattlefield(screen, s.opponent)
-	s.drawBattlefield(screen, s.self)
+	s.drawBattlefield(screen, s.opponent, s.lastMsg.State.Opponent)
+	s.drawBattlefield(screen, s.self, s.lastMsg.State.You)
 	s.drawBlockerArrows(screen)
-	s.drawHandPanel(screen, s.opponent)
-	s.drawHandPanel(screen, s.self)
+	s.drawHandPanel(screen, s.opponent, s.lastMsg.State.Opponent)
+	s.drawHandPanel(screen, s.self, s.lastMsg.State.You)
 	s.drawCardPreview(screen, H)
 }
 
@@ -1064,38 +1211,51 @@ func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
 	opts.GeoM.Translate(phaseX, 4)
 	screen.DrawImage(s.phaseDefaultBg, opts)
 
-	active := s.gameState.Players[s.gameState.ActivePlayer]
-	idx := phaseIndex(active.Turn.Phase)
+	step := s.lastMsg.State.Step
+	idx := phaseIndex(step)
 	var row int
-	if active == s.self.core {
+	if s.lastMsg.State.ActivePlayer == playerNameYou {
 		row = 10 + idx
 	} else {
 		row = idx
 	}
-	if s.phaseActiveImgs[row] != nil {
+	if row < len(s.phaseActiveImgs) && s.phaseActiveImgs[row] != nil {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(phaseX, float64(4+row*42))
 		screen.DrawImage(s.phaseActiveImgs[row], opts)
 	}
 }
 
-func phaseIndex(phase core.Phase) int {
-	for i, p := range phaseNames {
-		if p == phase {
-			return i
-		}
+func phaseIndex(step string) int {
+	phaseMap := map[string]int{
+		"Untap":               0,
+		"Upkeep":              1,
+		"Draw":                2,
+		"Precombat Main":      3,
+		"Begin Combat":        4,
+		stepDeclareAttackers:  4,
+		stepDeclareBlockers:   4,
+		"First Strike Damage": 4,
+		stepCombatDamage:      4,
+		"End of Combat":       4,
+		"Postcombat Main":     5,
+		"End Step":            6,
+		"Cleanup":             6,
+	}
+	if idx, ok := phaseMap[step]; ok {
+		return idx
 	}
 	return 0
 }
 
-func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boardH int) {
+func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, ps *interactive.PlayerState, startY, boardH int) {
 	if dp.boardBg != nil {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(duelBoardX), float64(startY))
 		screen.DrawImage(dp.boardBg, opts)
 	}
 
-	lifeText := fmt.Sprintf("Life: %d", dp.core.LifeTotal)
+	lifeText := fmt.Sprintf("Life: %d", ps.Life)
 	txt := elements.NewText(16, dp.name, duelBoardX+10, startY+10)
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
@@ -1103,20 +1263,15 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	infoText := fmt.Sprintf("Hand: %d  Library: %d  Graveyard: %d",
-		len(dp.core.Hand), len(dp.core.Library), len(dp.core.Graveyard))
+		ps.HandCount, ps.LibraryCount, ps.GraveyardCount)
 	txt = elements.NewText(12, infoText, duelBoardX+10, startY+52)
 	txt.Color = color.RGBA{200, 200, 200, 255}
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	if dp == s.self {
-		actions := s.gameState.AvailableActions(dp.core)
+	if dp == s.self && s.lastMsg != nil {
 		y := startY + 68
-		for _, a := range actions {
-			name := ""
-			if a.Card != nil {
-				name = a.Card.Name()
-			}
-			line := fmt.Sprintf("%s %s", a.Type, name)
+		for _, opt := range s.lastMsg.Options {
+			line := fmt.Sprintf("%v %s", opt.Type, opt.Label)
 			at := elements.NewText(14, line, duelBoardX+10, y)
 			at.Color = color.RGBA{180, 180, 180, 255}
 			at.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
@@ -1124,11 +1279,11 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 		}
 	}
 
-	if s.targetingCard != nil {
-		if _, isTarget := s.targetingActions[dp.core.EntityID()]; isTarget {
+	if s.targetingCardID != uuid.Nil {
+		if _, isTarget := s.targetingActions[ps.ID]; isTarget {
 			borderColor := color.RGBA{255, 255, 0, 255}
 			strokeW := float32(2)
-			if s.selectedTarget != nil && s.selectedTarget.EntityID() == dp.core.EntityID() {
+			if s.selectedTargetID == ps.ID {
 				borderColor = color.RGBA{0, 255, 0, 255}
 				strokeW = 3
 			}
@@ -1136,24 +1291,15 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, startY, boa
 				float32(duelBoardW), float32(boardH), strokeW, borderColor, false)
 		}
 	}
-
-	if s.targetingCard == nil {
-		if targets := s.stackTargetIDs(); targets[dp.core.EntityID()] {
-			vector.StrokeRect(screen, float32(duelBoardX), float32(startY),
-				float32(duelBoardW), float32(boardH), 2, color.RGBA{255, 255, 0, 255}, false)
-		}
-	}
 }
 
 func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
-	// Done button
 	if s.doneBtn[0] != nil {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(duelBoardX+2), float64(duelMsgY))
 		screen.DrawImage(s.doneBtn[0], opts)
 	}
 
-	// Message bar background
 	if s.messageBg != nil {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(duelBoardX+52), float64(duelMsgY+6))
@@ -1165,11 +1311,13 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 	if s.warningMsg != "" {
 		msg = s.warningMsg
 		msgColor = color.RGBA{255, 100, 100, 255}
-	} else if s.targetingCard != nil && s.selectedTarget != nil {
-		msg = fmt.Sprintf("targeting %s (Cancel)", s.selectedTarget.Name())
+	} else if s.targetingCardID != uuid.Nil && s.selectedTargetID != uuid.Nil {
+		targetName := s.targetNameByID(s.selectedTargetID)
+		msg = fmt.Sprintf("targeting %s (Cancel)", targetName)
 		msgColor = color.RGBA{255, 255, 255, 255}
-	} else if s.targetingCard != nil {
-		msg = fmt.Sprintf("Choose a target for %s", s.targetingCard.Name())
+	} else if s.targetingCardID != uuid.Nil {
+		cardName := s.cardNameByID(s.targetingCardID)
+		msg = fmt.Sprintf("Choose a target for %s", cardName)
 		msgColor = color.RGBA{255, 255, 255, 255}
 	} else {
 		msg = s.statusMessage()
@@ -1180,45 +1328,82 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
-func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
+func (s *DuelScreen) cardNameByID(id uuid.UUID) string {
+	if s.lastMsg == nil {
+		return ""
+	}
+	for _, c := range s.lastMsg.State.You.Hand {
+		if c.ID == id {
+			return c.Name
+		}
+	}
+	for _, p := range s.lastMsg.State.You.Battlefield {
+		if p.ID == id {
+			return p.Name
+		}
+	}
+	for _, p := range s.lastMsg.State.Opponent.Battlefield {
+		if p.ID == id {
+			return p.Name
+		}
+	}
+	return ""
+}
+
+func (s *DuelScreen) targetNameByID(id uuid.UUID) string {
+	name := s.cardNameByID(id)
+	if name != "" {
+		return name
+	}
+	if s.lastMsg != nil {
+		if s.lastMsg.State.You.ID == id {
+			return "You"
+		}
+		if s.lastMsg.State.Opponent.ID == id {
+			return s.opponent.name
+		}
+	}
+	return ""
+}
+
+func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps interactive.PlayerState) {
+	if s.frameCount%120 == 0 {
+		logging.Printf(logging.Duel, "drawBattlefield %s: %d permanents on battlefield\n", dp.name, len(ps.Battlefield))
+		for _, p := range ps.Battlefield {
+			logging.Printf(logging.Duel, "  perm: %s land=%v creature=%v tapped=%v\n", p.Name, p.IsLand, p.IsCreature, p.Tapped)
+		}
+	}
 	for _, landsOnly := range []bool{true, false} {
-		cards := s.fieldCards(dp, landsOnly)
-		for i, card := range cards {
-			pos := s.getFieldCardPos(card, dp, i, landsOnly)
+		perms := s.fieldPerms(ps, landsOnly)
+		for i, perm := range perms {
+			pos := s.getFieldCardPos(perm, dp, i, landsOnly)
 
-			n := len(card.Attachments)
-			for j := n - 1; j >= 0; j-- {
-				aura := card.Attachments[j]
-				auraImg := s.getCardArtImg(aura, fieldCardW)
-				if auraImg == nil {
-					continue
+			cardImg := s.getCardArtImg(perm.Name, fieldCardW)
+			if cardImg != nil {
+				cardOpts := &ebiten.DrawImageOptions{}
+				if perm.Tapped {
+					imgH := float64(cardImg.Bounds().Dy())
+					cardOpts.GeoM.Rotate(math.Pi / 2)
+					cardOpts.GeoM.Translate(imgH, 0)
 				}
-				auraOpts := &ebiten.DrawImageOptions{}
-				auraY := pos.Y - (j+1)*14
-				auraOpts.GeoM.Translate(float64(pos.X), float64(auraY))
-				screen.DrawImage(auraImg, auraOpts)
+				cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
+				screen.DrawImage(cardImg, cardOpts)
+			} else {
+				vector.DrawFilledRect(screen, float32(pos.X), float32(pos.Y),
+					float32(fieldCardW), float32(fieldCardH), color.RGBA{60, 60, 80, 255}, false)
+				vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
+					float32(fieldCardW), float32(fieldCardH), 1, color.RGBA{120, 120, 140, 255}, false)
+				nameTxt := elements.NewText(10, perm.Name, pos.X+4, pos.Y+4)
+				nameTxt.Color = color.RGBA{220, 220, 220, 255}
+				nameTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 			}
 
-			cardImg := s.getCardArtImg(card, fieldCardW)
-			if cardImg == nil {
-				continue
+			if perm.IsCreature {
+				s.drawCreatureStats(screen, perm, pos)
 			}
 
-			cardOpts := &ebiten.DrawImageOptions{}
-			if card.Tapped {
-				imgH := float64(cardImg.Bounds().Dy())
-				cardOpts.GeoM.Rotate(math.Pi / 2)
-				cardOpts.GeoM.Translate(imgH, 0)
-			}
-			cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
-			screen.DrawImage(cardImg, cardOpts)
-
-			if card.CardType == domain.CardTypeCreature {
-				s.drawCreatureStats(screen, card, pos)
-			}
-
-			if !card.Tapped {
-				icons := s.getKeywordIcons(card)
+			if !perm.Tapped {
+				icons := s.getKeywordIcons(perm)
 				for idx, icon := range icons {
 					iconX := pos.X + idx*22
 					if iconX+22 > pos.X+fieldCardW {
@@ -1230,54 +1415,45 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 				}
 			}
 
-			if _, hasAction := s.cardActions[card.ID]; hasAction && dp == s.self && s.targetingCard == nil {
+			if _, hasAction := s.cardActions[perm.ID]; hasAction && dp == s.self && s.targetingCardID == uuid.Nil {
 				star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
 				star.Color = color.RGBA{255, 255, 0, 255}
 				star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 			}
 
-			if s.pendingAttackers[card.ID] && dp == s.self {
+			if s.pendingAttackers[perm.ID] && dp == s.self {
 				vector.StrokeRect(screen,
 					float32(pos.X), float32(pos.Y),
 					float32(fieldCardW), float32(fieldCardH),
 					2, color.RGBA{255, 255, 0, 255}, false)
 			}
 
-			if dp == s.self && (s.selectedBlocker == card.ID || s.pendingBlockers[card.ID] != 0) {
+			if dp == s.self && (s.selectedBlocker == perm.ID || s.pendingBlockers[perm.ID] != uuid.Nil) {
 				vector.StrokeRect(screen,
 					float32(pos.X), float32(pos.Y),
 					float32(fieldCardW), float32(fieldCardH),
 					2, color.RGBA{255, 0, 0, 255}, false)
 			}
 
-			if dp == s.opponent && s.isInDeclareBlockers() {
-				var attackerCard *core.Card
-				for _, atk := range s.gameState.Attackers {
-					if atk.ID == card.ID {
-						attackerCard = atk
-						break
-					}
+			if dp == s.opponent && s.isInDeclareBlockers() && perm.Attacking {
+				borderColor := color.RGBA{255, 255, 0, 255}
+				if hasKeyword(perm.Keywords, "Menace") {
+					borderColor = color.RGBA{255, 140, 0, 255}
 				}
-				if attackerCard != nil {
-					borderColor := color.RGBA{255, 255, 0, 255}
-					if attackerCard.HasKeyword(effects.KeywordMenace) {
-						borderColor = color.RGBA{255, 140, 0, 255}
-					}
-					if s.selectedBlocker != 0 && s.isValidBlock(s.selectedBlocker, card.ID) {
-						borderColor = color.RGBA{0, 255, 0, 255}
-					}
-					vector.StrokeRect(screen,
-						float32(pos.X), float32(pos.Y),
-						float32(fieldCardW), float32(fieldCardH),
-						2, borderColor, false)
+				if s.selectedBlocker != uuid.Nil && s.isValidBlock(s.selectedBlocker, perm.ID) {
+					borderColor = color.RGBA{0, 255, 0, 255}
 				}
+				vector.StrokeRect(screen,
+					float32(pos.X), float32(pos.Y),
+					float32(fieldCardW), float32(fieldCardH),
+					2, borderColor, false)
 			}
 
-			if s.targetingCard != nil {
-				if _, isTarget := s.targetingActions[card.EntityID()]; isTarget {
+			if s.targetingCardID != uuid.Nil {
+				if _, isTarget := s.targetingActions[perm.ID]; isTarget {
 					borderColor := color.RGBA{255, 255, 0, 255}
 					strokeW := float32(2)
-					if s.selectedTarget != nil && s.selectedTarget.EntityID() == card.EntityID() {
+					if s.selectedTargetID == perm.ID {
 						borderColor = color.RGBA{0, 255, 0, 255}
 						strokeW = 3
 					}
@@ -1285,28 +1461,23 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer) {
 						float32(fieldCardW), float32(fieldCardH), strokeW, borderColor, false)
 				}
 			}
-
-			if s.targetingCard == nil {
-				if targets := s.stackTargetIDs(); targets[card.EntityID()] {
-					vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
-						float32(fieldCardW), float32(fieldCardH), 2, color.RGBA{255, 255, 0, 255}, false)
-				}
-			}
 		}
 	}
 }
 
-func (s *DuelScreen) drawCreatureStats(screen *ebiten.Image, card *core.Card, pos image.Point) {
-	statText := fmt.Sprintf("%d/%d", card.EffectivePower(), card.EffectiveToughness())
+func (s *DuelScreen) drawCreatureStats(screen *ebiten.Image, perm interactive.PermanentState, pos image.Point) {
+	statText := fmt.Sprintf("%d/%d", perm.Power, perm.Toughness)
 	textX := pos.X + fieldCardW - len(statText)*8 - 2
 	textY := pos.Y + fieldCardH - 18
 	bg := elements.NewText(16, statText, textX-1, textY-1)
 	bg.Color = color.RGBA{0, 0, 0, 200}
 	bg.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	stat := elements.NewText(16, statText, textX, textY)
-	if card.EffectivePower() > card.Power || card.EffectiveToughness() > card.Toughness {
+
+	domainCard := s.getDomainCard(perm.Name)
+	if domainCard != nil && (perm.Power > domainCard.Power || perm.Toughness > domainCard.Toughness) {
 		stat.Color = color.RGBA{100, 255, 100, 255}
-	} else if card.EffectivePower() < card.Power || card.EffectiveToughness() < card.Toughness {
+	} else if domainCard != nil && (perm.Power < domainCard.Power || perm.Toughness < domainCard.Toughness) {
 		stat.Color = color.RGBA{255, 100, 100, 255}
 	} else {
 		stat.Color = color.RGBA{255, 255, 255, 255}
@@ -1347,7 +1518,7 @@ func (s *DuelScreen) drawBlockerArrows(screen *ebiten.Image) {
 	}
 }
 
-func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer) {
+func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps interactive.PlayerState) {
 	if dp.handBg == nil {
 		return
 	}
@@ -1359,7 +1530,7 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer) {
 	opts.GeoM.Translate(float64(dp.handX), float64(dp.handY))
 	screen.DrawImage(dp.handBg, opts)
 
-	label := fmt.Sprintf("Your Hand (%d)", len(dp.core.Hand))
+	label := fmt.Sprintf("Your Hand (%d)", ps.HandCount)
 	txt := elements.NewText(16, label, dp.handX+15, dp.handY+13)
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
@@ -1367,18 +1538,20 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer) {
 		return
 	}
 
-	for i, card := range dp.core.Hand {
-		if card == nil {
-			continue
-		}
+	for i, card := range ps.Hand {
 		y := dp.handY + handBgH + i*handCardOverlap
-		cardImg := s.getCardArtImg(card, handBgW)
-		if cardImg == nil {
-			continue
+		cardImg := s.getCardArtImg(card.Name, handBgW)
+		if cardImg != nil {
+			cardOpts := &ebiten.DrawImageOptions{}
+			cardOpts.GeoM.Translate(float64(dp.handX), float64(y))
+			screen.DrawImage(cardImg, cardOpts)
+		} else {
+			vector.DrawFilledRect(screen, float32(dp.handX), float32(y),
+				float32(handBgW), float32(handCardOverlap+10), color.RGBA{60, 60, 80, 255}, false)
+			nameTxt := elements.NewText(10, card.Name, dp.handX+4, y+2)
+			nameTxt.Color = color.RGBA{220, 220, 220, 255}
+			nameTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
-		cardOpts := &ebiten.DrawImageOptions{}
-		cardOpts.GeoM.Translate(float64(dp.handX), float64(y))
-		screen.DrawImage(cardImg, cardOpts)
 
 		if _, hasAction := s.cardActions[card.ID]; hasAction {
 			star := elements.NewText(14, "*", dp.handX+2, y+2)
@@ -1388,34 +1561,38 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer) {
 	}
 }
 
-func drawManaPool(screen, manaPoolBg *ebiten.Image, player *duelPlayer, manaPoolY int) {
+func drawManaPool(screen, manaPoolBg *ebiten.Image, ps interactive.PlayerState, manaPoolY int) {
 	const manaPoolX = 120
 
-	// Mana pool display
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(manaPoolX, float64(manaPoolY))
 	screen.DrawImage(manaPoolBg, opts)
 
-	manaColors := []rune{'B', 'U', 'G', 'R', 'W', 'C'}
-	for i := range manaColors {
+	manaCounts := []int{
+		ps.ManaPool.Black,
+		ps.ManaPool.Blue,
+		ps.ManaPool.Green,
+		ps.ManaPool.Red,
+		ps.ManaPool.White,
+		ps.ManaPool.Colorless,
+	}
+	for i, count := range manaCounts {
 		x := manaPoolX + 50
 		y := (i * 30) + 10
-		count := countManaOfColor(player.core.ManaPool, manaColors[i])
 		countTxt := elements.NewText(24, fmt.Sprintf("%d", count), x, manaPoolY+y)
 		countTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	}
 }
 
-func drawLife(screen *ebiten.Image, player *duelPlayer, Y int) {
+func drawLife(screen *ebiten.Image, dp *duelPlayer, life int, Y int) {
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(0, float64(Y))
-	screen.DrawImage(player.lifeBg, opts)
-	countTxt := elements.NewText(64, fmt.Sprintf("%d", player.core.LifeTotal), 15, Y)
+	screen.DrawImage(dp.lifeBg, opts)
+	countTxt := elements.NewText(64, fmt.Sprintf("%d", life), 15, Y)
 	countTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
 func drawGraveyard(screen *ebiten.Image, player *duelPlayer, Y float64) {
-	// Graveyard (in left sidebar, below phases)
 	if player.graveyardImg != nil {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(60, Y)
@@ -1424,14 +1601,17 @@ func drawGraveyard(screen *ebiten.Image, player *duelPlayer, Y float64) {
 }
 
 func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
-	drawManaPool(screen, s.manaPoolBg, s.opponent, 0)
-	drawManaPool(screen, s.manaPoolBg, s.self, 580)
+	if s.lastMsg == nil {
+		return
+	}
+	drawManaPool(screen, s.manaPoolBg, s.lastMsg.State.Opponent, 0)
+	drawManaPool(screen, s.manaPoolBg, s.lastMsg.State.You, 580)
 
 	drawGraveyard(screen, s.opponent, 94)
 	drawGraveyard(screen, s.self, 580)
 
-	drawLife(screen, s.opponent, 0)
-	drawLife(screen, s.self, 671)
+	drawLife(screen, s.opponent, s.lastMsg.State.Opponent.Life, 0)
+	drawLife(screen, s.self, s.lastMsg.State.You.Life, 671)
 }
 
 func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
@@ -1444,40 +1624,41 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 	opts.GeoM.Translate(float64(previewX), float64(previewY))
 	screen.DrawImage(s.cardPreviewImg, opts)
 
-	card := s.cardPreviewCard
-	if card != nil && card.CardType == domain.CardTypeCreature {
-		imgW := s.cardPreviewImg.Bounds().Dx()
-		imgH := s.cardPreviewImg.Bounds().Dy()
-		statText := fmt.Sprintf("%d/%d", card.EffectivePower(), card.EffectiveToughness())
-		textX := previewX + imgW - len(statText)*9 - 4
-		textY := previewY + imgH - 22
-		bg := elements.NewText(16, statText, textX-1, textY-1)
-		bg.Color = color.RGBA{0, 0, 0, 200}
-		bg.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-		stat := elements.NewText(16, statText, textX, textY)
-		if card.EffectivePower() > card.Power || card.EffectiveToughness() > card.Toughness {
-			stat.Color = color.RGBA{100, 255, 100, 255}
-		} else if card.EffectivePower() < card.Power || card.EffectiveToughness() < card.Toughness {
-			stat.Color = color.RGBA{255, 100, 100, 255}
-		} else {
-			stat.Color = color.RGBA{255, 255, 255, 255}
+	if s.cardPreviewName != "" {
+		domainCard := s.getDomainCard(s.cardPreviewName)
+		if domainCard != nil && domainCard.CardType == domain.CardTypeCreature {
+			power, toughness := domainCard.Power, domainCard.Toughness
+			if s.cardPreviewPerm != nil {
+				power, toughness = s.cardPreviewPerm.Power, s.cardPreviewPerm.Toughness
+			}
+			imgW := s.cardPreviewImg.Bounds().Dx()
+			imgH := s.cardPreviewImg.Bounds().Dy()
+			statText := fmt.Sprintf("%d/%d", power, toughness)
+			textX := previewX + imgW - len(statText)*9 - 4
+			textY := previewY + imgH - 22
+			bg := elements.NewText(16, statText, textX-1, textY-1)
+			bg.Color = color.RGBA{0, 0, 0, 200}
+			bg.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+			stat := elements.NewText(16, statText, textX, textY)
+			if s.cardPreviewPerm != nil && (power > domainCard.Power || toughness > domainCard.Toughness) {
+				stat.Color = color.RGBA{100, 255, 100, 255}
+			} else if s.cardPreviewPerm != nil && (power < domainCard.Power || toughness < domainCard.Toughness) {
+				stat.Color = color.RGBA{255, 100, 100, 255}
+			} else {
+				stat.Color = color.RGBA{255, 255, 255, 255}
+			}
+			stat.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
-		stat.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	}
 }
 
 func (s *DuelScreen) stackDescription() string {
-	stack := s.gameState.Stack
-	if stack.IsEmpty() {
+	if s.lastMsg == nil || len(s.lastMsg.State.StackItems) == 0 {
 		return ""
 	}
 	var names []string
-	for _, item := range stack.Items {
-		if item.Card != nil {
-			names = append(names, item.Card.Name())
-		} else if item.SourceName != "" {
-			names = append(names, item.SourceName)
-		}
+	for _, item := range s.lastMsg.State.StackItems {
+		names = append(names, item.Name)
 	}
 	if len(names) == 0 {
 		return ""
@@ -1485,33 +1666,18 @@ func (s *DuelScreen) stackDescription() string {
 	return fmt.Sprintf("Responding to %s. ", strings.Join(names, ", "))
 }
 
-func (s *DuelScreen) stackTargetIDs() map[int]bool {
-	stack := s.gameState.Stack
-	if stack.IsEmpty() {
-		return nil
-	}
-	targets := map[int]bool{}
-	for _, item := range stack.Items {
-		if item.Target != nil {
-			targets[item.Target.EntityID()] = true
-		}
-	}
-	return targets
-}
-
 func (s *DuelScreen) statusMessage() string {
-	active := s.gameState.Players[s.gameState.ActivePlayer]
-	isMyTurn := active == s.self.core
-	phase := active.Turn.Phase
-
-	if s.self.core.Turn.Discarding {
-		return fmt.Sprintf("Hand size > max hand size. Choose a card to discard. (%d cards)", len(s.self.core.Hand))
+	if s.lastMsg == nil {
+		return ""
 	}
+	state := s.lastMsg.State
+	step := state.Step
+	isMyTurn := state.ActivePlayer == playerNameYou
 
 	stackMsg := s.stackDescription()
 
-	if phase == core.PhaseCombat {
-		return stackMsg + s.combatStatusMessage(active, isMyTurn)
+	if isCombatStep(step) {
+		return stackMsg + s.combatStatusMessage(step, isMyTurn)
 	}
 
 	prefix := "Your"
@@ -1519,55 +1685,63 @@ func (s *DuelScreen) statusMessage() string {
 		prefix = s.opponent.name + "'s"
 	}
 
-	switch phase {
-	case core.PhaseUntap:
+	switch step {
+	case "Untap":
 		return stackMsg + fmt.Sprintf("%s turn - Untap", prefix)
-	case core.PhaseUpkeep:
+	case "Upkeep":
 		return stackMsg + fmt.Sprintf("%s turn - Upkeep", prefix)
-	case core.PhaseDraw:
+	case "Draw":
 		return stackMsg + fmt.Sprintf("%s turn - Draw", prefix)
-	case core.PhaseMain1:
+	case "Precombat Main":
 		if isMyTurn {
 			return stackMsg + "Main phase: play a land or cast spells. Done to go to combat."
 		}
 		return stackMsg + fmt.Sprintf("%s main phase. Cast instants or Done to pass.", prefix)
-	case core.PhaseMain2:
+	case "Postcombat Main":
 		if isMyTurn {
 			return stackMsg + "Main phase 2: play a land or cast spells. Done to end turn."
 		}
 		return stackMsg + fmt.Sprintf("%s main phase 2. Cast instants or Done to pass.", prefix)
-	case core.PhaseEnd:
+	case "End Step":
 		return stackMsg + fmt.Sprintf("%s turn - End step", prefix)
-	case core.PhaseCleanup:
+	case "Cleanup":
 		return stackMsg + fmt.Sprintf("%s turn - Cleanup", prefix)
 	default:
 		return stackMsg
 	}
 }
 
-func (s *DuelScreen) combatStatusMessage(active *core.Player, isMyTurn bool) string {
-	step := active.Turn.CombatStep
+func isCombatStep(step string) bool {
 	switch step {
-	case core.CombatStepBeginning:
+	case "Begin Combat", stepDeclareAttackers, stepDeclareBlockers,
+		"First Strike Damage", stepCombatDamage, "End of Combat":
+		return true
+	}
+	return false
+}
+
+func (s *DuelScreen) combatStatusMessage(step string, isMyTurn bool) string {
+	switch step {
+	case "Begin Combat":
 		if isMyTurn {
 			return "Beginning of combat"
 		}
 		return fmt.Sprintf("%s declares combat", s.opponent.name)
-	case core.CombatStepDeclareAttackers:
+	case stepDeclareAttackers:
 		if isMyTurn {
 			return "Choose creatures to attack with. Done when finished."
 		}
 		return fmt.Sprintf("%s is choosing attackers...", s.opponent.name)
-	case core.CombatStepDeclareBlockers:
+	case stepDeclareBlockers:
 		if !isMyTurn {
 			return "Choose creatures to block with. Done when finished."
 		}
 		return fmt.Sprintf("%s is choosing blockers...", s.opponent.name)
-	case core.CombatStepFirstStrikeDamage:
+	case "First Strike Damage":
 		return "First strike damage"
-	case core.CombatStepCombatDamage:
+	case stepCombatDamage:
 		return "Combat damage resolves"
-	case core.CombatStepEndOfCombat:
+	case "End of Combat":
 		return "End of combat"
 	default:
 		if isMyTurn {
@@ -1577,21 +1751,11 @@ func (s *DuelScreen) combatStatusMessage(active *core.Player, isMyTurn bool) str
 	}
 }
 
-func hasActionType(actions []core.PlayerAction, actionType string) bool {
+func hasActionType(actions []interactive.ActionOption, actionType interactive.ActionType) bool {
 	for _, a := range actions {
 		if a.Type == actionType {
 			return true
 		}
 	}
 	return false
-}
-
-func countManaOfColor(pool core.ManaPool, c rune) int {
-	count := 0
-	for _, mana := range pool {
-		if len(mana) == 1 && mana[0] == c {
-			count++
-		}
-	}
-	return count
 }

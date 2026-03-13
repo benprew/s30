@@ -1,20 +1,18 @@
 package brawl
 
 import (
-	"github.com/benprew/s30/mtg/core"
+	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
 )
 
 type Brawl struct {
-	game *core.GameState
+	game *mage.Game
 }
 
-func NewBrawl(players []*core.Player) *Brawl {
-	g := core.NewGame(players)
+func NewBrawl(playerA, playerB mage.Player) *Brawl {
+	g := mage.NewGame(playerA, playerB)
 	return &Brawl{game: g}
 }
 
 func (b *Brawl) Update() error {
-	// loop until game ends
-
 	return nil
 }

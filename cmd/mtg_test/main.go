@@ -2,161 +2,159 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 
-	"github.com/benprew/s30/game/domain"
+	_ "git.sr.ht/~cdcarter/mage-go/cards"
+	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
+	"git.sr.ht/~cdcarter/mage-go/pkg/mage/core"
+	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
+	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai"
 	"github.com/benprew/s30/logging"
-	"github.com/benprew/s30/mtg/ai"
-	"github.com/benprew/s30/mtg/core"
 )
 
-func createPlayers() []*core.Player {
-	players := []*core.Player{}
-	entityID := core.EntityID(1)
-
-	for i := range 2 {
-		player := &core.Player{
-			ID:          core.EntityID(i + 1),
-			LifeTotal:   12,
-			ManaPool:    core.ManaPool{},
-			Hand:        []*core.Card{},
-			Library:     []*core.Card{},
-			Battlefield: []*core.Card{},
-			Graveyard:   []*core.Card{},
-			Exile:       []*core.Card{},
-			Turn:        &core.Turn{},
-			InputChan:   make(chan core.PlayerAction, 100),
-			WaitingChan: make(chan struct{}, 1),
-			IsAI:        true,
+func createPlayer(name string, cards []string) *ai.AIPlayer {
+	player := ai.NewAIPlayer(name)
+	for _, cardName := range cards {
+		c, err := mage.CreateCard(cardName)
+		if err != nil {
+			fmt.Printf("Failed to create card %s: %v\n", cardName, err)
+			continue
 		}
-
-		addCard := func(name string) {
-			domainCard := domain.FindCardByName(name)
-			if domainCard != nil {
-				coreCard := core.NewCardFromDomain(domainCard, entityID, player)
-				player.Library = append(player.Library, coreCard)
-				entityID++
-			}
-		}
-
-		for range 5 {
-			addCard("Mountain")
-		}
-		for range 5 {
-			addCard("Forest")
-		}
-		for range 2 {
-			addCard("Lightning Bolt")
-		}
-		for range 2 {
-			addCard("Giant Growth")
-		}
-		for range 2 {
-			addCard("Kird Ape")
-		}
-		for range 2 {
-			addCard("Sol Ring")
-		}
-		for range 2 {
-			addCard("War Mammoth")
-		}
-		for range 2 {
-			addCard("Dragon Whelp")
-		}
-		for range 2 {
-			addCard("Scryb Sprites")
-		}
-
-		rand.Shuffle(len(player.Library), func(i, j int) {
-			player.Library[i], player.Library[j] = player.Library[j], player.Library[i]
-		})
-
-		players = append(players, player)
+		player.AddToLibrary(c)
 	}
-
-	return players
-}
-
-func runAI(game *core.GameState, player *core.Player, done chan struct{}) {
-	for {
-		select {
-		case <-done:
-			return
-		case <-player.WaitingChan:
-		}
-
-		if player.HasLost || game.GetOpponent(player).HasLost {
-			return
-		}
-
-		activePlayer := game.Players[game.ActivePlayer]
-
-		logging.Printf(logging.Duel, "  [AI %s] Getting actions, phase=%v, combat_step=%v\n",
-			player.Name(), activePlayer.Turn.Phase, activePlayer.Turn.CombatStep)
-
-		actions := game.AvailableActions(player)
-		logging.Printf(logging.Duel, "  [AI %s] Available actions: %d\n", player.Name(), len(actions))
-		for i, a := range actions {
-			if a.Card != nil {
-				logging.Printf(logging.Duel, "    [%d] %v - %s\n", i, a.Type, a.Card.Name())
-			} else {
-				logging.Printf(logging.Duel, "    [%d] %v\n", i, a.Type)
-			}
-		}
-
-		action := ai.ChooseAction(actions, game)
-		if action.Type == core.ActionCastSpell && action.Card != nil {
-			if action.Target != nil {
-				logging.Printf(logging.Duel, "  [AI %s] Chose action: %v - %s#%d -> %s#%d\n",
-					player.Name(), action.Type, action.Card.Name(), action.Card.ID,
-					action.Target.Name(), action.Target.EntityID())
-			} else {
-				logging.Printf(logging.Duel, "  [AI %s] Chose action: %v - %s#%d\n",
-					player.Name(), action.Type, action.Card.Name(), action.Card.ID)
-			}
-		} else {
-			logging.Printf(logging.Duel, "  [AI %s] Chose action: %v\n", player.Name(), action.Type)
-		}
-
-		select {
-		case player.InputChan <- action:
-			logging.Printf(logging.Duel, "  [AI %s] Sent action to channel\n", player.Name())
-		case <-done:
-			return
-		}
-	}
+	player.ShuffleLibrary()
+	return player
 }
 
 func main() {
 	logging.Enable(logging.MTG)
 	logging.Enable(logging.Duel)
-	players := createPlayers()
-	game := core.NewGame(players)
-	game.StartGame()
+
+	var deck []string
+	for range 5 {
+		deck = append(deck, "Mountain")
+	}
+	for range 5 {
+		deck = append(deck, "Forest")
+	}
+	for range 2 {
+		deck = append(deck, "Lightning Bolt")
+	}
+	for range 2 {
+		deck = append(deck, "Giant Growth")
+	}
+	for range 2 {
+		deck = append(deck, "Kird Ape")
+	}
+	for range 2 {
+		deck = append(deck, "Sol Ring")
+	}
+	for range 2 {
+		deck = append(deck, "War Mammoth")
+	}
+	for range 2 {
+		deck = append(deck, "Web")
+	}
+	for range 2 {
+		deck = append(deck, "Scryb Sprites")
+	}
+
+	ai1 := createPlayer("Player 1", deck)
+	ai2 := createPlayer("Player 2", deck)
+
+	g := mage.NewGame(ai1, ai2)
+
+	for range 7 {
+		ai1.DrawCard()
+	}
+	for range 7 {
+		ai2.DrawCard()
+	}
 
 	fmt.Println("=== MTG Test Game ===")
-	fmt.Printf("Players: %d, Starting life: %d\n\n", len(players), players[0].LifeTotal)
+	fmt.Printf("Players: 2, Starting life: %d\n\n", ai1.Life())
 
-	done := make(chan struct{})
-	for _, p := range players {
-		go runAI(game, p, done)
+	g.OnPriority = func(g *mage.Game, playerIdx int, mainPhase bool) mage.PriorityAction {
+		aiP := g.Players[playerIdx].(*ai.AIPlayer)
+		action := aiP.GetPriorityAction(g, g.LandsPlayedThisTurn, mainPhase)
+		return convertAction(action)
 	}
 
-	winners := core.PlayGame(game, 15)
-	close(done)
+	g.AfterPriorityAction = func(g *mage.Game, playerIdx int, action mage.PriorityAction) {
+		p := g.Players[playerIdx]
+		switch action.Type {
+		case mage.PriorityPlayLand:
+			perm := g.FindPermanent(action.CardID)
+			name := "a land"
+			if perm != nil {
+				name = perm.Name()
+			}
+			fmt.Printf("  %s plays %s\n", p.Name(), name)
+		case mage.PriorityCastSpell:
+			obj := g.Stack.Peek()
+			name := "a spell"
+			if obj != nil && obj.Card != nil {
+				name = obj.Card.Name()
+			}
+			fmt.Printf("  %s casts %s\n", p.Name(), name)
+		case mage.PriorityActivateAbility:
+			perm := g.FindPermanent(action.PermanentID)
+			name := "permanent"
+			if perm != nil {
+				name = perm.Name()
+			}
+			fmt.Printf("  %s activates %s\n", p.Name(), name)
+		}
+	}
+
+	for g.Turn <= 50 {
+		fmt.Printf("── Turn %d: %s ──\n", g.Turn, g.ActivePlayerObj().Name())
+		for _, step := range core.AllSteps() {
+			g.RunStepWithPriority(step)
+			if step == core.CombatDamage && len(g.Combat.Groups) > 0 {
+				fmt.Printf("  Combat: %d attacker(s)\n", len(g.Combat.Groups))
+			}
+			if g.IsGameOver() {
+				break
+			}
+		}
+		if g.IsGameOver() {
+			break
+		}
+		if len(g.ExtraTurns) > 0 {
+			extraPlayerID := g.ExtraTurns[0]
+			g.ExtraTurns = g.ExtraTurns[1:]
+			for i, p := range g.Players {
+				if p.PlayerID() == extraPlayerID {
+					g.ActivePlayer = i
+					break
+				}
+			}
+		} else {
+			g.ActivePlayer = (g.ActivePlayer + 1) % len(g.Players)
+		}
+		g.Turn++
+	}
 
 	fmt.Println("\n=== Game Over ===")
-	for _, p := range players {
+	for _, p := range g.Players {
 		status := "alive"
-		if p.HasLost {
+		if !p.IsAlive() {
 			status = "lost"
 		}
-		fmt.Printf("%s: Life %d (%s)\n", p.Name(), p.LifeTotal, status)
+		fmt.Printf("%s: Life %d (%s)\n", p.Name(), p.Life(), status)
 	}
+	fmt.Printf("Winner: %s\n", g.Winner())
+}
 
-	if len(winners) == 1 {
-		fmt.Printf("Winner: %s\n", winners[0].Name())
-	} else if len(winners) == 0 {
-		fmt.Println("No winner (draw or max turns reached)")
+func convertAction(a interactive.PriorityAction) mage.PriorityAction {
+	switch a.Type {
+	case interactive.ActionPlayLand:
+		return mage.PriorityAction{Type: mage.PriorityPlayLand, CardID: a.CardID}
+	case interactive.ActionCastSpell:
+		return mage.PriorityAction{Type: mage.PriorityCastSpell, CardID: a.CardID, Targets: a.Targets, XValue: a.XValue}
+	case interactive.ActionActivateAbility:
+		return mage.PriorityAction{Type: mage.PriorityActivateAbility, PermanentID: a.PermanentID, AbilityIdx: a.AbilityIndex, Targets: a.Targets}
+	default:
+		return mage.PriorityAction{Type: mage.PriorityPass}
 	}
 }
