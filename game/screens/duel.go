@@ -1415,17 +1415,21 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 				}
 			}
 
-			if _, hasAction := s.cardActions[perm.ID]; hasAction && dp == s.self && s.targetingCardID == uuid.Nil {
-				star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
-				star.Color = color.RGBA{255, 255, 0, 255}
-				star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-			}
-
-			if s.pendingAttackers[perm.ID] && dp == s.self {
-				vector.StrokeRect(screen,
-					float32(pos.X), float32(pos.Y),
-					float32(fieldCardW), float32(fieldCardH),
-					2, color.RGBA{255, 255, 0, 255}, false)
+			if actions, hasAction := s.cardActions[perm.ID]; hasAction && dp == s.self && s.targetingCardID == uuid.Nil {
+				if hasActionType(actions, interactive.ActionSelectAttackers) {
+					borderColor := color.RGBA{255, 255, 0, 255}
+					if s.pendingAttackers[perm.ID] {
+						borderColor = color.RGBA{0, 255, 0, 255}
+					}
+					vector.StrokeRect(screen,
+						float32(pos.X), float32(pos.Y),
+						float32(fieldCardW), float32(fieldCardH),
+						2, borderColor, false)
+				} else {
+					star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
+					star.Color = color.RGBA{255, 255, 0, 255}
+					star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+				}
 			}
 
 			if dp == s.self && (s.selectedBlocker == perm.ID || s.pendingBlockers[perm.ID] != uuid.Nil) {
