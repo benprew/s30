@@ -466,9 +466,27 @@ func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPl
 func (s *DuelScreen) fieldPerms(ps interactive.PlayerState, landsOnly bool) []interactive.PermanentState {
 	var perms []interactive.PermanentState
 	for _, perm := range ps.Battlefield {
+		if perm.AttachedTo != uuid.Nil {
+			continue
+		}
 		isLand := perm.IsLand
 		if isLand == landsOnly {
 			perms = append(perms, perm)
+		}
+	}
+	return perms
+}
+
+func (s *DuelScreen) attachedPerms(hostID uuid.UUID) []interactive.PermanentState {
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return nil
+	}
+	var perms []interactive.PermanentState
+	for _, ps := range []interactive.PlayerState{s.lastMsg.State.You, s.lastMsg.State.Opponent} {
+		for _, perm := range ps.Battlefield {
+			if perm.AttachedTo == hostID {
+				perms = append(perms, perm)
+			}
 		}
 	}
 	return perms
@@ -484,8 +502,18 @@ func (s *DuelScreen) fieldPermAtPoint(mx, my int, dp *duelPlayer) *interactive.P
 		for i := len(perms) - 1; i >= 0; i-- {
 			perm := perms[i]
 			pos := s.getFieldCardPos(perm, dp, i, landsOnly)
-			if mx >= pos.X && mx < pos.X+fieldCardW && my >= pos.Y && my < pos.Y+fieldCardH {
-				return &perms[i]
+			if mx >= pos.X && mx < pos.X+fieldCardW {
+				auras := s.attachedPerms(perm.ID)
+				for j := len(auras) - 1; j >= 0; j-- {
+					auraY := pos.Y - (j+1)*14
+					if my >= auraY && my < auraY+14 {
+						auraCopy := auras[j]
+						return &auraCopy
+					}
+				}
+				if my >= pos.Y && my < pos.Y+fieldCardH {
+					return &perms[i]
+				}
 			}
 		}
 	}
@@ -1377,6 +1405,23 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 		perms := s.fieldPerms(ps, landsOnly)
 		for i, perm := range perms {
 			pos := s.getFieldCardPos(perm, dp, i, landsOnly)
+
+			auras := s.attachedPerms(perm.ID)
+			for j, aura := range auras {
+				auraY := pos.Y - (j+1)*14
+				auraImg := s.getCardArtImg(aura.Name, fieldCardW)
+				if auraImg != nil {
+					auraOpts := &ebiten.DrawImageOptions{}
+					auraOpts.GeoM.Translate(float64(pos.X), float64(auraY))
+					screen.DrawImage(auraImg, auraOpts)
+				} else {
+					vector.DrawFilledRect(screen, float32(pos.X), float32(auraY),
+						float32(fieldCardW), 14, color.RGBA{80, 60, 80, 255}, false)
+					auraTxt := elements.NewText(10, aura.Name, pos.X+4, auraY+2)
+					auraTxt.Color = color.RGBA{220, 200, 255, 255}
+					auraTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+				}
+			}
 
 			cardImg := s.getCardArtImg(perm.Name, fieldCardW)
 			if cardImg != nil {
