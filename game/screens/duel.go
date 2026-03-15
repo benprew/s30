@@ -453,9 +453,11 @@ const (
 	fieldCardH      = 83
 )
 
-func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPlayer, idx int, isLand bool) image.Point {
-	if pos, ok := s.cardPositions[perm.ID]; ok {
-		return pos
+func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPlayer, idx int, total int, isLand bool) image.Point {
+	if perm.ID == s.draggingCardID {
+		if pos, ok := s.cardPositions[perm.ID]; ok {
+			return pos
+		}
 	}
 	var baseY int
 	if dp == s.opponent {
@@ -471,9 +473,14 @@ func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPl
 			baseY = duelPlayerBoardY + 20
 		}
 	}
-	spacing := 35
+	maxSpacing := 35
 	if !isLand {
-		spacing = 120
+		maxSpacing = 120
+	}
+	availableW := duelBoardW - 30 - fieldCardW
+	spacing := maxSpacing
+	if total > 1 && (total-1)*spacing > availableW {
+		spacing = availableW / (total - 1)
 	}
 	pos := image.Pt(duelBoardX+30+idx*spacing, baseY)
 	s.cardPositions[perm.ID] = pos
@@ -518,7 +525,7 @@ func (s *DuelScreen) fieldPermAtPoint(mx, my int, dp *duelPlayer) *interactive.P
 		perms := s.fieldPerms(*ps, landsOnly)
 		for i := len(perms) - 1; i >= 0; i-- {
 			perm := perms[i]
-			pos := s.getFieldCardPos(perm, dp, i, landsOnly)
+			pos := s.getFieldCardPos(perm, dp, i, len(perms), landsOnly)
 			if mx >= pos.X && mx < pos.X+fieldCardW {
 				auras := s.attachedPerms(perm.ID)
 				for j := len(auras) - 1; j >= 0; j-- {
@@ -1427,7 +1434,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 	for _, landsOnly := range []bool{true, false} {
 		perms := s.fieldPerms(ps, landsOnly)
 		for i, perm := range perms {
-			pos := s.getFieldCardPos(perm, dp, i, landsOnly)
+			pos := s.getFieldCardPos(perm, dp, i, len(perms), landsOnly)
 
 			auras := s.attachedPerms(perm.ID)
 			for j, aura := range auras {

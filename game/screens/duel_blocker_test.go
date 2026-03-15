@@ -91,7 +91,7 @@ func TestIsInDeclareBlockers(t *testing.T) {
 func TestPendingBlockers_SelectBlocker(t *testing.T) {
 	s, blocker, _ := setupBlockerTest()
 
-	pos := s.getFieldCardPos(blocker, s.self, 0, false)
+	pos := s.getFieldCardPos(blocker, s.self, 0, 1, false)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
@@ -107,7 +107,7 @@ func TestPendingBlockers_AssignBlocker(t *testing.T) {
 
 	s.selectedBlocker = blocker.ID
 
-	pos := s.getFieldCardPos(attacker, s.opponent, 0, false)
+	pos := s.getFieldCardPos(attacker, s.opponent, 0, 1, false)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
@@ -130,7 +130,7 @@ func TestPendingBlockers_RemoveBlocker(t *testing.T) {
 
 	s.pendingBlockers[blocker.ID] = attacker.ID
 
-	pos := s.getFieldCardPos(blocker, s.self, 0, false)
+	pos := s.getFieldCardPos(blocker, s.self, 0, 1, false)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
