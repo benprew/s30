@@ -189,6 +189,7 @@ func (s *DuelScreen) initGameState() {
 	s.aiPlayer.ShuffleLibrary()
 
 	s.game = mage.NewGame(s.human, s.aiPlayer)
+	mage.DebugPriority = logging.Enabled(logging.Duel)
 
 	logging.Printf(logging.Duel, "Drawing cards\n")
 
@@ -222,6 +223,14 @@ func (s *DuelScreen) drainMessages() {
 				return
 			}
 			s.lastMsg = &msg
+			if logging.Enabled(logging.Duel) {
+				optNames := make([]string, len(msg.Options))
+				for i, o := range msg.Options {
+					optNames[i] = fmt.Sprintf("%s(%s)", o.Type, o.CardName)
+				}
+				logging.Printf(logging.Duel, "MSG: turn=%d step=%q active=%q prompt=%v options=%v gameover=%v\n",
+					msg.State.Turn, msg.State.Step, msg.State.ActivePlayer, msg.Prompt, optNames, msg.GameOver)
+			}
 		default:
 			return
 		}
@@ -236,6 +245,14 @@ func (s *DuelScreen) drainChoiceRequests() {
 				return
 			}
 			s.choiceRequest = &req
+			if logging.Enabled(logging.Duel) {
+				optLabels := make([]string, len(req.Options))
+				for i, o := range req.Options {
+					optLabels[i] = o.Label
+				}
+				logging.Printf(logging.Duel, "CHOICE_REQ: type=%d reason=%q amount=%d options=%v\n",
+					req.Type, req.Reason, req.Amount, optLabels)
+			}
 		default:
 			return
 		}
@@ -1096,18 +1113,22 @@ func (s *DuelScreen) handleChoiceRequest() {
 
 	switch req.Type {
 	case interactive.ChoiceMay:
+		logging.Printf(logging.Duel, "CHOICE_RESP: type=May accepted=false reason=%q\n", req.Reason)
 		s.human.ChoiceResponses() <- interactive.ChoiceResponse{Accepted: false}
 		s.choiceRequest = nil
 	case interactive.ChoiceManaColor:
 		if len(req.Options) > 0 {
+			logging.Printf(logging.Duel, "CHOICE_RESP: type=ManaColor color=%v reason=%q\n", req.Options[0].Color, req.Reason)
 			s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedColor: req.Options[0].Color}
 		}
 		s.choiceRequest = nil
 	case interactive.ChoiceMode:
+		logging.Printf(logging.Duel, "CHOICE_RESP: type=Mode index=0 reason=%q\n", req.Reason)
 		s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedIndex: 0}
 		s.choiceRequest = nil
 	case interactive.ChoicePermanent:
 		if len(req.Options) > 0 {
+			logging.Printf(logging.Duel, "CHOICE_RESP: type=Permanent selected=%q reason=%q\n", req.Options[0].Label, req.Reason)
 			s.human.ChoiceResponses() <- interactive.ChoiceResponse{
 				SelectedIDs: []uuid.UUID{req.Options[0].ID},
 			}
@@ -1121,10 +1142,12 @@ func (s *DuelScreen) handleChoiceRequest() {
 			}
 			ids = append(ids, opt.ID)
 		}
+		logging.Printf(logging.Duel, "CHOICE_RESP: type=CardsFromHand count=%d reason=%q\n", len(ids), req.Reason)
 		s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedIDs: ids}
 		s.choiceRequest = nil
 	default:
 		if len(req.Options) > 0 {
+			logging.Printf(logging.Duel, "CHOICE_RESP: type=%d selected=%q reason=%q\n", req.Type, req.Options[0].Label, req.Reason)
 			s.human.ChoiceResponses() <- interactive.ChoiceResponse{
 				SelectedIDs: []uuid.UUID{req.Options[0].ID},
 			}
