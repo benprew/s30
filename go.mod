@@ -23,4 +23,4 @@ require (
 	golang.org/x/text v0.24.0 // indirect
 )
 
-replace git.sr.ht/~cdcarter/mage-go => ../mage-go
+replace git.sr.ht/~cdcarter/mage-go => git.sr.ht/~benprew/mage-go v0.0.0-20260316060227-8577edb3b218
