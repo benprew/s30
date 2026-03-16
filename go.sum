@@ -1,5 +1,5 @@
-git.sr.ht/~benprew/mage-go v0.0.0-20260316060227-8577edb3b218 h1:nS65cLMdcgHg8wi2D5akjLdyiCFs6nRSTm7azHU1Ed4=
-git.sr.ht/~benprew/mage-go v0.0.0-20260316060227-8577edb3b218/go.mod h1:EWcQd4DEuA28turisfGALITP/JO18psMPct7Tmn2Ecs=
+git.sr.ht/~benprew/mage-go v0.0.0-20260316063616-ddef53a12e19 h1:e5VJm97TPeYPEMJWqPD+Pz8WBNdYuq++MGsypsFdZPA=
+git.sr.ht/~benprew/mage-go v0.0.0-20260316063616-ddef53a12e19/go.mod h1:EWcQd4DEuA28turisfGALITP/JO18psMPct7Tmn2Ecs=
 github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
 github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/aquilax/go-perlin v1.1.0 h1:Gg+3jQ24wT4Y5GI7TCRLmYarzUG0k+n/JATFqOimb7s=
