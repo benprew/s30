@@ -1,11 +1,8 @@
-* Fix cards like Basal Thrull that tap for mana
-
-*
-
 * Card Pool
 ** For cards that are VintageRestricted, don't show them in buycards, or give them as ante cards or use them in player's starting decks
 * Duel UI screen
-** TODO Duel UI - card parsing improvements
+** DONE Duel UI - card parsing improvements
+CLOSED: [2026-03-13 Fri 16:31]
 Suggested Parsing Categories (by impact & frequency)
 
 Tier 1 — High-frequency, high-impact (would unlock the most cards)
@@ -130,7 +127,8 @@ Destroy effects (44 unparsed) — "Destroy target creature", "Destroy target art
 see assets/card_info/scryfall_cards.json for the full list of cards
 and assets/card_info/parsed_cards.json for card parsing rules/format.
 
-* Rules
+* DONE Rules
+CLOSED: [2026-03-13 Fri 16:31]
 ** TODO When a card leaves the battlefield (goes to graveyard, library, exile, etc) all counters should be removed and all auras attached to it should be discarded.
 ** DONE Enforce minimum deck size (flll with temporary random lands if below min size and starting a duel) and use player starting life in game/domain/player.go
 CLOSED: [2026-03-06 Fri 14:13]
@@ -146,7 +144,6 @@ CLOSED: [2026-02-24 Tue 23:10]
 ** LATER Build a card image from the card back, the card art (scryfall ArtURL), text, card name and casting cost (assert/card/Manasymbols.pic.png)
 
 Requires using mana symbols, which shouldn't be stored in the repo.
-
 * TODO AI opponent
 ** TODO AI: board evaluation strategy
 https://claude.ai/share/14892337-d846-4ced-a18d-dee4222eb096
@@ -209,7 +206,42 @@ If a card image hasn't been downloaded yet and needs to be shown on the screen, 
   17. Deck stats in editor — No mana curve or color distribution display. The 872-line editor is the most polished screen but still missing this.
 
 * MTG Engine
+** Card sell prices are too high in the cities, make them 50%-75% cheaper, try to keep the sale price < 100 for cards, but keep the buy price similar to what it was before.
+** UI: Handle casting X spells (allow user to tap more mana for X cost)
+** DONE Mage: pass the player's mana pools into the snapshot (mage-ui), then show them in the UI in duel.go
+CLOSED: [2026-03-14 Sat 23:28]
+** DONE UI: Add a way for player to make choices. Ex. pay upkeep costs, choose card modes (ex. Healing Salve). Bring up a box that has the card in it with a button for each option. Also allow pressing a number to select one of the options. Example for Healing Salve:
+CLOSED: [2026-03-14 Sat 23:28]
+1. Gain 3 life
+2. Prevent the next 3 damage
 
+This wouldn't affect targeting or selecting blockers, only making choices that don't involve targeting. In the case of healing salve you'd select the target, click done and then it would bring up the options menu.
+
+When bringing up the card and the options shade the rest of the screen so it's a little darker, like it's disabled.
+
+Use Tradbut1_png for the buttons displaying the options. See an example ing random_encounter.
+** DONE UI: Way for player to pay upkeep costs, maybe just "pay upkeep cost yes/no" then if it's a mana cost, just pay the mana, if it's a discard cost let player choose which card to discard
+CLOSED: [2026-03-14 Sat 23:28]
+** DONE UI: when placing creatures on the board, adjust creatures so there's less space between them as more creatures are played, so they all fit on the screen.
+CLOSED: [2026-03-14 Sat 21:55]
+** DONE UI: Draw attached cards under card they're attached to, not on top of
+CLOSED: [2026-03-14 Sat 16:41]
+** DONE If an aura doesn't have a target it shouldn't have any actions associated with it
+CLOSED: [2026-03-13 Fri 13:34]
+** DONE UI: when selecting attackers instead of showing * for available attackers, draw a yellow border around them. If the player selects them turn the border green.
+CLOSED: [2026-03-13 Fri 13:34]
+
+** DONE Scavenging Ghoul doesn't get +1/+1 counters
+CLOSED: [2026-03-12 Thu 23:32]
+** DONE Lands show up as available to play on opponent's main phase
+CLOSED: [2026-03-12 Thu 23:32]
+
+** DONE AI: Teach it how to cast X spells
+CLOSED: [2026-03-12 Thu 23:32]
+
+
+** DONE The declare blockers and combat damage steps are skipped if no creatures are declared as attackers or put onto the battlefield attacking.
+CLOSED: [2026-03-12 Thu 23:06]
 ** DONE Add new card keywords
 CLOSED: [2026-02-24 Tue 23:12]
 Implement this keyword in the mtg core engine see mtg/core/
@@ -235,7 +267,10 @@ Write tests to verify the correct behavior
   Lifelink is a keyword ability in Magic: The Gathering that allows a player to gain life equal to the damage dealt by a source with lifelink. This life gain occurs simultaneously with the damage, meaning if a creature with lifelink deals 5 damage, its controller gains 5 life at the same time.
 - landwalk
   Landwalk is a keyword ability in Magic: The Gathering that allows a creature to be unblockable if the defending player controls a land of a specified type, such as "islandwalk" for Islands or "swampwalk" for Swamps. This means that if the opponent has the relevant land type, they cannot block the creature with that ability.
-** Card Ability Parsing
+** DONE Card Ability Parsing
+CLOSED: [2026-03-12 Thu 23:00]
+Card parsing moved to mage-go repo
+
 I'm building a magic the gathering game (see mtg/GEMINI.md) and I'd like to parse the card text and return structured data describing the ability of the card.
 
 What are some systems/libraries I could use to do this.

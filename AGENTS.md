@@ -38,6 +38,7 @@ go run ./cmd/mtg_test                                # Run AI vs AI game simulat
 - Comments should explain "why", not "what"
 - Function header comments for public functions are good
 - Don't resize images in `Draw()` or `Update()` methods; resize when creating screens
+- When making changes use TDD, write test first, then make changes, then confirm tests pass
 
 ### Python
 - Use type hints everywhere
