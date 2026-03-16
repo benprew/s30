@@ -15,6 +15,7 @@ import (
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
@@ -22,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
@@ -100,7 +102,10 @@ type DuelScreen struct {
 
 	anteCard *domain.Card
 
-	choiceRequest *interactive.ChoiceRequest
+	choiceRequest  *interactive.ChoiceRequest
+	choiceButtons  []*elements.Button
+	choiceCardImg  *ebiten.Image
+	choiceCardName string
 }
 
 type mouseStateType int
@@ -1116,50 +1121,166 @@ func (s *DuelScreen) handleChoiceRequest() {
 		return
 	}
 
+	if s.choiceButtons == nil {
+		s.initChoiceUI()
+	}
+
+	s.updateChoiceUI()
+}
+
+func (s *DuelScreen) initChoiceUI() {
+	req := s.choiceRequest
+
+	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
+	if err != nil {
+		logging.Printf(logging.Duel, "Error loading choice button sprites: %v\n", err)
+		return
+	}
+
+	fontFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 16}
+	s.choiceButtons = make([]*elements.Button, len(req.Options))
+	for i, opt := range req.Options {
+		label := fmt.Sprintf("%d. %s", i+1, opt.Label)
+		btn := elements.NewButton(btnSprites[0][0], btnSprites[0][1], btnSprites[0][2], 0, 0, 1.0)
+		btn.ButtonText = elements.ButtonText{
+			Text:      label,
+			Font:      fontFace,
+			TextColor: color.White,
+			HAlign:    elements.AlignCenter,
+			VAlign:    elements.AlignMiddle,
+		}
+		s.choiceButtons[i] = btn
+	}
+
+	s.choiceCardName = req.Reason
+	domainCard := s.getDomainCard(req.Reason)
+	if domainCard != nil {
+		s.choiceCardImg, _ = domainCard.CardImage(domain.CardViewFull)
+	} else {
+		s.choiceCardImg = nil
+	}
+}
+
+func (s *DuelScreen) updateChoiceUI() {
+	req := s.choiceRequest
+
+	for i := range req.Options {
+		key := ebiten.Key1 + ebiten.Key(i)
+		if i < 9 && inpututil.IsKeyJustPressed(key) {
+			s.respondToChoice(i)
+			return
+		}
+	}
+
+	btnW := 0
+	if len(s.choiceButtons) > 0 {
+		btnW = s.choiceButtons[0].Normal.Bounds().Dx()
+	}
+	cardH := 0
+	if s.choiceCardImg != nil {
+		cardH = s.choiceCardImg.Bounds().Dy()
+	}
+
+	centerX := 512
+	titleH := 30
+	cardTopY := 768/2 - (cardH+titleH+len(s.choiceButtons)*40)/2
+	btnStartY := cardTopY + titleH + cardH + 10
+
+	for i, btn := range s.choiceButtons {
+		btnX := centerX - btnW/2
+		btnY := btnStartY + i*40
+		btn.MoveTo(btnX, btnY)
+		opts := &ebiten.DrawImageOptions{}
+		btn.Update(opts, 1.0, 1024, 768)
+		if btn.IsClicked() {
+			s.respondToChoice(i)
+			return
+		}
+	}
+}
+
+func (s *DuelScreen) respondToChoice(index int) {
 	req := s.choiceRequest
 
 	switch req.Type {
 	case interactive.ChoiceMay:
-		logging.Printf(logging.Duel, "CHOICE_RESP: type=May accepted=false reason=%q\n", req.Reason)
-		s.human.ChoiceResponses() <- interactive.ChoiceResponse{Accepted: false}
-		s.choiceRequest = nil
+		accepted := index == 0
+		logging.Printf(logging.Duel, "CHOICE_RESP: type=May accepted=%v reason=%q\n", accepted, req.Reason)
+		s.human.ChoiceResponses() <- interactive.ChoiceResponse{Accepted: accepted}
 	case interactive.ChoiceManaColor:
-		if len(req.Options) > 0 {
-			logging.Printf(logging.Duel, "CHOICE_RESP: type=ManaColor color=%v reason=%q\n", req.Options[0].Color, req.Reason)
-			s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedColor: req.Options[0].Color}
+		if index < len(req.Options) {
+			logging.Printf(logging.Duel, "CHOICE_RESP: type=ManaColor color=%v reason=%q\n", req.Options[index].Color, req.Reason)
+			s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedColor: req.Options[index].Color}
 		}
-		s.choiceRequest = nil
 	case interactive.ChoiceMode:
-		logging.Printf(logging.Duel, "CHOICE_RESP: type=Mode index=0 reason=%q\n", req.Reason)
-		s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedIndex: 0}
-		s.choiceRequest = nil
+		logging.Printf(logging.Duel, "CHOICE_RESP: type=Mode index=%d reason=%q\n", index, req.Reason)
+		s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedIndex: index}
 	case interactive.ChoicePermanent:
-		if len(req.Options) > 0 {
-			logging.Printf(logging.Duel, "CHOICE_RESP: type=Permanent selected=%q reason=%q\n", req.Options[0].Label, req.Reason)
+		if index < len(req.Options) {
+			logging.Printf(logging.Duel, "CHOICE_RESP: type=Permanent selected=%q reason=%q\n", req.Options[index].Label, req.Reason)
 			s.human.ChoiceResponses() <- interactive.ChoiceResponse{
-				SelectedIDs: []uuid.UUID{req.Options[0].ID},
+				SelectedIDs: []uuid.UUID{req.Options[index].ID},
 			}
 		}
-		s.choiceRequest = nil
 	case interactive.ChoiceCardsFromHand:
-		var ids []uuid.UUID
-		for i, opt := range req.Options {
-			if i >= req.Amount {
-				break
-			}
-			ids = append(ids, opt.ID)
-		}
-		logging.Printf(logging.Duel, "CHOICE_RESP: type=CardsFromHand count=%d reason=%q\n", len(ids), req.Reason)
-		s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedIDs: ids}
-		s.choiceRequest = nil
-	default:
-		if len(req.Options) > 0 {
-			logging.Printf(logging.Duel, "CHOICE_RESP: type=%d selected=%q reason=%q\n", req.Type, req.Options[0].Label, req.Reason)
+		if index < len(req.Options) {
+			logging.Printf(logging.Duel, "CHOICE_RESP: type=CardsFromHand selected=%q reason=%q\n", req.Options[index].Label, req.Reason)
 			s.human.ChoiceResponses() <- interactive.ChoiceResponse{
-				SelectedIDs: []uuid.UUID{req.Options[0].ID},
+				SelectedIDs: []uuid.UUID{req.Options[index].ID},
 			}
 		}
-		s.choiceRequest = nil
+	default:
+		if index < len(req.Options) {
+			logging.Printf(logging.Duel, "CHOICE_RESP: type=%d selected=%q reason=%q\n", req.Type, req.Options[index].Label, req.Reason)
+			s.human.ChoiceResponses() <- interactive.ChoiceResponse{
+				SelectedIDs: []uuid.UUID{req.Options[index].ID},
+			}
+		}
+	}
+
+	s.choiceRequest = nil
+	s.choiceButtons = nil
+	s.choiceCardImg = nil
+	s.choiceCardName = ""
+}
+
+func (s *DuelScreen) drawChoiceUI(screen *ebiten.Image, W, H int) {
+	if s.choiceRequest == nil || s.choiceButtons == nil {
+		return
+	}
+
+	vector.DrawFilledRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 160}, false)
+
+	centerX := float64(W) / 2
+
+	cardH := 0
+	if s.choiceCardImg != nil {
+		cardH = s.choiceCardImg.Bounds().Dy()
+	}
+	titleH := 30
+	totalH := titleH + cardH + 10 + len(s.choiceButtons)*40
+	startY := float64(H)/2 - float64(totalH)/2
+
+	reasonText := s.choiceCardName
+	if reasonText == "" {
+		reasonText = "Choose"
+	}
+	title := elements.NewText(24, reasonText, 0, int(startY))
+	title.HAlign = elements.AlignCenter
+	title.BoundsW = float64(W)
+	title.Color = color.White
+	title.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+
+	if s.choiceCardImg != nil {
+		cardW := float64(s.choiceCardImg.Bounds().Dx())
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(centerX-cardW/2, startY+float64(titleH))
+		screen.DrawImage(s.choiceCardImg, op)
+	}
+
+	btnOpts := &ebiten.DrawImageOptions{}
+	for _, btn := range s.choiceButtons {
+		btn.Draw(screen, btnOpts, 1.0)
 	}
 }
 
@@ -1256,6 +1377,7 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawHandPanel(screen, s.opponent, s.lastMsg.State.Opponent)
 	s.drawHandPanel(screen, s.self, s.lastMsg.State.You)
 	s.drawCardPreview(screen, H)
+	s.drawChoiceUI(screen, W, H)
 }
 
 func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
@@ -1507,11 +1629,23 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 				}
 			}
 
-			if dp == s.self && (s.selectedBlocker == perm.ID || s.pendingBlockers[perm.ID] != uuid.Nil) {
-				vector.StrokeRect(screen,
-					float32(pos.X), float32(pos.Y),
-					float32(fieldCardW), float32(fieldCardH),
-					2, color.RGBA{255, 0, 0, 255}, false)
+			if dp == s.self && s.isInDeclareBlockers() && s.targetingCardID == uuid.Nil {
+				if s.selectedBlocker == perm.ID {
+					vector.StrokeRect(screen,
+						float32(pos.X), float32(pos.Y),
+						float32(fieldCardW), float32(fieldCardH),
+						2, color.RGBA{0, 255, 0, 255}, false)
+				} else if s.pendingBlockers[perm.ID] != uuid.Nil {
+					vector.StrokeRect(screen,
+						float32(pos.X), float32(pos.Y),
+						float32(fieldCardW), float32(fieldCardH),
+						2, color.RGBA{0, 255, 0, 255}, false)
+				} else if s.canBlockAnything(perm.ID) {
+					vector.StrokeRect(screen,
+						float32(pos.X), float32(pos.Y),
+						float32(fieldCardW), float32(fieldCardH),
+						2, color.RGBA{255, 255, 0, 255}, false)
+				}
 			}
 
 			if dp == s.opponent && s.isInDeclareBlockers() && perm.Attacking {
