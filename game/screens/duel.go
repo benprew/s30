@@ -100,7 +100,8 @@ type DuelScreen struct {
 	frameCount int
 	warningMsg string
 
-	anteCard *domain.Card
+	anteCard      *domain.Card
+	enemyAnteCard *domain.Card
 
 	choiceRequest  *interactive.ChoiceRequest
 	choiceButtons  []*elements.Button
@@ -128,7 +129,7 @@ type cardImgEntry struct {
 
 func (s *DuelScreen) IsFramed() bool { return false }
 
-func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level, idx int, anteCard *domain.Card) *DuelScreen {
+func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level, idx int, anteCard *domain.Card, enemyAnteCard *domain.Card) *DuelScreen {
 	s := &DuelScreen{
 		player:           player,
 		enemy:            enemy,
@@ -136,6 +137,7 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		idx:              idx,
 		selectedCardIdx:  -1,
 		anteCard:         anteCard,
+		enemyAnteCard:    enemyAnteCard,
 		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 		pendingAttackers: make(map[uuid.UUID]bool),
@@ -1325,19 +1327,10 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 
 	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())
 
-	enemyLevel := s.enemy.Character.Level
-	cardCount := getRewardCardCount(enemyLevel)
-	enemyDeck := s.enemy.Character.GetActiveDeck()
-	for c := range enemyDeck {
-		logging.Printf(logging.Duel, "enemyDeck: %s\n", c.Name())
-	}
-
-	wonCards := selectRewardCards(enemyDeck, cardCount)
-
-	for _, card := range wonCards {
-		if card != nil {
-			s.player.CardCollection.AddCard(card, 1)
-		}
+	wonCards := []*domain.Card{}
+	if s.enemyAnteCard != nil {
+		s.player.CardCollection.AddCard(s.enemyAnteCard, 1)
+		wonCards = append(wonCards, s.enemyAnteCard)
 	}
 
 	s.lvl.RemoveEnemyAt(s.idx)

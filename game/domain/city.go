@@ -88,10 +88,14 @@ func (c *City) GetWorldMagic() *WorldMagic {
 }
 
 func MkCards() []*Card {
-	// Pick 5 random indexes from CARDS
 	cards := make([]*Card, 0, 5)
 	for i := 0; i < 5; i++ {
-		cards = append(cards, CARDS[rand.Intn(len(CARDS))])
+		card := CARDS[rand.Intn(len(CARDS))]
+		if card.VintageRestricted {
+			i--
+			continue
+		}
+		cards = append(cards, card)
 	}
 	return cards
 }

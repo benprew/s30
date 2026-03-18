@@ -301,6 +301,10 @@ func (dg *DeckGenerator) colorsFriendlyEnough(card *Card, color ColorMask, lenie
 }
 
 func (dg *DeckGenerator) shouldSkipCard(card *Card) bool {
+	if card.VintageRestricted {
+		return true
+	}
+
 	if dg.difficulty == DifficultyEasy {
 		for _, keyword := range card.Keywords {
 			if keyword == "Islandwalk" || keyword == "Swampwalk" {
