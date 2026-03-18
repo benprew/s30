@@ -28,6 +28,8 @@ type Player struct {
 	Days            int
 	TimeAccumulator float64
 	mouseMoving     bool
+	BonusDuelLife   int
+	BonusDuelCards  []*Card
 }
 
 const TicksPerDay = 5000.0

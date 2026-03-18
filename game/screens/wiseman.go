@@ -80,8 +80,15 @@ func NewWisemanScreen(city *domain.City, player *domain.Player, level *world.Lev
 // determineState sets the wiseman screen state based on quest progress.
 func (s *WisemanScreen) determineState() {
 	if s.Player.ActiveQuest != nil {
-		s.handleActiveQuest()
-		return
+		q := s.Player.ActiveQuest
+		if q.DaysRemaining <= 0 {
+			s.handleExpiredQuest(q)
+			return
+		}
+		if s.isQuestRelevantCity(q) {
+			s.handleActiveQuest()
+			return
+		}
 	}
 
 	if s.City.QuestBanDays > 0 {
@@ -95,20 +102,40 @@ func (s *WisemanScreen) determineState() {
 		return
 	}
 
-	if rand.Float32() < .25 {
-		s.generateQuest()
-	} else {
+	if s.City.BoonGranted {
 		s.loadStory()
+		return
 	}
+
+	if s.City.WisemanBoon == domain.BoonQuest && s.Player.ActiveQuest != nil {
+		s.loadStory()
+		return
+	}
+
+	switch s.City.WisemanBoon {
+	case domain.BoonQuest:
+		s.generateQuest()
+	default:
+		if rand.Float32() < 0.5 {
+			s.grantBoon()
+		} else {
+			s.loadStory()
+		}
+	}
+}
+
+func (s *WisemanScreen) isQuestRelevantCity(q *domain.Quest) bool {
+	switch q.Type {
+	case domain.QuestTypeDelivery:
+		return q.OriginCity.Name == s.City.Name || q.TargetCity.Name == s.City.Name
+	case domain.QuestTypeDefeatEnemy:
+		return q.OriginCity.Name == s.City.Name
+	}
+	return false
 }
 
 func (s *WisemanScreen) handleActiveQuest() {
 	q := s.Player.ActiveQuest
-
-	if q.DaysRemaining <= 0 {
-		s.handleExpiredQuest(q)
-		return
-	}
 
 	if s.isQuestComplete(q) {
 		s.State = WisemanStateReward
@@ -129,6 +156,9 @@ func (s *WisemanScreen) handleExpiredQuest(q *domain.Quest) {
 	}
 	if q.OriginCity.Name == s.City.Name {
 		s.City.QuestBanDays = 20
+		s.City.WisemanBoon = domain.BoonNone
+		s.City.BoonGranted = false
+		s.City.ProposedQuest = nil
 		s.Player.ActiveQuest = nil
 		s.State = WisemanStateBanned
 		s.TextLines = banText
@@ -137,6 +167,9 @@ func (s *WisemanScreen) handleExpiredQuest(q *domain.Quest) {
 
 	if q.OriginCity != nil {
 		q.OriginCity.QuestBanDays = 20
+		q.OriginCity.WisemanBoon = domain.BoonNone
+		q.OriginCity.BoonGranted = false
+		q.OriginCity.ProposedQuest = nil
 	}
 	s.Player.ActiveQuest = nil
 
@@ -146,11 +179,7 @@ func (s *WisemanScreen) handleExpiredQuest(q *domain.Quest) {
 		return
 	}
 
-	if rand.Float32() < .25 {
-		s.generateQuest()
-	} else {
-		s.loadStory()
-	}
+	s.loadStory()
 }
 
 func (s *WisemanScreen) isQuestComplete(q *domain.Quest) bool {
@@ -166,12 +195,20 @@ func (s *WisemanScreen) isQuestComplete(q *domain.Quest) bool {
 func (s *WisemanScreen) generateQuest() {
 	s.State = WisemanStateOffer
 
+	if s.City.ProposedQuest != nil {
+		s.ProposedQuest = s.City.ProposedQuest
+		s.prepareQuestOfferText(s.ProposedQuest)
+		s.setupButtons()
+		return
+	}
+
 	if rand.Float32() < 0.5 {
 		s.generateDeliveryQuest()
 	} else {
 		s.generateDefeatEnemyQuest()
 	}
 
+	s.City.ProposedQuest = s.ProposedQuest
 	s.setupButtons()
 }
 
@@ -315,6 +352,27 @@ func rewardDescription(rt domain.RewardType, amuletColor domain.ColorMask) strin
 	return "a reward"
 }
 
+func (s *WisemanScreen) prepareQuestOfferText(q *domain.Quest) {
+	switch q.Type {
+	case domain.QuestTypeDelivery:
+		rewardText := rewardDescription(q.RewardType, q.AmuletColor)
+		s.TextLines = []string{
+			fmt.Sprintf("We need a message delivered to %s.", q.TargetCity.Name),
+			fmt.Sprintf("You will be rewarded with %s.", rewardText),
+			"",
+			"Accept the Quest?",
+		}
+	case domain.QuestTypeDefeatEnemy:
+		rewardText := rewardDescription(q.RewardType, q.AmuletColor)
+		s.TextLines = []string{
+			fmt.Sprintf("A %s threatens our village.", q.EnemyName),
+			fmt.Sprintf("Slay it and earn %s.", rewardText),
+			"",
+			"Accept the Quest?",
+		}
+	}
+}
+
 func (s *WisemanScreen) prepareActiveText() {
 	q := s.Player.ActiveQuest
 	switch q.Type {
@@ -371,6 +429,9 @@ func (s *WisemanScreen) giveReward() {
 			s.Player.CardCollection.AddCardToDeck(card, 0, 1)
 		}
 	}
+
+	q.OriginCity.BoonGranted = true
+	q.OriginCity.ProposedQuest = nil
 }
 
 // --- UI Setup ---
@@ -484,6 +545,114 @@ func (s *WisemanScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		for _, b := range s.Buttons {
 			b.Draw(screen, opts, scale)
 		}
+	}
+}
+
+// --- Boons ---
+
+func (s *WisemanScreen) grantBoon() {
+	s.State = WisemanStateStory
+
+	switch s.City.WisemanBoon {
+	case domain.BoonBonusLife:
+		s.giveBonusLife()
+	case domain.BoonEnemyDeckInfo:
+		s.giveEnemyDeckInfo()
+	case domain.BoonWorldMagicLocation:
+		s.giveWorldMagicLocation()
+	case domain.BoonBonusCard:
+		s.giveBonusCard()
+	default:
+		s.loadStory()
+		return
+	}
+
+	s.City.BoonGranted = true
+}
+
+func (s *WisemanScreen) giveBonusLife() {
+	s.Player.BonusDuelLife += 2
+	s.TextLines = []string{
+		"I sense great danger ahead.",
+		"Take this blessing with you.",
+		"",
+		"You will start your next duel",
+		"with +2 life.",
+	}
+}
+
+func (s *WisemanScreen) giveEnemyDeckInfo() {
+	var names []string
+	for name, char := range domain.Rogues {
+		if char.Level <= 10 {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		s.loadStory()
+		return
+	}
+
+	name := names[rand.Intn(len(names))]
+	rogue := domain.Rogues[name]
+
+	s.TextLines = []string{
+		fmt.Sprintf("I have studied the %s.", name),
+		fmt.Sprintf("It fights with a %s deck.", rogue.PrimaryColor),
+		"",
+		"Prepare your cards accordingly.",
+	}
+}
+
+func (s *WisemanScreen) findWorldMagicCity() *domain.City {
+	var cities []*domain.City
+	w, h := s.Level.Size()
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			tile := s.Level.Tile(image.Point{X: x, Y: y})
+			if tile != nil && tile.IsCity && tile.City.HasWorldMagic() {
+				cities = append(cities, &tile.City)
+			}
+		}
+	}
+	if len(cities) == 0 {
+		return nil
+	}
+	return cities[rand.Intn(len(cities))]
+}
+
+func (s *WisemanScreen) giveWorldMagicLocation() {
+	city := s.findWorldMagicCity()
+	if city == nil {
+		s.loadStory()
+		return
+	}
+
+	magic := city.GetWorldMagic()
+	s.TextLines = []string{
+		"I have heard rumors of a",
+		"powerful artifact...",
+		"",
+		fmt.Sprintf("The %s can be found", magic.Name),
+		fmt.Sprintf("in %s.", city.Name),
+	}
+}
+
+func (s *WisemanScreen) giveBonusCard() {
+	if len(domain.CARDS) == 0 {
+		s.loadStory()
+		return
+	}
+
+	card := domain.CARDS[rand.Intn(len(domain.CARDS))]
+	s.Player.BonusDuelCards = append(s.Player.BonusDuelCards, card)
+	s.TextLines = []string{
+		"Take this card, planeswalker.",
+		"It may aid you in your",
+		"next battle.",
+		"",
+		fmt.Sprintf("Received %s for your", card.CardName),
+		"next duel.",
 	}
 }
 

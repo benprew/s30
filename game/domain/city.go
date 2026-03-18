@@ -6,6 +6,21 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+type BoonType int
+
+const (
+	BoonNone BoonType = iota
+	BoonQuest
+	BoonBonusLife
+	BoonEnemyDeckInfo
+	BoonWorldMagicLocation
+	BoonBonusCard
+)
+
+func (b BoonType) IsQuest() bool {
+	return b == BoonQuest
+}
+
 type CityTier int
 
 const (
@@ -40,6 +55,9 @@ type City struct {
 	AssignedWorldMagic *WorldMagic
 	QuestBanDays       int
 	IsManaLinked       bool
+	WisemanBoon        BoonType
+	BoonGranted        bool
+	ProposedQuest      *Quest
 }
 
 // ==============================================================================

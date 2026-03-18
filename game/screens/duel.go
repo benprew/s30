@@ -166,7 +166,7 @@ func buildCardImageMap(decks ...domain.Deck) map[string]*domain.Card {
 
 func (s *DuelScreen) initGameState() {
 	s.human = interactive.NewHumanPlayer("You")
-	s.human.SetLife(s.player.Life)
+	s.human.SetLife(s.player.Life + s.player.BonusDuelLife)
 	s.aiPlayer = ai.NewAIPlayer(s.enemy.Name())
 	s.aiPlayer.SetLife(s.enemy.Character.Life)
 
@@ -180,6 +180,16 @@ func (s *DuelScreen) initGameState() {
 			s.human.AddToLibrary(c)
 		}
 	}
+	for _, card := range s.player.BonusDuelCards {
+		c, err := mage.CreateCard(card.CardName)
+		if err != nil {
+			logging.Printf(logging.Duel, "Failed to create bonus card %s: %v\n", card.CardName, err)
+			continue
+		}
+		s.human.AddToLibrary(c)
+	}
+	s.player.BonusDuelLife = 0
+	s.player.BonusDuelCards = nil
 	for card, count := range s.enemy.Character.GetActiveDeck() {
 		for range count {
 			c, err := mage.CreateCard(card.CardName)
