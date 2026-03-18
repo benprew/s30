@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
 	_ "git.sr.ht/~cdcarter/mage-go/cards"
+	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai"
 	"github.com/benprew/s30/assets"
@@ -1559,7 +1559,9 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 			pos := s.getFieldCardPos(perm, dp, i, len(perms), landsOnly)
 
 			auras := s.attachedPerms(perm.ID)
-			for j, aura := range auras {
+			// reverse order so it draws correctly on the screen
+			for j := len(auras) - 1; j >= 0; j-- {
+				aura := auras[j]
 				auraY := pos.Y - (j+1)*14
 				auraImg := s.getCardArtImg(aura.Name, fieldCardW)
 				if auraImg != nil {
