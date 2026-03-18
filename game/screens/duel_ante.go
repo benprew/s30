@@ -52,14 +52,14 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 
 	s.background = loadBackgroundForEnemy(enemy)
 
-	s.playerAnteCard = selectAnteCard(l.Player.GetActiveDeck(), true)
+	s.playerAnteCard = selectPlayerAnteCard(l.Player.GetActiveDeck())
 	card, err := s.playerAnteCard.CardImage(domain.CardViewFull)
 	if err != nil || card == nil {
 		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
 	}
 	s.playerAnteCardImg = imageutil.ScaleImage(card, 0.75)
 
-	enemyCard := selectAnteCard(enemy.Character.GetActiveDeck(), false)
+	enemyCard := selectEnemyAnteCard(enemy.Character.GetActiveDeck())
 	card, err = enemyCard.CardImage(domain.CardViewFull)
 	if err != nil {
 		panic(fmt.Sprintf("No card image for %s\n", enemyCard.Name()))
@@ -235,8 +235,26 @@ func loadBackgroundForEnemy(enemy *domain.Enemy) *ebiten.Image {
 	return img
 }
 
-func selectAnteCard(deck domain.Deck, excludeBasicLand bool) *domain.Card {
-	validCards := deck.ValidAnteCards(excludeBasicLand)
+func selectPlayerAnteCard(deck domain.Deck) *domain.Card {
+	validCards := deck.ValidAnteCards(domain.ExcludeBasicLand)
+
+	if len(validCards) == 0 {
+		panic("No valid ante cards!!")
+	}
+
+	return validCards[rand.Intn(len(validCards))]
+}
+
+func selectEnemyAnteCard(deck domain.Deck) *domain.Card {
+	// 5% chance to allow VintageRestricted cards as ante
+	if rand.Intn(100) >= 5 {
+		validCards := deck.ValidAnteCards(domain.ExcludeVintageRestricted)
+		if len(validCards) > 0 {
+			return validCards[rand.Intn(len(validCards))]
+		}
+	}
+
+	validCards := deck.ValidAnteCards()
 
 	if len(validCards) == 0 {
 		panic("No valid ante cards!!")
