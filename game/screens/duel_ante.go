@@ -20,6 +20,7 @@ type DuelAnteScreen struct {
 	playerAnteCardImg *ebiten.Image
 	playerAnteCard    *domain.Card
 	enemy             *domain.Enemy
+	enemyAnteCard     *domain.Card
 	enemyAnteCardImg  *ebiten.Image
 	enemyVisage       *ebiten.Image
 	enemyName         string
@@ -59,10 +60,10 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	}
 	s.playerAnteCardImg = imageutil.ScaleImage(card, 0.75)
 
-	enemyCard := selectEnemyAnteCard(enemy.Character.GetActiveDeck())
-	card, err = enemyCard.CardImage(domain.CardViewFull)
+	s.enemyAnteCard = selectEnemyAnteCard(enemy.Character.GetActiveDeck())
+	card, err = s.enemyAnteCard.CardImage(domain.CardViewFull)
 	if err != nil {
-		panic(fmt.Sprintf("No card image for %s\n", enemyCard.Name()))
+		panic(fmt.Sprintf("No card image for %s\n", s.enemyAnteCard.Name()))
 	}
 	s.enemyAnteCardImg = imageutil.ScaleImage(card, 0.75)
 	s.visageBorder = loadVisageBorder()
@@ -193,7 +194,7 @@ func hCenter(dest, src *ebiten.Image) float64 {
 }
 
 func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, error) {
-	return screenui.DuelScr, NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, s.playerAnteCard), nil
+	return screenui.DuelScr, NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, s.playerAnteCard, s.enemyAnteCard), nil
 }
 
 func (s *DuelAnteScreen) bribe() (screenui.ScreenName, screenui.Screen, error) {
@@ -263,73 +264,6 @@ func selectEnemyAnteCard(deck domain.Deck) *domain.Card {
 	return validCards[rand.Intn(len(validCards))]
 }
 
-func getRewardCardCount(enemyLevel int) int {
-	if enemyLevel <= 3 {
-		return 1
-	} else if enemyLevel <= 7 {
-		return 2
-	}
-	return 3
-}
-
-func selectFromFallbackPool(commonPool, uncommonPool, rarePool []*domain.Card) *domain.Card {
-	if len(commonPool) > 0 {
-		return commonPool[rand.Intn(len(commonPool))]
-	}
-	if len(uncommonPool) > 0 {
-		return uncommonPool[rand.Intn(len(uncommonPool))]
-	}
-	if len(rarePool) > 0 {
-		return rarePool[rand.Intn(len(rarePool))]
-	}
-	return nil
-}
-
-func selectRewardCards(enemyDeck domain.Deck, numCards int) []*domain.Card {
-	commonPool := []*domain.Card{}
-	uncommonPool := []*domain.Card{}
-	rarePool := []*domain.Card{}
-
-	for card := range enemyDeck {
-		if card.VintageRestricted {
-			continue
-		}
-
-		switch card.Rarity {
-		case "common":
-			commonPool = append(commonPool, card)
-		case "uncommon":
-			uncommonPool = append(uncommonPool, card)
-		case "rare", "mythic":
-			rarePool = append(rarePool, card)
-		}
-	}
-
-	selectedCards := []*domain.Card{}
-	for i := 0; i < numCards; i++ {
-		roll := rand.Float64()
-		var selectedCard *domain.Card
-
-		if roll < 0.70 && len(commonPool) > 0 {
-			idx := rand.Intn(len(commonPool))
-			selectedCard = commonPool[idx]
-		} else if roll < 0.95 && len(uncommonPool) > 0 {
-			idx := rand.Intn(len(uncommonPool))
-			selectedCard = uncommonPool[idx]
-		} else if len(rarePool) > 0 {
-			idx := rand.Intn(len(rarePool))
-			selectedCard = rarePool[idx]
-		} else {
-			selectedCard = selectFromFallbackPool(commonPool, uncommonPool, rarePool)
-		}
-
-		if selectedCard != nil {
-			selectedCards = append(selectedCards, selectedCard)
-		}
-	}
-
-	return selectedCards
-}
 
 func loadVisageBorder() []*ebiten.Image {
 	return loadButtonMap(assets.DuelAnteBorder_png, assets.DuelAnteBorderMap_json)

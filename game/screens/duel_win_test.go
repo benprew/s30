@@ -63,11 +63,12 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 	enemy := lvl.GetEnemyAt(0)
 
 	s := &DuelScreen{
-		player:   player,
-		enemy:    enemy,
-		lvl:      lvl,
-		idx:      0,
-		anteCard: mountain,
+		player:        player,
+		enemy:         enemy,
+		lvl:           lvl,
+		idx:           0,
+		anteCard:      mountain,
+		enemyAnteCard: giantGrowth,
 	}
 
 	_, screen, err := s.handleWin()
@@ -80,9 +81,10 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 		t.Fatalf("expected DuelWinScreen, got %T", screen)
 	}
 
-	for _, card := range winScreen.cards {
-		if card.Name() != forest.Name() && card.Name() != giantGrowth.Name() {
-			t.Errorf("won card %q is not from the defeated enemy's deck (expected Forest or Giant Growth)", card.Name())
-		}
+	if len(winScreen.cards) != 1 {
+		t.Fatalf("expected 1 won card, got %d", len(winScreen.cards))
+	}
+	if winScreen.cards[0].Name() != giantGrowth.Name() {
+		t.Errorf("expected won card to be enemy ante card %q, got %q", giantGrowth.Name(), winScreen.cards[0].Name())
 	}
 }
