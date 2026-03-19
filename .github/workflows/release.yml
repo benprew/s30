@@ -23,7 +23,7 @@ jobs:
             goos: linux
             goarch: arm64
             artifact: s30_linux-arm
-          - os: macos-13
+          - os: macos-latest
             goos: darwin
             goarch: amd64
             artifact: s30_mac-intel
@@ -86,6 +86,9 @@ jobs:
         with:
           ndk-version: r26d
           link-to-sdk: true
+
+      - name: Ensure ebitenmobile dependencies
+        run: go get github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile
 
       - name: Build AAR with ebitenmobile
         run: |
