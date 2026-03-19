@@ -94,6 +94,7 @@ jobs:
 
       - name: Build AAR with ebitenmobile
         run: |
+          mkdir -p ./mobile/android/s30
           go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind \
             -target android \
             -javapkg com.benprew.s30 \
