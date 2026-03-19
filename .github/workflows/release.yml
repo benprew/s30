@@ -23,7 +23,7 @@ jobs:
             goos: linux
             goarch: arm64
             artifact: s30_linux-arm
-          - os: macos-latest
+          - os: macos-13
             goos: darwin
             goarch: amd64
             artifact: s30_mac-intel
@@ -64,8 +64,54 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
 
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+          link-to-sdk: true
+
+      - name: Build AAR with ebitenmobile
+        run: |
+          go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind \
+            -target android \
+            -javapkg com.benprew.s30 \
+            -o ./mobile/android/s30/s30.aar \
+            ./mobile
+
+      - name: Build APK with Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Assemble release APK
+        working-directory: ./mobile/android
+        run: gradle assembleRelease
+
+      - name: Rename APK
+        run: cp mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk s30_android.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s30_android.apk
+          path: s30_android.apk
+
   release:
-    needs: build
+    needs: [build, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -85,4 +131,5 @@ jobs:
             artifacts/s30_mac-intel/s30_mac-intel \
             artifacts/s30_mac-apple-silicon/s30_mac-apple-silicon \
             artifacts/s30_windows.exe/s30_windows.exe \
-            artifacts/s30_windows-arm.exe/s30_windows-arm.exe
+            artifacts/s30_windows-arm.exe/s30_windows-arm.exe \
+            artifacts/s30_android.apk/s30_android.apk
