@@ -141,6 +141,138 @@ func TestPendingBlockers_RemoveBlocker(t *testing.T) {
 	}
 }
 
+func TestCanBlockAnything_OnlyValidBlockers(t *testing.T) {
+	s, blocker, _ := setupBlockerTest()
+
+	if !s.canBlockAnything(blocker.ID) {
+		t.Error("expected untapped blocker listed in options to be a valid blocker")
+	}
+
+	tappedCreatureID := uuid.New()
+	if s.canBlockAnything(tappedCreatureID) {
+		t.Error("expected creature not in options (e.g. tapped) to not be a valid blocker")
+	}
+}
+
+func TestIsValidBlock_OnlyValidBlockers(t *testing.T) {
+	s, blocker, attacker := setupBlockerTest()
+
+	if !s.isValidBlock(blocker.ID, attacker.ID) {
+		t.Error("expected valid blocker to be allowed to block attacker")
+	}
+
+	tappedCreatureID := uuid.New()
+	if s.isValidBlock(tappedCreatureID, attacker.ID) {
+		t.Error("expected creature not in options (e.g. tapped) to not be a valid blocker")
+	}
+}
+
+func TestPendingBlockers_TappedCreatureCannotBeSelected(t *testing.T) {
+	s, blocker, _ := setupBlockerTest()
+
+	tappedCreature := interactive.PermanentState{
+		ID:         uuid.New(),
+		Name:       "Birds of Paradise",
+		Power:      0,
+		Toughness:  1,
+		IsCreature: true,
+	}
+
+	s.lastMsg.State.You.Battlefield = append(
+		s.lastMsg.State.You.Battlefield, tappedCreature,
+	)
+
+	tappedPos := s.getFieldCardPos(tappedCreature, s.self, 1, 2, false)
+	s.handleBlockerClick(tappedPos.X+fieldCardW/2, tappedPos.Y+fieldCardH/2)
+
+	if s.selectedBlocker == tappedCreature.ID {
+		t.Error("tapped creature (not in options) should not be selectable as blocker")
+	}
+
+	validPos := s.getFieldCardPos(blocker, s.self, 0, 2, false)
+	s.handleBlockerClick(validPos.X+fieldCardW/2, validPos.Y+fieldCardH/2)
+
+	if s.selectedBlocker != blocker.ID {
+		t.Errorf("valid blocker should be selectable, got %v", s.selectedBlocker)
+	}
+}
+
+func TestAIBlockerArrows(t *testing.T) {
+	playerAttackerID := uuid.New()
+	aiBlockerID := uuid.New()
+
+	playerAttacker := interactive.PermanentState{
+		ID:         playerAttackerID,
+		Name:       "Grizzly Bears",
+		Power:      2,
+		Toughness:  2,
+		IsCreature: true,
+		Attacking:  true,
+	}
+
+	aiBlocker := interactive.PermanentState{
+		ID:         aiBlockerID,
+		Name:       "Llanowar Elves",
+		Power:      1,
+		Toughness:  1,
+		IsCreature: true,
+		Blocking:   playerAttackerID,
+	}
+
+	state := &interactive.GameState{
+		Step:         stepDeclareBlockers,
+		ActivePlayer: "You",
+		You: interactive.PlayerState{
+			ID:          uuid.New(),
+			Name:        "You",
+			Life:        20,
+			Battlefield: []interactive.PermanentState{playerAttacker},
+		},
+		Opponent: interactive.PlayerState{
+			ID:          uuid.New(),
+			Name:        "Opponent",
+			Life:        20,
+			Battlefield: []interactive.PermanentState{aiBlocker},
+		},
+	}
+
+	msg := &interactive.GameMsg{
+		State:  state,
+		Prompt: interactive.PromptNone,
+	}
+
+	s := &DuelScreen{
+		lastMsg:          msg,
+		self:             &duelPlayer{name: "You"},
+		opponent:         &duelPlayer{name: "Opponent"},
+		pendingAttackers: make(map[uuid.UUID]bool),
+		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
+		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
+		cardImgCache:     make(map[cardImgKey]cardImgEntry),
+		cardPositions:    make(map[uuid.UUID]image.Point),
+	}
+
+	arrows := s.getAIBlockerArrows()
+	if len(arrows) != 1 {
+		t.Fatalf("expected 1 AI blocker arrow, got %d", len(arrows))
+	}
+	attackerID, ok := arrows[aiBlockerID]
+	if !ok {
+		t.Fatal("expected AI blocker to be in arrows map")
+	}
+	if attackerID != playerAttackerID {
+		t.Errorf("expected AI blocker to point to player attacker %v, got %v", playerAttackerID, attackerID)
+	}
+}
+
+func TestAIBlockerArrows_Empty(t *testing.T) {
+	s, _, _ := setupBlockerTest()
+	arrows := s.getAIBlockerArrows()
+	if len(arrows) != 0 {
+		t.Errorf("expected no AI blocker arrows when no AI blockers, got %d", len(arrows))
+	}
+}
+
 func TestPendingBlockers_ClearedWhenLeavingPhase(t *testing.T) {
 	s, blocker, attacker := setupBlockerTest()
 

@@ -97,8 +97,9 @@ type DuelScreen struct {
 
 	cardImageMap map[string]*domain.Card
 
-	frameCount int
-	warningMsg string
+	frameCount   int
+	warningMsg   string
+	lastMsgTime  time.Time
 
 	anteCard *domain.Card
 
@@ -221,24 +222,26 @@ func (s *DuelScreen) initGameState() {
 }
 
 func (s *DuelScreen) drainMessages() {
-	for {
-		select {
-		case msg, ok := <-s.human.ToTUI():
-			if !ok {
-				return
-			}
-			s.lastMsg = &msg
-			if logging.Enabled(logging.Duel) {
-				optNames := make([]string, len(msg.Options))
-				for i, o := range msg.Options {
-					optNames[i] = fmt.Sprintf("%s(%s)", o.Type, o.CardName)
-				}
-				logging.Printf(logging.Duel, "MSG: turn=%d step=%q active=%q prompt=%v options=%v gameover=%v\n",
-					msg.State.Turn, msg.State.Step, msg.State.ActivePlayer, msg.Prompt, optNames, msg.GameOver)
-			}
-		default:
+	if time.Since(s.lastMsgTime) < 50*time.Millisecond {
+		return
+	}
+	select {
+	case msg, ok := <-s.human.ToTUI():
+		if !ok {
 			return
 		}
+		s.lastMsg = &msg
+		s.lastMsgTime = time.Now()
+		if logging.Enabled(logging.Duel) {
+			optNames := make([]string, len(msg.Options))
+			for i, o := range msg.Options {
+				optNames[i] = fmt.Sprintf("%s(%s)", o.Type, o.CardName)
+			}
+			logging.Printf(logging.Duel, "MSG: turn=%d step=%q active=%q prompt=%v options=%v gameover=%v\n",
+				msg.State.Turn, msg.State.Step, msg.State.ActivePlayer, msg.Prompt, optNames, msg.GameOver)
+		}
+	default:
+		return
 	}
 }
 
@@ -637,7 +640,7 @@ func (s *DuelScreen) isValidBlock(blockerID, attackerID uuid.UUID) bool {
 			return true
 		}
 	}
-	return true
+	return false
 }
 
 func (s *DuelScreen) canBlockAnything(blockerID uuid.UUID) bool {
@@ -649,7 +652,7 @@ func (s *DuelScreen) canBlockAnything(blockerID uuid.UUID) bool {
 			return true
 		}
 	}
-	return s.isInDeclareBlockers()
+	return false
 }
 
 func (s *DuelScreen) handleBlockerClick(mx, my int) {
@@ -1473,11 +1476,23 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, ps *interac
 	}
 }
 
+func (s *DuelScreen) humanHasPriority() bool {
+	return s.lastMsg != nil && len(s.lastMsg.Options) > 0
+}
+
 func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 	if s.doneBtn[0] != nil {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(duelBoardX+2), float64(duelMsgY))
 		screen.DrawImage(s.doneBtn[0], opts)
+
+		if s.humanHasPriority() {
+			bounds := s.doneBtn[0].Bounds()
+			vector.StrokeRect(screen,
+				float32(duelBoardX+2), float32(duelMsgY),
+				float32(bounds.Dx()), float32(bounds.Dy()),
+				2, color.RGBA{255, 255, 0, 255}, false)
+		}
 	}
 
 	if s.messageBg != nil {
@@ -1698,37 +1713,66 @@ func (s *DuelScreen) drawCreatureStats(screen *ebiten.Image, perm interactive.Pe
 	stat.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
-func (s *DuelScreen) drawBlockerArrows(screen *ebiten.Image) {
-	for blockerID, attackerID := range s.pendingBlockers {
-		blockerPos, bOK := s.cardPositions[blockerID]
-		attackerPos, aOK := s.cardPositions[attackerID]
-		if !bOK || !aOK {
-			continue
-		}
-
-		bx := float32(blockerPos.X) + float32(fieldCardW)/2
-		by := float32(blockerPos.Y)
-		ax := float32(attackerPos.X) + float32(fieldCardW)/2
-		ay := float32(attackerPos.Y) + float32(fieldCardH)
-
-		lineColor := color.RGBA{255, 0, 0, 255}
-		vector.StrokeLine(screen, bx, by, ax, ay, 2, lineColor, false)
-
-		dx := bx - ax
-		dy := by - ay
-		length := float32(math.Sqrt(float64(dx*dx + dy*dy)))
-		if length == 0 {
-			continue
-		}
-		dx /= length
-		dy /= length
-
-		arrowLen := float32(10)
-		px := -dy
-		py := dx
-		vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen+px*arrowLen*0.5, ay+dy*arrowLen+py*arrowLen*0.5, 2, lineColor, false)
-		vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen-px*arrowLen*0.5, ay+dy*arrowLen-py*arrowLen*0.5, 2, lineColor, false)
+// getAIBlockerArrows returns a map of AI blocker ID -> player attacker ID
+// from the game state's Blocking field on opponent creatures.
+func (s *DuelScreen) getAIBlockerArrows() map[uuid.UUID]uuid.UUID {
+	arrows := make(map[uuid.UUID]uuid.UUID)
+	if s.lastMsg == nil {
+		return arrows
 	}
+	for _, perm := range s.lastMsg.State.Opponent.Battlefield {
+		if perm.Blocking != uuid.Nil {
+			arrows[perm.ID] = perm.Blocking
+		}
+	}
+	return arrows
+}
+
+func (s *DuelScreen) drawBlockerArrows(screen *ebiten.Image) {
+	step := ""
+	if s.lastMsg != nil && s.lastMsg.State != nil {
+		step = s.lastMsg.State.Step
+	}
+	showAIArrows := step == stepDeclareBlockers || step == "First Strike Damage"
+	if showAIArrows {
+		for blockerID, attackerID := range s.getAIBlockerArrows() {
+			s.drawArrow(screen, blockerID, attackerID)
+		}
+	}
+	for blockerID, attackerID := range s.pendingBlockers {
+		s.drawArrow(screen, blockerID, attackerID)
+	}
+}
+
+func (s *DuelScreen) drawArrow(screen *ebiten.Image, blockerID, attackerID uuid.UUID) {
+	blockerPos, bOK := s.cardPositions[blockerID]
+	attackerPos, aOK := s.cardPositions[attackerID]
+	if !bOK || !aOK {
+		return
+	}
+
+	bx := float32(blockerPos.X) + float32(fieldCardW)/2
+	by := float32(blockerPos.Y)
+	ax := float32(attackerPos.X) + float32(fieldCardW)/2
+	ay := float32(attackerPos.Y) + float32(fieldCardH)
+
+	lineColor := color.RGBA{255, 0, 0, 255}
+	vector.StrokeLine(screen, bx, by, ax, ay, 2, lineColor, false)
+
+	dx := bx - ax
+	dy := by - ay
+	length := float32(math.Sqrt(float64(dx*dx + dy*dy)))
+	if length == 0 {
+		return
+	}
+	dx /= length
+	dy /= length
+
+	arrowLen := float32(10)
+	px := -dy
+	py := dx
+	vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen+px*arrowLen*0.5, ay+dy*arrowLen+py*arrowLen*0.5, 2, lineColor, false)
+	vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen-px*arrowLen*0.5, ay+dy*arrowLen-py*arrowLen*0.5, 2, lineColor, false)
 }
 
 func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps interactive.PlayerState) {
@@ -1948,6 +1992,9 @@ func (s *DuelScreen) combatStatusMessage(step string, isMyTurn bool) string {
 	case stepDeclareBlockers:
 		if !isMyTurn {
 			return "Choose creatures to block with. Done when finished."
+		}
+		if s.lastMsg.Prompt == interactive.PromptPriority {
+			return "Blockers declared. Cast instants or Done to continue."
 		}
 		return fmt.Sprintf("%s is choosing blockers...", s.opponent.name)
 	case "First Strike Damage":
