@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math/rand"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -37,12 +38,63 @@ type ButtonConfig struct {
 }
 
 func NewCityScreen(city *domain.City, player *domain.Player, level *world.Level) *CityScreen {
+	if city.WisemanBoon == domain.BoonNone {
+		city.WisemanBoon = pickBoon(city, player, level)
+	}
 	return &CityScreen{
 		Buttons: mkButtons(SCALE-0.4, city),
 		City:    city,
 		Player:  player,
 		Level:   level,
 	}
+}
+
+func pickBoon(city *domain.City, player *domain.Player, level *world.Level) domain.BoonType {
+	allowQuest := player.ActiveQuest == nil
+
+	var options []domain.BoonType
+	if allowQuest {
+		for range 5 {
+			options = append(options, domain.BoonQuest)
+		}
+	}
+	for range 2 {
+		options = append(options, domain.BoonBonusLife)
+	}
+	for range 2 {
+		options = append(options, domain.BoonEnemyDeckInfo)
+	}
+	if hasWorldMagicCities(city, level) {
+		for range 2 {
+			options = append(options, domain.BoonWorldMagicLocation)
+		}
+	}
+	if len(domain.CARDS) > 0 {
+		for range 2 {
+			options = append(options, domain.BoonBonusCard)
+		}
+	}
+
+	if len(options) == 0 {
+		return domain.BoonBonusLife
+	}
+	return options[rand.Intn(len(options))]
+}
+
+func hasWorldMagicCities(city *domain.City, level *world.Level) bool {
+	if level == nil {
+		return false
+	}
+	w, h := level.Size()
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			tile := level.Tile(image.Point{X: x, Y: y})
+			if tile != nil && tile.IsCity && tile.City.Name != city.Name && tile.City.HasWorldMagic() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (c *CityScreen) IsFramed() bool {
@@ -132,9 +184,14 @@ func mkButtons(scale float64, city *domain.City) []*elements.Button {
 		Size:   20,
 	}
 
+	questText := "Talk to Wiseman"
+	if city.WisemanBoon.IsQuest() && !city.BoonGranted {
+		questText = "Begin Quest"
+	}
+
 	buttonConfigs := []ButtonConfig{
 		{ID: "buycards", Text: "Buy Cards", Index: 3, Position: &layout.Position{Anchor: layout.WFTopLeft, OffsetX: 100, OffsetY: 50}},
-		{ID: "quest", Text: "Begin Quest", Index: 2, Position: &layout.Position{Anchor: layout.WFCenter, OffsetX: -50, OffsetY: 0}},
+		{ID: "quest", Text: questText, Index: 2, Position: &layout.Position{Anchor: layout.WFCenter, OffsetX: -50, OffsetY: 0}},
 		{ID: "buyfood", Text: fmt.Sprintf("%d gold = 10 food", city.FoodCost()), Index: 0, Position: &layout.Position{Anchor: layout.WFBottomLeft, OffsetX: 100, OffsetY: -125}},
 		{ID: "leave", Text: "Leave Village", Index: 1, Position: &layout.Position{Anchor: layout.WFBottomRight, OffsetX: -250, OffsetY: -125}},
 		{ID: "editdeck", Text: "Edit Deck", Index: 4, Position: &layout.Position{Anchor: layout.WFTopRight, OffsetX: -250, OffsetY: 50}},
