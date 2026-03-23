@@ -51,10 +51,11 @@ func setupBlockerTest() (*DuelScreen, interactive.PermanentState, interactive.Pe
 		Prompt: interactive.PromptDeclareBlockers,
 		Options: []interactive.ActionOption{
 			{
-				Type:        interactive.ActionSelectBlockers,
-				Label:       "Llanowar Elves",
-				CardName:    "Llanowar Elves",
-				PermanentID: blockerID,
+				Type:         interactive.ActionSelectBlockers,
+				Label:        "Llanowar Elves",
+				CardName:     "Llanowar Elves",
+				PermanentID:  blockerID,
+				ValidTargets: []uuid.UUID{attackerID},
 			},
 		},
 	}
@@ -273,6 +274,23 @@ func TestAIBlockerArrows_Empty(t *testing.T) {
 	}
 }
 
+func TestIsValidBlock_AttackerNotInValidTargets(t *testing.T) {
+	s, blocker, attacker := setupBlockerTest()
+
+	s.lastMsg.Options[0].ValidTargets = nil
+
+	if s.isValidBlock(blocker.ID, attacker.ID) {
+		t.Error("expected isValidBlock to return false when attacker is not in ValidTargets")
+	}
+}
+
+func TestIsValidBlock_AttackerInValidTargets(t *testing.T) {
+	s, blocker, attacker := setupBlockerTest()
+
+	if !s.isValidBlock(blocker.ID, attacker.ID) {
+		t.Error("expected isValidBlock to return true when attacker is in ValidTargets")
+	}
+}
 func TestPendingBlockers_ClearedWhenLeavingPhase(t *testing.T) {
 	s, blocker, attacker := setupBlockerTest()
 

@@ -635,11 +635,13 @@ func (s *DuelScreen) isValidBlock(blockerID, attackerID uuid.UUID) bool {
 		return false
 	}
 	for _, opt := range s.lastMsg.Options {
-		if opt.Type != interactive.ActionSelectBlockers {
+		if opt.Type != interactive.ActionSelectBlockers || opt.PermanentID != blockerID {
 			continue
 		}
-		if opt.PermanentID == blockerID {
-			return true
+		for _, target := range opt.ValidTargets {
+			if target == attackerID {
+				return true
+			}
 		}
 	}
 	return false
@@ -650,8 +652,26 @@ func (s *DuelScreen) canBlockAnything(blockerID uuid.UUID) bool {
 		return false
 	}
 	for _, opt := range s.lastMsg.Options {
-		if opt.Type == interactive.ActionSelectBlockers && opt.PermanentID == blockerID {
+		if opt.Type == interactive.ActionSelectBlockers && opt.PermanentID == blockerID && len(opt.ValidTargets) > 0 {
 			return true
+		}
+	}
+	return false
+}
+
+// canBeBlocked returns true if any eligible blocker can legally block this attacker.
+func (s *DuelScreen) canBeBlocked(attackerID uuid.UUID) bool {
+	if s.lastMsg == nil {
+		return false
+	}
+	for _, opt := range s.lastMsg.Options {
+		if opt.Type != interactive.ActionSelectBlockers {
+			continue
+		}
+		for _, target := range opt.ValidTargets {
+			if target == attackerID {
+				return true
+			}
 		}
 	}
 	return false
@@ -1658,7 +1678,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 				}
 			}
 
-			if dp == s.opponent && s.isInDeclareBlockers() && perm.Attacking {
+			if dp == s.opponent && s.isInDeclareBlockers() && perm.Attacking && s.canBeBlocked(perm.ID) {
 				borderColor := color.RGBA{255, 255, 0, 255}
 				if hasKeyword(perm.Keywords, "Menace") {
 					borderColor = color.RGBA{255, 140, 0, 255}
