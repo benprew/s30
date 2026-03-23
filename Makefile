@@ -19,7 +19,7 @@ macarmbuild:
 # https://ebitengine.org/en/documents/webassembly.html
 webbuild:
 	GOOS=js GOARCH=wasm go build -o s30.wasm github.com/benprew/s30
-	scp s30.wasm /usr/local/go/lib/wasm/wasm_exec.js index.html main.html throwingbones@teamvite.com:/var/www/html/throwingbones/ben/s30/
+	scp s30.wasm /usr/local/go/lib/wasm/wasm_exec.js index.html main.html throwingbones@throwingbones.com:/var/www/html/throwingbones/ben/s30/
 
 androidbuild:
 	go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind -target android -javapkg com.benprew.s30 -o ./mobile/android/s30/s30.aar ./mobile
