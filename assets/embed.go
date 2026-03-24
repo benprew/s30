@@ -188,4 +188,8 @@ var (
 	// Text
 	//go:embed text/Advblocks.txt
 	Advblocks_txt []byte
+
+	// Audio
+	//go:embed audio/sfx/* audio/bgm/*
+	AudioFS embed.FS
 )

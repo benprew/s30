@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"math/rand"
 
+	gameaudio "github.com/benprew/s30/game/audio"
+	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -37,11 +40,28 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 	}
 
 	currentTile := s.Level.CharacterTile()
+	tile := s.Level.Tile(currentTile)
+
+	if am := gameaudio.Get(); am != nil && currentTile != (image.Point{X: -1, Y: -1}) {
+		if tile != nil {
+			terrainColor := gameaudio.TerrainTypeToColor(tile.TerrainType)
+
+			if prevTile != currentTile {
+				am.PlayFootstep(terrainColor)
+			}
+
+			if s.Level.TotalTicks()%50 == 0 && rand.Intn(3) == 0 {
+				am.PlayBird(terrainColor)
+			}
+		}
+	}
 
 	if currentTile != (image.Point{X: -1, Y: -1}) {
-		tile := s.Level.Tile(currentTile)
 		if tile != nil {
 			if tile.IsCity && prevTile != currentTile {
+				if am := gameaudio.Get(); am != nil {
+					am.PlaySFX(gameaudio.CastleSFXForColor(domain.ColorMaskToString(tile.City.AmuletColor)))
+				}
 				return screenui.CityScr, NewCityScreen(&tile.City, s.Level.Player, s.Level), nil
 			}
 		}

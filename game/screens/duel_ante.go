@@ -7,6 +7,7 @@ import (
 	"math/rand"
 
 	"github.com/benprew/s30/assets"
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -71,6 +72,10 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 
 	s.enemyVisage = borderedVisage(enemy.Character.Visage, s.visageBorder[20])
 	s.enemyName = enemy.Character.Name
+
+	if am := gameaudio.Get(); am != nil {
+		am.PlaySFX(gameaudio.EnemySFXForName(enemy.Character.Name))
+	}
 
 	return s
 }
@@ -194,6 +199,9 @@ func hCenter(dest, src *ebiten.Image) float64 {
 }
 
 func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, error) {
+	if am := gameaudio.Get(); am != nil {
+		am.PlaySFX(gameaudio.SFXDice)
+	}
 	return screenui.DuelScr, NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, s.playerAnteCard, s.enemyAnteCard), nil
 }
 
@@ -263,7 +271,6 @@ func selectEnemyAnteCard(deck domain.Deck) *domain.Card {
 
 	return validCards[rand.Intn(len(validCards))]
 }
-
 
 func loadVisageBorder() []*ebiten.Image {
 	return loadButtonMap(assets.DuelAnteBorder_png, assets.DuelAnteBorderMap_json)

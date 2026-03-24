@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/assets"
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
@@ -190,6 +191,9 @@ func (s *BuyCardsScreen) buyCard() {
 		fmt.Println("Buying card:", s.PreviewIdx, "name:", card.Name(), "for", card.Price, "gold")
 		s.Player.Gold -= card.Price
 		s.Player.CardCollection.AddCard(card, 1)
+		if am := gameaudio.Get(); am != nil {
+			am.PlaySFX(gameaudio.SFXTreasure)
+		}
 		s.City.CardsForSale = append(s.City.CardsForSale[:s.PreviewIdx], s.City.CardsForSale[s.PreviewIdx+1:]...)
 		s.Buttons = mkCardButtons(SCALE, s.City, 1024, 768) // TODO remove hardcoded W/H
 		s.PreviewIdx = -1

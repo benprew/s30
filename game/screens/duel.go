@@ -13,6 +13,7 @@ import (
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai"
 	"github.com/benprew/s30/assets"
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
@@ -97,9 +98,9 @@ type DuelScreen struct {
 
 	cardImageMap map[string]*domain.Card
 
-	frameCount   int
-	warningMsg   string
-	lastMsgTime  time.Time
+	frameCount  int
+	warningMsg  string
+	lastMsgTime time.Time
 
 	anteCard      *domain.Card
 	enemyAnteCard *domain.Card
@@ -108,6 +109,13 @@ type DuelScreen struct {
 	choiceButtons  []*elements.Button
 	choiceCardImg  *ebiten.Image
 	choiceCardName string
+
+	prevYouLife        int
+	prevOppLife        int
+	prevYouGraveLen    int
+	prevOppGraveLen    int
+	prevYouCreatureLen int
+	prevOppCreatureLen int
 }
 
 type mouseStateType int
@@ -244,6 +252,7 @@ func (s *DuelScreen) drainMessages() {
 		}
 		s.lastMsg = &msg
 		s.lastMsgTime = time.Now()
+		s.checkSoundTriggers(&msg)
 		if logging.Enabled(logging.Duel) {
 			optNames := make([]string, len(msg.Options))
 			for i, o := range msg.Options {
@@ -277,6 +286,41 @@ func (s *DuelScreen) drainChoiceRequests() {
 			return
 		}
 	}
+}
+
+func (s *DuelScreen) checkSoundTriggers(msg *interactive.GameMsg) {
+	am := gameaudio.Get()
+	if am == nil {
+		return
+	}
+
+	youLife := msg.State.You.Life
+	oppLife := msg.State.Opponent.Life
+	youGraveLen := len(msg.State.You.Graveyard)
+	oppGraveLen := len(msg.State.Opponent.Graveyard)
+	youCreatureLen := len(msg.State.You.Battlefield)
+	oppCreatureLen := len(msg.State.Opponent.Battlefield)
+
+	if s.prevYouLife != 0 || s.prevOppLife != 0 {
+		if youLife < s.prevYouLife || oppLife < s.prevOppLife {
+			am.PlaySFX(gameaudio.SFXDamage)
+		}
+
+		if youGraveLen > s.prevYouGraveLen || oppGraveLen > s.prevOppGraveLen {
+			am.PlaySFX(gameaudio.SFXCreatureDeath)
+		}
+
+		if youCreatureLen > s.prevYouCreatureLen || oppCreatureLen > s.prevOppCreatureLen {
+			am.PlaySFX(gameaudio.SFXSummon)
+		}
+	}
+
+	s.prevYouLife = youLife
+	s.prevOppLife = oppLife
+	s.prevYouGraveLen = youGraveLen
+	s.prevOppGraveLen = oppGraveLen
+	s.prevYouCreatureLen = youCreatureLen
+	s.prevOppCreatureLen = oppCreatureLen
 }
 
 func (s *DuelScreen) getDomainCard(name string) *domain.Card {
@@ -812,6 +856,9 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 	pa := actionOptionToPriorityAction(action)
 	select {
 	case s.human.FromTUI() <- pa:
+		if am := gameaudio.Get(); am != nil {
+			am.PlaySFX(gameaudio.SFXCast)
+		}
 	default:
 	}
 }
@@ -870,6 +917,9 @@ func (s *DuelScreen) updateTargetingMouse(mx, my int) {
 				pa.Targets = []uuid.UUID{s.selectedTargetID}
 				select {
 				case s.human.FromTUI() <- pa:
+					if am := gameaudio.Get(); am != nil {
+						am.PlaySFX(gameaudio.SFXCast)
+					}
 				default:
 				}
 			}

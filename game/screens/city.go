@@ -7,6 +7,7 @@ import (
 	"math/rand"
 
 	"github.com/benprew/s30/assets"
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
@@ -141,6 +142,9 @@ func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 				if c.Player.Gold >= cost {
 					c.Player.Gold -= cost
 					c.Player.Food += 10
+					if am := gameaudio.Get(); am != nil {
+						am.PlaySFX(gameaudio.SFXTreasure)
+					}
 				}
 				b.State = elements.StateNormal
 			}

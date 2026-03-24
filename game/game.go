@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/save"
@@ -27,6 +28,7 @@ type Game struct {
 	screenMap            map[screenui.ScreenName]screenui.Screen
 	player               *domain.Player
 	Difficulty           domain.Difficulty
+	audio                *gameaudio.AudioManager
 }
 
 func (g *Game) CurrentScreen() screenui.Screen {
@@ -62,6 +64,8 @@ func NewGame() (*Game, error) {
 	screenW := int(1024 * scale)
 	screenH := int(768 * scale)
 
+	am := gameaudio.NewAudioManager()
+
 	g := &Game{
 		ScreenW:           screenW,
 		ScreenH:           screenH,
@@ -78,17 +82,24 @@ func NewGame() (*Game, error) {
 		},
 		player:     player,
 		Difficulty: domain.DifficultyEasy,
+		audio:      am,
 	}
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
 
 	go domain.PreloadCardImages(domain.CollectPriorityCards(player))
 
+	am.PlayBGM(gameaudio.RandomWorldBGM())
+
 	fmt.Printf("NewGame execution time: %s\n", time.Since(startTime))
 	return g, err
 }
 
 func (g *Game) Update() error {
+	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
+		g.audio.ToggleMute()
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyF5) {
 		if err := g.SaveGame("quicksave"); err != nil {
 			fmt.Printf("Error saving game: %v\n", err)
@@ -138,7 +149,12 @@ func (g *Game) Update() error {
 		}
 	}
 
+	prevScreen := g.currentScreenName
 	g.currentScreenName = name
+
+	if name != prevScreen {
+		g.updateBGM(name)
+	}
 
 	if g.CurrentScreen().IsFramed() {
 		var wfScreen screenui.Screen
@@ -191,6 +207,32 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return 1024, 768
 }
 
+// Audio returns the game's AudioManager for use by screens.
+func (g *Game) Audio() *gameaudio.AudioManager {
+	return g.audio
+}
+
+func (g *Game) updateBGM(screen screenui.ScreenName) {
+	switch screen {
+	case screenui.WorldScr, screenui.MiniMapScr:
+		if !gameaudio.IsWorldBGM(g.audio.CurrentBGM()) {
+			g.audio.PlayBGM(gameaudio.RandomWorldBGM())
+		}
+	case screenui.DuelScr:
+		g.audio.PlayBGM(gameaudio.BGMBattle)
+	case screenui.CityScr, screenui.BuyCardsScr, screenui.EditDeckScr, screenui.WisemanScr:
+		g.audio.PlayBGM(gameaudio.BGMCity)
+	case screenui.DuelWinScr:
+		g.audio.PlaySFX(gameaudio.SFXVictory)
+		g.audio.StopBGM()
+	case screenui.DuelLoseScr:
+		g.audio.PlaySFX(gameaudio.SFXDefeat)
+		g.audio.StopBGM()
+	case screenui.DuelAnteScr:
+		g.audio.StopBGM()
+	}
+}
+
 func (g *Game) SaveGame(saveName string) error {
 	level := g.Level()
 	savePath, err := save.SaveGame(level, saveName)
@@ -213,6 +255,8 @@ func LoadSavedGame(savePath string) (*Game, error) {
 		return nil, fmt.Errorf("failed to create world frame: %w", err)
 	}
 
+	am := gameaudio.NewAudioManager()
+
 	scale := 1.0
 	screenW := int(1024 * scale)
 	screenH := int(768 * scale)
@@ -232,11 +276,14 @@ func LoadSavedGame(savePath string) (*Game, error) {
 			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
 		},
 		player: level.Player,
+		audio:  am,
 	}
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
 
 	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
+
+	am.PlayBGM(gameaudio.RandomWorldBGM())
 
 	return g, nil
 }

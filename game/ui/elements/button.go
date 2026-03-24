@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 
+	"github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/layout"
@@ -134,6 +135,9 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, s
 		} else if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) || isTouch {
 			fmt.Printf("Button Clicked: %s\n", b.ID)
 			b.State = StateClicked
+			if am := audio.Get(); am != nil {
+				am.PlaySFX(audio.SFXClick)
+			}
 		} else {
 			fmt.Println("Hover", b.ID)
 			b.State = StateHover

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/benprew/s30/assets"
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
@@ -71,6 +72,10 @@ func NewWisemanScreen(city *domain.City, player *domain.Player, level *world.Lev
 		City:    city,
 		Player:  player,
 		Level:   level,
+	}
+
+	if am := gameaudio.Get(); am != nil {
+		am.PlaySFX(gameaudio.SFXWizardMale)
 	}
 
 	s.determineState()
@@ -194,6 +199,10 @@ func (s *WisemanScreen) isQuestComplete(q *domain.Quest) bool {
 
 func (s *WisemanScreen) generateQuest() {
 	s.State = WisemanStateOffer
+
+	if am := gameaudio.Get(); am != nil {
+		am.PlaySFX(gameaudio.SFXNewsflash)
+	}
 
 	if s.City.ProposedQuest != nil {
 		s.ProposedQuest = s.City.ProposedQuest
@@ -414,19 +423,29 @@ func (s *WisemanScreen) giveReward() {
 		return
 	}
 
+	am := gameaudio.Get()
 	switch q.RewardType {
 	case domain.RewardManaLink:
 		s.Player.Life++
 		s.City.IsManaLinked = true
+		if am != nil {
+			am.PlaySFX(gameaudio.SFXManalink)
+		}
 	case domain.RewardAmulet:
 		count := 1 + rand.Intn(3)
 		for i := 0; i < count; i++ {
 			s.Player.AddAmulet(domain.NewAmulet(q.AmuletColor))
 		}
+		if am != nil {
+			am.PlaySFX(gameaudio.SFXManaball)
+		}
 	case domain.RewardCard:
 		if len(domain.CARDS) > 0 {
 			card := domain.CARDS[rand.Intn(len(domain.CARDS))]
 			s.Player.CardCollection.AddCardToDeck(card, 0, 1)
+		}
+		if am != nil {
+			am.PlaySFX(gameaudio.SFXFindCard)
 		}
 	}
 
@@ -553,6 +572,10 @@ func (s *WisemanScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 func (s *WisemanScreen) grantBoon() {
 	s.State = WisemanStateStory
 
+	if am := gameaudio.Get(); am != nil {
+		am.PlaySFX(gameaudio.SFXReward)
+	}
+
 	switch s.City.WisemanBoon {
 	case domain.BoonBonusLife:
 		s.giveBonusLife()
@@ -677,6 +700,9 @@ func loadStories() []string {
 
 func (s *WisemanScreen) loadStory() {
 	s.State = WisemanStateStory
+	if am := gameaudio.Get(); am != nil {
+		am.PlaySFX(gameaudio.SFXScroll)
+	}
 	stories := loadStories()
 	story := "No stories found."
 	if len(stories) > 0 {

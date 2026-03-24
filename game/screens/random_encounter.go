@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/assets"
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
@@ -75,6 +76,9 @@ func NewRandomEncounterScreen(player *domain.Player, landName string, terrainTyp
 	card := domain.FindCardByName(landName)
 	if card != nil {
 		player.CardCollection.AddCard(card, 1)
+		if am := gameaudio.Get(); am != nil {
+			am.PlaySFX(gameaudio.SFXFindCard)
+		}
 	} else {
 		fmt.Println("Warning: could not find land card:", landName)
 	}

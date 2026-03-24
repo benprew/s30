@@ -442,6 +442,10 @@ func (l *Level) Size() (width, height int) {
 	return l.w, l.h
 }
 
+func (l *Level) TotalTicks() int {
+	return l.totalTicks
+}
+
 func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale float64) {
 	tileWidth := l.tileWidth
 	tileHeight := l.tileHeight
