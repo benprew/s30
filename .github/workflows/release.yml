@@ -110,6 +110,16 @@ jobs:
         working-directory: ./mobile/android
         run: gradle assembleRelease
 
+      - name: Sign APK with debug key
+        run: |
+          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android \
+            -dname "CN=Debug, OU=Debug, O=Debug, L=Debug, ST=Debug, C=US"
+          ${ANDROID_HOME}/build-tools/$(ls ${ANDROID_HOME}/build-tools/ | tail -1)/apksigner sign \
+            --ks debug.keystore --ks-pass pass:android \
+            mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
+
       - name: Rename APK
         run: cp mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk s30_android.apk
 
