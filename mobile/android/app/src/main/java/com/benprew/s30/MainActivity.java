@@ -14,10 +14,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.i(TAG, "onCreate: setting content view");
-        setContentView(R.layout.activity_main);
         Log.i(TAG, "onCreate: setting Seq context");
         Seq.setContext(getApplicationContext());
+        Log.i(TAG, "onCreate: setting content view");
+        setContentView(R.layout.activity_main);
         Log.i(TAG, "onCreate: done");
     }
 
