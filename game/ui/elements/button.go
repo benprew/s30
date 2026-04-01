@@ -132,14 +132,13 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, s
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			fmt.Println("Pressed")
 			b.State = StatePressed
-		} else if b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) || isTouch {
+		} else if (b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)) || isTouch {
 			fmt.Printf("Button Clicked: %s\n", b.ID)
 			b.State = StateClicked
 			if am := audio.Get(); am != nil {
 				am.PlaySFX(audio.SFXClick)
 			}
 		} else {
-			fmt.Println("Hover", b.ID)
 			b.State = StateHover
 		}
 	} else {
@@ -223,10 +222,5 @@ func (b *Button) MoveTo(X, Y int) {
 	w := b.Normal.Bounds().Dx()
 	h := b.Normal.Bounds().Dy()
 	r := image.Rect(X, Y, X+w, Y+h)
-	// fmt.Println(r)
 	b.Bounds = r
 }
-
-// func (b *Button) Bounds() image.Rectangle {
-// 	return b.Normal.Bounds()
-// }
