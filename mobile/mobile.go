@@ -6,11 +6,7 @@ import (
 )
 
 func init() {
-	g, err := game.NewGame()
-	if err != nil {
-		panic(err)
-	}
-	mobile.SetGame(g)
+	mobile.SetGame(game.NewLoadingGame())
 }
 
 // Dummy is required by gomobile.
