@@ -1,6 +1,8 @@
 name: Release Builds
 
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       version:
@@ -65,68 +67,7 @@ jobs:
           path: ${{ matrix.artifact }}
 
   android:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r26d
-          link-to-sdk: true
-
-      - name: Ensure dependencies
-        run: |
-          go mod download
-          go get github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.9
-
-      - name: Build AAR with ebitenmobile
-        run: |
-          mkdir -p ./mobile/android/s30
-          go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind \
-            -target android \
-            -javapkg com.benprew.s30 \
-            -o ./mobile/android/s30/s30.aar \
-            ./mobile
-
-      - name: Build APK with Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.2
-
-      - name: Assemble release APK
-        working-directory: ./mobile/android
-        run: gradle assembleRelease
-
-      - name: Sign APK with debug key
-        run: |
-          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android \
-            -dname "CN=Debug, OU=Debug, O=Debug, L=Debug, ST=Debug, C=US"
-          ${ANDROID_HOME}/build-tools/$(ls ${ANDROID_HOME}/build-tools/ | tail -1)/apksigner sign \
-            --ks debug.keystore --ks-pass pass:android \
-            mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
-
-      - name: Rename APK
-        run: cp mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk s30_android.apk
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: s30_android.apk
-          path: s30_android.apk
+    uses: ./.github/workflows/android.yml
 
   release:
     needs: [build, android]
@@ -141,8 +82,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create ${{ inputs.version }} \
-            --title "${{ inputs.version }}" \
+          VERSION=${{ inputs.version || github.ref_name }}
+          gh release create $VERSION \
+            --title "$VERSION" \
             --generate-notes \
             artifacts/s30_linux/s30_linux \
             artifacts/s30_linux-arm/s30_linux-arm \
