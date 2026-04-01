@@ -456,41 +456,40 @@ func (s *WisemanScreen) giveReward() {
 // --- UI Setup ---
 
 func (s *WisemanScreen) setupButtons() {
-	Icons, err := imageutil.LoadSpriteSheet(12, 2, assets.Icons_png)
+	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
 	if err != nil {
 		panic(err)
 	}
-	Iconb, err := imageutil.LoadSpriteSheet(8, 1, assets.Iconb_png)
-	if err != nil {
-		panic(err)
-	}
-
 	fontFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 20}
 
-	yesBtn := mkWisemanButton("Accept", 0, 50, -50, fontFace, Icons, Iconb)
-	yesBtn.ID = "yes"
+	acceptW, _ := elements.TextButtonSize("Accept", fontFace)
+	refuseW, _ := elements.TextButtonSize("Refuse", fontFace)
+	totalW := acceptW + 10 + refuseW
+	startX := 512 - totalW/2
 
-	noBtn := mkWisemanButton("Refuse", 1, 150, -50, fontFace, Icons, Iconb)
-	noBtn.ID = "no"
+	yesBtn := elements.NewButtonFromConfig(elements.ButtonConfig{
+		Normal:  btnSprites[0][0],
+		Hover:   btnSprites[0][1],
+		Pressed: btnSprites[0][2],
+		Text:    "Accept",
+		Font:    fontFace,
+		ID:      "yes",
+		X:       startX,
+		Y:       618,
+	})
+
+	noBtn := elements.NewButtonFromConfig(elements.ButtonConfig{
+		Normal:  btnSprites[0][0],
+		Hover:   btnSprites[0][1],
+		Pressed: btnSprites[0][2],
+		Text:    "Refuse",
+		Font:    fontFace,
+		ID:      "no",
+		X:       startX + acceptW + 10,
+		Y:       618,
+	})
 
 	s.Buttons = []*elements.Button{yesBtn, noBtn}
-}
-
-func mkWisemanButton(txt string, index int, x, y int, fontFace *text.GoTextFace, Icons, Iconb [][]*ebiten.Image) *elements.Button {
-	scale := 1.2
-	norm := elements.CombineButton(Iconb[0][0], Icons[0][index], Iconb[0][1], scale)
-	hover := elements.CombineButton(Iconb[0][2], Icons[0][index], Iconb[0][3], scale)
-	pressed := elements.CombineButton(Iconb[0][0], Icons[0][index], Iconb[0][1], scale)
-
-	btn := elements.NewButton(norm, hover, pressed, x, y, 1.0)
-	btn.ButtonText = elements.ButtonText{
-		Text:       txt,
-		Font:       fontFace,
-		TextColor:  color.White,
-		TextOffset: image.Point{X: 10, Y: 40},
-		VAlign:     elements.AlignBottom,
-	}
-	return btn
 }
 
 // --- Update / Draw ---
@@ -517,12 +516,6 @@ func (s *WisemanScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 func (s *WisemanScreen) updateOffer(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	opts := &ebiten.DrawImageOptions{}
 	for _, b := range s.Buttons {
-		btnX := W/2 - 100
-		if b.ID == "no" {
-			btnX += 150
-		}
-		b.MoveTo(btnX, H-150)
-
 		b.Update(opts, scale, W, H)
 		if b.IsClicked() {
 			if b.ID == "yes" {

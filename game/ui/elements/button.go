@@ -28,6 +28,11 @@ const (
 	AlignBottom
 )
 
+const (
+	textPaddingX = 40.0
+	textPaddingY = 20.0
+)
+
 type ButtonState int
 
 const (
@@ -57,6 +62,49 @@ type Button struct {
 	Bounds       image.Rectangle
 	Position     *layout.Position
 	ID           string
+}
+
+type ButtonConfig struct {
+	Normal    *ebiten.Image
+	Hover     *ebiten.Image // defaults to Normal
+	Pressed   *ebiten.Image // defaults to Normal
+	Text      string
+	Font      text.Face
+	TextColor color.Color // defaults to white
+	Scale     float64     // defaults to 1.0
+	X, Y      int
+	ID        string
+}
+
+func NewButtonFromConfig(cfg ButtonConfig) *Button {
+	if cfg.Hover == nil {
+		cfg.Hover = cfg.Normal
+	}
+	if cfg.Pressed == nil {
+		cfg.Pressed = cfg.Normal
+	}
+	if cfg.Scale == 0 {
+		cfg.Scale = 1.0
+	}
+	if cfg.TextColor == nil {
+		cfg.TextColor = color.White
+	}
+
+	btn := NewButton(cfg.Normal, cfg.Hover, cfg.Pressed, cfg.X, cfg.Y, cfg.Scale)
+	btn.ID = cfg.ID
+
+	if cfg.Text != "" && cfg.Font != nil {
+		btn.ButtonText = ButtonText{
+			Text:      cfg.Text,
+			Font:      cfg.Font,
+			TextColor: cfg.TextColor,
+			HAlign:    AlignCenter,
+			VAlign:    AlignMiddle,
+		}
+		btn.ResizeToText(textPaddingX, textPaddingY)
+	}
+
+	return btn
 }
 
 func NewButton(normal, hover, pressed *ebiten.Image, x, y int, scale float64) *Button {
@@ -148,6 +196,33 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, s
 
 func (b *Button) IsClicked() bool {
 	return b.State == StateClicked
+}
+
+// TextButtonSize returns the final button dimensions for text with auto-resize padding.
+func TextButtonSize(txt string, font text.Face) (int, int) {
+	textW, textH := text.Measure(txt, font, 0)
+	return int(textW + textPaddingX), int(textH + textPaddingY)
+}
+
+// ResizeToText scales the button images so the text fits with padding.
+func (b *Button) ResizeToText(paddingX, paddingY float64) {
+	if b.ButtonText.Text == "" || b.ButtonText.Font == nil {
+		return
+	}
+	textW, textH := text.Measure(b.ButtonText.Text, b.ButtonText.Font, 0)
+	targetW := textW + paddingX
+	targetH := textH + paddingY
+
+	scaleX := targetW / float64(b.Normal.Bounds().Dx())
+	scaleY := targetH / float64(b.Normal.Bounds().Dy())
+
+	b.Normal = imageutil.ScaleImageInd(b.Normal, scaleX, scaleY)
+	b.Hover = imageutil.ScaleImageInd(b.Hover, scaleX, scaleY)
+	b.Pressed = imageutil.ScaleImageInd(b.Pressed, scaleX, scaleY)
+
+	w := b.Normal.Bounds().Dx()
+	h := b.Normal.Bounds().Dy()
+	b.Bounds = image.Rect(b.Bounds.Min.X, b.Bounds.Min.Y, b.Bounds.Min.X+w, b.Bounds.Min.Y+h)
 }
 
 // CombineButton combines the 3 images into a single button image

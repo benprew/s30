@@ -2,7 +2,6 @@ package screens
 
 import (
 	"fmt"
-	"image"
 	"image/color"
 	"math/rand"
 
@@ -10,10 +9,12 @@ import (
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 type DuelAnteScreen struct {
@@ -27,8 +28,8 @@ type DuelAnteScreen struct {
 	enemyName         string
 	lvl               *world.Level
 	idx               int
-	duelBtn           image.Rectangle
-	bribeBtn          image.Rectangle
+	duelBtn           *elements.Button
+	bribeBtn          *elements.Button
 	visageBorder      []*ebiten.Image
 	playerStatsUI     []*ebiten.Image
 	player            *domain.Player
@@ -44,13 +45,45 @@ func NewDuelAnteScreen() *DuelAnteScreen {
 func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	enemy := l.GetEnemyAt(idx)
 	s := &DuelAnteScreen{
-		player:   l.Player,
-		enemy:    enemy,
-		lvl:      l,
-		idx:      idx,
-		duelBtn:  image.Rectangle{image.Point{400, 500}, image.Point{700, 540}},
-		bribeBtn: image.Rectangle{image.Point{400, 550}, image.Point{700, 590}},
+		player: l.Player,
+		enemy:  enemy,
+		lvl:    l,
+		idx:    idx,
 	}
+
+	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
+	if err != nil {
+		panic(fmt.Sprintf("Error loading button sprites: %v", err))
+	}
+	fontFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 20}
+
+	duelText := "1. Duel the Enemy"
+	bribeText := fmt.Sprintf("2. Bribe for %d gold", enemy.BribeAmount())
+	duelW, duelH := elements.TextButtonSize(duelText, fontFace)
+	bribeW, _ := elements.TextButtonSize(bribeText, fontFace)
+
+	btnY := 500
+	s.duelBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
+		Normal:  btnSprites[0][0],
+		Hover:   btnSprites[0][1],
+		Pressed: btnSprites[0][2],
+		Text:    duelText,
+		Font:    fontFace,
+		ID:      "duel",
+		X:       512 - duelW/2,
+		Y:       btnY,
+	})
+
+	s.bribeBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
+		Normal:  btnSprites[0][0],
+		Hover:   btnSprites[0][1],
+		Pressed: btnSprites[0][2],
+		Text:    bribeText,
+		Font:    fontFace,
+		ID:      "bribe",
+		X:       512 - bribeW/2,
+		Y:       btnY + duelH + 10,
+	})
 
 	s.background = loadBackgroundForEnemy(enemy)
 
@@ -90,9 +123,6 @@ func borderedVisage(visage, border *ebiten.Image) *ebiten.Image {
 }
 
 func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	mx, my := ebiten.CursorPosition()
-	mousePoint := image.Point{mx, my}
-
 	if ebiten.IsKeyPressed(ebiten.Key1) {
 		return s.startDuel()
 	}
@@ -101,13 +131,15 @@ func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		return s.bribe()
 	}
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		if within(mousePoint, s.duelBtn) {
-			return s.startDuel()
-		}
-		if within(mousePoint, s.bribeBtn) {
-			return s.bribe()
-		}
+	opts := &ebiten.DrawImageOptions{}
+	s.duelBtn.Update(opts, scale, W, H)
+	s.bribeBtn.Update(opts, scale, W, H)
+
+	if s.duelBtn.IsClicked() {
+		return s.startDuel()
+	}
+	if s.bribeBtn.IsClicked() {
+		return s.bribe()
 	}
 
 	return screenui.DuelAnteScr, nil, nil
@@ -159,12 +191,9 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	textElement := elements.NewText(24, duelText, W/2-250, 450)
 	textElement.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	// Action buttons - centered, positioned better
-	duelBtnText := elements.NewText(24, "1. Duel the Enemy", s.duelBtn.Min.X, s.duelBtn.Min.Y)
-	duelBtnText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-
-	bribeBtnText := elements.NewText(24, fmt.Sprintf("2. Bribe for %d gold", s.enemy.BribeAmount()), s.bribeBtn.Min.X, s.bribeBtn.Min.Y)
-	bribeBtnText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+	btnOpts := &ebiten.DrawImageOptions{}
+	s.duelBtn.Draw(screen, btnOpts, scale)
+	s.bribeBtn.Draw(screen, btnOpts, scale)
 
 	// Player stats UI background in lower-left
 	if len(s.playerStatsUI) > 0 && s.playerStatsUI[0] != nil {
@@ -209,10 +238,6 @@ func (s *DuelAnteScreen) bribe() (screenui.ScreenName, screenui.Screen, error) {
 	s.lvl.RemoveEnemyAt(s.idx)
 	s.player.Gold -= s.enemy.BribeAmount()
 	return screenui.WorldScr, nil, nil
-}
-
-func within(point image.Point, btn image.Rectangle) bool {
-	return point.In(btn)
 }
 
 func loadBackgroundForEnemy(enemy *domain.Enemy) *ebiten.Image {
