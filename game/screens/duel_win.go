@@ -82,7 +82,6 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		if err != nil {
 			continue
 		}
-		img = imageutil.ScaleImage(img, 0.75)
 		screen.DrawImage(img, cardOpts)
 		cardOpts.GeoM.Translate(260, 0)
 	}
