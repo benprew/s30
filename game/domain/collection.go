@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -221,4 +222,46 @@ func (cc CardCollection) NumCards() int {
 		total += item.Count
 	}
 	return total
+}
+
+type collectionItemJSON struct {
+	CardName   string `json:"card_name"`
+	Count      int    `json:"count"`
+	DeckCounts []int  `json:"deck_counts"`
+}
+
+func (cc CardCollection) MarshalJSON() ([]byte, error) {
+	items := make([]collectionItemJSON, 0, len(cc))
+	for card, item := range cc {
+		items = append(items, collectionItemJSON{
+			CardName:   card.CardName,
+			Count:      item.Count,
+			DeckCounts: item.DeckCounts,
+		})
+	}
+	return json.Marshal(items)
+}
+
+func (cc *CardCollection) UnmarshalJSON(data []byte) error {
+	var items []collectionItemJSON
+	if err := json.Unmarshal(data, &items); err != nil {
+		return err
+	}
+
+	if *cc == nil {
+		*cc = make(CardCollection)
+	}
+
+	for _, item := range items {
+		card := FindCardByName(item.CardName)
+		if card == nil {
+			return fmt.Errorf("card not found: %s", item.CardName)
+		}
+		(*cc)[card] = &CollectionItem{
+			Card:       card,
+			Count:      item.Count,
+			DeckCounts: item.DeckCounts,
+		}
+	}
+	return nil
 }
