@@ -361,7 +361,7 @@ func (s *DuelScreen) loadImages() {
 	}
 	s.doneBtn = [3]*ebiten.Image{statbutt[0][11], statbutt[0][12], statbutt[0][13]}
 
-	abilityData, err := assets.DuelFS.ReadFile("art/sprites/duel/Abilities.pic.png")
+	abilityData, err := assets.DuelFS.ReadFile("art/screens/duel/Abilities.pic.png")
 	if err == nil {
 		sprites, err := imageutil.LoadSpriteSheet(1, 18, abilityData)
 		if err == nil {
@@ -374,7 +374,7 @@ func (s *DuelScreen) loadImages() {
 }
 
 func loadDuelImage(name string) *ebiten.Image {
-	data, err := assets.DuelFS.ReadFile("art/sprites/duel/" + name)
+	data, err := assets.DuelFS.ReadFile("art/screens/duel/" + name)
 	if err != nil {
 		fmt.Printf("Error loading duel image %s: %v\n", name, err)
 		return nil

@@ -189,7 +189,7 @@ func (g *TileGrid) printGrid() {
 }
 
 func parseCoastlineMap() (*CoastlineMap, error) {
-	content, err := os.ReadFile("assets/art/sprites/world/land/Cstline_map.json")
+	content, err := os.ReadFile("assets/art/screens/world/land/Cstline_map.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read Cstline_map.json: %w", err)
 	}

@@ -16,7 +16,7 @@ var Rogues = loadRogues()
 
 func (c *Character) LoadImages() error {
 	if c.Visage == nil {
-		data, err := assets.RogueVisageFS.ReadFile("art/sprites/rogues/" + c.VisageFn)
+		data, err := assets.RogueVisageFS.ReadFile("art/rogues/" + c.VisageFn)
 		if err != nil {
 			fmt.Printf("ERROR: Loading Visage: %v", err)
 		}
@@ -27,7 +27,7 @@ func (c *Character) LoadImages() error {
 		c.Visage = img
 	}
 	if c.WalkingSprite == nil {
-		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + c.WalkingSpriteFn)
+		data, err := assets.RogueSpriteFS.ReadFile("art/screens/world/characters/" + c.WalkingSpriteFn)
 		if err != nil {
 			fmt.Printf("ERROR: Loading Walking for %s: %v", c.Name, err)
 		}
@@ -38,7 +38,7 @@ func (c *Character) LoadImages() error {
 		c.WalkingSprite = spr
 	}
 	if c.ShadowSprite == nil {
-		data, err := assets.RogueSpriteFS.ReadFile("art/sprites/world/characters/" + c.WalkingShadowSpriteFn)
+		data, err := assets.RogueSpriteFS.ReadFile("art/screens/world/characters/" + c.WalkingShadowSpriteFn)
 		if err != nil {
 			fmt.Printf("ERROR: Loading Shadow: %v", err)
 		}

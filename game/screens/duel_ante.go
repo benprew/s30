@@ -242,19 +242,19 @@ func (s *DuelAnteScreen) bribe() (screenui.ScreenName, screenui.Screen, error) {
 
 func loadBackgroundForEnemy(enemy *domain.Enemy) *ebiten.Image {
 	var backgroundFile string
-	backgroundFile = "art/sprites/duel_ante/Prdwht.pic.png"
+	backgroundFile = "art/screens/duel_ante/Prdwht.pic.png"
 
 	switch enemy.Character.PrimaryColor {
 	case "White":
-		backgroundFile = "art/sprites/duel_ante/Prdwht.pic.png"
+		backgroundFile = "art/screens/duel_ante/Prdwht.pic.png"
 	case "Blue":
-		backgroundFile = "art/sprites/duel_ante/Prdblu.pic.png"
+		backgroundFile = "art/screens/duel_ante/Prdblu.pic.png"
 	case "Black":
-		backgroundFile = "art/sprites/duel_ante/Prdblk.pic.png"
+		backgroundFile = "art/screens/duel_ante/Prdblk.pic.png"
 	case "Red":
-		backgroundFile = "art/sprites/duel_ante/Prdred.pic.png"
+		backgroundFile = "art/screens/duel_ante/Prdred.pic.png"
 	case "Green":
-		backgroundFile = "art/sprites/duel_ante/Prdgrn.pic.png"
+		backgroundFile = "art/screens/duel_ante/Prdgrn.pic.png"
 	}
 
 	data, err := assets.DuelAnteFS.ReadFile(backgroundFile)

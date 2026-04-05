@@ -18,20 +18,20 @@ import (
 )
 
 var encounterBgFiles = map[int]string{
-	world.TerrainPlains:    "art/sprites/rand_encounter/0569.pic.png",
-	world.TerrainMountains: "art/sprites/rand_encounter/0737.pic.png",
-	world.TerrainMarsh:     "art/sprites/rand_encounter/0333.pic.png",
-	world.TerrainForest:    "art/sprites/rand_encounter/0335.pic.png",
-	world.TerrainWater:     "art/sprites/rand_encounter/0873.pic.png",
-	world.TerrainSand:      "art/sprites/rand_encounter/0873.pic.png",
+	world.TerrainPlains:    "art/screens/rand_encounter/0569.pic.png",
+	world.TerrainMountains: "art/screens/rand_encounter/0737.pic.png",
+	world.TerrainMarsh:     "art/screens/rand_encounter/0333.pic.png",
+	world.TerrainForest:    "art/screens/rand_encounter/0335.pic.png",
+	world.TerrainWater:     "art/screens/rand_encounter/0873.pic.png",
+	world.TerrainSand:      "art/screens/rand_encounter/0873.pic.png",
 }
 
 var landToBgFile = map[string]string{
-	"Plains":   "art/sprites/rand_encounter/0569.pic.png",
-	"Mountain": "art/sprites/rand_encounter/0737.pic.png",
-	"Swamp":    "art/sprites/rand_encounter/0333.pic.png",
-	"Forest":   "art/sprites/rand_encounter/0335.pic.png",
-	"Island":   "art/sprites/rand_encounter/0873.pic.png",
+	"Plains":   "art/screens/rand_encounter/0569.pic.png",
+	"Mountain": "art/screens/rand_encounter/0737.pic.png",
+	"Swamp":    "art/screens/rand_encounter/0333.pic.png",
+	"Forest":   "art/screens/rand_encounter/0335.pic.png",
+	"Island":   "art/screens/rand_encounter/0873.pic.png",
 }
 
 type RandomEncounterScreen struct {

@@ -164,7 +164,7 @@ func (c *Character) GetNumDecks() int {
 }
 
 func getEmbeddedFile(filename string) []byte {
-	data, err := assets.CharacterFS.ReadFile("art/sprites/world/characters/" + filename)
+	data, err := assets.CharacterFS.ReadFile("art/screens/world/characters/" + filename)
 	if err != nil {
 		fmt.Printf("Error loading sprite file %s: %v\n", filename, err)
 		return nil
