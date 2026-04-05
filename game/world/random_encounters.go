@@ -55,8 +55,8 @@ func (l *Level) SpawnEncounters(count int) {
 
 		for attempt := 0; attempt < maxAttempts; attempt++ {
 			// Random tile coordinates
-			tileX = rand.Intn(l.w)
-			tileY = rand.Intn(l.h)
+			tileX = rand.Intn(l.W)
+			tileY = rand.Intn(l.H)
 
 			// Get Tile
 			t := l.Tile(image.Point{tileX, tileY})
@@ -123,7 +123,7 @@ func (l *Level) SpawnEncounters(count int) {
 			SpriteIndex: spriteIdx,
 			TerrainType: t.TerrainType,
 		}
-		l.randomEncounters = append(l.randomEncounters, re)
+		l.RandomEncounters = append(l.RandomEncounters, re)
 	}
 }
 
@@ -134,14 +134,14 @@ func dist(p1, p2 image.Point) float64 {
 }
 
 func (l *Level) UpdateEncounters() {
-	for i, re := range l.randomEncounters {
+	for i, re := range l.RandomEncounters {
 		if dist(l.Player.Loc(), l.TileToPixel(re.Tile)) < EncounterTriggerDist {
 			l.randomEncounterPending = true
 			l.pendingEncounterSprite = re.SpriteIndex
 			l.pendingEncounterTerrain = re.TerrainType
 			t := l.Tile(re.Tile)
 			t.RemoveRandomEncounter()
-			l.randomEncounters = append(l.randomEncounters[:i], l.randomEncounters[i+1:]...)
+			l.RandomEncounters = append(l.RandomEncounters[:i], l.RandomEncounters[i+1:]...)
 		}
 	}
 

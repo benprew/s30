@@ -12,8 +12,8 @@ import (
 // Helper function to create a simple level for testing
 func createTestLevel(w, h int) *Level {
 	l := &Level{
-		w:     w,
-		h:     h,
+		W:     w,
+		H:     h,
 		Tiles: make([][]*Tile, h),
 		// Initialize other fields if necessary for the function being tested
 		// roadSprites, roadSpriteInfo might not be needed for BFS logic itself
@@ -159,8 +159,8 @@ func TestConnectCityBFS(t *testing.T) {
 func TestTileToPixel(t *testing.T) {
 	// Initialize a level with known tile dimensions
 	l := &Level{
-		tileWidth:  200,
-		tileHeight: 100,
+		TileWidth:  200,
+		TileHeight: 100,
 	}
 
 	testCases := []struct {

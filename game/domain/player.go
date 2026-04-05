@@ -27,6 +27,7 @@ type Player struct {
 	ActiveQuest     *Quest
 	Days            int
 	TimeAccumulator float64
+	IsMale          bool
 	mouseMoving     bool
 	BonusDuelLife   int
 	BonusDuelCards  []*Card
@@ -102,10 +103,33 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 		Gold:        gold,
 		Food:        food,
 		MinDeckSize: minDeckSize,
+		IsMale:      isM,
 		Amulets:     make(map[ColorMask]int),
 		WorldMagics: make([]*WorldMagic, 0),
 		ActiveDeck:  0,
 	}, nil
+}
+
+// LoadImages reloads the player's sprite images. Required after deserializing
+// from a save file since ebiten.Image doesn't survive JSON round-trips.
+func (p *Player) LoadImages() error {
+	spriteFn := "Ego_F.spr.png"
+	shadowFn := "Sego_F.spr.png"
+	if p.IsMale {
+		spriteFn = "Ego_M.spr.png"
+		shadowFn = "Sego_M.spr.png"
+	}
+	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile(spriteFn))
+	if err != nil {
+		return fmt.Errorf("failed to load player sprite: %w", err)
+	}
+	shadow, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile(shadowFn))
+	if err != nil {
+		return fmt.Errorf("failed to load player shadow: %w", err)
+	}
+	p.WalkingSprite = sprite
+	p.ShadowSprite = shadow
+	return nil
 }
 
 func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {

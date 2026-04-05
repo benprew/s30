@@ -177,6 +177,9 @@ var (
 	//go:embed art/ui/Tradbut1.pic.png
 	Tradbut1_png []byte
 
+	//go:embed art/screens/start/Title.pic.png
+	StartTitle_png []byte
+
 	// Random encounter backgrounds
 	//go:embed art/screens/rand_encounter/*.png
 	RandEncounterFS embed.FS

@@ -130,14 +130,14 @@ func generateTerrain(w, h int) [][]float64 {
 // mapTerrainTypes assigns terrain based on noise values and returns potential city locations.
 func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites [][]*ebiten.Image) []image.Point {
 	// Fill each tile with one or more sprites randomly.
-	l.Tiles = make([][]*Tile, l.h)
+	l.Tiles = make([][]*Tile, l.H)
 	validCityLocations := []image.Point{} // Store potential city coordinates
 
-	for y := range l.h {
-		l.Tiles[y] = make([]*Tile, l.w)
-		for x := range l.w {
+	for y := range l.H {
+		l.Tiles[y] = make([]*Tile, l.W)
+		for x := range l.W {
 			t := &Tile{}
-			isBorderSpace := x < 4 || y < 8 || x > l.w-4 || y > l.h-8
+			isBorderSpace := x < 4 || y < 8 || x > l.W-4 || y > l.H-8
 			val := terrain[y][x]
 			folIdx := rand.Intn(11)
 			isWater := false // Track if the tile is water
@@ -342,7 +342,7 @@ func (l *Level) connectCityBFS(start image.Point) []image.Point {
 			// fmt.Println("current:", current, "neighborPos:", neighborPos)
 
 			// Check bounds
-			if neighborPos.X < 0 || neighborPos.X >= l.w || neighborPos.Y < 0 || neighborPos.Y >= l.h {
+			if neighborPos.X < 0 || neighborPos.X >= l.W || neighborPos.Y < 0 || neighborPos.Y >= l.H {
 				continue
 			}
 

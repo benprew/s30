@@ -15,22 +15,22 @@ import (
 
 // Level represents a Game level.
 type Level struct {
-	w, h       int
+	W, H       int
 	Tiles      [][]*Tile // (Y,X) array of tiles
-	tileWidth  int
-	tileHeight int
+	TileWidth  int
+	TileHeight int
 
 	roadSprites    [][]*ebiten.Image // Sprites for roads
 	roadSpriteInfo [][]string        // Maps sprite index to direction string (e.g., "N", "NE")
 
 	Player  *domain.Player
-	enemies []domain.Enemy
+	Enemies []domain.Enemy
 	// encounterIndex holds the index of an enemy that triggered an encounter
 	// encounterPending indicates whether an encounter is waiting to be consumed
 	encounterIndex   int
 	encounterPending bool
 
-	randomEncounters        []RandomEncounter
+	RandomEncounters        []RandomEncounter
 	encounterSprites        [][]*ebiten.Image
 	randomEncounterPending  bool
 	pendingEncounterSprite  int
@@ -46,17 +46,17 @@ func NewLevel(c *domain.Player) (*Level, error) {
 	fmt.Println("NewLevel start")
 
 	l := &Level{
-		w:              47,
-		h:              63,
-		tileWidth:      206,
-		tileHeight:     102,
-		enemies:        make([]domain.Enemy, 0),
+		W:              47,
+		H:              63,
+		TileWidth:      206,
+		TileHeight:     102,
+		Enemies:        make([]domain.Enemy, 0),
 		Player:         c,
 		encounterIndex: -1,
 	}
 
 	// Load embedded SpriteSheet.
-	ss, err := LoadWorldTileSheet(l.tileWidth, l.tileHeight)
+	ss, err := LoadWorldTileSheet(l.TileWidth, l.TileHeight)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
@@ -106,7 +106,7 @@ func NewLevel(c *domain.Player) (*Level, error) {
 		{"", "NE", "E", "SE", "N", "SW"},
 		{"W", "NW", "S", "", "", ""},
 	}
-	noise := generateTerrain(l.w, l.h)
+	noise := generateTerrain(l.W, l.H)
 	// mapTerrainTypes now returns valid city locations and sets Tile.TerrainType
 	validCityLocations := l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites)
 
@@ -139,7 +139,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	l.RenderZigzag(screen, pLoc.X, pLoc.Y, (screenW/2)+padding, (screenH/2)+padding, scale)
 
 	// Draw enemies
-	for _, e := range l.enemies {
+	for _, e := range l.Enemies {
 		eLoc := e.Loc()
 		eDim := e.Dims()
 		if !l.isVisible(eLoc.X, eLoc.Y, eDim.Dx(), eDim.Dy(), screenW, screenH) {
@@ -182,8 +182,8 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 	}
 	if l.Player.Days > currentDay {
 		// New day, update city bans
-		for y := 0; y < l.h; y++ {
-			for x := 0; x < l.w; x++ {
+		for y := 0; y < l.H; y++ {
+			for x := 0; x < l.W; x++ {
 				if l.Tiles[y][x] != nil && l.Tiles[y][x].IsCity {
 					if l.Tiles[y][x].City.QuestBanDays > 0 {
 						l.Tiles[y][x].City.QuestBanDays--
@@ -193,10 +193,10 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 		}
 	}
 
-	for i := range l.enemies {
-		ex, ey := l.enemies[i].X, l.enemies[i].Y
-		_ = l.enemies[i].Update(l.Player.Loc())
-		newPos := l.enemies[i].Loc()
+	for i := range l.Enemies {
+		ex, ey := l.Enemies[i].X, l.Enemies[i].Y
+		_ = l.Enemies[i].Update(l.Player.Loc())
+		newPos := l.Enemies[i].Loc()
 
 		if !l.IsWaterAtPixel(newPos) {
 			continue
@@ -208,19 +208,19 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 		// Wall-slide: when moving diagonally, try allowing movement on one axis only
 		if dx != 0 && dy != 0 {
 			if !l.IsWaterAtPixel(image.Point{X: newPos.X, Y: ey}) {
-				l.enemies[i].Y = ey
+				l.Enemies[i].Y = ey
 				continue
 			}
 			if !l.IsWaterAtPixel(image.Point{X: ex, Y: newPos.Y}) {
-				l.enemies[i].X = ex
+				l.Enemies[i].X = ex
 				continue
 			}
 		}
 
 		// Blocked: restore and nudge perpendicular to get around the water
-		l.enemies[i].X = ex
-		l.enemies[i].Y = ey
-		speed := l.enemies[i].MoveSpeed
+		l.Enemies[i].X = ex
+		l.Enemies[i].Y = ey
+		speed := l.Enemies[i].MoveSpeed
 		pLoc := l.Player.Loc()
 
 		if dx != 0 {
@@ -230,9 +230,9 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 				nudgeY = -speed
 			}
 			if !l.IsWaterAtPixel(image.Point{X: ex, Y: ey + nudgeY}) {
-				l.enemies[i].Y = ey + nudgeY
+				l.Enemies[i].Y = ey + nudgeY
 			} else if !l.IsWaterAtPixel(image.Point{X: ex, Y: ey - nudgeY}) {
-				l.enemies[i].Y = ey - nudgeY
+				l.Enemies[i].Y = ey - nudgeY
 			}
 		} else {
 			// Vertical movement, nudge horizontally toward player
@@ -241,9 +241,9 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 				nudgeX = -speed
 			}
 			if !l.IsWaterAtPixel(image.Point{X: ex + nudgeX, Y: ey}) {
-				l.enemies[i].X = ex + nudgeX
+				l.Enemies[i].X = ex + nudgeX
 			} else if !l.IsWaterAtPixel(image.Point{X: ex - nudgeX, Y: ey}) {
-				l.enemies[i].X = ex - nudgeX
+				l.Enemies[i].X = ex - nudgeX
 			}
 		}
 	}
@@ -256,23 +256,15 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 		}
 	}
 
-	if l.totalTicks%EncounterSpawnRate == 0 && len(l.randomEncounters) < MaxRandomEncounters {
+	if l.totalTicks%EncounterSpawnRate == 0 && len(l.RandomEncounters) < MaxRandomEncounters {
 		l.SpawnEncounters(1)
 	}
 
 	return nil
 }
 
-func (l *Level) Enemies() []domain.Enemy {
-	return l.enemies
-}
-
-func (l *Level) SetEnemies(enemies []domain.Enemy) {
-	l.enemies = enemies
-}
-
 func (l *Level) ClearEnemies() {
-	l.enemies = make([]domain.Enemy, 0)
+	l.Enemies = make([]domain.Enemy, 0)
 }
 
 func (l *Level) SetEncounter(idx int) {
@@ -372,7 +364,7 @@ func (l *Level) SpawnEnemies(count int) error {
 		enemy.SetLoc(image.Point{X: x, Y: y})
 		enemy.MoveSpeed = 5 + rand.Intn(7)
 
-		l.enemies = append(l.enemies, enemy)
+		l.Enemies = append(l.Enemies, enemy)
 	}
 
 	return nil
@@ -391,7 +383,7 @@ func (l *Level) SpawnEnemyNear(enemyName string, tile image.Point) error {
 	}
 
 	center := l.TileToPixel(tile)
-	spread := l.tileWidth * 2
+	spread := l.TileWidth * 2
 	x, y := center.X, center.Y
 	for attempts := 0; attempts < 20; attempts++ {
 		x = center.X + rand.Intn(spread) - spread/2
@@ -405,33 +397,33 @@ func (l *Level) SpawnEnemyNear(enemyName string, tile image.Point) error {
 
 	enemy.SetLoc(image.Point{X: x, Y: y})
 	enemy.MoveSpeed = 5 + rand.Intn(3)
-	l.enemies = append(l.enemies, enemy)
+	l.Enemies = append(l.Enemies, enemy)
 	return nil
 }
 
 func (l *Level) LevelW() int {
-	return l.tileWidth * l.w
+	return l.TileWidth * l.W
 }
 
 func (l *Level) LevelH() int {
-	return l.tileHeight / 2 * l.h
+	return l.TileHeight / 2 * l.H
 }
 
 // TileToPixel returns the center pixel location of the tile at x, y.
 func (l *Level) TileToPixel(p image.Point) image.Point {
-	px := p.X * l.tileWidth
-	py := p.Y * l.tileHeight / 2
+	px := p.X * l.TileWidth
+	py := p.Y * l.TileHeight / 2
 	if p.Y%2 != 0 {
-		px += l.tileWidth / 2
+		px += l.TileWidth / 2
 	}
 
 	// Add half width and height to get to the center of the diamond
-	return image.Point{px + l.tileWidth/2, py + l.tileHeight/2}
+	return image.Point{px + l.TileWidth/2, py + l.TileHeight/2}
 }
 
 // Tile returns the tile at the provided coordinates, or nil.
 func (l *Level) Tile(p image.Point) *Tile {
-	if p.X >= 0 && p.Y >= 0 && p.X < l.w && p.Y < l.h {
+	if p.X >= 0 && p.Y >= 0 && p.X < l.W && p.Y < l.H {
 		return l.Tiles[p.Y][p.X]
 	}
 	return nil
@@ -439,7 +431,7 @@ func (l *Level) Tile(p image.Point) *Tile {
 
 // Size returns the size of the Level.
 func (l *Level) Size() (width, height int) {
-	return l.w, l.h
+	return l.W, l.H
 }
 
 func (l *Level) TotalTicks() int {
@@ -447,8 +439,8 @@ func (l *Level) TotalTicks() int {
 }
 
 func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale float64) {
-	tileWidth := l.tileWidth
-	tileHeight := l.tileHeight
+	tileWidth := l.TileWidth
+	tileHeight := l.TileHeight
 
 	op := &ebiten.DrawImageOptions{}
 
@@ -458,8 +450,8 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale
 	visibleXOpposite := pX + padX
 	visibleYOpposite := pY + padY
 
-	for y := 0; y < l.h; y++ {
-		for x := 0; x < l.w; x++ {
+	for y := 0; y < l.H; y++ {
+		for x := 0; x < l.W; x++ {
 			tile := l.Tile(image.Point{x, y})
 			if tile == nil {
 				continue
@@ -493,10 +485,10 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale
 }
 
 func (l *Level) PixelToTile(pixel image.Point) image.Point {
-	tileY := pixel.Y / (l.tileHeight / 2)
-	tileX := (pixel.X - (tileY%2)*(l.tileWidth/2)) / l.tileWidth
+	tileY := pixel.Y / (l.TileHeight / 2)
+	tileX := (pixel.X - (tileY%2)*(l.TileWidth/2)) / l.TileWidth
 
-	if pixel.X < 0 || tileX >= l.w || pixel.Y < 0 || tileY >= l.h {
+	if pixel.X < 0 || tileX >= l.W || pixel.Y < 0 || tileY >= l.H {
 		return image.Point{-1, -1}
 	}
 
@@ -518,7 +510,7 @@ func (l *Level) CharacterTile() image.Point {
 
 // EncounterPending returns true if an encounter was recorded and not yet taken.
 func (l *Level) EncounterPending() bool {
-	return l.encounterPending && l.encounterIndex >= 0 && l.encounterIndex < len(l.enemies)
+	return l.encounterPending && l.encounterIndex >= 0 && l.encounterIndex < len(l.Enemies)
 }
 
 // TakeEncounter returns the enemy that triggered the encounter and clears the pending flag.
@@ -530,7 +522,7 @@ func (l *Level) TakeEncounter() (domain.Enemy, int, bool) {
 		return domain.Enemy{}, -1, false
 	}
 	idx := l.encounterIndex
-	e := l.enemies[idx]
+	e := l.Enemies[idx]
 	l.encounterPending = false
 	l.encounterIndex = -1
 	return e, idx, true
@@ -538,25 +530,25 @@ func (l *Level) TakeEncounter() (domain.Enemy, int, bool) {
 
 // RemoveEnemyAt removes an enemy by index.
 func (l *Level) RemoveEnemyAt(idx int) {
-	if idx < 0 || idx >= len(l.enemies) {
+	if idx < 0 || idx >= len(l.Enemies) {
 		return
 	}
-	l.enemies = append(l.enemies[:idx], l.enemies[idx+1:]...)
+	l.Enemies = append(l.Enemies[:idx], l.Enemies[idx+1:]...)
 }
 
 func (l *Level) GetEnemyAt(idx int) *domain.Enemy {
-	return &l.enemies[idx]
+	return &l.Enemies[idx]
 }
 
 // SetEnemyEngaged marks the enemy at index as engaged or not.
 func (l *Level) SetEnemyEngaged(idx int, v bool) {
-	if idx < 0 || idx >= len(l.enemies) {
+	if idx < 0 || idx >= len(l.Enemies) {
 		return
 	}
 	// modify the enemy in place
-	e := l.enemies[idx]
+	e := l.Enemies[idx]
 	e.SetEngaged(v)
-	l.enemies[idx] = e
+	l.Enemies[idx] = e
 }
 
 // FindClosestCity returns the tile coordinates and distance of the closest city to the player
@@ -565,8 +557,8 @@ func (l *Level) FindClosestCity() (image.Point, float64) {
 	closestTile := image.Point{-1, -1}
 	minDistance := math.MaxFloat64
 
-	for y := 0; y < l.h; y++ {
-		for x := 0; x < l.w; x++ {
+	for y := 0; y < l.H; y++ {
+		for x := 0; x < l.W; x++ {
 			tile := l.Tile(image.Point{x, y})
 			if tile != nil && tile.IsCity {
 				// Calculate pixel position of this tile

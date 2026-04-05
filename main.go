@@ -31,7 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err = ebiten.RunGame(g); err != nil {
+	if err = ebiten.RunGame(g); err != nil && err != ebiten.Termination {
 		log.Fatal(err)
 	}
 }

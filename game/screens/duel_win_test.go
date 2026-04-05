@@ -55,10 +55,10 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 		Player: player,
 	}
 
-	lvl.SetEnemies([]domain.Enemy{
+	lvl.Enemies = []domain.Enemy{
 		{Character: &domain.Character{Name: "Green Mage", Level: 1, CardCollection: enemy0Collection}},
 		{Character: &domain.Character{Name: "Blue Mage", Level: 1, CardCollection: enemy1Collection}},
-	})
+	}
 
 	enemy := lvl.GetEnemyAt(0)
 

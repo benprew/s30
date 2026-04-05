@@ -41,25 +41,6 @@ func (g *Game) Level() *world.Level {
 }
 
 func NewGame() (*Game, error) {
-	startTime := time.Now()
-
-	player, err := domain.NewPlayer("Player", nil, false, domain.DifficultyEasy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load player sprite: %s", err)
-	}
-
-	l, err := world.NewLevel(player)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new level: %s", err)
-	}
-
-	m := minimap.NewMiniMap(l)
-
-	wf, err := screens.NewWorldFrame(player)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create world frame: %s", err)
-	}
-
 	scale := 1.0
 	screenW := int(1024 * scale)
 	screenH := int(768 * scale)
@@ -73,52 +54,109 @@ func NewGame() (*Game, error) {
 		camScaleTo:        1,
 		mousePanX:         math.MinInt32,
 		mousePanY:         math.MinInt32,
-		worldFrame:        wf,
-		currentScreenName: screenui.WorldScr,
+		currentScreenName: screenui.StartScr,
 		screenMap: map[screenui.ScreenName]screenui.Screen{
-			screenui.WorldScr:    screens.NewLevelScreen(l),
-			screenui.MiniMapScr:  m,
-			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
+			screenui.StartScr: screens.NewStartScreen(),
 		},
-		player:     player,
 		Difficulty: domain.DifficultyEasy,
 		audio:      am,
 	}
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
+	ebiten.SetWindowClosingHandled(true)
+	return g, nil
+}
 
-	go domain.PreloadCardImages(domain.CollectPriorityCards(player))
+func (g *Game) initWorld(level *world.Level) error {
+	m := minimap.NewMiniMap(level)
 
-	am.PlayBGM(gameaudio.RandomWorldBGM())
+	wf, err := screens.NewWorldFrame(level.Player)
+	if err != nil {
+		return fmt.Errorf("failed to create world frame: %w", err)
+	}
 
-	fmt.Printf("NewGame execution time: %s\n", time.Since(startTime))
-	return g, err
+	g.worldFrame = wf
+	g.player = level.Player
+	g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(level)
+	g.screenMap[screenui.MiniMapScr] = m
+	g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreen()
+
+	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
+	g.audio.PlayBGM(gameaudio.RandomWorldBGM())
+
+	return nil
+}
+
+func (g *Game) handleStartTransition() error {
+	startScr := g.screenMap[screenui.StartScr].(*screens.StartScreen)
+	if startScr.SelectedSave != "" {
+		level, err := save.LoadGame(startScr.SelectedSave)
+		if err != nil {
+			return fmt.Errorf("failed to load save: %w", err)
+		}
+		if err := level.RebuildSprites(); err != nil {
+			return fmt.Errorf("failed to rebuild sprites: %w", err)
+		}
+		return g.initWorld(level)
+	}
+
+	startTime := time.Now()
+	player, err := domain.NewPlayer("Player", nil, false, g.Difficulty)
+	if err != nil {
+		return fmt.Errorf("failed to load player sprite: %s", err)
+	}
+	level, err := world.NewLevel(player)
+	if err != nil {
+		return fmt.Errorf("failed to create new level: %s", err)
+	}
+	if err := g.initWorld(level); err != nil {
+		return err
+	}
+	fmt.Printf("New game creation time: %s\n", time.Since(startTime))
+	return nil
 }
 
 func (g *Game) Update() error {
+	if ebiten.IsWindowBeingClosed() {
+		if g.player != nil {
+			if err := g.SaveGame("autosave"); err != nil {
+				fmt.Printf("Error auto-saving: %v\n", err)
+			}
+		}
+		return ebiten.Termination
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
 		g.audio.ToggleMute()
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyF5) {
-		if err := g.SaveGame("quicksave"); err != nil {
-			fmt.Printf("Error saving game: %v\n", err)
-		} else {
-			fmt.Println("Game saved!")
+	if g.player != nil {
+		if inpututil.IsKeyJustPressed(ebiten.KeyF5) {
+			if err := g.SaveGame("quicksave"); err != nil {
+				fmt.Printf("Error saving game: %v\n", err)
+			} else {
+				fmt.Println("Game saved!")
+			}
 		}
-	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		l, err := world.NewLevel(g.player)
-		if err != nil {
-			return fmt.Errorf("failed to create new level: %s", err)
+		if inpututil.IsKeyJustPressed(ebiten.KeyR) {
+			l, err := world.NewLevel(g.player)
+			if err != nil {
+				return fmt.Errorf("failed to create new level: %s", err)
+			}
+			g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(l)
 		}
-		g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(l)
 	}
 
 	name, screen, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
 	if err != nil {
 		return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err)
+	}
+
+	if g.currentScreenName == screenui.StartScr && name == screenui.WorldScr {
+		if err := g.handleStartTransition(); err != nil {
+			return err
+		}
 	}
 
 	// If the screen returned a new screen instance, use it
@@ -179,7 +217,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.worldFrame.Draw(screen, g.camScale)
 	}
 
-	if logging.Enabled(logging.World) {
+	if logging.Enabled(logging.World) && g.screenMap[screenui.WorldScr] != nil {
 		charT := g.Level().CharacterTile()
 		charP := g.Level().Player.Loc()
 		closestCityTile, closestCityDistance := g.Level().FindClosestCity()
@@ -249,10 +287,8 @@ func LoadSavedGame(savePath string) (*Game, error) {
 		return nil, fmt.Errorf("failed to load game: %w", err)
 	}
 
-	m := minimap.NewMiniMap(level)
-	wf, err := screens.NewWorldFrame(level.Player)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create world frame: %w", err)
+	if err := level.RebuildSprites(); err != nil {
+		return nil, fmt.Errorf("failed to rebuild sprites: %w", err)
 	}
 
 	am := gameaudio.NewAudioManager()
@@ -262,28 +298,22 @@ func LoadSavedGame(savePath string) (*Game, error) {
 	screenH := int(768 * scale)
 
 	g := &Game{
-		ScreenW:           screenW,
-		ScreenH:           screenH,
-		camScale:          scale,
-		camScaleTo:        1,
-		mousePanX:         math.MinInt32,
-		mousePanY:         math.MinInt32,
-		worldFrame:        wf,
-		currentScreenName: screenui.WorldScr,
-		screenMap: map[screenui.ScreenName]screenui.Screen{
-			screenui.WorldScr:    screens.NewLevelScreen(level),
-			screenui.MiniMapScr:  m,
-			screenui.DuelAnteScr: screens.NewDuelAnteScreen(),
-		},
-		player: level.Player,
-		audio:  am,
+		ScreenW:    screenW,
+		ScreenH:    screenH,
+		camScale:   scale,
+		camScaleTo: 1,
+		mousePanX:  math.MinInt32,
+		mousePanY:  math.MinInt32,
+		screenMap:  make(map[screenui.ScreenName]screenui.Screen),
+		audio:      am,
 	}
 
+	if err := g.initWorld(level); err != nil {
+		return nil, err
+	}
+
+	g.currentScreenName = screenui.WorldScr
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
-
-	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
-
-	am.PlayBGM(gameaudio.RandomWorldBGM())
 
 	return g, nil
 }

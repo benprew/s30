@@ -68,7 +68,7 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 	}
 
 	pLoc := s.Level.Player.Loc()
-	for i, e := range s.Level.Enemies() {
+	for i, e := range s.Level.Enemies {
 		if e.Engaged {
 			continue
 		}
