@@ -251,6 +251,7 @@ func (l *Level) placeCities(validLocations []image.Point, citySprites [][]*ebite
 				Y:               loc.Y,
 				BackgroundImage: cityBgImage(int(tier)),
 				AmuletColor:     amuletColor,
+				CardsForSale:    domain.MkCards(),
 			}
 
 			tile.City = city

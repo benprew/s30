@@ -46,7 +46,9 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 		panic(fmt.Sprintf("Unable to load BuyCards.png: %s", err))
 	}
 
-	city.CardsForSale = domain.MkCards()
+	if len(city.CardsForSale) == 0 {
+		city.CardsForSale = domain.MkCards()
+	}
 
 	sprite := loadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
 	title := imageutil.ScaleImage(ebiten.NewImageFromImage(sprite[4]), SCALE)
