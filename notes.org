@@ -1,5 +1,148 @@
-* Card Pool
-** For cards that are VintageRestricted, don't show them in buycards, or give them as ante cards or use them in player's starting decks
+* Polish/Engagement Loop
+  ---
+  1. Zone-Based Difficulty (Biggest Win)
+
+  Right now all enemies level 1-10 spawn anywhere with equal probability. This is the core source
+   of the "random" feeling.
+
+  Suggestion: Divide the map into concentric zones radiating from the player's starting position
+  (or from cities). Spawn enemy level based on zone:
+
+  - Inner ring (near starting city): levels 1-3
+  - Middle ring: levels 4-7
+  - Outer ring / mountains / marshes: levels 8-10
+  - Boss lairs: fixed locations for level 11-12
+
+  This gives the player a sense of direction — "I need to get stronger before venturing into the
+  mountains." The terrain types already map nicely to this (plains = safe, mountains/marsh =
+  dangerous).
+
+  Implementation: In SpawnEnemies() in game/world/level.go, filter the rogue pool based on the
+  spawn tile's distance from the nearest city or from map center, instead of the flat level <= 10
+   check.
+
+  ---
+  2. Visible Enemy Indicators
+
+  Let the player see how dangerous an enemy is before contact. Options:
+
+  - Tint enemy sprites by tier (green/yellow/red glow or aura)
+  - Show the enemy's level number floating above them
+  - Use different walking sprites per tier (you already have per-rogue sprites)
+
+  This turns encounters from "random punishment" into risk/reward decisions: "Do I engage that
+  red enemy for a better ante card, or avoid it?"
+
+  ---
+  3. Progressive Spawning Over Time
+
+  Currently SpawnEnemies draws from the same pool regardless of game state. Tie the spawn pool to
+   progression markers:
+
+  - Days elapsed: After day 10, allow level 5+. After day 25, allow level 8+.
+  - Duels won: Each 3 wins shifts the minimum spawn level up by 1.
+  - Amulets collected: Each amulet unlocks the next difficulty tier.
+
+  This creates a natural difficulty ramp even without zones.
+
+  ---
+  4. Reward Scaling & Card Economy
+
+  The engagement loop needs better pull (reasons to seek fights), not just push (enemies chasing
+  you):
+
+  - Bounty system: Higher-level enemies drop better cards or bonus gold. Right now you only get
+  their ante card — add a gold bounty scaling with enemy level.
+  - City demand board: Cities could post wanted rogues with specific bounties, giving the player
+  a reason to hunt specific enemies.
+  - Card trader in cities: Let players sell unwanted cards for gold, creating a use for weak
+  cards won from easy fights.
+
+  ---
+  5. Encounter Variety (Random Encounters)
+
+  Your RandomEncounterScr system exists but feels like it could carry more weight:
+
+  - Positive events: Find a treasure chest (gold/card), healing spring (restore life), wandering
+  merchant (buy at discount)
+  - Choice events: "A traveler offers to trade a random rare for 3 of your commons" — meaningful
+  risk/reward decisions
+  - Lore/map reveals: Learn which rogues patrol a region, reveal city locations on minimap
+
+  ---
+  6. Retreat / Flee Mechanic
+
+  Getting caught by a level 10 enemy when you're weak feels bad if the only options are "duel or
+  bribe." Consider:
+
+  - Flee option in DuelAnteScr — costs food instead of gold, with a % chance based on level
+  difference
+  - Partial loss on flee — lose some gold but keep your cards
+  - This makes the bribe system feel like a premium option rather than the only escape
+
+  ---
+  7. Quest-Driven Exploration
+
+  Quests currently feel disconnected from the core loop. Tighten them:
+
+  - Quest enemies appear on the map with a distinct marker so you can hunt them
+  - Chain quests: Completing a delivery quest unlocks a defeat quest in the destination city
+  - Quest rewards that affect the world: Completing a quest could clear high-level enemies from a
+   zone, or unlock a new city shop tier
+
+  ---
+  Priority Ranking
+
+  If I were implementing these, I'd start with:
+
+  1. Zone-based difficulty — immediately fixes the "random" feel
+  2. Visible enemy indicators — gives player agency over encounters
+  3. Progressive spawning — creates session-level arc
+  4. Reward scaling — makes engaging strong enemies feel worth it
+
+  These four changes together would transform the loop from "wander and hope" to "explore, assess
+   risk, grow stronger, push further" — which is the classic roguelike loop that keeps players
+  coming back.
+
+* Blog Post:
+Change in S30 since the alpha:
+
+- Switch to mage-go rules engine (based on XMage) - much better support for cards rules!
+- Sounds! (press M to mute)
+- AI is smarter - heuristic-based but also working on a MinMax AI with search
+- Lots of duel UI improvements - combat visuals, aura rendering, card choices
+- More wiseman boons!
+
+- More platforms supported (Intel Mac, Windows ARM, Android) - Note: android is very much WIP
+
+* New Game/Loading screen
+
+* TODO Use local storage for saving/loading game from WASM
+* TODO fix basalt monolith
+
+* Creatures with 0 power can be attackers - merchant ship wasn't able to attack
+* BUG: Players only need to discard down to 7 at the end of their turn not at the end of every turn
+
+* UI: Pause after the AI casts a spell or uses an ability, even if the player has no responses. Also show targets for AI spells and abilities
+
+* UI: Show the phases passing slower (50ms) even if the phases jump to a new phase, roll it forward
+
+* DONE Timetwister doesn't make everyone discard their hand first
+CLOSED: [2026-03-23 Mon 22:51]
+
+* DONE in game/screens/duel.go Only available blockers should be highlighted as available (ex, tapped creatures can't be blockers)
+CLOSED: [2026-03-23 Mon 22:51]
+* DONE Duel should show what AI creatures are blocking which player attackers, similar to how UI shows what AI creatures are being blocked by player's creatures
+CLOSED: [2026-03-23 Mon 22:51]
+* DONE UI: Don't allow illegal blocks (UI shows I can block an islandwalking creature but I have a island in play)
+CLOSED: [2026-03-23 Mon 22:51]
+* DONE in game/screens/duel.go Auras need to be drawn in LIFO order
+CLOSED: [2026-03-17 Tue 22:31]
+* DONE BUG: Activated ability of dragon engine with mana flare out still taps 2 mountains to activate ability
+CLOSED: [2026-03-17 Tue 22:35]
+* DONE Card Pool
+CLOSED: [2026-03-17 Tue 22:30]
+** For cards that are VintageRestricted, don't show them in buycards, or give them as ante cards or ulimiteduse them in player's starting decks
 * Duel UI screen
 ** DONE Duel UI - card parsing improvements
 CLOSED: [2026-03-13 Fri 16:31]
@@ -374,6 +517,8 @@ write a function AvailableActions that returns a list of actions a player can ta
   - blog
 - [[https://pigsquad.com/form-prge-2025][Retro Game Submission form]]
 - [[https://pigsquad.com/form-prge-2025][Ebiten splash logo]]
+
+- Spanish version? https://www.clasicosbasicos.org/juegos/juegos-de-mesa/magic-the-gathering
 * Overland
 ** Minimap
 *** DONE City names
