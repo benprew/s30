@@ -300,7 +300,11 @@ func NewAudioManager() *AudioManager {
 		sfxVolume:     0.7,
 	}
 
-	am.context = audio.NewContext(sampleRate)
+	if ctx := audio.CurrentContext(); ctx != nil {
+		am.context = ctx
+	} else {
+		am.context = audio.NewContext(sampleRate)
+	}
 	am.preloadSFX()
 	am.preloadFootsteps()
 	am.preloadBirds()
