@@ -254,8 +254,8 @@ func normalizePrice(price float64) int {
 	const (
 		minInput  = 0.25
 		maxInput  = 20000.0
-		minOutput = 10.0
-		maxOutput = 1500.0
+		minOutput = 5.0
+		maxOutput = 150.0
 	)
 
 	// Clamp input to avoid log(0)
