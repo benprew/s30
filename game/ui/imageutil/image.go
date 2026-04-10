@@ -33,12 +33,19 @@ func ScaleImageInd(img *ebiten.Image, scaleX, scaleY float64) *ebiten.Image {
 
 // Make loading images from the embedded file system easier.
 func LoadImage(asset []byte) (*ebiten.Image, error) {
+	key := cacheKey(asset, "image")
+	if cached, ok := registryGet(key); ok {
+		return cached.(*ebiten.Image), nil
+	}
+
 	img, _, err := image.Decode(bytes.NewReader(asset))
 	if err != nil {
 		return nil, err
 	}
 
-	return ebiten.NewImageFromImage(img), nil
+	result := ebiten.NewImageFromImage(img)
+	registrySet(key, result)
+	return result, nil
 }
 
 // TileImage creates a new image of size (width, height) by tiling the src image.

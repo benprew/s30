@@ -24,6 +24,11 @@ type SubimageInfo struct {
 // sprHeight is the number of images vertically in the sheet
 // pixel size of a single sprite iamge is deteremined by the image width divided by sprWidth
 func LoadSpriteSheet(sprWidth, sprHeight int, file []byte) ([][]*ebiten.Image, error) {
+	key := cacheKey(file, fmt.Sprintf("sheet:%d:%d", sprWidth, sprHeight))
+	if cached, ok := registryGet(key); ok {
+		return cached.([][]*ebiten.Image), nil
+	}
+
 	sheet, err := LoadImage(file)
 	if err != nil {
 		return nil, err
@@ -49,6 +54,7 @@ func LoadSpriteSheet(sprWidth, sprHeight int, file []byte) ([][]*ebiten.Image, e
 		}
 	}
 
+	registrySet(key, s)
 	return s, nil
 }
 
@@ -131,6 +137,11 @@ func LoadSprInfoFromJSON(jsonData []byte) ([]SprInfo, error) {
 // Return
 // - a map of strings to ebiten.images (subimages from the original image)
 func LoadMappedSprite(spriteData []byte, spriteMap []byte) (map[string]*ebiten.Image, error) {
+	key := cacheKey(spriteData, "mapped:"+cacheKey(spriteMap, ""))
+	if cached, ok := registryGet(key); ok {
+		return cached.(map[string]*ebiten.Image), nil
+	}
+
 	var spriteInfoMap map[string]SubimageInfo
 	err := json.Unmarshal(spriteMap, &spriteInfoMap)
 	if err != nil {
@@ -160,6 +171,7 @@ func LoadMappedSprite(spriteData []byte, spriteMap []byte) (map[string]*ebiten.I
 		sprites[name] = subImg
 	}
 
+	registrySet(key, sprites)
 	return sprites, nil
 }
 
@@ -175,6 +187,15 @@ type RowSpec struct {
 // rowSpecs defines the structure of each row (count, width, height).
 // Returns a 2D slice where each sub-slice represents a row of sprites.
 func LoadVariableRowSpriteSheet(rowSpecs []RowSpec, file []byte) ([][]*ebiten.Image, error) {
+	specKey := ""
+	for _, s := range rowSpecs {
+		specKey += fmt.Sprintf("%d:%d:%d,", s.Count, s.Width, s.Height)
+	}
+	key := cacheKey(file, "varsheet:"+specKey)
+	if cached, ok := registryGet(key); ok {
+		return cached.([][]*ebiten.Image), nil
+	}
+
 	sheet, err := LoadImage(file)
 	if err != nil {
 		return nil, err
@@ -199,6 +220,7 @@ func LoadVariableRowSpriteSheet(rowSpecs []RowSpec, file []byte) ([][]*ebiten.Im
 		yOffset += spec.Height
 	}
 
+	registrySet(key, result)
 	return result, nil
 }
 
