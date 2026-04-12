@@ -535,41 +535,43 @@ func (am *AudioManager) ToggleMute() {
 }
 
 // EnemySFXForName returns the appropriate SFX for an enemy based on its name.
+// Keywords are checked in priority order; more specific matches come first.
 func EnemySFXForName(name string) SFX {
-	keywords := map[string]SFX{
-		"Dragon":   SFXEnemyDragon,
-		"Drake":    SFXEnemyDragon,
-		"Hydra":    SFXEnemyDragon,
-		"Dracur":   SFXEnemyDragon,
-		"Knight":   SFXEnemyKnight,
-		"Crusader": SFXEnemyKnight,
-		"Paladin":  SFXEnemyKnight,
-		"Wolf":     SFXEnemyWolf,
-		"Beast":    SFXEnemyWolf,
-		"Sedge":    SFXEnemyWolf,
-		"Troll":    SFXEnemyTroll,
-		"Fungus":   SFXEnemyTroll,
-		"Nether":   SFXEnemyTroll,
-		"Djinn":    SFXEnemyDjinn,
-		"Prismat":  SFXEnemyDjinn,
-		"Wyrm":     SFXEnemyWyrm,
-		"Archmage": SFXEnemyArchmage,
-		"Arzakon":  SFXEnemyArchmage,
-		"Lord":     SFXEnemyLord,
-		"Vampire":  SFXEnemyLord,
-		"Lich":     SFXEnemyLord,
-		"Stallion": SFXEnemyHorse,
-		"Centaur":  SFXEnemyHorse,
-		"Winged":   SFXEnemyFlying,
-		"Angel":    SFXEnemyFlying,
-		"Astral":   SFXEnemyFlying,
+	keywords := []struct {
+		keyword string
+		sfx     SFX
+	}{
+		{"Dragon", SFXEnemyDragon},
+		{"Drake", SFXEnemyDragon},
+		{"Hydra", SFXEnemyDragon},
+		{"Dracur", SFXEnemyDragon},
+		{"Knight", SFXEnemyKnight},
+		{"Crusader", SFXEnemyKnight},
+		{"Paladin", SFXEnemyKnight},
+		{"Wolf", SFXEnemyWolf},
+		{"Beast", SFXEnemyWolf},
+		{"Sedge", SFXEnemyWolf},
+		{"Troll", SFXEnemyTroll},
+		{"Fungus", SFXEnemyTroll},
+		{"Nether", SFXEnemyTroll},
+		{"Djinn", SFXEnemyDjinn},
+		{"Prismat", SFXEnemyDjinn},
+		{"Wyrm", SFXEnemyWyrm},
+		{"Archmage", SFXEnemyArchmage},
+		{"Arzakon", SFXEnemyArchmage},
+		{"Lord", SFXEnemyLord},
+		{"Vampire", SFXEnemyLord},
+		{"Lich", SFXEnemyLord},
+		{"Stallion", SFXEnemyHorse},
+		{"Centaur", SFXEnemyHorse},
+		{"Winged", SFXEnemyFlying},
+		{"Angel", SFXEnemyFlying},
+		{"Astral", SFXEnemyFlying},
 	}
 
-	for keyword, sfx := range keywords {
-		for range name {
-			if strings.Contains(name, keyword) {
-				return sfx
-			}
+	for _, kw := range keywords {
+		if strings.Contains(name, kw.keyword) {
+			return kw.sfx
 		}
 	}
 

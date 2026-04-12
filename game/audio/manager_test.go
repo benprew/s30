@@ -4,8 +4,22 @@ import (
 	"testing"
 )
 
+// newTestAudioManager creates an AudioManager without preloading audio files.
+func newTestAudioManager() *AudioManager {
+	am := &AudioManager{
+		currentBGM:    BGMNone,
+		sfxBytes:      make(map[SFX][]byte),
+		footstepBytes: make(map[TerrainColor][2][]byte),
+		birdBytes:     make(map[TerrainColor][][]byte),
+		bgmVolume:     0.4,
+		sfxVolume:     0.7,
+	}
+	instance = am
+	return am
+}
+
 func TestNewAudioManager(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 	if am == nil {
 		t.Fatal("expected non-nil AudioManager")
 	}
@@ -21,7 +35,7 @@ func TestNewAudioManager(t *testing.T) {
 }
 
 func TestMuteUnmute(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 
 	am.Mute()
 	if !am.muted {
@@ -35,7 +49,7 @@ func TestMuteUnmute(t *testing.T) {
 }
 
 func TestToggleMute(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 
 	am.ToggleMute()
 	if !am.muted {
@@ -49,7 +63,7 @@ func TestToggleMute(t *testing.T) {
 }
 
 func TestSetVolume(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 
 	am.SetVolume(0.5, 0.8)
 	if am.bgmVolume != 0.5 {
@@ -61,7 +75,7 @@ func TestSetVolume(t *testing.T) {
 }
 
 func TestSetVolumeClamped(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 
 	am.SetVolume(-0.5, 1.5)
 	if am.bgmVolume != 0.0 {
@@ -73,19 +87,19 @@ func TestSetVolumeClamped(t *testing.T) {
 }
 
 func TestPlaySFXWhenMuted(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 	am.Mute()
 	am.PlaySFX(SFXClick)
 }
 
 func TestPlayBGMWhenMuted(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 	am.Mute()
 	am.PlayBGM(BGMWorld0)
 }
 
 func TestStopBGM(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 	am.StopBGM()
 }
 
@@ -129,7 +143,8 @@ func TestEnemySFXForName(t *testing.T) {
 		{"Prismat", SFXEnemyDjinn},
 		{"Arzakon", SFXEnemyArchmage},
 		{"Vampire Lord", SFXEnemyLord},
-		{"Winged Stallion", SFXEnemyFlying},
+		{"Winged Stallion", SFXEnemyHorse},
+		{"Winged Serpent", SFXEnemyFlying},
 		{"Arch Angel", SFXEnemyFlying},
 		{"Goblin Warlord", SFXEncounter},
 		{"Sorcerer", SFXEncounter},
@@ -171,19 +186,19 @@ func TestWorldMagicSFXForColor(t *testing.T) {
 }
 
 func TestPlayFootstepWhenMuted(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 	am.Mute()
 	am.PlayFootstep(TerrainColorWhite)
 }
 
 func TestPlayBirdWhenMuted(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 	am.Mute()
 	am.PlayBird(TerrainColorGreen)
 }
 
 func TestGetInstance(t *testing.T) {
-	am := NewAudioManager()
+	am := newTestAudioManager()
 	if Get() != am {
 		t.Error("Get() should return the instance set by NewAudioManager")
 	}
