@@ -58,8 +58,8 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 
 	colors := []ColorMask{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
 	color := colors[rand.Intn(len(colors))]
-	deckGen := NewDeckGenerator(difficulty, color, time.Now().UnixNano())
-	deck := deckGen.GenerateStartingDeck()
+	deckGen := DeckBuilder(difficulty, color, time.Now().UnixNano())
+	deck := deckGen.CreateStartingDeck()
 
 	cardCollection := NewCardCollection()
 	for card, count := range deck {

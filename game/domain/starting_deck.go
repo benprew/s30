@@ -45,18 +45,27 @@ type DeckGenerator struct {
 	difficulty  Difficulty
 	playerColor ColorMask
 	rng         *rand.Rand
+	// weakPool is the set of non-land cards the starting deck may draw from:
+	// the three lowest tiers from card_tiers.toml. Scoped to the generator so
+	// tests can substitute a custom pool.
+	weakPool []*Card
 }
 
-func NewDeckGenerator(difficulty Difficulty, playerColor ColorMask, seed int64) *DeckGenerator {
+func DeckBuilder(difficulty Difficulty, playerColor ColorMask, seed int64) *DeckGenerator {
 	return &DeckGenerator{
 		deck:        Deck{},
 		difficulty:  difficulty,
 		playerColor: playerColor,
 		rng:         rand.New(rand.NewSource(seed)),
+		weakPool: CardsInTiers(
+			TierRarelyPlayed,
+			TierAlmostNeverPlayed,
+			TierMeme,
+		),
 	}
 }
 
-func (dg *DeckGenerator) GenerateStartingDeck() Deck {
+func (dg *DeckGenerator) CreateStartingDeck() Deck {
 	dg.deck = Deck{}
 
 	primaryColor := dg.playerColor
@@ -64,45 +73,50 @@ func (dg *DeckGenerator) GenerateStartingDeck() Deck {
 	switch dg.difficulty {
 	case DifficultyEasy:
 		if primaryColor < ColorWhite {
-			dg.generateRandomDeck(primaryColor, 13, 7, 15, true, true)
+			dg.generateRandomDeck(primaryColor, 13, 7, 15, true)
 		} else {
-			dg.generateRandomDeck(primaryColor, 13, 12, 10, true, true)
+			dg.generateRandomDeck(primaryColor, 13, 12, 10, true)
 		}
 
 	case DifficultyMedium:
-		dg.generateRandomDeck(primaryColor, 11, 4, 12, true, true)
+		dg.generateRandomDeck(primaryColor, 11, 4, 12, true)
 		secondaryColor := dg.pickRandomColorOtherThan(primaryColor)
-		dg.generateRandomDeck(secondaryColor, 4, 3, 4, false, true)
+		dg.generateRandomDeck(secondaryColor, 4, 3, 4, true)
 
 	case DifficultyHard:
-		dg.generateRandomDeck(primaryColor, 9, 3, 9, true, true)
+		dg.generateRandomDeck(primaryColor, 9, 3, 9, true)
 		secondaryColor := dg.pickRandomColorOtherThan(primaryColor)
-		dg.generateRandomDeck(secondaryColor, 5, 3, 4, false, true)
+		dg.generateRandomDeck(secondaryColor, 5, 3, 4, true)
 		tertiaryColor := dg.pickRandomColorOtherThan(primaryColor | secondaryColor)
-		dg.generateRandomDeck(tertiaryColor, 4, 3, 3, false, true)
+		dg.generateRandomDeck(tertiaryColor, 4, 3, 3, true)
 
 	case DifficultyExpert:
-		dg.generateRandomDeck(primaryColor, 6, 3, 5, true, true)
-		dg.generateRandomDeck(ColorColorless, 11, 5, 14, false, true)
+		dg.generateRandomDeck(primaryColor, 6, 3, 5, true)
+		dg.generateRandomDeck(ColorColorless, 11, 5, 14, true)
 	}
 
 	return dg.deck
 }
+
+// maxPickAttempts bounds how many times we'll retry picking a card for a slot
+// before giving up and leaving the slot empty. The weak-tier pool is small
+// (~70 cards) and some color/type combinations may have zero candidates, so a
+// bound is required to avoid an infinite loop.
+const maxPickAttempts = 500
 
 func (dg *DeckGenerator) generateRandomDeck(
 	color ColorMask,
 	numBasicLands int,
 	numEnchantmentsAndArtifacts int,
 	numCreatures int,
-	addRareCard bool,
 	allowArtifacts bool,
 ) {
 	for i := 0; i < numBasicLands; i++ {
-		card := dg.pickRandomCard([]CardType{CardTypeLand}, color)
-		if card != nil && dg.isBasicLandOfColor(card, color) {
+		card := dg.pickBasicLand(color)
+		if card != nil {
 			dg.addCardToDeck(card)
 		} else {
-			i--
+			break
 		}
 	}
 
@@ -118,88 +132,19 @@ func (dg *DeckGenerator) generateRandomDeck(
 			cardType = CardTypeEnchantment
 		}
 
-		card := dg.pickRandomCard([]CardType{cardType}, cardColor)
+		card := dg.pickWeakCard([]CardType{cardType}, cardColor)
 		if card == nil {
-			i--
 			continue
 		}
-
-		if dg.shouldSkipCard(card) {
-			i--
-			continue
-		}
-
-		checkColor := cardColor
-		if cardType == CardTypeArtifact {
-			checkColor = ColorColorless
-		}
-
-		rarity := dg.getRarityThreshold(i)
-		if dg.colorsFriendlyEnough(card, checkColor, false) &&
-			dg.cardRarity(card) <= rarity {
-			dg.addCardToDeck(card)
-		} else {
-			i--
-		}
+		dg.addCardToDeck(card)
 	}
 
-	attempts := 0
-	for added := 0; added < numCreatures; added++ {
-		card := dg.pickRandomCard([]CardType{CardTypeCreature}, color)
+	for i := 0; i < numCreatures; i++ {
+		card := dg.pickWeakCard([]CardType{CardTypeCreature}, color)
 		if card == nil {
-			added--
-			attempts++
 			continue
 		}
-
-		if dg.shouldSkipCard(card) {
-			added--
-			attempts++
-			continue
-		}
-
-		viable := attempts >= 1000 || dg.isViableCreature(card)
-		rarity := dg.getRarityThreshold(added)
-
-		if dg.colorsFriendlyEnough(card, color, false) &&
-			dg.cardRarity(card) <= rarity &&
-			viable {
-			dg.addCardToDeck(card)
-		} else {
-			added--
-		}
-		attempts++
-	}
-
-	if addRareCard {
-		for {
-			card := dg.pickRandomCard(
-				[]CardType{CardTypeSorcery, CardTypeEnchantment, CardTypeCreature},
-				ColorColorless,
-			)
-			if card == nil {
-				continue
-			}
-
-			if !dg.colorsFriendlyEnough(card, color, true) {
-				continue
-			}
-
-			if dg.cardRarity(card) < 3 {
-				continue
-			}
-
-			if !dg.isViableCreature(card) {
-				continue
-			}
-
-			if dg.shouldSkipCard(card) {
-				continue
-			}
-
-			dg.addCardToDeck(card)
-			break
-		}
+		dg.addCardToDeck(card)
 	}
 }
 
@@ -226,25 +171,60 @@ func (dg *DeckGenerator) pickRandomColorOtherThan(excludeColors ColorMask) Color
 	return validColors[dg.rng.Intn(len(validColors))]
 }
 
-func (dg *DeckGenerator) pickRandomCard(cardTypes []CardType, color ColorMask) *Card {
-	var matchingCards []*Card
-
+// pickBasicLand picks a random basic land matching the requested color.
+// Basic lands are not in the tier pool, so we scan the full card database.
+func (dg *DeckGenerator) pickBasicLand(color ColorMask) *Card {
+	var candidates []*Card
 	for _, card := range CARDS {
-		for _, cardType := range cardTypes {
-			if card.CardType == cardType {
-				if dg.matchesColor(card, color) {
-					matchingCards = append(matchingCards, card)
-					break
-				}
+		if dg.isBasicLandOfColor(card, color) {
+			candidates = append(candidates, card)
+		}
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+	return candidates[dg.rng.Intn(len(candidates))]
+}
+
+// pickWeakCard draws a card from the bottom-tier pool matching the given
+// types and color, filtering out restricted and non-viable cards. Returns nil
+// if no suitable card is found within maxPickAttempts tries.
+func (dg *DeckGenerator) pickWeakCard(cardTypes []CardType, color ColorMask) *Card {
+	candidates := dg.filterPool(cardTypes, color)
+	if len(candidates) == 0 {
+		return nil
+	}
+	for attempt := 0; attempt < maxPickAttempts; attempt++ {
+		card := candidates[dg.rng.Intn(len(candidates))]
+		if dg.shouldSkipCard(card) {
+			continue
+		}
+		if !dg.isViableCreature(card) {
+			continue
+		}
+		checkColor := color
+		if card.CardType == CardTypeArtifact {
+			checkColor = ColorColorless
+		}
+		if !dg.colorsFriendlyEnough(card, checkColor, false) {
+			continue
+		}
+		return card
+	}
+	return nil
+}
+
+func (dg *DeckGenerator) filterPool(cardTypes []CardType, color ColorMask) []*Card {
+	var matching []*Card
+	for _, card := range dg.weakPool {
+		for _, ct := range cardTypes {
+			if card.CardType == ct && dg.matchesColor(card, color) {
+				matching = append(matching, card)
+				break
 			}
 		}
 	}
-
-	if len(matchingCards) == 0 {
-		return nil
-	}
-
-	return matchingCards[dg.rng.Intn(len(matchingCards))]
+	return matching
 }
 
 func (dg *DeckGenerator) matchesColor(card *Card, color ColorMask) bool {
@@ -314,28 +294,6 @@ func (dg *DeckGenerator) shouldSkipCard(card *Card) bool {
 	}
 
 	return false
-}
-
-func (dg *DeckGenerator) cardRarity(card *Card) int {
-	switch card.Rarity {
-	case "common":
-		return 1
-	case "uncommon":
-		return 2
-	case "rare":
-		return 3
-	case "mythic":
-		return 4
-	default:
-		return 1
-	}
-}
-
-func (dg *DeckGenerator) getRarityThreshold(index int) int {
-	if index%2 == 0 {
-		return 2
-	}
-	return 1
 }
 
 func (dg *DeckGenerator) isViableCreature(card *Card) bool {

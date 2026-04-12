@@ -127,6 +127,9 @@ var (
 	//go:embed configs/rogues/*.toml
 	RogueCfgFS embed.FS
 
+	//go:embed configs/card_tiers.toml
+	CardTiers_toml []byte
+
 	////////////////////////
 	// Duel screen sprites
 	////////////////////////
