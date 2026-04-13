@@ -1,15 +1,15 @@
 package imageutil
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sync"
-	"unsafe"
 )
 
 // Sprite registry caches loaded sprites so that the same asset data is only
-// decoded once. Cache keys are derived from the backing-array pointer of the
-// embedded []byte slice plus the load parameters, so identical calls return
-// the previously loaded result.
+// decoded once. Cache keys are derived from a content hash of the data plus
+// the load parameters, so identical calls return the previously loaded result.
 
 var (
 	registry = make(map[string]any)
@@ -20,8 +20,8 @@ func cacheKey(data []byte, extra string) string {
 	if len(data) == 0 {
 		return extra
 	}
-	ptr := unsafe.Pointer(unsafe.SliceData(data))
-	return fmt.Sprintf("%p:%s", ptr, extra)
+	h := sha256.Sum256(data)
+	return fmt.Sprintf("%s:%s", hex.EncodeToString(h[:16]), extra)
 }
 
 func registryGet(key string) (any, bool) {

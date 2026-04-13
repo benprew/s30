@@ -70,3 +70,31 @@ func TestRegistryStats(t *testing.T) {
 		t.Errorf("expected 2 entries, got %d", count)
 	}
 }
+
+func TestCacheKeyContentBased(t *testing.T) {
+	// Two separately allocated slices with the same content must produce the same key
+	data1 := make([]byte, 4)
+	copy(data1, []byte{10, 20, 30, 40})
+	data2 := make([]byte, 4)
+	copy(data2, []byte{10, 20, 30, 40})
+
+	key1 := cacheKey(data1, "test")
+	key2 := cacheKey(data2, "test")
+	if key1 != key2 {
+		t.Errorf("same content should produce same key, got %q vs %q", key1, key2)
+	}
+
+	// Different content must produce different keys
+	data3 := make([]byte, 4)
+	copy(data3, []byte{10, 20, 30, 99})
+	key3 := cacheKey(data3, "test")
+	if key1 == key3 {
+		t.Error("different content should produce different keys")
+	}
+
+	// Different extra with same content must produce different keys
+	key4 := cacheKey(data1, "other")
+	if key1 == key4 {
+		t.Error("different extra should produce different keys")
+	}
+}
