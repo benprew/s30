@@ -123,13 +123,7 @@ type Card struct {
 var CARDS = loadCardsWithAbilities()
 
 func loadCardsWithAbilities() []*Card {
-	cards := LoadCardDatabase(bytes.NewReader(assets.Cards_json))
-	parsedAbilities := LoadParsedAbilities(assets.ParsedCards_json)
-	if parsedAbilities != nil {
-		ApplyParsedAbilities(cards, parsedAbilities)
-	}
-	ApplyLandManaAbilities(cards)
-	return cards
+	return LoadCardDatabase(bytes.NewReader(assets.Cards_json))
 }
 
 func (c *Card) Name() string {
