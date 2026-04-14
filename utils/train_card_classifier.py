@@ -171,7 +171,9 @@ def extract_parsed_mechanics(abilities: list[dict]) -> dict:
                 m["has_destroy"] = True
                 if atype == "Activated":
                     m["activated_removal"] = True
-                    m["activated_removal_cost"] = parse_activation_cost(cost.get("Mana", ""))
+                    m["activated_removal_cost"] = parse_activation_cost(
+                        cost.get("Mana", "")
+                    )
                     m["activated_removal_needs_tap"] = cost.get("Tap", False)
                     m["activated_removal_target"] = target_type
 
@@ -184,7 +186,9 @@ def extract_parsed_mechanics(abilities: list[dict]) -> dict:
             m["damage_target_type"] = target_type
             if atype == "Activated" and target_type == "any":
                 m["activated_removal"] = True
-                m["activated_removal_cost"] = parse_activation_cost(cost.get("Mana", ""))
+                m["activated_removal_cost"] = parse_activation_cost(
+                    cost.get("Mana", "")
+                )
                 m["activated_removal_needs_tap"] = cost.get("Tap", False)
                 m["activated_removal_target"] = "any"
 
@@ -212,7 +216,9 @@ def extract_parsed_mechanics(abilities: list[dict]) -> dict:
     return m
 
 
-def score_card(card: dict, parsed_abilities: list[dict] | None = None) -> dict[str, float]:
+def score_card(
+    card: dict, parsed_abilities: list[dict] | None = None
+) -> dict[str, float]:
     """Compute Impact, Efficiency, Reliability, and Quadrant scores for a card.
 
     Each sub-score is 0-10, following the judging_magic_cards.md scale.
@@ -250,10 +256,20 @@ def score_card(card: dict, parsed_abilities: list[dict] | None = None) -> dict[s
         t += pm["etb_counters"] * pm["counter_toughness"]
         counters = pm["etb_counters"]
     else:
-        counter_match = re.search(r"enters.*?with\s+(\w+)\s+\+1/\+1\s+counter", text_lower)
+        counter_match = re.search(
+            r"enters.*?with\s+(\w+)\s+\+1/\+1\s+counter", text_lower
+        )
         if counter_match:
             word = counter_match.group(1)
-            word_map = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7}
+            word_map = {
+                "one": 1,
+                "two": 2,
+                "three": 3,
+                "four": 4,
+                "five": 5,
+                "six": 6,
+                "seven": 7,
+            }
             counters = word_map.get(word) or (int(word) if word.isdigit() else 0)
             p += counters
             t += counters
@@ -284,9 +300,7 @@ def score_card(card: dict, parsed_abilities: list[dict] | None = None) -> dict[s
 
     # ── Detect card mechanics ──
 
-    exiles_creature = bool(
-        re.search(r"exile\s+target\s+(\w+\s+)?creature", text_lower)
-    )
+    exiles_creature = bool(re.search(r"exile\s+target\s+(\w+\s+)?creature", text_lower))
     destroys_creature = bool(
         re.search(r"destroy\s+target\s+(\w+\s+)?creature", text_lower)
         or exiles_creature
@@ -425,10 +439,10 @@ def score_card(card: dict, parsed_abilities: list[dict] | None = None) -> dict[s
     doesnt_untap = bool(re.search(r"doesn't untap", text_lower))
     cumulative_upkeep = bool(re.search(r"cumulative upkeep", text_lower))
     # Self-damage on activated abilities (Orcish Artillery, Psionic Entity)
-    activation_self_damage = re.search(
-        r"and\s+(\d+)\s+damage\s+to\s+you", text_lower
+    activation_self_damage = re.search(r"and\s+(\d+)\s+damage\s+to\s+you", text_lower)
+    activation_self_damage_amt = (
+        int(activation_self_damage.group(1)) if activation_self_damage else 0
     )
-    activation_self_damage_amt = int(activation_self_damage.group(1)) if activation_self_damage else 0
     # Opponent-choice drawback (Cuombajj Witches — opponent gets to ping something)
     opponent_choice_drawback = bool(re.search(r"opponent'?s?\s+choice", text_lower))
 
@@ -436,7 +450,10 @@ def score_card(card: dict, parsed_abilities: list[dict] | None = None) -> dict[s
     # 0 = no upkeep cost, 1 = trivial, 2 = moderate, 3 = severe
     upkeep_cost = 0
     upkeep_text = ""
-    upkeep_match = re.search(r"(at the beginning of your upkeep|during your upkeep),?\s*(.*?)(?:\.|$)", text_lower)
+    upkeep_match = re.search(
+        r"(at the beginning of your upkeep|during your upkeep),?\s*(.*?)(?:\.|$)",
+        text_lower,
+    )
     if upkeep_match:
         upkeep_text = upkeep_match.group(2)
 
@@ -1150,7 +1167,9 @@ def main() -> None:
     print(f"Scored {len(results)} cards")
 
     validate(results)
-    print_ranked(results, top_pct=args.top, bottom_pct=args.bottom, type_filter=args.type)
+    print_ranked(
+        results, top_pct=args.top, bottom_pct=args.bottom, type_filter=args.type
+    )
 
     if args.output:
         write_scores(results, args.output)
