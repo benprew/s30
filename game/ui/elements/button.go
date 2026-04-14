@@ -153,12 +153,15 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale
 
 	if b.ButtonText.Text != "" {
 		textX, textY := AlignText(imgToDraw, b.ButtonText.Text, b.ButtonText.Font, b.ButtonText.HAlign, b.ButtonText.VAlign)
-		textOpts := &ebiten.DrawImageOptions{}
-		textOpts.GeoM.Concat(options.GeoM)
-		textOpts.GeoM.Translate(textX, textY)
-		R, G, B, A := b.ButtonText.TextColor.RGBA()
-		textOpts.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
-		text.Draw(screen, b.ButtonText.Text, b.ButtonText.Font, &text.DrawOptions{DrawImageOptions: *textOpts})
+		textGeoM := options.GeoM
+		textGeoM.Translate(textX, textY)
+		if !drawCachedText(screen, b.ButtonText.Text, b.ButtonText.Font, b.ButtonText.TextColor, 0, textGeoM, false) {
+			textOpts := &ebiten.DrawImageOptions{}
+			textOpts.GeoM = textGeoM
+			R, G, B, A := b.ButtonText.TextColor.RGBA()
+			textOpts.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
+			text.Draw(screen, b.ButtonText.Text, b.ButtonText.Font, &text.DrawOptions{DrawImageOptions: *textOpts})
+		}
 	}
 }
 

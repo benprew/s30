@@ -43,7 +43,6 @@ func NewText(size float64, txt string, x, y int) *Text {
 }
 
 func (t *Text) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale float64) {
-	R, G, B, A := t.Color.RGBA()
 	x, y := t.getPosition(screen, scale)
 
 	lineSpacing := 32.0
@@ -51,18 +50,23 @@ func (t *Text) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale f
 		lineSpacing = t.LineSpacing
 	}
 
+	geoM := opts.GeoM
+	geoM.Translate(float64(x)*scale, float64(y)*scale)
+	if drawCachedText(screen, t.Text, t.font, t.Color, lineSpacing, geoM, true) {
+		return
+	}
+
+	R, G, B, A := t.Color.RGBA()
 	shadow := &text.DrawOptions{}
 	shadow.GeoM.Concat(opts.GeoM)
-	shadow.GeoM.Translate(float64(x)+1, float64(y)+2)
+	shadow.GeoM.Translate(float64(x)*scale+1, float64(y)*scale+2)
 	shadow.ColorScale.Scale(0, 0, 0, float32(A)/65535)
 	shadow.LineSpacing = lineSpacing
 	text.Draw(screen, t.Text, t.font, shadow)
 
 	options := &text.DrawOptions{}
 	options.GeoM.Concat(opts.GeoM)
-	options.GeoM.Translate(float64(x), float64(y))
-	// Normalize 16-bit RGBA to 0.0-1.0 so semi-transparent anti-aliased edge pixels
-	// aren't blown out to fully opaque (which makes text look blurry)
+	options.GeoM.Translate(float64(x)*scale, float64(y)*scale)
 	options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
 	options.LineSpacing = lineSpacing
 	text.Draw(screen, t.Text, t.font, options)

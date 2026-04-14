@@ -290,7 +290,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 			}
 			scaleOpts := &ebiten.DrawImageOptions{}
 			scaleOpts.GeoM.Scale(scale, scale)
-			elements.NewText(20, priceText, int(textX*scale), int(textY*scale)).Draw(screen, scaleOpts, scale)
+			elements.NewText(20, priceText, int(textX), int(textY)).Draw(screen, scaleOpts, scale)
 		}
 	}
 
@@ -911,7 +911,7 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 
 	// Section 1: Card count
 	countX := float64(bounds.Min.X + 10)
-	elements.NewText(14, fmt.Sprintf("%d cards", totalCards), int(countX*scale), int(16*scale)).Draw(screen, scaleOpts, scale)
+	elements.NewText(14, fmt.Sprintf("%d cards", totalCards), int(countX), 16).Draw(screen, scaleOpts, scale)
 
 	// Section 2: Mana curve histogram
 	curveX := bounds.Min.X + 80
@@ -944,13 +944,13 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 			screen.DrawImage(bar, barOpts)
 		}
 
-		elements.NewText(10, strconv.Itoa(count), int(float64(bx+2)*scale), int(1*scale)).Draw(screen, scaleOpts, scale)
+		elements.NewText(10, strconv.Itoa(count), bx+2, 1).Draw(screen, scaleOpts, scale)
 
 		cmcLabel := strconv.Itoa(i)
 		if i == 7 {
 			cmcLabel = "7+"
 		}
-		elements.NewText(10, cmcLabel, int(float64(bx+2)*scale), int(43*scale)).Draw(screen, scaleOpts, scale)
+		elements.NewText(10, cmcLabel, bx+2, 43).Draw(screen, scaleOpts, scale)
 	}
 
 	// Section 3: Color distribution
@@ -975,13 +975,13 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 		pipOpts.GeoM.Translate(float64(px)*scale, 18*scale)
 		screen.DrawImage(pip, pipOpts)
 
-		elements.NewText(14, strconv.Itoa(colorCounts[c]), int(float64(px+pipSize+2)*scale), int(16*scale)).Draw(screen, scaleOpts, scale)
+		elements.NewText(14, strconv.Itoa(colorCounts[c]), px+pipSize+2, 16).Draw(screen, scaleOpts, scale)
 	}
 
 	// Section 4: Type counts
 	typeX := float64(colorX + 5*36 + 15)
 	typeText := fmt.Sprintf("Land: %d Creatures: %d Spells: %d", landCount, creatureCount, spellCount)
-	elements.NewText(14, typeText, int(typeX*scale), int(16*scale)).Draw(screen, scaleOpts, scale)
+	elements.NewText(14, typeText, int(typeX), 16).Draw(screen, scaleOpts, scale)
 }
 
 // drawCountOverlay draws a count overlay at the specified position
@@ -1012,5 +1012,5 @@ func (s *EditDeckScreen) drawCountOverlay(screen *ebiten.Image, scale float64, x
 	scaleOpts.GeoM.Scale(scale, scale)
 	textX := countX + float64(countBgSize/2) - 7
 	textY := countY + float64(countBgSize/2) - 12
-	elements.NewText(24, countStr, int(textX*scale), int(textY*scale)).Draw(screen, scaleOpts, scale)
+	elements.NewText(24, countStr, int(textX), int(textY)).Draw(screen, scaleOpts, scale)
 }

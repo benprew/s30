@@ -126,13 +126,13 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		promptX := int(centerX + (fw / 2) - (len(prompt) * 8))
 		promptY := int(centerY + fh - 40)
 		promptText := elements.NewText(32, prompt, promptX, promptY)
-		promptText.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+		promptText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		// Draw error message if present using Text element
 		if s.ErrorMsg != "" {
 			errX := int(centerX + (fw / 2) - (len(s.ErrorMsg) * 7))
 			errY := int(centerY + fh - 10)
 			errText := elements.NewText(24, s.ErrorMsg, errX, errY)
-			errText.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+			errText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
 	}
 }
