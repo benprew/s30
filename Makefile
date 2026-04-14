@@ -1,6 +1,9 @@
 default:
 	go run . -v mtg,duel
 
+pprof:
+	go run . -pprof 127.0.0.1:6060 -v mtg,duel
+
 test:
 	go test -count=10 ./...
 
@@ -32,6 +35,7 @@ androidbuild:
 
 builddeps:
 	sudo apt-get install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libxxf86vm-dev
+	pip3 install torch transformers scikit-learn scipy numpy
 
 fedorabuilddeps:
 	sudo dnf install -y libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel android-tools alsa-lib-devel java-21-openjdk-devel
