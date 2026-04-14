@@ -1,3 +1,19 @@
+* UI
+- [] Show target when enemy cast spells (draw arrow)
+- [] artifacts that aren't creatures go to 2nd row
+- [] UI for X spells (like disintegrate)
+- [X] bug with Sprite registry, is not showing images correctly in duel and rogue faces
+* Card Rules needed
+- [] Forcefield - went from 1 life to 3 life?
+- [] Raging River + UI needs
+- [] Wall of Dust - prevent untapping next turn
+- [] Animate Dead - can only be played on dead creatures
+- [] Keldon Warlord - not counting himself?
+- [] power surge - incorrectly calculating untapped cards?
+
+- [] animate wall - wall's still can't attack
+- [] crystal rod ability doesn't show up after casting a spell
+
 * Polish/Engagement Loop
   ---
   1. Zone-Based Difficulty (Biggest Win)
