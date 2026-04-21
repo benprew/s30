@@ -6,6 +6,7 @@ assets/art/carddata/*
 .claude
 *.zip
 __pycache__/
+.venv/
 scryfall_cards.json
 sprite_pairs/
 s30_android.apk/

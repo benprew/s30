@@ -40,5 +40,11 @@ builddeps:
 fedorabuilddeps:
 	sudo dnf install -y libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel android-tools alsa-lib-devel java-21-openjdk-devel
 
+lint:
+	golangci-lint run --fix
+	.venv/bin/ruff check --fix .
+	.venv/bin/ruff format .
+	.venv/bin/ty check .
+
 devdeps:
 	sudo apt install imagemagick pngquant

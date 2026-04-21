@@ -42,3 +42,5 @@ go run ./cmd/mtg_test                                # Run AI vs AI game simulat
 
 ### Python
 - Use type hints everywhere
+- Use uv for package management
+- Use ruff and ty for formatting and linting
