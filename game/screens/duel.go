@@ -96,6 +96,11 @@ type DuelScreen struct {
 	targetingActions map[uuid.UUID]interactive.ActionOption
 	selectedTargetID uuid.UUID
 
+	xChoosingActions []interactive.ActionOption
+	xButtons         []*elements.Button
+	xMaxValue        int
+	xChosenValue     int
+
 	cardImageMap map[string]*domain.Card
 
 	frameCount  int
@@ -458,7 +463,9 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		if s.targetingCardID != uuid.Nil {
+		if s.isChoosingX() {
+			s.exitXChoosingMode()
+		} else if s.targetingCardID != uuid.Nil {
 			if s.selectedTargetID != uuid.Nil {
 				s.selectedTargetID = uuid.Nil
 			} else {
@@ -473,6 +480,11 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 
 	if s.choiceRequest != nil {
 		s.handleChoiceRequest()
+		return screenui.DuelScr, nil, nil
+	}
+
+	if s.isChoosingX() {
+		s.updateXChoosingUI()
 		return screenui.DuelScr, nil, nil
 	}
 
@@ -846,6 +858,11 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 		return
 	}
 
+	if actions[0].Type == interactive.ActionCastSpell && isXSpell(actions[0].ManaCost) {
+		s.enterXChoosingMode(actions)
+		return
+	}
+
 	if len(actions) > 1 || actions[0].NeedsTarget {
 		s.enterTargetingMode(id, name, actions)
 		return
@@ -915,6 +932,7 @@ func (s *DuelScreen) updateTargetingMouse(mx, my int) {
 			if action, ok := s.targetingActions[s.selectedTargetID]; ok {
 				pa := actionOptionToPriorityAction(action)
 				pa.Targets = []uuid.UUID{s.selectedTargetID}
+				pa.XValue = s.xValueForAction()
 				select {
 				case s.human.FromTUI() <- pa:
 					if am := gameaudio.Get(); am != nil {
@@ -1454,6 +1472,7 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawHandPanel(screen, s.self, s.lastMsg.State.You)
 	s.drawCardPreview(screen, H)
 	s.drawChoiceUI(screen, W, H)
+	s.drawXChoosingUI(screen, W, H)
 }
 
 func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
