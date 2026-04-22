@@ -154,7 +154,7 @@ func (s *DuelScreen) drawXChoosingUI(screen *ebiten.Image, W, H int) {
 		return
 	}
 
-	vector.DrawFilledRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 160}, false)
+	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 160}, false)
 
 	centerX := float64(W) / 2
 

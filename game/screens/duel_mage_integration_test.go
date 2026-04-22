@@ -11,13 +11,15 @@ import (
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai"
 )
 
+const testCardMountain = "Mountain"
+
 func TestMageIntegration_PlayLandShowsOnBattlefield(t *testing.T) {
 	human := interactive.NewHumanPlayer("You")
 	ai := ai.NewAIPlayer("Opponent")
 
 	// Give human known cards
 	for range 5 {
-		c, err := mage.CreateCard("Mountain")
+		c, err := mage.CreateCard(testCardMountain)
 		if err != nil {
 			t.Fatalf("Failed to create Mountain: %v", err)
 		}
@@ -132,7 +134,7 @@ func TestMageIntegration_PlayLandShowsOnBattlefield(t *testing.T) {
 
 	landFound := false
 	for _, p := range msg.State.You.Battlefield {
-		if p.Name == "Mountain" && p.IsLand {
+		if p.Name == testCardMountain && p.IsLand {
 			landFound = true
 			break
 		}
@@ -155,7 +157,7 @@ func TestMageIntegration_CastArtifactAfterPlayingLands(t *testing.T) {
 	human.AddToHand(solRing)
 
 	for range 3 {
-		c, err := mage.CreateCard("Mountain")
+		c, err := mage.CreateCard(testCardMountain)
 		if err != nil {
 			t.Fatalf("Failed to create Mountain: %v", err)
 		}
@@ -165,7 +167,7 @@ func TestMageIntegration_CastArtifactAfterPlayingLands(t *testing.T) {
 
 	// Pad libraries
 	for range 10 {
-		c, _ := mage.CreateCard("Mountain")
+		c, _ := mage.CreateCard(testCardMountain)
 		human.AddToLibrary(c)
 	}
 	for range 10 {
@@ -202,7 +204,7 @@ func TestMageIntegration_CastArtifactAfterPlayingLands(t *testing.T) {
 	// Find and play a Mountain
 	var playLand *interactive.ActionOption
 	for _, opt := range msg.Options {
-		if opt.Type == interactive.ActionPlayLand && opt.CardName == "Mountain" {
+		if opt.Type == interactive.ActionPlayLand && opt.CardName == testCardMountain {
 			playLand = &opt
 			break
 		}

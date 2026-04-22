@@ -29,10 +29,11 @@ import (
 )
 
 const (
-	stepDeclareAttackers = "Declare Attackers"
-	stepDeclareBlockers  = "Declare Blockers"
-	stepCombatDamage     = "Combat Damage"
-	playerNameYou        = "You"
+	stepDeclareAttackers  = "Declare Attackers"
+	stepDeclareBlockers   = "Declare Blockers"
+	stepCombatDamage      = "Combat Damage"
+	stepFirstStrikeDamage = "First Strike Damage"
+	playerNameYou         = "You"
 )
 
 type duelPlayer struct {
@@ -1352,7 +1353,7 @@ func (s *DuelScreen) drawChoiceUI(screen *ebiten.Image, W, H int) {
 		return
 	}
 
-	vector.DrawFilledRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 160}, false)
+	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 160}, false)
 
 	centerX := float64(W) / 2
 
@@ -1510,7 +1511,7 @@ func phaseIndex(step string) int {
 		"Begin Combat":        4,
 		stepDeclareAttackers:  4,
 		stepDeclareBlockers:   4,
-		"First Strike Damage": 4,
+		stepFirstStrikeDamage: 4,
 		stepCombatDamage:      4,
 		"End of Combat":       4,
 		"Postcombat Main":     5,
@@ -1676,7 +1677,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 					auraOpts.GeoM.Translate(float64(pos.X), float64(auraY))
 					screen.DrawImage(auraImg, auraOpts)
 				} else {
-					vector.DrawFilledRect(screen, float32(pos.X), float32(auraY),
+					vector.FillRect(screen, float32(pos.X), float32(auraY),
 						float32(fieldCardW), 14, color.RGBA{80, 60, 80, 255}, false)
 					auraTxt := elements.NewText(10, aura.Name, pos.X+4, auraY+2)
 					auraTxt.Color = color.RGBA{220, 200, 255, 255}
@@ -1695,7 +1696,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 				cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
 				screen.DrawImage(cardImg, cardOpts)
 			} else {
-				vector.DrawFilledRect(screen, float32(pos.X), float32(pos.Y),
+				vector.FillRect(screen, float32(pos.X), float32(pos.Y),
 					float32(fieldCardW), float32(fieldCardH), color.RGBA{60, 60, 80, 255}, false)
 				vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
 					float32(fieldCardW), float32(fieldCardH), 1, color.RGBA{120, 120, 140, 255}, false)
@@ -1721,68 +1722,72 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 				}
 			}
 
-			if actions, hasAction := s.cardActions[perm.ID]; hasAction && dp == s.self && s.targetingCardID == uuid.Nil {
-				if hasActionType(actions, interactive.ActionSelectAttackers) {
-					borderColor := color.RGBA{255, 255, 0, 255}
-					if s.pendingAttackers[perm.ID] {
-						borderColor = color.RGBA{0, 255, 0, 255}
-					}
-					vector.StrokeRect(screen,
-						float32(pos.X), float32(pos.Y),
-						float32(fieldCardW), float32(fieldCardH),
-						2, borderColor, false)
-				} else {
-					star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
-					star.Color = color.RGBA{255, 255, 0, 255}
-					star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-				}
-			}
+			s.drawPermanentBorders(screen, dp, perm, pos)
+		}
+	}
+}
 
-			if dp == s.self && s.isInDeclareBlockers() && s.targetingCardID == uuid.Nil {
-				if s.selectedBlocker == perm.ID {
-					vector.StrokeRect(screen,
-						float32(pos.X), float32(pos.Y),
-						float32(fieldCardW), float32(fieldCardH),
-						2, color.RGBA{0, 255, 0, 255}, false)
-				} else if s.pendingBlockers[perm.ID] != uuid.Nil {
-					vector.StrokeRect(screen,
-						float32(pos.X), float32(pos.Y),
-						float32(fieldCardW), float32(fieldCardH),
-						2, color.RGBA{0, 255, 0, 255}, false)
-				} else if s.canBlockAnything(perm.ID) {
-					vector.StrokeRect(screen,
-						float32(pos.X), float32(pos.Y),
-						float32(fieldCardW), float32(fieldCardH),
-						2, color.RGBA{255, 255, 0, 255}, false)
-				}
+func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, perm interactive.PermanentState, pos image.Point) {
+	if actions, hasAction := s.cardActions[perm.ID]; hasAction && dp == s.self && s.targetingCardID == uuid.Nil {
+		if hasActionType(actions, interactive.ActionSelectAttackers) {
+			borderColor := color.RGBA{255, 255, 0, 255}
+			if s.pendingAttackers[perm.ID] {
+				borderColor = color.RGBA{0, 255, 0, 255}
 			}
+			vector.StrokeRect(screen,
+				float32(pos.X), float32(pos.Y),
+				float32(fieldCardW), float32(fieldCardH),
+				2, borderColor, false)
+		} else {
+			star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
+			star.Color = color.RGBA{255, 255, 0, 255}
+			star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		}
+	}
 
-			if dp == s.opponent && s.isInDeclareBlockers() && perm.Attacking && s.canBeBlocked(perm.ID) {
-				borderColor := color.RGBA{255, 255, 0, 255}
-				if hasKeyword(perm.Keywords, "Menace") {
-					borderColor = color.RGBA{255, 140, 0, 255}
-				}
-				if s.selectedBlocker != uuid.Nil && s.isValidBlock(s.selectedBlocker, perm.ID) {
-					borderColor = color.RGBA{0, 255, 0, 255}
-				}
-				vector.StrokeRect(screen,
-					float32(pos.X), float32(pos.Y),
-					float32(fieldCardW), float32(fieldCardH),
-					2, borderColor, false)
-			}
+	if dp == s.self && s.isInDeclareBlockers() && s.targetingCardID == uuid.Nil {
+		if s.selectedBlocker == perm.ID {
+			vector.StrokeRect(screen,
+				float32(pos.X), float32(pos.Y),
+				float32(fieldCardW), float32(fieldCardH),
+				2, color.RGBA{0, 255, 0, 255}, false)
+		} else if s.pendingBlockers[perm.ID] != uuid.Nil {
+			vector.StrokeRect(screen,
+				float32(pos.X), float32(pos.Y),
+				float32(fieldCardW), float32(fieldCardH),
+				2, color.RGBA{0, 255, 0, 255}, false)
+		} else if s.canBlockAnything(perm.ID) {
+			vector.StrokeRect(screen,
+				float32(pos.X), float32(pos.Y),
+				float32(fieldCardW), float32(fieldCardH),
+				2, color.RGBA{255, 255, 0, 255}, false)
+		}
+	}
 
-			if s.targetingCardID != uuid.Nil {
-				if _, isTarget := s.targetingActions[perm.ID]; isTarget {
-					borderColor := color.RGBA{255, 255, 0, 255}
-					strokeW := float32(2)
-					if s.selectedTargetID == perm.ID {
-						borderColor = color.RGBA{0, 255, 0, 255}
-						strokeW = 3
-					}
-					vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
-						float32(fieldCardW), float32(fieldCardH), strokeW, borderColor, false)
-				}
+	if dp == s.opponent && s.isInDeclareBlockers() && perm.Attacking && s.canBeBlocked(perm.ID) {
+		borderColor := color.RGBA{255, 255, 0, 255}
+		if hasKeyword(perm.Keywords, "Menace") {
+			borderColor = color.RGBA{255, 140, 0, 255}
+		}
+		if s.selectedBlocker != uuid.Nil && s.isValidBlock(s.selectedBlocker, perm.ID) {
+			borderColor = color.RGBA{0, 255, 0, 255}
+		}
+		vector.StrokeRect(screen,
+			float32(pos.X), float32(pos.Y),
+			float32(fieldCardW), float32(fieldCardH),
+			2, borderColor, false)
+	}
+
+	if s.targetingCardID != uuid.Nil {
+		if _, isTarget := s.targetingActions[perm.ID]; isTarget {
+			borderColor := color.RGBA{255, 255, 0, 255}
+			strokeW := float32(2)
+			if s.selectedTargetID == perm.ID {
+				borderColor = color.RGBA{0, 255, 0, 255}
+				strokeW = 3
 			}
+			vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
+				float32(fieldCardW), float32(fieldCardH), strokeW, borderColor, false)
 		}
 	}
 }
@@ -1827,7 +1832,7 @@ func (s *DuelScreen) drawBlockerArrows(screen *ebiten.Image) {
 	if s.lastMsg != nil && s.lastMsg.State != nil {
 		step = s.lastMsg.State.Step
 	}
-	showAIArrows := step == stepDeclareBlockers || step == "First Strike Damage"
+	showAIArrows := step == stepDeclareBlockers || step == stepFirstStrikeDamage
 	if showAIArrows {
 		for blockerID, attackerID := range s.getAIBlockerArrows() {
 			s.drawArrow(screen, blockerID, attackerID)
@@ -1897,7 +1902,7 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps inte
 			cardOpts.GeoM.Translate(float64(dp.handX), float64(y))
 			screen.DrawImage(cardImg, cardOpts)
 		} else {
-			vector.DrawFilledRect(screen, float32(dp.handX), float32(y),
+			vector.FillRect(screen, float32(dp.handX), float32(y),
 				float32(handBgW), float32(handCardOverlap+10), color.RGBA{60, 60, 80, 255}, false)
 			nameTxt := elements.NewText(10, card.Name, dp.handX+4, y+2)
 			nameTxt.Color = color.RGBA{220, 220, 220, 255}
@@ -2065,7 +2070,7 @@ func (s *DuelScreen) statusMessage() string {
 func isCombatStep(step string) bool {
 	switch step {
 	case "Begin Combat", stepDeclareAttackers, stepDeclareBlockers,
-		"First Strike Damage", stepCombatDamage, "End of Combat":
+		stepFirstStrikeDamage, stepCombatDamage, "End of Combat":
 		return true
 	}
 	return false
@@ -2091,7 +2096,7 @@ func (s *DuelScreen) combatStatusMessage(step string, isMyTurn bool) string {
 			return "Blockers declared. Cast instants or Done to continue."
 		}
 		return fmt.Sprintf("%s is choosing blockers...", s.opponent.name)
-	case "First Strike Damage":
+	case stepFirstStrikeDamage:
 		return "First strike damage"
 	case stepCombatDamage:
 		return "Combat damage resolves"
