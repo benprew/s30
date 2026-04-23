@@ -557,8 +557,9 @@ func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPl
 		}
 	}
 
-	rowH := fieldCardH + 10
-	totalH := 3*fieldCardH + 2*10
+	rowGap := 20
+	rowH := fieldCardH + rowGap
+	totalH := 3*fieldCardH + 2*rowGap
 	var baseY int
 	if dp == s.opponent {
 		// Opponent half: 0 to duelMsgY (370px)
