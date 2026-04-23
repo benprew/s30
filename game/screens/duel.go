@@ -557,20 +557,26 @@ func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPl
 		}
 	}
 
-	rowH := fieldCardH + 5
+	rowH := fieldCardH + 10
+	totalH := 3*fieldCardH + 2*10
 	var baseY int
 	if dp == s.opponent {
-		// Opponent: lands at top, other middle, creatures closest to center
-		baseY = duelOpponentBoardY + 70 + int(row)*rowH
+		// Opponent half: 0 to duelMsgY (370px)
+		// Lands at top (back), other middle, creatures at bottom (front, near center)
+		topPad := (duelMsgY - totalH) / 2
+		baseY = duelOpponentBoardY + topPad + int(row)*rowH
 	} else {
-		// Player: lands at bottom, other middle, creatures closest to center
+		// Player half: duelPlayerBoardY to 768 (384px)
+		// Creatures at top (front, near center), other middle, lands at bottom (back)
+		boardH := 768 - duelPlayerBoardY
+		topPad := (boardH - totalH) / 2
 		switch row {
 		case permRowCreature:
-			baseY = duelPlayerBoardY + 20
+			baseY = duelPlayerBoardY + topPad
 		case permRowOther:
-			baseY = duelPlayerBoardY + 20 + rowH
+			baseY = duelPlayerBoardY + topPad + rowH
 		case permRowLand:
-			baseY = duelPlayerBoardY + 20 + 2*rowH
+			baseY = duelPlayerBoardY + topPad + 2*rowH
 		}
 	}
 
