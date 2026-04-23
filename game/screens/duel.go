@@ -530,28 +530,52 @@ const (
 	fieldCardH      = 83
 )
 
-func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPlayer, idx int, total int, isLand bool) image.Point {
+type permRow int
+
+const (
+	permRowCreature  permRow = iota // front row (closest to opponent)
+	permRowOther                    // middle row (non-creature, non-land permanents)
+	permRowLand                     // back row (lands)
+)
+
+var allPermRows = []permRow{permRowLand, permRowOther, permRowCreature}
+
+func permRowFor(perm interactive.PermanentState) permRow {
+	if perm.IsLand {
+		return permRowLand
+	}
+	if perm.IsCreature {
+		return permRowCreature
+	}
+	return permRowOther
+}
+
+func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPlayer, idx int, total int, row permRow) image.Point {
 	if perm.ID == s.draggingCardID {
 		if pos, ok := s.cardPositions[perm.ID]; ok {
 			return pos
 		}
 	}
+
+	rowH := fieldCardH + 5
 	var baseY int
 	if dp == s.opponent {
-		if isLand {
-			baseY = duelOpponentBoardY + 70
-		} else {
-			baseY = duelOpponentBoardY + 70 + fieldCardH + 10
-		}
+		// Opponent: lands at top, other middle, creatures closest to center
+		baseY = duelOpponentBoardY + 70 + int(row)*rowH
 	} else {
-		if isLand {
-			baseY = 600
-		} else {
+		// Player: lands at bottom, other middle, creatures closest to center
+		switch row {
+		case permRowCreature:
 			baseY = duelPlayerBoardY + 20
+		case permRowOther:
+			baseY = duelPlayerBoardY + 20 + rowH
+		case permRowLand:
+			baseY = duelPlayerBoardY + 20 + 2*rowH
 		}
 	}
+
 	maxSpacing := 35
-	if !isLand {
+	if row == permRowCreature {
 		maxSpacing = 120
 	}
 	availableW := duelBoardW - 30 - fieldCardW
@@ -564,14 +588,13 @@ func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPl
 	return pos
 }
 
-func (s *DuelScreen) fieldPerms(ps interactive.PlayerState, landsOnly bool) []interactive.PermanentState {
+func (s *DuelScreen) fieldPerms(ps interactive.PlayerState, row permRow) []interactive.PermanentState {
 	var perms []interactive.PermanentState
 	for _, perm := range ps.Battlefield {
 		if perm.AttachedTo != uuid.Nil {
 			continue
 		}
-		isLand := perm.IsLand
-		if isLand == landsOnly {
+		if permRowFor(perm) == row {
 			perms = append(perms, perm)
 		}
 	}
@@ -598,11 +621,11 @@ func (s *DuelScreen) fieldPermAtPoint(mx, my int, dp *duelPlayer) *interactive.P
 	if ps == nil {
 		return nil
 	}
-	for _, landsOnly := range []bool{false, true} {
-		perms := s.fieldPerms(*ps, landsOnly)
+	for _, row := range allPermRows {
+		perms := s.fieldPerms(*ps, row)
 		for i := len(perms) - 1; i >= 0; i-- {
 			perm := perms[i]
-			pos := s.getFieldCardPos(perm, dp, i, len(perms), landsOnly)
+			pos := s.getFieldCardPos(perm, dp, i, len(perms), row)
 			if mx >= pos.X && mx < pos.X+fieldCardW {
 				auras := s.attachedPerms(perm.ID)
 				for j := len(auras) - 1; j >= 0; j-- {
@@ -1661,10 +1684,10 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 			logging.Printf(logging.Duel, "  perm: %s land=%v creature=%v tapped=%v\n", p.Name, p.IsLand, p.IsCreature, p.Tapped)
 		}
 	}
-	for _, landsOnly := range []bool{true, false} {
-		perms := s.fieldPerms(ps, landsOnly)
+	for _, row := range allPermRows {
+		perms := s.fieldPerms(ps, row)
 		for i, perm := range perms {
-			pos := s.getFieldCardPos(perm, dp, i, len(perms), landsOnly)
+			pos := s.getFieldCardPos(perm, dp, i, len(perms), row)
 
 			auras := s.attachedPerms(perm.ID)
 			// reverse order so it draws correctly on the screen

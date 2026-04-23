@@ -92,7 +92,7 @@ func TestIsInDeclareBlockers(t *testing.T) {
 func TestPendingBlockers_SelectBlocker(t *testing.T) {
 	s, blocker, _ := setupBlockerTest()
 
-	pos := s.getFieldCardPos(blocker, s.self, 0, 1, false)
+	pos := s.getFieldCardPos(blocker, s.self, 0, 1, permRowCreature)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
@@ -108,7 +108,7 @@ func TestPendingBlockers_AssignBlocker(t *testing.T) {
 
 	s.selectedBlocker = blocker.ID
 
-	pos := s.getFieldCardPos(attacker, s.opponent, 0, 1, false)
+	pos := s.getFieldCardPos(attacker, s.opponent, 0, 1, permRowCreature)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
@@ -131,7 +131,7 @@ func TestPendingBlockers_RemoveBlocker(t *testing.T) {
 
 	s.pendingBlockers[blocker.ID] = attacker.ID
 
-	pos := s.getFieldCardPos(blocker, s.self, 0, 1, false)
+	pos := s.getFieldCardPos(blocker, s.self, 0, 1, permRowCreature)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
@@ -183,14 +183,14 @@ func TestPendingBlockers_TappedCreatureCannotBeSelected(t *testing.T) {
 		s.lastMsg.State.You.Battlefield, tappedCreature,
 	)
 
-	tappedPos := s.getFieldCardPos(tappedCreature, s.self, 1, 2, false)
+	tappedPos := s.getFieldCardPos(tappedCreature, s.self, 1, 2, permRowCreature)
 	s.handleBlockerClick(tappedPos.X+fieldCardW/2, tappedPos.Y+fieldCardH/2)
 
 	if s.selectedBlocker == tappedCreature.ID {
 		t.Error("tapped creature (not in options) should not be selectable as blocker")
 	}
 
-	validPos := s.getFieldCardPos(blocker, s.self, 0, 2, false)
+	validPos := s.getFieldCardPos(blocker, s.self, 0, 2, permRowCreature)
 	s.handleBlockerClick(validPos.X+fieldCardW/2, validPos.Y+fieldCardH/2)
 
 	if s.selectedBlocker != blocker.ID {
