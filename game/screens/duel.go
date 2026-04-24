@@ -102,6 +102,9 @@ type DuelScreen struct {
 	xMaxValue        int
 	xChosenValue     int
 
+	abilityChoosingActions []interactive.ActionOption
+	abilityButtons         []*elements.Button
+
 	cardImageMap map[string]*domain.Card
 
 	frameCount  int
@@ -459,12 +462,14 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		return screenui.DuelScr, nil, nil
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil && !s.isChoosingAbility() {
 		s.submitPendingAndPass()
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		if s.isChoosingX() {
+		if s.isChoosingAbility() {
+			s.exitAbilityChoosingMode()
+		} else if s.isChoosingX() {
 			s.exitXChoosingMode()
 		} else if s.targetingCardID != uuid.Nil {
 			if s.selectedTargetID != uuid.Nil {
@@ -481,6 +486,11 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 
 	if s.choiceRequest != nil {
 		s.handleChoiceRequest()
+		return screenui.DuelScr, nil, nil
+	}
+
+	if s.isChoosingAbility() {
+		s.updateAbilityChoosingUI()
 		return screenui.DuelScr, nil, nil
 	}
 
@@ -541,11 +551,11 @@ const (
 var allPermRows = []permRow{permRowLand, permRowOther, permRowCreature}
 
 func permRowFor(perm interactive.PermanentState) permRow {
-	if perm.IsLand {
-		return permRowLand
-	}
 	if perm.IsCreature {
 		return permRowCreature
+	}
+	if perm.IsLand {
+		return permRowLand
 	}
 	return permRowOther
 }
@@ -889,12 +899,17 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 		return
 	}
 
-	if actions[0].Type == interactive.ActionCastSpell && isXSpell(actions[0].ManaCost) {
+	if actions[0].MaxX > 0 {
 		s.enterXChoosingMode(actions)
 		return
 	}
 
-	if len(actions) > 1 || actions[0].NeedsTarget {
+	if len(actions) > 1 {
+		s.enterAbilityChoosingMode(actions)
+		return
+	}
+
+	if actions[0].NeedsTarget {
 		s.enterTargetingMode(id, name, actions)
 		return
 	}
@@ -1504,6 +1519,7 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawCardPreview(screen, H)
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
+	s.drawAbilityChoosingUI(screen, W, H)
 }
 
 func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
