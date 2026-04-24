@@ -3,9 +3,7 @@ package screens
 import (
 	"fmt"
 	"image/color"
-	"strings"
 
-	"git.sr.ht/~cdcarter/mage-go/pkg/mage/core"
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/ui/elements"
@@ -20,37 +18,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-func isXSpell(manaCost string) bool {
-	return strings.Contains(manaCost, "{X}")
-}
-
-// maxXValue calculates the maximum X a player can pay for an X spell.
-// It counts mana in pool + untapped lands, minus the base cost (non-X portion).
-func maxXValue(ps interactive.PlayerState, manaCost string) int {
-	mc := core.ParseManaCost(manaCost)
-	baseCost := mc.CMC()
-
-	poolTotal := ps.ManaPool.White + ps.ManaPool.Blue + ps.ManaPool.Black +
-		ps.ManaPool.Red + ps.ManaPool.Green + ps.ManaPool.Colorless
-
-	untappedLands := 0
-	for _, p := range ps.Battlefield {
-		if p.IsLand && !p.Tapped {
-			untappedLands++
-		}
-	}
-
-	available := poolTotal + untappedLands - baseCost
-	if available < 0 {
-		return 0
-	}
-	return available
-}
-
 func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 	action := actions[0]
-	ps := s.lastMsg.State.You
-	maxX := maxXValue(ps, action.ManaCost)
+	maxX := action.MaxX
 
 	s.xChoosingActions = actions
 	s.xMaxValue = maxX
