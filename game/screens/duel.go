@@ -1514,6 +1514,7 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawBattlefield(screen, s.opponent, s.lastMsg.State.Opponent)
 	s.drawBattlefield(screen, s.self, s.lastMsg.State.You)
 	s.drawBlockerArrows(screen)
+	s.drawStackArrows(screen)
 	s.drawHandPanel(screen, s.opponent, s.lastMsg.State.Opponent)
 	s.drawHandPanel(screen, s.self, s.lastMsg.State.You)
 	s.drawCardPreview(screen, H)
@@ -1901,11 +1902,14 @@ func (s *DuelScreen) drawArrow(screen *ebiten.Image, blockerID, attackerID uuid.
 	ax := float32(attackerPos.X) + float32(fieldCardW)/2
 	ay := float32(attackerPos.Y) + float32(fieldCardH)
 
-	lineColor := color.RGBA{255, 0, 0, 255}
-	vector.StrokeLine(screen, bx, by, ax, ay, 2, lineColor, false)
+	drawArrowLine(screen, bx, by, ax, ay, color.RGBA{255, 0, 0, 255})
+}
 
-	dx := bx - ax
-	dy := by - ay
+func drawArrowLine(screen *ebiten.Image, fromX, fromY, toX, toY float32, lineColor color.RGBA) {
+	vector.StrokeLine(screen, fromX, fromY, toX, toY, 2, lineColor, false)
+
+	dx := fromX - toX
+	dy := fromY - toY
 	length := float32(math.Sqrt(float64(dx*dx + dy*dy)))
 	if length == 0 {
 		return
@@ -1916,8 +1920,59 @@ func (s *DuelScreen) drawArrow(screen *ebiten.Image, blockerID, attackerID uuid.
 	arrowLen := float32(10)
 	px := -dy
 	py := dx
-	vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen+px*arrowLen*0.5, ay+dy*arrowLen+py*arrowLen*0.5, 2, lineColor, false)
-	vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen-px*arrowLen*0.5, ay+dy*arrowLen-py*arrowLen*0.5, 2, lineColor, false)
+	vector.StrokeLine(screen, toX, toY, toX+dx*arrowLen+px*arrowLen*0.5, toY+dy*arrowLen+py*arrowLen*0.5, 2, lineColor, false)
+	vector.StrokeLine(screen, toX, toY, toX+dx*arrowLen-px*arrowLen*0.5, toY+dy*arrowLen-py*arrowLen*0.5, 2, lineColor, false)
+}
+
+// drawStackArrows draws an arrow from the casting player's hand panel to each
+// target of every spell currently on the stack, so the user can see what is
+// being cast (especially by the opponent) and what it targets.
+func (s *DuelScreen) drawStackArrows(screen *ebiten.Image) {
+	if s.lastMsg == nil || len(s.lastMsg.State.StackItems) == 0 {
+		return
+	}
+	for _, item := range s.lastMsg.State.StackItems {
+		if len(item.TargetIDs) == 0 {
+			continue
+		}
+		dp := s.self
+		if item.Controller != playerNameYou {
+			dp = s.opponent
+		}
+		fromX, fromY := s.stackArrowOrigin(dp)
+		for _, tid := range item.TargetIDs {
+			tx, ty, ok := s.targetPosition(tid)
+			if !ok {
+				continue
+			}
+			drawArrowLine(screen, fromX, fromY, tx, ty, color.RGBA{255, 200, 0, 255})
+		}
+	}
+}
+
+func (s *DuelScreen) stackArrowOrigin(dp *duelPlayer) (float32, float32) {
+	w, h := 0, 0
+	if dp.handBg != nil {
+		w = dp.handBg.Bounds().Dx()
+		h = dp.handBg.Bounds().Dy()
+	}
+	return float32(dp.handX + w/2), float32(dp.handY + h/2)
+}
+
+func (s *DuelScreen) targetPosition(id uuid.UUID) (float32, float32, bool) {
+	if pos, ok := s.cardPositions[id]; ok {
+		return float32(pos.X) + float32(fieldCardW)/2, float32(pos.Y) + float32(fieldCardH)/2, true
+	}
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return 0, 0, false
+	}
+	if id == s.lastMsg.State.You.ID {
+		return 30, float32(671 + 32), true
+	}
+	if id == s.lastMsg.State.Opponent.ID {
+		return 30, 32, true
+	}
+	return 0, 0, false
 }
 
 func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps interactive.PlayerState) {
@@ -2058,14 +2113,28 @@ func (s *DuelScreen) stackDescription() string {
 	if s.lastMsg == nil || len(s.lastMsg.State.StackItems) == 0 {
 		return ""
 	}
-	var names []string
+	var parts []string
 	for _, item := range s.lastMsg.State.StackItems {
-		names = append(names, item.Name)
+		parts = append(parts, formatStackItem(item))
 	}
-	if len(names) == 0 {
-		return ""
+	return strings.Join(parts, ". ") + ". "
+}
+
+func formatStackItem(item interactive.StackItemState) string {
+	verb := "casts"
+	if item.IsAbility {
+		verb = "activates"
 	}
-	return fmt.Sprintf("Responding to %s. ", strings.Join(names, ", "))
+	desc := fmt.Sprintf("%s %s %s", item.Controller, verb, item.Name)
+	if item.XValue > 0 {
+		desc += fmt.Sprintf(" for %d", item.XValue)
+	} else if item.EventAmount > 0 {
+		desc += fmt.Sprintf(" for %d", item.EventAmount)
+	}
+	if len(item.Targets) > 0 {
+		desc += " targeting " + strings.Join(item.Targets, ", ")
+	}
+	return desc
 }
 
 func (s *DuelScreen) statusMessage() string {
