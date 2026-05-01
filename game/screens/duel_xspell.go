@@ -20,7 +20,7 @@ import (
 
 func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 	action := actions[0]
-	maxX := action.MaxX
+	maxX := action.MaxXValue
 
 	s.xChoosingActions = actions
 	s.xMaxValue = maxX

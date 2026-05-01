@@ -899,7 +899,7 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 		return
 	}
 
-	if actions[0].MaxX > 0 {
+	if actions[0].NeedsX {
 		s.enterXChoosingMode(actions)
 		return
 	}
