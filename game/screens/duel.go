@@ -125,6 +125,8 @@ type DuelScreen struct {
 	prevOppGraveLen    int
 	prevYouCreatureLen int
 	prevOppCreatureLen int
+
+	viewingGraveyard *duelPlayer
 }
 
 type mouseStateType int
@@ -467,7 +469,9 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		if s.isChoosingAbility() {
+		if s.viewingGraveyard != nil {
+			s.viewingGraveyard = nil
+		} else if s.isChoosingAbility() {
 			s.exitAbilityChoosingMode()
 		} else if s.isChoosingX() {
 			s.exitXChoosingMode()
@@ -1248,6 +1252,17 @@ func (s *DuelScreen) submitPendingAndPass() {
 }
 
 func (s *DuelScreen) handleClick(mx, my int) {
+	if s.viewingGraveyard != nil {
+		if !s.handleGraveyardClick(mx, my) {
+			s.viewingGraveyard = nil
+		}
+		return
+	}
+
+	if s.handleGraveyardClick(mx, my) {
+		return
+	}
+
 	doneBounds := s.doneBtn[0].Bounds()
 	doneX := duelBoardX + 2
 	doneY := duelMsgY
@@ -1518,9 +1533,64 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawHandPanel(screen, s.opponent, s.lastMsg.State.Opponent)
 	s.drawHandPanel(screen, s.self, s.lastMsg.State.You)
 	s.drawCardPreview(screen, H)
+	s.drawGraveyardView(screen, W, H)
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
 	s.drawAbilityChoosingUI(screen, W, H)
+}
+
+func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {
+	if s.viewingGraveyard == nil {
+		return
+	}
+	ps := s.playerState(s.viewingGraveyard)
+	if ps == nil {
+		return
+	}
+
+	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 200}, false)
+
+	title := fmt.Sprintf("%s's Graveyard (%d)", s.viewingGraveyard.name, len(ps.Graveyard))
+	titleTxt := elements.NewText(24, title, 0, 20)
+	titleTxt.HAlign = elements.AlignCenter
+	titleTxt.BoundsW = float64(W)
+	titleTxt.Color = color.White
+	titleTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+
+	if len(ps.Graveyard) == 0 {
+		return
+	}
+
+	cardW := 150
+	gap := 12
+	startY := 60
+	cols := (W - gap) / (cardW + gap)
+	if cols < 1 {
+		cols = 1
+	}
+	totalW := cols*cardW + (cols-1)*gap
+	startX := (W - totalW) / 2
+
+	for i, c := range ps.Graveyard {
+		col := i % cols
+		row := i / cols
+		domainCard := s.getDomainCard(c.Name)
+		if domainCard == nil {
+			continue
+		}
+		img, err := domainCard.CardImage(domain.CardViewFull)
+		if err != nil || img == nil {
+			continue
+		}
+		scale := float64(cardW) / float64(img.Bounds().Dx())
+		cardH := int(float64(img.Bounds().Dy()) * scale)
+		x := startX + col*(cardW+gap)
+		y := startY + row*(cardH+gap)
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Scale(scale, scale)
+		opts.GeoM.Translate(float64(x), float64(y))
+		screen.DrawImage(img, opts)
+	}
 }
 
 func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
@@ -2049,12 +2119,66 @@ func drawLife(screen *ebiten.Image, dp *duelPlayer, life int, Y int) {
 	countTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
-func drawGraveyard(screen *ebiten.Image, player *duelPlayer, Y float64) {
-	if player.graveyardImg != nil {
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(60, Y)
-		screen.DrawImage(player.graveyardImg, opts)
+const (
+	graveyardX = 60
+	graveyardW = 61
+	graveyardH = 91
+	graveyardSelfY     = 580
+	graveyardOpponentY = 94
+)
+
+func (s *DuelScreen) graveyardBounds(dp *duelPlayer) image.Rectangle {
+	y := graveyardOpponentY
+	if dp == s.self {
+		y = graveyardSelfY
 	}
+	return image.Rect(graveyardX, y, graveyardX+graveyardW, y+graveyardH)
+}
+
+func (s *DuelScreen) drawGraveyard(screen *ebiten.Image, dp *duelPlayer) {
+	bounds := s.graveyardBounds(dp)
+	if dp.graveyardImg != nil {
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
+		screen.DrawImage(dp.graveyardImg, opts)
+	}
+
+	ps := s.playerState(dp)
+	if ps == nil || len(ps.Graveyard) == 0 {
+		return
+	}
+	top := ps.Graveyard[len(ps.Graveyard)-1]
+	art := s.getCardArtImg(top.Name, graveyardW)
+	if art == nil {
+		return
+	}
+	artH := art.Bounds().Dy()
+	offsetY := bounds.Min.Y + (graveyardH-artH)/2
+	if offsetY < bounds.Min.Y {
+		offsetY = bounds.Min.Y
+	}
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(bounds.Min.X), float64(offsetY))
+	screen.DrawImage(art, opts)
+}
+
+func (s *DuelScreen) handleGraveyardClick(mx, my int) bool {
+	for _, dp := range []*duelPlayer{s.self, s.opponent} {
+		if !image.Pt(mx, my).In(s.graveyardBounds(dp)) {
+			continue
+		}
+		ps := s.playerState(dp)
+		if ps == nil || len(ps.Graveyard) == 0 {
+			return false
+		}
+		if s.viewingGraveyard == dp {
+			s.viewingGraveyard = nil
+		} else {
+			s.viewingGraveyard = dp
+		}
+		return true
+	}
+	return false
 }
 
 func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
@@ -2064,8 +2188,8 @@ func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
 	drawManaPool(screen, s.manaPoolBg, s.lastMsg.State.Opponent, 0)
 	drawManaPool(screen, s.manaPoolBg, s.lastMsg.State.You, 580)
 
-	drawGraveyard(screen, s.opponent, 94)
-	drawGraveyard(screen, s.self, 580)
+	s.drawGraveyard(screen, s.opponent)
+	s.drawGraveyard(screen, s.self)
 
 	drawLife(screen, s.opponent, s.lastMsg.State.Opponent.Life, 0)
 	drawLife(screen, s.self, s.lastMsg.State.You.Life, 671)
