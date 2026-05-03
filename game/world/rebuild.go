@@ -6,6 +6,7 @@ import (
 	"math/rand"
 
 	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -143,9 +144,12 @@ func (l *Level) RebuildSprites() error {
 	}
 
 	for i := range l.Enemies {
+		name := l.Enemies[i].Character.Name
+		if rogue, ok := domain.Rogues[name]; ok {
+			l.Enemies[i].Character = rogue
+		}
 		if err := l.Enemies[i].Character.LoadImages(); err != nil {
-			fmt.Printf("Warning: failed to load sprites for enemy %q: %v\n",
-				l.Enemies[i].Character.Name, err)
+			fmt.Printf("Warning: failed to load sprites for enemy %q: %v\n", name, err)
 		}
 	}
 

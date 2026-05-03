@@ -153,6 +153,16 @@ func FindCardByName(name string) *Card {
 	return nil
 }
 
+// FindCardByID returns the card with the given cardID, or nil if not found.
+func FindCardByID(id string) *Card {
+	for _, c := range CARDS {
+		if c.cardID == id {
+			return c
+		}
+	}
+	return nil
+}
+
 // FindAllCardsByName searches for all cards with the given name
 // Returns a slice of all cards with the matching name (different sets)
 func FindAllCardsByName(name string) []*Card {

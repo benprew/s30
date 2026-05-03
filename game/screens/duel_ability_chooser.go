@@ -18,23 +18,19 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
-	action := actions[0]
-	mx := action.MaxXValue
-
-	s.xChoosingActions = actions
-	s.xMaxValue = mx
+func (s *DuelScreen) enterAbilityChoosingMode(actions []interactive.ActionOption) {
+	s.abilityChoosingActions = actions
 
 	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
 	if err != nil {
-		logging.Printf(logging.Duel, "Error loading X choice button sprites: %v\n", err)
+		logging.Printf(logging.Duel, "Error loading ability choice button sprites: %v\n", err)
 		return
 	}
 
 	fontFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 16}
-	s.xButtons = make([]*elements.Button, mx+1)
-	for i := range mx + 1 {
-		label := fmt.Sprintf("X = %d", i)
+	s.abilityButtons = make([]*elements.Button, len(actions))
+	for i, action := range actions {
+		label := fmt.Sprintf("%d. %s", i+1, action.Label)
 		btn := elements.NewButton(btnSprites[0][0], btnSprites[0][1], btnSprites[0][2], 0, 0, 1.0)
 		btn.ButtonText = elements.ButtonText{
 			Text:      label,
@@ -43,34 +39,33 @@ func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 			HAlign:    elements.AlignCenter,
 			VAlign:    elements.AlignMiddle,
 		}
-		s.xButtons[i] = btn
+		s.abilityButtons[i] = btn
 	}
 
-	s.loadCardPreviewByName(action.CardName)
+	s.loadCardPreviewByName(actions[0].CardName)
 }
 
-func (s *DuelScreen) exitXChoosingMode() {
-	s.xChoosingActions = nil
-	s.xButtons = nil
-	s.xMaxValue = 0
+func (s *DuelScreen) exitAbilityChoosingMode() {
+	s.abilityChoosingActions = nil
+	s.abilityButtons = nil
 }
 
-func (s *DuelScreen) isChoosingX() bool {
-	return s.xChoosingActions != nil
+func (s *DuelScreen) isChoosingAbility() bool {
+	return s.abilityChoosingActions != nil
 }
 
-func (s *DuelScreen) updateXChoosingUI() {
-	for i := range s.xButtons {
-		key := ebiten.Key0 + ebiten.Key(i)
-		if i <= 9 && inpututil.IsKeyJustPressed(key) {
-			s.selectXValue(i)
+func (s *DuelScreen) updateAbilityChoosingUI() {
+	for i := range s.abilityButtons {
+		key := ebiten.Key1 + ebiten.Key(i)
+		if i < 9 && inpututil.IsKeyJustPressed(key) {
+			s.selectAbility(i)
 			return
 		}
 	}
 
 	btnW := 0
-	if len(s.xButtons) > 0 {
-		btnW = s.xButtons[0].Normal.Bounds().Dx()
+	if len(s.abilityButtons) > 0 {
+		btnW = s.abilityButtons[0].Normal.Bounds().Dx()
 	}
 
 	cardH := 0
@@ -80,36 +75,33 @@ func (s *DuelScreen) updateXChoosingUI() {
 
 	centerX := 512
 	titleH := 30
-	cardTopY := 768/2 - (cardH+titleH+len(s.xButtons)*40)/2
+	cardTopY := 768/2 - (cardH+titleH+len(s.abilityButtons)*40)/2
 	btnStartY := cardTopY + titleH + cardH + 10
 
-	for i, btn := range s.xButtons {
+	for i, btn := range s.abilityButtons {
 		btnX := centerX - btnW/2
 		btnY := btnStartY + i*40
 		btn.MoveTo(btnX, btnY)
 		opts := &ebiten.DrawImageOptions{}
 		btn.Update(opts, 1.0, 1024, 768)
 		if btn.IsClicked() {
-			s.selectXValue(i)
+			s.selectAbility(i)
 			return
 		}
 	}
 }
 
-func (s *DuelScreen) selectXValue(xValue int) {
-	actions := s.xChoosingActions
-	s.exitXChoosingMode()
+func (s *DuelScreen) selectAbility(index int) {
+	action := s.abilityChoosingActions[index]
+	s.exitAbilityChoosingMode()
 
-	if len(actions) > 1 || actions[0].NeedsTarget {
-		s.xChosenValue = xValue
-		s.enterTargetingMode(actions[0].CardID, actions[0].CardName, actions)
+	if action.NeedsTarget {
+		s.enterTargetingMode(action.PermanentID, action.CardName, []interactive.ActionOption{action})
 		return
 	}
 
-	action := actions[0]
+	logging.Printf(logging.Duel, "CLICK: %s -> ability=%d\n", action.CardName, action.AbilityIndex)
 	pa := actionOptionToPriorityAction(action)
-	pa.XValue = xValue
-	logging.Printf(logging.Duel, "CLICK: %s -> X=%d\n", action.CardName, xValue)
 	select {
 	case s.human.FromTUI() <- pa:
 		if am := gameaudio.Get(); am != nil {
@@ -119,8 +111,8 @@ func (s *DuelScreen) selectXValue(xValue int) {
 	}
 }
 
-func (s *DuelScreen) drawXChoosingUI(screen *ebiten.Image, W, H int) {
-	if !s.isChoosingX() || s.xButtons == nil {
+func (s *DuelScreen) drawAbilityChoosingUI(screen *ebiten.Image, W, H int) {
+	if !s.isChoosingAbility() || s.abilityButtons == nil {
 		return
 	}
 
@@ -133,10 +125,10 @@ func (s *DuelScreen) drawXChoosingUI(screen *ebiten.Image, W, H int) {
 		cardH = s.cardPreviewImg.Bounds().Dy()
 	}
 	titleH := 30
-	totalH := titleH + cardH + 10 + len(s.xButtons)*40
+	totalH := titleH + cardH + 10 + len(s.abilityButtons)*40
 	startY := float64(H)/2 - float64(totalH)/2
 
-	title := elements.NewText(24, "Choose X", 0, int(startY))
+	title := elements.NewText(24, "Choose Ability", 0, int(startY))
 	title.HAlign = elements.AlignCenter
 	title.BoundsW = float64(W)
 	title.Color = color.White
@@ -150,15 +142,7 @@ func (s *DuelScreen) drawXChoosingUI(screen *ebiten.Image, W, H int) {
 	}
 
 	btnOpts := &ebiten.DrawImageOptions{}
-	for _, btn := range s.xButtons {
+	for _, btn := range s.abilityButtons {
 		btn.Draw(screen, btnOpts, 1.0)
 	}
-}
-
-// xValueForAction returns the chosen X value if in X-choosing flow, 0 otherwise.
-// Used by targeting mode when confirming a targeted X spell.
-func (s *DuelScreen) xValueForAction() int {
-	v := s.xChosenValue
-	s.xChosenValue = 0
-	return v
 }

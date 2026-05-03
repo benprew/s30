@@ -225,6 +225,7 @@ func (cc CardCollection) NumCards() int {
 }
 
 type collectionItemJSON struct {
+	CardID     string `json:"card_id"`
 	CardName   string `json:"card_name"`
 	Count      int    `json:"count"`
 	DeckCounts []int  `json:"deck_counts"`
@@ -234,6 +235,7 @@ func (cc CardCollection) MarshalJSON() ([]byte, error) {
 	items := make([]collectionItemJSON, 0, len(cc))
 	for card, item := range cc {
 		items = append(items, collectionItemJSON{
+			CardID:     card.cardID,
 			CardName:   card.CardName,
 			Count:      item.Count,
 			DeckCounts: item.DeckCounts,
@@ -253,9 +255,25 @@ func (cc *CardCollection) UnmarshalJSON(data []byte) error {
 	}
 
 	for _, item := range items {
-		card := FindCardByName(item.CardName)
+		var card *Card
+		if item.CardID != "" {
+			card = FindCardByID(item.CardID)
+		}
 		if card == nil {
-			return fmt.Errorf("card not found: %s", item.CardName)
+			card = FindCardByName(item.CardName)
+		}
+		if card == nil {
+			return fmt.Errorf("card not found: id=%q name=%q", item.CardID, item.CardName)
+		}
+		if existing, ok := (*cc)[card]; ok {
+			existing.Count += item.Count
+			for i, n := range item.DeckCounts {
+				if i >= len(existing.DeckCounts) {
+					existing.DeckCounts = append(existing.DeckCounts, 0)
+				}
+				existing.DeckCounts[i] += n
+			}
+			continue
 		}
 		(*cc)[card] = &CollectionItem{
 			Card:       card,

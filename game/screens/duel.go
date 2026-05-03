@@ -103,6 +103,7 @@ type DuelScreen struct {
 	xChosenValue     int
 
 	abilityChoosingActions []interactive.ActionOption
+	abilityButtons         []*elements.Button
 
 	cardImageMap map[string]*domain.Card
 
@@ -124,6 +125,8 @@ type DuelScreen struct {
 	prevOppGraveLen    int
 	prevYouCreatureLen int
 	prevOppCreatureLen int
+
+	viewingGraveyard *duelPlayer
 }
 
 type mouseStateType int
@@ -466,7 +469,9 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		if s.isChoosingAbility() {
+		if s.viewingGraveyard != nil {
+			s.viewingGraveyard = nil
+		} else if s.isChoosingAbility() {
 			s.exitAbilityChoosingMode()
 		} else if s.isChoosingX() {
 			s.exitXChoosingMode()
@@ -898,7 +903,7 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 		return
 	}
 
-	if maxX(actions[0]) > 0 {
+	if actions[0].NeedsX {
 		s.enterXChoosingMode(actions)
 		return
 	}
@@ -1247,6 +1252,17 @@ func (s *DuelScreen) submitPendingAndPass() {
 }
 
 func (s *DuelScreen) handleClick(mx, my int) {
+	if s.viewingGraveyard != nil {
+		if !s.handleGraveyardClick(mx, my) {
+			s.viewingGraveyard = nil
+		}
+		return
+	}
+
+	if s.handleGraveyardClick(mx, my) {
+		return
+	}
+
 	doneBounds := s.doneBtn[0].Bounds()
 	doneX := duelBoardX + 2
 	doneY := duelMsgY
@@ -1513,12 +1529,68 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawBattlefield(screen, s.opponent, s.lastMsg.State.Opponent)
 	s.drawBattlefield(screen, s.self, s.lastMsg.State.You)
 	s.drawBlockerArrows(screen)
+	s.drawStackArrows(screen)
 	s.drawHandPanel(screen, s.opponent, s.lastMsg.State.Opponent)
 	s.drawHandPanel(screen, s.self, s.lastMsg.State.You)
 	s.drawCardPreview(screen, H)
+	s.drawGraveyardView(screen, W, H)
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
 	s.drawAbilityChoosingUI(screen, W, H)
+}
+
+func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {
+	if s.viewingGraveyard == nil {
+		return
+	}
+	ps := s.playerState(s.viewingGraveyard)
+	if ps == nil {
+		return
+	}
+
+	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 200}, false)
+
+	title := fmt.Sprintf("%s's Graveyard (%d)", s.viewingGraveyard.name, len(ps.Graveyard))
+	titleTxt := elements.NewText(24, title, 0, 20)
+	titleTxt.HAlign = elements.AlignCenter
+	titleTxt.BoundsW = float64(W)
+	titleTxt.Color = color.White
+	titleTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+
+	if len(ps.Graveyard) == 0 {
+		return
+	}
+
+	cardW := 150
+	gap := 12
+	startY := 60
+	cols := (W - gap) / (cardW + gap)
+	if cols < 1 {
+		cols = 1
+	}
+	totalW := cols*cardW + (cols-1)*gap
+	startX := (W - totalW) / 2
+
+	for i, c := range ps.Graveyard {
+		col := i % cols
+		row := i / cols
+		domainCard := s.getDomainCard(c.Name)
+		if domainCard == nil {
+			continue
+		}
+		img, err := domainCard.CardImage(domain.CardViewFull)
+		if err != nil || img == nil {
+			continue
+		}
+		scale := float64(cardW) / float64(img.Bounds().Dx())
+		cardH := int(float64(img.Bounds().Dy()) * scale)
+		x := startX + col*(cardW+gap)
+		y := startY + row*(cardH+gap)
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Scale(scale, scale)
+		opts.GeoM.Translate(float64(x), float64(y))
+		screen.DrawImage(img, opts)
+	}
 }
 
 func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
@@ -1900,11 +1972,14 @@ func (s *DuelScreen) drawArrow(screen *ebiten.Image, blockerID, attackerID uuid.
 	ax := float32(attackerPos.X) + float32(fieldCardW)/2
 	ay := float32(attackerPos.Y) + float32(fieldCardH)
 
-	lineColor := color.RGBA{255, 0, 0, 255}
-	vector.StrokeLine(screen, bx, by, ax, ay, 2, lineColor, false)
+	drawArrowLine(screen, bx, by, ax, ay, color.RGBA{255, 0, 0, 255})
+}
 
-	dx := bx - ax
-	dy := by - ay
+func drawArrowLine(screen *ebiten.Image, fromX, fromY, toX, toY float32, lineColor color.RGBA) {
+	vector.StrokeLine(screen, fromX, fromY, toX, toY, 2, lineColor, false)
+
+	dx := fromX - toX
+	dy := fromY - toY
 	length := float32(math.Sqrt(float64(dx*dx + dy*dy)))
 	if length == 0 {
 		return
@@ -1915,8 +1990,59 @@ func (s *DuelScreen) drawArrow(screen *ebiten.Image, blockerID, attackerID uuid.
 	arrowLen := float32(10)
 	px := -dy
 	py := dx
-	vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen+px*arrowLen*0.5, ay+dy*arrowLen+py*arrowLen*0.5, 2, lineColor, false)
-	vector.StrokeLine(screen, ax, ay, ax+dx*arrowLen-px*arrowLen*0.5, ay+dy*arrowLen-py*arrowLen*0.5, 2, lineColor, false)
+	vector.StrokeLine(screen, toX, toY, toX+dx*arrowLen+px*arrowLen*0.5, toY+dy*arrowLen+py*arrowLen*0.5, 2, lineColor, false)
+	vector.StrokeLine(screen, toX, toY, toX+dx*arrowLen-px*arrowLen*0.5, toY+dy*arrowLen-py*arrowLen*0.5, 2, lineColor, false)
+}
+
+// drawStackArrows draws an arrow from the casting player's hand panel to each
+// target of every spell currently on the stack, so the user can see what is
+// being cast (especially by the opponent) and what it targets.
+func (s *DuelScreen) drawStackArrows(screen *ebiten.Image) {
+	if s.lastMsg == nil || len(s.lastMsg.State.StackItems) == 0 {
+		return
+	}
+	for _, item := range s.lastMsg.State.StackItems {
+		if len(item.TargetIDs) == 0 {
+			continue
+		}
+		dp := s.self
+		if item.Controller != playerNameYou {
+			dp = s.opponent
+		}
+		fromX, fromY := s.stackArrowOrigin(dp)
+		for _, tid := range item.TargetIDs {
+			tx, ty, ok := s.targetPosition(tid)
+			if !ok {
+				continue
+			}
+			drawArrowLine(screen, fromX, fromY, tx, ty, color.RGBA{255, 200, 0, 255})
+		}
+	}
+}
+
+func (s *DuelScreen) stackArrowOrigin(dp *duelPlayer) (float32, float32) {
+	w, h := 0, 0
+	if dp.handBg != nil {
+		w = dp.handBg.Bounds().Dx()
+		h = dp.handBg.Bounds().Dy()
+	}
+	return float32(dp.handX + w/2), float32(dp.handY + h/2)
+}
+
+func (s *DuelScreen) targetPosition(id uuid.UUID) (float32, float32, bool) {
+	if pos, ok := s.cardPositions[id]; ok {
+		return float32(pos.X) + float32(fieldCardW)/2, float32(pos.Y) + float32(fieldCardH)/2, true
+	}
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return 0, 0, false
+	}
+	if id == s.lastMsg.State.You.ID {
+		return 30, float32(671 + 32), true
+	}
+	if id == s.lastMsg.State.Opponent.ID {
+		return 30, 32, true
+	}
+	return 0, 0, false
 }
 
 func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps interactive.PlayerState) {
@@ -1993,12 +2119,66 @@ func drawLife(screen *ebiten.Image, dp *duelPlayer, life int, Y int) {
 	countTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
-func drawGraveyard(screen *ebiten.Image, player *duelPlayer, Y float64) {
-	if player.graveyardImg != nil {
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(60, Y)
-		screen.DrawImage(player.graveyardImg, opts)
+const (
+	graveyardX = 60
+	graveyardW = 61
+	graveyardH = 91
+	graveyardSelfY     = 580
+	graveyardOpponentY = 94
+)
+
+func (s *DuelScreen) graveyardBounds(dp *duelPlayer) image.Rectangle {
+	y := graveyardOpponentY
+	if dp == s.self {
+		y = graveyardSelfY
 	}
+	return image.Rect(graveyardX, y, graveyardX+graveyardW, y+graveyardH)
+}
+
+func (s *DuelScreen) drawGraveyard(screen *ebiten.Image, dp *duelPlayer) {
+	bounds := s.graveyardBounds(dp)
+	if dp.graveyardImg != nil {
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
+		screen.DrawImage(dp.graveyardImg, opts)
+	}
+
+	ps := s.playerState(dp)
+	if ps == nil || len(ps.Graveyard) == 0 {
+		return
+	}
+	top := ps.Graveyard[len(ps.Graveyard)-1]
+	art := s.getCardArtImg(top.Name, graveyardW)
+	if art == nil {
+		return
+	}
+	artH := art.Bounds().Dy()
+	offsetY := bounds.Min.Y + (graveyardH-artH)/2
+	if offsetY < bounds.Min.Y {
+		offsetY = bounds.Min.Y
+	}
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(bounds.Min.X), float64(offsetY))
+	screen.DrawImage(art, opts)
+}
+
+func (s *DuelScreen) handleGraveyardClick(mx, my int) bool {
+	for _, dp := range []*duelPlayer{s.self, s.opponent} {
+		if !image.Pt(mx, my).In(s.graveyardBounds(dp)) {
+			continue
+		}
+		ps := s.playerState(dp)
+		if ps == nil || len(ps.Graveyard) == 0 {
+			return false
+		}
+		if s.viewingGraveyard == dp {
+			s.viewingGraveyard = nil
+		} else {
+			s.viewingGraveyard = dp
+		}
+		return true
+	}
+	return false
 }
 
 func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
@@ -2008,8 +2188,8 @@ func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
 	drawManaPool(screen, s.manaPoolBg, s.lastMsg.State.Opponent, 0)
 	drawManaPool(screen, s.manaPoolBg, s.lastMsg.State.You, 580)
 
-	drawGraveyard(screen, s.opponent, 94)
-	drawGraveyard(screen, s.self, 580)
+	s.drawGraveyard(screen, s.opponent)
+	s.drawGraveyard(screen, s.self)
 
 	drawLife(screen, s.opponent, s.lastMsg.State.Opponent.Life, 0)
 	drawLife(screen, s.self, s.lastMsg.State.You.Life, 671)
@@ -2057,14 +2237,28 @@ func (s *DuelScreen) stackDescription() string {
 	if s.lastMsg == nil || len(s.lastMsg.State.StackItems) == 0 {
 		return ""
 	}
-	var names []string
+	var parts []string
 	for _, item := range s.lastMsg.State.StackItems {
-		names = append(names, item.Name)
+		parts = append(parts, formatStackItem(item))
 	}
-	if len(names) == 0 {
-		return ""
+	return strings.Join(parts, ". ") + ". "
+}
+
+func formatStackItem(item interactive.StackItemState) string {
+	verb := "casts"
+	if item.IsAbility {
+		verb = "activates"
 	}
-	return fmt.Sprintf("Responding to %s. ", strings.Join(names, ", "))
+	desc := fmt.Sprintf("%s %s %s", item.Controller, verb, item.Name)
+	if item.XValue > 0 {
+		desc += fmt.Sprintf(" for %d", item.XValue)
+	} else if item.EventAmount > 0 {
+		desc += fmt.Sprintf(" for %d", item.EventAmount)
+	}
+	if len(item.Targets) > 0 {
+		desc += " targeting " + strings.Join(item.Targets, ", ")
+	}
+	return desc
 }
 
 func (s *DuelScreen) statusMessage() string {
