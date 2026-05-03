@@ -36,6 +36,8 @@ type Level struct {
 	pendingEncounterSprite  int
 	pendingEncounterTerrain int
 
+	Dungeons []*domain.Dungeon
+
 	ticksSinceLastInteraction int
 	totalTicks                int
 }
@@ -94,6 +96,11 @@ func NewLevel(c *domain.Player) (*Level, error) {
 		return nil, fmt.Errorf("failed to load city spritesheet Castles1.spr.png: %w", err)
 	}
 
+	dungeonSprites, err := imageutil.LoadSpriteSheet(6, 4, assets.Dungeons_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load dungeon spritesheet Locatn03.spr.png: %w", err)
+	}
+
 	roads, err := imageutil.LoadSpriteSheet(6, 2, assets.Roads_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load city spritesheet Roads_png: %w", err)
@@ -111,6 +118,7 @@ func NewLevel(c *domain.Player) (*Level, error) {
 	validCityLocations := l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites)
 
 	l.placeCities(validCityLocations, citySprites, 35, 6)
+	l.placeDungeons(5, 6, time.Now().UnixNano(), dungeonSprites)
 
 	// Set initial player position at center of map
 	loc := image.Point{X: l.LevelW() / 2, Y: l.LevelH() / 2}

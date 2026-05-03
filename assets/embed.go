@@ -62,6 +62,23 @@ var (
 	//go:embed art/screens/world/land/Locatn03.spr.png
 	Dungeons_png []byte
 
+	// Dungeon interior tilesets, 12 columns x N rows of 64x64 cells.
+	// row 0 cols 0-7 = walkable floor variants
+	// row 0 col 8    = treasure
+	// row 0 col 9    = scroll/trivia
+	// row 0 col 10   = dice
+	// row 1 col 8    = wall / unpathed
+	//go:embed art/screens/dungeons/Dungeonw.spr.png
+	DungeonW_png []byte
+	//go:embed art/screens/dungeons/Dungeonu.spr.png
+	DungeonU_png []byte
+	//go:embed art/screens/dungeons/Dungeonb.spr.png
+	DungeonB_png []byte
+	//go:embed art/screens/dungeons/Dungeonr.spr.png
+	DungeonR_png []byte
+	//go:embed art/screens/dungeons/Dungeong.spr.png
+	DungeonG_png []byte
+
 	// Random Encounters
 	//go:embed art/screens/world/land/Locatn07.spr.png
 	RandomEncounters_png []byte

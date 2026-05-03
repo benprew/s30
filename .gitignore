@@ -10,3 +10,4 @@ __pycache__/
 scryfall_cards.json
 sprite_pairs/
 s30_android.apk/
+.DS_Store

@@ -20,10 +20,10 @@ import (
 
 func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 	action := actions[0]
-	maxX := action.MaxX
+	mx := maxX(action)
 
 	s.xChoosingActions = actions
-	s.xMaxValue = maxX
+	s.xMaxValue = mx
 
 	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
 	if err != nil {
@@ -32,8 +32,8 @@ func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 	}
 
 	fontFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 16}
-	s.xButtons = make([]*elements.Button, maxX+1)
-	for i := range maxX + 1 {
+	s.xButtons = make([]*elements.Button, mx+1)
+	for i := range mx + 1 {
 		label := fmt.Sprintf("X = %d", i)
 		btn := elements.NewButton(btnSprites[0][0], btnSprites[0][1], btnSprites[0][2], 0, 0, 1.0)
 		btn.ButtonText = elements.ButtonText{

@@ -31,6 +31,7 @@ type Player struct {
 	mouseMoving     bool
 	BonusDuelLife   int
 	BonusDuelCards  []*Card
+	DungeonState    *DungeonState
 }
 
 const TicksPerDay = 5000.0

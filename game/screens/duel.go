@@ -103,7 +103,6 @@ type DuelScreen struct {
 	xChosenValue     int
 
 	abilityChoosingActions []interactive.ActionOption
-	abilityButtons         []*elements.Button
 
 	cardImageMap map[string]*domain.Card
 
@@ -899,7 +898,7 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 		return
 	}
 
-	if actions[0].MaxX > 0 {
+	if maxX(actions[0]) > 0 {
 		s.enterXChoosingMode(actions)
 		return
 	}

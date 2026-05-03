@@ -17,6 +17,8 @@ const (
 	DuelLoseScr
 	WisemanScr
 	RandomEncounterScr
+	DungeonEntryScr
+	DungeonScr
 )
 
 type Screen interface {
@@ -52,6 +54,10 @@ func ScreenNameToString(sn ScreenName) string {
 		return "Wiseman"
 	case RandomEncounterScr:
 		return "RandomEncounter"
+	case DungeonEntryScr:
+		return "DungeonEntry"
+	case DungeonScr:
+		return "Dungeon"
 	default:
 		return "Unknown"
 	}

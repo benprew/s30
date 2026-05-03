@@ -64,6 +64,9 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 				}
 				return screenui.CityScr, NewCityScreen(&tile.City, s.Level.Player, s.Level), nil
 			}
+			if tile.IsDungeon && tile.Dungeon != nil && prevTile != currentTile {
+				return screenui.DungeonEntryScr, NewDungeonEntryScreen(tile.Dungeon, s.Level.Player, s.Level), nil
+			}
 		}
 	}
 

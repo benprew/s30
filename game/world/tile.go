@@ -23,7 +23,9 @@ type Tile struct {
 	encounterSprites  []*PositionedSprite // Random encounters
 	IsCity            bool                // Indicates if this tile represents a city
 	City              domain.City
-	TerrainType       int // Added terrain type
+	IsDungeon         bool             // Indicates if this tile holds a dungeon entrance
+	Dungeon           *domain.Dungeon  // Non-nil when IsDungeon is true
+	TerrainType       int              // Added terrain type
 }
 
 // AddSprite adds a sprite to the Tile.
