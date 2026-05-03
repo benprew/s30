@@ -6,3 +6,8 @@ select = ["E", "F", "W", "I"]
 
 [tool.ty.environment]
 python-version = "3.11"
+
+[dependency-groups]
+dev = [
+    "pillow>=12.2.0",
+]
