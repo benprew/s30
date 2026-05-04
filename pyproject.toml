@@ -10,4 +10,5 @@ python-version = "3.11"
 [dependency-groups]
 dev = [
     "pillow>=12.2.0",
+    "zstandard>=0.25.0",
 ]
