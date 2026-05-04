@@ -29,12 +29,15 @@ func xTestDeck() domain.Deck {
 
 	add("Fireball", 4)
 	add("Earthquake", 2)
-	add("Drain Life", 2)
 	add("Lightning Bolt", 4)
+	add("Rod of Ruin", 3)
+	add("Jade Statue", 2)
 	add("Kird Ape", 4)
+	add("Fire Elemental", 3)
+	add("Sol Ring", 2)
+	add("Mishra's Factory", 3)
 	add("Mountain", 14)
-	add("Swamp", 4)
-	add("Forest", 2)
+	add("Forest", 6)
 
 	return deck
 }
