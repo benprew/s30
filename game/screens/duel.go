@@ -189,7 +189,7 @@ func buildCardImageMap(decks ...domain.Deck) map[string]*domain.Card {
 func (s *DuelScreen) initGameState() {
 	s.human = interactive.NewHumanPlayer("You")
 	s.human.SetLife(s.player.Life + s.player.BonusDuelLife)
-	s.aiPlayer = ai.NewAIPlayer(s.enemy.Name())
+	s.aiPlayer = ai.NewAdaptiveSearchAI(s.enemy.Name(), ai.DefaultSearchConfig())
 	s.aiPlayer.SetLife(s.enemy.Character.Life)
 
 	for card, count := range s.player.GetDuelDeck() {
@@ -227,6 +227,7 @@ func (s *DuelScreen) initGameState() {
 
 	s.game = mage.NewGame(s.human, s.aiPlayer)
 	mage.DebugPriority = logging.Enabled(logging.Duel)
+	ai.DebugSearchStats = logging.Enabled(logging.Duel)
 
 	logging.Printf(logging.Duel, "Drawing cards\n")
 
@@ -1780,12 +1781,6 @@ func (s *DuelScreen) targetNameByID(id uuid.UUID) string {
 }
 
 func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps interactive.PlayerState) {
-	if s.frameCount%120 == 0 {
-		logging.Printf(logging.Duel, "drawBattlefield %s: %d permanents on battlefield\n", dp.name, len(ps.Battlefield))
-		for _, p := range ps.Battlefield {
-			logging.Printf(logging.Duel, "  perm: %s land=%v creature=%v tapped=%v\n", p.Name, p.IsLand, p.IsCreature, p.Tapped)
-		}
-	}
 	for _, row := range allPermRows {
 		perms := s.fieldPerms(ps, row)
 		for i, perm := range perms {
