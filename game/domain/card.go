@@ -2,6 +2,8 @@ package domain
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"image"
 	"regexp"
 	"sort"
@@ -132,6 +134,44 @@ func (c *Card) Name() string {
 
 func (c *Card) CardID() string {
 	return c.cardID
+}
+
+// MarshalJSON serializes a Card as just its CardID. The full card data lives
+// in the embedded CARDS database; saves only need the identifier.
+func (c *Card) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		CardID string `json:"CardID"`
+	}{CardID: c.cardID})
+}
+
+// UnmarshalJSON looks up the card in CARDS by ID and copies its fields onto
+// the receiver. Falls back to deriving the ID from CardName/SetID/CollectorNo
+// for save files written before Card serialized only its ID.
+func (c *Card) UnmarshalJSON(data []byte) error {
+	var aux struct {
+		CardID      string `json:"CardID"`
+		CardName    string `json:"CardName,omitempty"`
+		SetID       string `json:"SetID,omitempty"`
+		CollectorNo string `json:"CollectorNo,omitempty"`
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	id := aux.CardID
+	if id == "" && aux.CardName != "" {
+		id = fmt.Sprintf("%s-%s-%s", aux.SetID, aux.CollectorNo, sanitizeFilename(aux.CardName))
+	}
+
+	found := FindCardByID(id)
+	if found == nil && aux.CardName != "" {
+		found = FindCardByName(aux.CardName)
+	}
+	if found == nil {
+		return fmt.Errorf("card not found: id=%q name=%q", id, aux.CardName)
+	}
+	*c = *found
+	return nil
 }
 
 func (c *Card) ImageLoaded() bool {
