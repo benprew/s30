@@ -27,10 +27,21 @@ Clues are revealed one at a time. The player must gather clues to locate dungeon
 
 - Fixed number of dungeons per game (e.g., 5-8), placed during `GenerateLevel()`
 - Placed on valid terrain tiles, away from cities, spread across the map
-- Visually hidden until the player walks over them (or optionally revealed by clues)
 - If a player leaves a dungeon without collecting all restricted cards, the dungeon **relocates** to a random map position and the player must obtain new clues to find it again
 
 ## Dungeon Structure
+
+### Art
+
+see assets/art/screens/dungeons/
+
+Dungbutt.spr.png - sprite 1x4
+DungeonX.spr.png - all sprite 4x11
+
+Dungeon{bgruw}.spr.png are the tiles used for the wizard castles
+Dungeon{123}.spr.png are for the random encounter dungeons
+
+sprites are isometric tile images, similar to the overworld tiles.
 
 ### Grid Layout
 
