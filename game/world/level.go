@@ -38,6 +38,12 @@ type Level struct {
 
 	Dungeons []*domain.Dungeon
 
+	Castles           []*domain.Castle
+	castles1Sprites   [][]*ebiten.Image
+	castles2Sprites   [][]*ebiten.Image
+	pendingCastle     *domain.Castle
+	pendingCastleTile image.Point
+
 	ticksSinceLastInteraction int
 	totalTicks                int
 }
@@ -101,6 +107,17 @@ func NewLevel(c *domain.Player) (*Level, error) {
 		return nil, fmt.Errorf("failed to load dungeon spritesheet Locatn03.spr.png: %w", err)
 	}
 
+	castles1, err := imageutil.LoadSpriteSheet(2, 6, assets.Castles1_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load castle spritesheet Castles1.spr.png: %w", err)
+	}
+	castles2, err := imageutil.LoadSpriteSheet(2, 6, assets.Castles2_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load castle spritesheet Castles2.spr.png: %w", err)
+	}
+	l.castles1Sprites = castles1
+	l.castles2Sprites = castles2
+
 	roads, err := imageutil.LoadSpriteSheet(6, 2, assets.Roads_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load city spritesheet Roads_png: %w", err)
@@ -117,6 +134,7 @@ func NewLevel(c *domain.Player) (*Level, error) {
 	// mapTerrainTypes now returns valid city locations and sets Tile.TerrainType
 	validCityLocations := l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites)
 
+	l.placeCastles(time.Now().UnixNano(), castles1, castles2, ss, foliage, Sfoliage)
 	l.placeCities(validCityLocations, citySprites, 35, 6)
 	l.placeDungeons(5, 6, time.Now().UnixNano(), dungeonSprites)
 
@@ -279,6 +297,48 @@ func (l *Level) SetEncounter(idx int) {
 	l.encounterIndex = idx
 	l.encounterPending = true
 	l.ticksSinceLastInteraction = 0
+}
+
+// SetPendingCastle records that a castle duel is in progress so the level can
+// react after the duel resolves.
+func (l *Level) SetPendingCastle(c *domain.Castle, tile image.Point) {
+	l.pendingCastle = c
+	l.pendingCastleTile = tile
+}
+
+// HandleCastleDuelOutcome is called from the duel screen once the duel ends.
+// On a win, the castle is marked defeated, its sprite swaps to the destroyed
+// variant, and the defeated *Castle is returned so the caller can grant a
+// boss reward. On a loss the castle is left intact so the player can
+// re-attempt it. In either case the pending state is cleared.
+func (l *Level) HandleCastleDuelOutcome(won bool) *domain.Castle {
+	castle := l.pendingCastle
+	defer func() {
+		l.pendingCastle = nil
+		l.pendingCastleTile = image.Point{}
+	}()
+	if !won || castle == nil {
+		return nil
+	}
+	tile := l.Tile(l.pendingCastleTile)
+	if tile == nil || !tile.IsCastle || tile.Castle == nil {
+		return nil
+	}
+	tile.Castle.Defeated = true
+	spec, ok := castleSpecs[tile.Castle.Color]
+	if !ok {
+		return castle
+	}
+	sheet := l.castles1Sprites
+	if spec.sheet == 2 {
+		sheet = l.castles2Sprites
+	}
+	if sheet == nil {
+		return castle
+	}
+	tile.positionedSprites = nil
+	addCastleSprites(tile, sheet, spec, true)
+	return castle
 }
 
 // x,y is the pixel position of the tile, width and height are the dimensions of the tile

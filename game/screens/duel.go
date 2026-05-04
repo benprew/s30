@@ -1496,6 +1496,13 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	}
 
 	s.lvl.RemoveEnemyAt(s.idx)
+	if defeatedCastle := s.lvl.HandleCastleDuelOutcome(true); defeatedCastle != nil {
+		bonus := domain.RandomPowerfulCardsForColor(defeatedCastle.Color, 5)
+		for _, c := range bonus {
+			s.player.CardCollection.AddCard(c, 1)
+			wonCards = append(wonCards, c)
+		}
+	}
 
 	return screenui.DuelWinScr, NewWinDuelScreen(wonCards), nil
 }
@@ -1510,6 +1517,7 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 	}
 
 	s.lvl.RemoveEnemyAt(s.idx)
+	s.lvl.HandleCastleDuelOutcome(false)
 
 	return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
 }

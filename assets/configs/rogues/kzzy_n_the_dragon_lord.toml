@@ -24,3 +24,5 @@ sideboard_cards = [
 ]
 face = "MPS_Kzzy_n_the_Dragon_Lord.png"
 level = 11
+walking_sprite = "R_Mwz.spr.png"
+walking_shadow_sprite = "Smwz.spr.png"

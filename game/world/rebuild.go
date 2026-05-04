@@ -18,6 +18,8 @@ type spriteAssets struct {
 	foliage2    [][]*ebiten.Image
 	sfoliage2   [][]*ebiten.Image
 	citySprites [][]*ebiten.Image
+	castles1    [][]*ebiten.Image
+	castles2    [][]*ebiten.Image
 }
 
 func loadSpriteAssets(tileWidth, tileHeight int) (*spriteAssets, error) {
@@ -45,7 +47,15 @@ func loadSpriteAssets(tileWidth, tileHeight int) (*spriteAssets, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load city sprites: %w", err)
 	}
-	return &spriteAssets{ss, foliage, sfoliage, foliage2, sfoliage2, citySprites}, nil
+	castles1, err := imageutil.LoadSpriteSheet(2, 6, assets.Castles1_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load Castles1 sprites: %w", err)
+	}
+	castles2, err := imageutil.LoadSpriteSheet(2, 6, assets.Castles2_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load Castles2 sprites: %w", err)
+	}
+	return &spriteAssets{ss, foliage, sfoliage, foliage2, sfoliage2, citySprites, castles1, castles2}, nil
 }
 
 func rebuildTileSprites(tile *Tile, sa *spriteAssets) {
@@ -96,6 +106,16 @@ func rebuildTileSprites(tile *Tile, sa *spriteAssets) {
 		tile.AddCitySprite(sa.citySprites[cityY+1][cityX])
 		tile.City.BackgroundImage = cityBgImage(int(tile.City.Tier))
 	}
+
+	if tile.IsCastle && tile.Castle != nil {
+		if spec, ok := castleSpecs[tile.Castle.Color]; ok {
+			sheet := sa.castles1
+			if spec.sheet == 2 {
+				sheet = sa.castles2
+			}
+			addCastleSprites(tile, sheet, spec, tile.Castle.Defeated)
+		}
+	}
 }
 
 // RebuildSprites reloads all image data after deserializing a Level from JSON.
@@ -114,6 +134,8 @@ func (l *Level) RebuildSprites() error {
 	if err != nil {
 		return err
 	}
+	l.castles1Sprites = sa.castles1
+	l.castles2Sprites = sa.castles2
 
 	roads, err := imageutil.LoadSpriteSheet(6, 2, assets.Roads_png)
 	if err != nil {
@@ -123,6 +145,19 @@ func (l *Level) RebuildSprites() error {
 	l.roadSpriteInfo = [][]string{
 		{"", "NE", "E", "SE", "N", "SW"},
 		{"W", "NW", "S", "", "", ""},
+	}
+
+	// JSON unmarshalling produces a separate *Castle for each tile and for
+	// each entry in l.Castles even when the original objects were aliased.
+	// Re-link so updates to a castle's Defeated flag are visible from both
+	// sides without any divergence.
+	for _, c := range l.Castles {
+		if c == nil {
+			continue
+		}
+		if tile := l.Tile(c.MapTile); tile != nil && tile.IsCastle {
+			tile.Castle = c
+		}
 	}
 
 	for y := 0; y < l.H; y++ {

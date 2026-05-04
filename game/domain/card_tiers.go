@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"log"
+	"math/rand"
 
 	"github.com/BurntSushi/toml"
 	"github.com/benprew/s30/assets"
@@ -103,4 +104,47 @@ func CardsInTiers(tiers ...CardTier) []*Card {
 		cards = append(cards, CardsByTier[t]...)
 	}
 	return cards
+}
+
+// RandomPowerfulCardsForColor picks up to count unique high-tier cards whose
+// color identity matches the requested color or are colorless (artifacts).
+// Vintage-restricted cards are eligible. Lands are excluded so the reward is
+// always a playable spell. Returns fewer than count if the eligible pool is
+// smaller.
+func RandomPowerfulCardsForColor(color ColorMask, count int) []*Card {
+	pool := CardsInTiers(TierMandatory, TierAlmostMandatory, TierStaple)
+	seen := make(map[string]bool)
+	eligible := make([]*Card, 0, len(pool))
+	for _, c := range pool {
+		if c.CardType == CardTypeLand {
+			continue
+		}
+		if seen[c.CardName] {
+			continue
+		}
+		if !cardMatchesColorOrColorless(c, color) {
+			continue
+		}
+		seen[c.CardName] = true
+		eligible = append(eligible, c)
+	}
+	rand.Shuffle(len(eligible), func(i, j int) {
+		eligible[i], eligible[j] = eligible[j], eligible[i]
+	})
+	if len(eligible) > count {
+		eligible = eligible[:count]
+	}
+	return eligible
+}
+
+func cardMatchesColorOrColorless(c *Card, color ColorMask) bool {
+	if len(c.ColorIdentity) == 0 {
+		return true
+	}
+	for _, s := range c.ColorIdentity {
+		if m, ok := colorStringToMask[s]; ok && color&m != 0 {
+			return true
+		}
+	}
+	return false
 }

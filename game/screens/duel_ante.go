@@ -236,6 +236,7 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, erro
 
 func (s *DuelAnteScreen) bribe() (screenui.ScreenName, screenui.Screen, error) {
 	s.lvl.RemoveEnemyAt(s.idx)
+	s.lvl.HandleCastleDuelOutcome(false)
 	s.player.Gold -= s.enemy.BribeAmount()
 	return screenui.WorldScr, nil, nil
 }

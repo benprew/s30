@@ -23,3 +23,5 @@ sideboard_cards = [
 ]
 face = "MPS_Astral_Visionary.png"
 level = 11
+walking_sprite = "Bu_Mwz.spr.png"
+walking_shadow_sprite = "Smwz.spr.png"

@@ -130,6 +130,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		world.TerrainPlains:    {0, 18},
 	}
 	city := m.terrainSprite[1][1]
+	castle := m.terrainSprite[1][2]
 	pLoc := m.level.CharacterTile()
 	player := m.terrainSprite[3][0]
 	width := int(float64(m.terrainSprite[0][0].Bounds().Dx())*SCALE) - 1
@@ -156,6 +157,15 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 				cOpts.GeoM.Concat(opts.GeoM)
 				cOpts.GeoM.Translate(0, -13)
 				screen.DrawImage(city, cOpts)
+			}
+			if col.IsCastle && col.Castle != nil {
+				cOpts := &ebiten.DrawImageOptions{}
+				cOpts.GeoM.Concat(opts.GeoM)
+				cOpts.GeoM.Translate(0, -13)
+				if col.Castle.Defeated {
+					cOpts.ColorScale.ScaleAlpha(0.4)
+				}
+				screen.DrawImage(castle, cOpts)
 			}
 			p := image.Point{X: j, Y: i}
 			if pLoc == p && m.blinkCounter%10 < 7 {
@@ -191,6 +201,14 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 				}
 				cityText.Draw(screen, opts, 1.0)
 			}
+			if col.IsCastle && col.Castle != nil {
+				label := domain.ColorMaskToString(col.Castle.Color) + "\nCastle"
+				castleText := elements.NewText(14, label, 0, 8)
+				castleText.LineSpacing = float64(m.fontFace.Size)
+				textWidth, _ := castleText.Measure()
+				castleText.X = -int(textWidth / 2)
+				castleText.Draw(screen, opts, 1.0)
+			}
 		}
 	}
 }
@@ -199,6 +217,7 @@ func (m *MiniMap) isQuestTarget(cityName string) bool {
 	q := m.level.Player.ActiveQuest
 	return q != nil && q.Type == domain.QuestTypeDelivery && q.TargetCity != nil && q.TargetCity.Name == cityName
 }
+
 
 func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	m.blinkCounter++

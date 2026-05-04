@@ -75,15 +75,23 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	s.textbox.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
-	cardOpts := &ebiten.DrawImageOptions{}
-	cardOpts.GeoM.Translate(20, 20)
-	for _, c := range s.cards {
+	const (
+		cardStartX     = 20.0
+		cardStartY     = 20.0
+		cardSpacingX   = 260.0
+		cardSpacingY   = 360.0
+		cardsPerRow    = 4
+	)
+	for i, c := range s.cards {
 		img, err := c.CardImage(domain.CardViewFull)
 		if err != nil {
 			continue
 		}
+		row := i / cardsPerRow
+		col := i % cardsPerRow
+		cardOpts := &ebiten.DrawImageOptions{}
+		cardOpts.GeoM.Translate(cardStartX+float64(col)*cardSpacingX, cardStartY+float64(row)*cardSpacingY)
 		screen.DrawImage(img, cardOpts)
-		cardOpts.GeoM.Translate(260, 0)
 	}
 }
 

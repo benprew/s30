@@ -141,48 +141,28 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 			val := terrain[y][x]
 			folIdx := rand.Intn(11)
 			isWater := false // Track if the tile is water
-			var terrainType int
 			switch {
 			case isBorderSpace:
-				t.AddSprite(ss.Water)
+				paintTerrain(t, TerrainWater, ss, foliage, Sfoliage, folIdx)
 				isWater = true // Border is treated as water for city placement
-				terrainType = TerrainWater
 			case val < Water:
-				t.AddSprite(ss.Water)
+				paintTerrain(t, TerrainWater, ss, foliage, Sfoliage, folIdx)
 				isWater = true
-				terrainType = TerrainWater
 				if rand.Float64() < 0.1 {
 					t.AddFoliageSprite(Sfoliage2[folIdx][0])
 					t.AddFoliageSprite(foliage2[folIdx][0])
 				}
 			case val < Sand:
-				t.AddSprite(ss.Sand) // Use desert sprite for sandy shores
-				terrainType = TerrainSand
-				t.AddFoliageSprite(Sfoliage[folIdx][1])
-				t.AddFoliageSprite(foliage[folIdx][1])
+				paintTerrain(t, TerrainSand, ss, foliage, Sfoliage, folIdx)
 			case val < Marsh:
-				t.AddSprite(ss.Marsh)
-				terrainType = TerrainMarsh
-				t.AddFoliageSprite(Sfoliage[folIdx][0])
-				t.AddFoliageSprite(foliage[folIdx][0])
+				paintTerrain(t, TerrainMarsh, ss, foliage, Sfoliage, folIdx)
 			case val < Plains:
-				t.AddSprite(ss.Plains)
-				terrainType = TerrainPlains
-				t.AddFoliageSprite(Sfoliage[folIdx][4])
-				t.AddFoliageSprite(foliage[folIdx][4])
+				paintTerrain(t, TerrainPlains, ss, foliage, Sfoliage, folIdx)
 			case val < Forest:
-				t.AddSprite(ss.Forest)
-				terrainType = TerrainForest
-				t.AddFoliageSprite(Sfoliage[folIdx][2])
-				t.AddFoliageSprite(foliage[folIdx][2])
+				paintTerrain(t, TerrainForest, ss, foliage, Sfoliage, folIdx)
 			default: // Assuming this is Mountains+
-				t.AddSprite(ss.Plains)         // Base is plains
-				terrainType = TerrainMountains // Higher ground
-				// Add mountain foliage/sprites if available, similar to hills
-				t.AddFoliageSprite(Sfoliage[folIdx][3])
-				t.AddFoliageSprite(foliage[folIdx][3])
+				paintTerrain(t, TerrainMountains, ss, foliage, Sfoliage, folIdx)
 			}
-			t.TerrainType = terrainType // Set the type on the tile
 			l.Tiles[y][x] = t
 
 			// If not water and not border, add to potential city locations
@@ -194,6 +174,39 @@ func (l *Level) mapTerrainTypes(terrain [][]float64, ss *SpriteSheet, foliage, S
 	return validCityLocations // Return potential locations
 }
 
+// paintTerrain sets the tile's base sprite, foliage layers and TerrainType for
+// the given terrain. folRow selects which row of the foliage/shadow sheets to
+// draw from. Water tiles get only the base sprite — callers that want
+// occasional water foliage must add it themselves.
+func paintTerrain(t *Tile, terrain int, ss *SpriteSheet, foliage, Sfoliage [][]*ebiten.Image, folRow int) {
+	switch terrain {
+	case TerrainWater:
+		t.AddSprite(ss.Water)
+	case TerrainSand:
+		t.AddSprite(ss.Sand)
+		t.AddFoliageSprite(Sfoliage[folRow][1])
+		t.AddFoliageSprite(foliage[folRow][1])
+	case TerrainMarsh:
+		t.AddSprite(ss.Marsh)
+		t.AddFoliageSprite(Sfoliage[folRow][0])
+		t.AddFoliageSprite(foliage[folRow][0])
+	case TerrainPlains:
+		t.AddSprite(ss.Plains)
+		t.AddFoliageSprite(Sfoliage[folRow][4])
+		t.AddFoliageSprite(foliage[folRow][4])
+	case TerrainForest:
+		t.AddSprite(ss.Forest)
+		t.AddFoliageSprite(Sfoliage[folRow][2])
+		t.AddFoliageSprite(foliage[folRow][2])
+	case TerrainMountains:
+		// Mountains share the plains base; foliage carries the silhouette.
+		t.AddSprite(ss.Plains)
+		t.AddFoliageSprite(Sfoliage[folRow][3])
+		t.AddFoliageSprite(foliage[folRow][3])
+	}
+	t.TerrainType = terrain
+}
+
 // placeCities places cities and returns their locations.
 func (l *Level) placeCities(validLocations []image.Point, citySprites [][]*ebiten.Image, numCities, minDistance int) {
 	if len(validLocations) == 0 || numCities <= 0 {
@@ -201,6 +214,7 @@ func (l *Level) placeCities(validLocations []image.Point, citySprites [][]*ebite
 	}
 
 	placedCities := []image.Point{}
+	castleLocs := l.castleTileLocations()
 
 	// Shuffle valid locations for random placement
 	rand.Shuffle(len(validLocations), func(i, j int) {
@@ -220,6 +234,10 @@ func (l *Level) placeCities(validLocations []image.Point, citySprites [][]*ebite
 				isValidPlacement = false
 				break
 			}
+		}
+
+		if isValidPlacement && !farFrom(loc, castleLocs, minDistance) {
+			isValidPlacement = false
 		}
 
 		if !isValidPlacement {

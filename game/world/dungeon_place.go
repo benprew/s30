@@ -40,6 +40,7 @@ func (l *Level) placeDungeons(numDungeons, minDistance int, seed int64, dungeonS
 	})
 
 	cityLocs := l.cityTileLocations()
+	castleLocs := l.castleTileLocations()
 	placed := []image.Point{}
 
 	for _, loc := range candidates {
@@ -47,6 +48,9 @@ func (l *Level) placeDungeons(numDungeons, minDistance int, seed int64, dungeonS
 			break
 		}
 		if !farFrom(loc, cityLocs, minDistance) || !farFrom(loc, placed, minDistance) {
+			continue
+		}
+		if !farFrom(loc, castleLocs, minDistance) {
 			continue
 		}
 

@@ -67,6 +67,17 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 			if tile.IsDungeon && tile.Dungeon != nil && prevTile != currentTile {
 				return screenui.DungeonEntryScr, NewDungeonEntryScreen(tile.Dungeon, s.Level.Player, s.Level), nil
 			}
+			if tile.IsCastle && tile.Castle != nil && !tile.Castle.Defeated && prevTile != currentTile {
+				if err := s.Level.SpawnEnemyNear(tile.Castle.RogueName, currentTile); err != nil {
+					return screenui.WorldScr, nil, err
+				}
+				s.Level.SetEncounter(len(s.Level.Enemies) - 1)
+				s.Level.SetPendingCastle(tile.Castle, currentTile)
+				if am := gameaudio.Get(); am != nil {
+					am.PlaySFX(gameaudio.CastleSFXForColor(domain.ColorMaskToString(tile.Castle.Color)))
+				}
+				return screenui.DuelAnteScr, nil, nil
+			}
 		}
 	}
 

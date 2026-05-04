@@ -52,6 +52,9 @@ var (
 	//go:embed art/screens/world/land/Castles1.spr.png
 	Castles1_png []byte
 
+	//go:embed art/screens/world/land/Castles2.spr.png
+	Castles2_png []byte
+
 	// 6x2 city + shadow x2
 	// Total 6x4
 	//go:embed art/screens/world/land/Locatn01.spr.png

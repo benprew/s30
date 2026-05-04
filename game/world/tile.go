@@ -25,6 +25,8 @@ type Tile struct {
 	City              domain.City
 	IsDungeon         bool             // Indicates if this tile holds a dungeon entrance
 	Dungeon           *domain.Dungeon  // Non-nil when IsDungeon is true
+	IsCastle          bool             // Indicates if this tile holds a wizard's castle
+	Castle            *domain.Castle   // Non-nil when IsCastle is true
 	TerrainType       int              // Added terrain type
 }
 
