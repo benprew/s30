@@ -1,0 +1,32 @@
+* MTG Neural Network AI
+Goal is to build an AI that can play a game of Magic the Gathering.
+
+
+
+Neural Network: Impala or APE-X
+
+Pipeline:
+- Impala/Ape-X NN running on GPU
+- Mage games running on CPU
+  - at each game's decision point it's sent to NN and it responds
+
+Needed:
+- Reinforcement reward function similar to R-NaD (from DeepNash paper)
+  - R-NaD GPU implementation [[https://github.com/baskuit/R-NaD][github]]
+
+
+** Resources
+*** Gameplay Training
+source: [[https://arxiv.org/pdf/2206.15378][DeepNash paper]]
+
+
+*** Card Representation
+source: [[https://arxiv.org/pdf/2407.05879][Learning With Generalised Card Representations paper]]
+
+Features + Metadata + Image (1024D) gives the best result, trained with SNN (Siamese Neural Network).
+
+> For the Features representation, we encode a card as a vector of all numerical and categorical features and append a text-embedding of the full card text generated with a sentence transformer.
+
+> In addition, full-scale RGB images of cards are large (3 × 936 × 672), leading to an explosion in input size. To combat this, we train a basic convolutional autoencoder [9] to construct latent representations of card images, which can be used as compressed representations of inputs to the SNN
+
+>  The best performing model is Features + Meta + Image, as it is able to predict almost 43% of decisions on completely unseen cards while retaining accuracy on NEO
