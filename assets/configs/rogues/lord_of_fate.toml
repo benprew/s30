@@ -1,7 +1,7 @@
 name = "Lord of Fate"
 image = "Rogue70.pic.png"
-walking_sprite = "M_Lrd.spr.png"
-walking_shadow_sprite = "Sm_Lrd.spr.png"
+walking_sprite = "M_Kht.spr.png"
+walking_shadow_sprite = "Skht.spr.png"
 main_cards = [
 ["11",	"Plains"],
 ["11",	"Swamp"],
