@@ -9,13 +9,14 @@ import (
 	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai"
+	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai/heuristic"
 )
 
 const testCardMountain = "Mountain"
 
 func TestMageIntegration_PlayLandShowsOnBattlefield(t *testing.T) {
 	human := interactive.NewHumanPlayer("You")
-	ai := ai.NewAIPlayer("Opponent")
+	ai := ai.NewAIPlayer("Opponent", heuristic.New(ai.MidrangeWeighted))
 
 	// Give human known cards
 	for range 5 {
@@ -146,7 +147,7 @@ func TestMageIntegration_PlayLandShowsOnBattlefield(t *testing.T) {
 
 func TestMageIntegration_CastArtifactAfterPlayingLands(t *testing.T) {
 	human := interactive.NewHumanPlayer("You")
-	ai := ai.NewAIPlayer("Opponent")
+	ai := ai.NewAIPlayer("Opponent", heuristic.New(ai.MidrangeWeighted))
 
 	// Give human Sol Ring + Mountains
 	solRing, err := mage.CreateCard("Sol Ring")

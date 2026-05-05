@@ -12,6 +12,7 @@ import (
 	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
 	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai"
+	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai/search"
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
@@ -189,7 +190,7 @@ func buildCardImageMap(decks ...domain.Deck) map[string]*domain.Card {
 func (s *DuelScreen) initGameState() {
 	s.human = interactive.NewHumanPlayer("You")
 	s.human.SetLife(s.player.Life + s.player.BonusDuelLife)
-	s.aiPlayer = ai.NewAdaptiveSearchAI(s.enemy.Name(), ai.DefaultSearchConfig())
+	s.aiPlayer = ai.NewAIPlayer(s.enemy.Name(), search.NewAdaptive(search.DefaultConfig()))
 	s.aiPlayer.SetLife(s.enemy.Character.Life)
 
 	for card, count := range s.player.GetDuelDeck() {
@@ -227,7 +228,7 @@ func (s *DuelScreen) initGameState() {
 
 	s.game = mage.NewGame(s.human, s.aiPlayer)
 	mage.DebugPriority = logging.Enabled(logging.Duel)
-	ai.DebugSearchStats = logging.Enabled(logging.Duel)
+	search.DebugStats = logging.Enabled(logging.Duel)
 
 	logging.Printf(logging.Duel, "Drawing cards\n")
 
