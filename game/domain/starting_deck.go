@@ -13,6 +13,7 @@ const (
 	ColorBlack     ColorMask = 1 << 2
 	ColorRed       ColorMask = 1 << 3
 	ColorGreen     ColorMask = 1 << 4
+	ColorAny       ColorMask = ColorWhite | ColorBlue | ColorBlack | ColorRed | ColorGreen
 )
 
 var basicLands = map[string]ColorMask{
@@ -72,31 +73,34 @@ func (dg *DeckGenerator) CreateStartingDeck() Deck {
 
 	switch dg.difficulty {
 	case DifficultyEasy:
-		if primaryColor < ColorWhite {
-			dg.generateRandomDeck(primaryColor, 13, 7, 15, true)
-		} else {
-			dg.generateRandomDeck(primaryColor, 13, 12, 10, true)
-		}
+		dg.generateRandomDeck(primaryColor, 11, 10, 9, true)
 
 	case DifficultyMedium:
-		dg.generateRandomDeck(primaryColor, 11, 4, 12, true)
+		dg.generateRandomDeck(primaryColor, 11, 3, 12, true)
 		secondaryColor := dg.pickRandomColorOtherThan(primaryColor)
-		dg.generateRandomDeck(secondaryColor, 4, 3, 4, true)
+		dg.generateRandomDeck(secondaryColor, 3, 2, 4, true)
 
 	case DifficultyHard:
 		dg.generateRandomDeck(primaryColor, 9, 3, 9, true)
 		secondaryColor := dg.pickRandomColorOtherThan(primaryColor)
-		dg.generateRandomDeck(secondaryColor, 5, 3, 4, true)
+		dg.generateRandomDeck(secondaryColor, 4, 3, 3, true)
 		tertiaryColor := dg.pickRandomColorOtherThan(primaryColor | secondaryColor)
-		dg.generateRandomDeck(tertiaryColor, 4, 3, 3, true)
+		dg.generateRandomDeck(tertiaryColor, 3, 3, 3, true)
 
 	case DifficultyExpert:
 		dg.generateRandomDeck(primaryColor, 6, 3, 5, true)
-		dg.generateRandomDeck(ColorColorless, 11, 5, 14, true)
+		dg.generateRandomDeck(ColorAny, 11, 3, 12, true)
 	}
 
 	return dg.deck
 }
+
+// Starting deck shape per difficulty. Sizes match the minimum deck size for
+// the difficulty tier from shandalar-faq.txt.
+//   Apprentice (Easy):   1 color,  30 cards
+//   Magician   (Medium): 2 colors, 35 cards
+//   Sorcerer   (Hard):   3 colors, 40 cards
+//   Wizard     (Expert): 5 colors, 40 cards (primary color + rainbow)
 
 // maxPickAttempts bounds how many times we'll retry picking a card for a slot
 // before giving up and leaving the slot empty. The weak-tier pool is small
