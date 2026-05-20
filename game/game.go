@@ -154,8 +154,8 @@ func (g *Game) Update() error {
 	}
 
 	if g.currentScreenName == screenui.StartScr && name == screenui.WorldScr {
-		if err := g.handleStartTransition(); err != nil {
-			return err
+		if transitionErr := g.handleStartTransition(); transitionErr != nil {
+			return transitionErr
 		}
 	}
 

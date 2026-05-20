@@ -25,13 +25,13 @@ func TestListSaves(t *testing.T) {
 	file1 := filepath.Join(tmpDir, "quicksave_2026-01-15_10-30-00.json")
 	file2 := filepath.Join(tmpDir, "autosave_2026-02-20_14-00-00.json")
 
-	if err := os.WriteFile(file1, []byte(save1), 0644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(file1, []byte(save1), 0644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 	// Ensure file2 is newer
 	time.Sleep(10 * time.Millisecond)
-	if err := os.WriteFile(file2, []byte(save2), 0644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(file2, []byte(save2), 0644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	saves, err = ListSaves(tmpDir)

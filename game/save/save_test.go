@@ -246,8 +246,8 @@ func TestInvalidSaveVersion(t *testing.T) {
 		t.Fatalf("Failed to marshal save data: %v", err)
 	}
 
-	if err := os.WriteFile(savePath, jsonData, 0644); err != nil {
-		t.Fatalf("Failed to write save file: %v", err)
+	if writeErr := os.WriteFile(savePath, jsonData, 0644); writeErr != nil {
+		t.Fatalf("Failed to write save file: %v", writeErr)
 	}
 
 	_, err = LoadGame(savePath)
