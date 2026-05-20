@@ -11,7 +11,7 @@ import (
 func TestRefreshCardActions_PopulatesFromOptions(t *testing.T) {
 	cardID := uuid.New()
 	state := &interactive.GameState{
-		Step:         "Precombat Main",
+		Step:         stepPrecombatMain,
 		ActivePlayer: "You",
 		You: interactive.PlayerState{
 			ID:   uuid.New(),
@@ -74,7 +74,7 @@ func TestRefreshCardActions_PopulatesFromOptions(t *testing.T) {
 func TestRefreshCardActions_ClearsPendingAttackersOutsideCombat(t *testing.T) {
 	creatureID := uuid.New()
 	state := &interactive.GameState{
-		Step:         "Precombat Main",
+		Step:         stepPrecombatMain,
 		ActivePlayer: "You",
 		You: interactive.PlayerState{
 			ID:   uuid.New(),

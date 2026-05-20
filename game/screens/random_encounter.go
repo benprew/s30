@@ -17,21 +17,26 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
+const (
+	encounterForestBg = "art/screens/rand_encounter/0335.pic.png"
+	encounterWaterBg  = "art/screens/rand_encounter/0873.pic.png"
+)
+
 var encounterBgFiles = map[int]string{
 	world.TerrainPlains:    "art/screens/rand_encounter/0569.pic.png",
 	world.TerrainMountains: "art/screens/rand_encounter/0737.pic.png",
 	world.TerrainMarsh:     "art/screens/rand_encounter/0333.pic.png",
-	world.TerrainForest:    "art/screens/rand_encounter/0335.pic.png",
-	world.TerrainWater:     "art/screens/rand_encounter/0873.pic.png",
-	world.TerrainSand:      "art/screens/rand_encounter/0873.pic.png",
+	world.TerrainForest:    encounterForestBg,
+	world.TerrainWater:     encounterWaterBg,
+	world.TerrainSand:      encounterWaterBg,
 }
 
 var landToBgFile = map[string]string{
 	"Plains":   "art/screens/rand_encounter/0569.pic.png",
 	"Mountain": "art/screens/rand_encounter/0737.pic.png",
 	"Swamp":    "art/screens/rand_encounter/0333.pic.png",
-	"Forest":   "art/screens/rand_encounter/0335.pic.png",
-	"Island":   "art/screens/rand_encounter/0873.pic.png",
+	"Forest":   encounterForestBg,
+	"Island":   encounterWaterBg,
 }
 
 type RandomEncounterScreen struct {

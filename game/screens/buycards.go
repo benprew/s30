@@ -32,7 +32,6 @@ type BuyCardsScreen struct {
 	ScreenTitle *ebiten.Image
 	CardFrame   *ebiten.Image
 	PreviewIdx  int    // -1 if not previewing, else index into CardsForSale
-	PreviewType string // "" (none), "card", or "price"
 	ErrorMsg    string // error message to display (e.g. not enough money)
 }
 
@@ -66,7 +65,6 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 		ScreenTitle: title,
 		CardFrame:   frameImg,
 		PreviewIdx:  -1,
-		PreviewType: "",
 		ErrorMsg:    "",
 	}
 	screen.Buttons = mkCardButtons(SCALE, city, W, H)
@@ -149,7 +147,6 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		if inpututil.IsKeyJustPressed(ebiten.KeyN) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			s.ErrorMsg = ""
 			s.PreviewIdx = -1
-			s.PreviewType = ""
 			return screenui.BuyCardsScr, nil, nil
 		}
 		return screenui.BuyCardsScr, nil, nil
@@ -167,14 +164,12 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 				idx := -1
 				fmt.Sscanf(b.ID, "card_%d", &idx)
 				s.PreviewIdx = idx
-				s.PreviewType = "card"
 				return screenui.BuyCardsScr, nil, nil
 			}
 			if len(b.ID) > 6 && b.ID[:6] == "price_" {
 				idx := -1
 				fmt.Sscanf(b.ID, "price_%d", &idx)
 				s.PreviewIdx = idx
-				s.PreviewType = "price"
 				return screenui.BuyCardsScr, nil, nil
 			}
 		}
@@ -199,7 +194,6 @@ func (s *BuyCardsScreen) buyCard() {
 		s.City.CardsForSale = append(s.City.CardsForSale[:s.PreviewIdx], s.City.CardsForSale[s.PreviewIdx+1:]...)
 		s.Buttons = mkCardButtons(SCALE, s.City, 1024, 768) // TODO remove hardcoded W/H
 		s.PreviewIdx = -1
-		s.PreviewType = ""
 	} else {
 		s.ErrorMsg = "Not enough money!"
 	}

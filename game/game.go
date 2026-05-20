@@ -101,7 +101,8 @@ func (g *Game) handleStartTransition() error {
 	}
 
 	startTime := time.Now()
-	player, err := domain.NewPlayer("Player", nil, false, g.Difficulty)
+	g.Difficulty = startScr.SelectedDifficulty
+	player, err := domain.NewPlayer("Player", nil, false, g.Difficulty, startScr.SelectedColor)
 	if err != nil {
 		return fmt.Errorf("failed to load player sprite: %s", err)
 	}

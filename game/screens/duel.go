@@ -30,11 +30,13 @@ import (
 )
 
 const (
+	stepPrecombatMain     = "Precombat Main"
+	stepBeginCombat       = "Begin Combat"
 	stepDeclareAttackers  = "Declare Attackers"
 	stepDeclareBlockers   = "Declare Blockers"
+	stepEndOfCombat       = "End of Combat"
 	stepCombatDamage      = "Combat Damage"
 	stepFirstStrikeDamage = "First Strike Damage"
-	playerNameYou         = "You"
 )
 
 type duelPlayer struct {
@@ -531,7 +533,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 			s.lastMsg.Winner, s.lastMsg.State.Step, s.lastMsg.State.Turn,
 			s.lastMsg.State.You.Life, s.lastMsg.State.Opponent.Life,
 			s.lastMsg.State.You.LibraryCount, s.lastMsg.State.Opponent.LibraryCount)
-		if s.lastMsg.Winner == playerNameYou {
+		if s.lastMsg.Winner == "You" {
 			return s.handleWin()
 		}
 		return s.handleLoss()
@@ -549,9 +551,9 @@ const (
 type permRow int
 
 const (
-	permRowCreature  permRow = iota // front row (closest to opponent)
-	permRowOther                    // middle row (non-creature, non-land permanents)
-	permRowLand                     // back row (lands)
+	permRowCreature permRow = iota // front row (closest to opponent)
+	permRowOther                   // middle row (non-creature, non-land permanents)
+	permRowLand                    // back row (lands)
 )
 
 var allPermRows = []permRow{permRowLand, permRowOther, permRowCreature}
@@ -683,7 +685,7 @@ func (s *DuelScreen) refreshCardActions() {
 	}
 
 	step := s.lastMsg.State.Step
-	inDeclareAttackers := s.lastMsg.State.ActivePlayer == playerNameYou &&
+	inDeclareAttackers := s.lastMsg.State.ActivePlayer == "You" &&
 		step == stepDeclareAttackers
 	if !inDeclareAttackers && len(s.pendingAttackers) > 0 {
 		s.pendingAttackers = make(map[uuid.UUID]bool)
@@ -1617,7 +1619,7 @@ func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
 	step := s.lastMsg.State.Step
 	idx := phaseIndex(step)
 	var row int
-	if s.lastMsg.State.ActivePlayer == playerNameYou {
+	if s.lastMsg.State.ActivePlayer == "You" {
 		row = 10 + idx
 	} else {
 		row = idx
@@ -1634,13 +1636,13 @@ func phaseIndex(step string) int {
 		"Untap":               0,
 		"Upkeep":              1,
 		"Draw":                2,
-		"Precombat Main":      3,
-		"Begin Combat":        4,
+		stepPrecombatMain:     3,
+		stepBeginCombat:       4,
 		stepDeclareAttackers:  4,
 		stepDeclareBlockers:   4,
 		stepFirstStrikeDamage: 4,
 		stepCombatDamage:      4,
-		"End of Combat":       4,
+		stepEndOfCombat:       4,
 		"Postcombat Main":     5,
 		"End Step":            6,
 		"Cleanup":             6,
@@ -2010,7 +2012,7 @@ func (s *DuelScreen) drawStackArrows(screen *ebiten.Image) {
 			continue
 		}
 		dp := s.self
-		if item.Controller != playerNameYou {
+		if item.Controller != "You" {
 			dp = s.opponent
 		}
 		fromX, fromY := s.stackArrowOrigin(dp)
@@ -2124,9 +2126,9 @@ func drawLife(screen *ebiten.Image, dp *duelPlayer, life int, Y int) {
 }
 
 const (
-	graveyardX = 60
-	graveyardW = 61
-	graveyardH = 91
+	graveyardX         = 60
+	graveyardW         = 61
+	graveyardH         = 91
 	graveyardSelfY     = 580
 	graveyardOpponentY = 94
 )
@@ -2271,7 +2273,7 @@ func (s *DuelScreen) statusMessage() string {
 	}
 	state := s.lastMsg.State
 	step := state.Step
-	isMyTurn := state.ActivePlayer == playerNameYou
+	isMyTurn := state.ActivePlayer == "You"
 
 	stackMsg := s.stackDescription()
 
@@ -2291,7 +2293,7 @@ func (s *DuelScreen) statusMessage() string {
 		return stackMsg + fmt.Sprintf("%s turn - Upkeep", prefix)
 	case "Draw":
 		return stackMsg + fmt.Sprintf("%s turn - Draw", prefix)
-	case "Precombat Main":
+	case stepPrecombatMain:
 		if isMyTurn {
 			return stackMsg + "Main phase: play a land or cast spells. Done to go to combat."
 		}
@@ -2312,8 +2314,8 @@ func (s *DuelScreen) statusMessage() string {
 
 func isCombatStep(step string) bool {
 	switch step {
-	case "Begin Combat", stepDeclareAttackers, stepDeclareBlockers,
-		stepFirstStrikeDamage, stepCombatDamage, "End of Combat":
+	case stepBeginCombat, stepDeclareAttackers, stepDeclareBlockers,
+		stepFirstStrikeDamage, stepCombatDamage, stepEndOfCombat:
 		return true
 	}
 	return false
@@ -2321,7 +2323,7 @@ func isCombatStep(step string) bool {
 
 func (s *DuelScreen) combatStatusMessage(step string, isMyTurn bool) string {
 	switch step {
-	case "Begin Combat":
+	case stepBeginCombat:
 		if isMyTurn {
 			return "Beginning of combat"
 		}
@@ -2343,7 +2345,7 @@ func (s *DuelScreen) combatStatusMessage(step string, isMyTurn bool) string {
 		return "First strike damage"
 	case stepCombatDamage:
 		return "Combat damage resolves"
-	case "End of Combat":
+	case stepEndOfCombat:
 		return "End of combat"
 	default:
 		if isMyTurn {

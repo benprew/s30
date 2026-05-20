@@ -1,9 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
+	"runtime"
+	"runtime/pprof"
 
 	_ "git.sr.ht/~cdcarter/mage-go/cards"
 	"github.com/benprew/s30/game/domain"
@@ -52,9 +56,16 @@ func pickRandomRogue() string {
 
 type testGame struct {
 	duelScreen *screens.DuelScreen
+	maxFrames  int
+	frames     int
 }
 
 func (g *testGame) Update() error {
+	g.frames++
+	if g.maxFrames > 0 && g.frames > g.maxFrames {
+		return ebiten.Termination
+	}
+
 	name, screen, err := g.duelScreen.Update(1024, 768, 1.0)
 	if err != nil {
 		return err
@@ -80,9 +91,34 @@ func (g *testGame) Layout(_, _ int) (int, int) {
 }
 
 func main() {
+	cpuprofile := flag.String("cpuprofile", "", "write CPU profile to file")
+	memprofile := flag.String("memprofile", "", "write memory profile to file")
+	profileFrames := flag.Int("profileframes", 0, "terminate after this many update frames")
+	rogue := flag.String("rogue", "", "fight this rogue instead of picking randomly")
+	flag.Parse()
+
+	if *memprofile != "" {
+		runtime.MemProfileRate = 1
+	}
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatalf("Failed to create CPU profile: %v", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatalf("Failed to start CPU profile: %v", err)
+		}
+		defer f.Close()
+		defer pprof.StopCPUProfile()
+	}
+
 	logging.Enable(logging.Duel)
 
-	rogueName := pickRandomRogue()
+	rogueName := *rogue
+	if rogueName == "" {
+		rogueName = pickRandomRogue()
+	}
 	fmt.Printf("Fighting: %s\n", rogueName)
 
 	enemy, err := domain.NewEnemy(rogueName)
@@ -90,7 +126,7 @@ func main() {
 		log.Fatalf("Failed to create enemy %s: %v", rogueName, err)
 	}
 
-	player, err := domain.NewPlayer("Test", nil, false, domain.DifficultyEasy)
+	player, err := domain.NewPlayer("Test", nil, false, domain.DifficultyEasy, domain.ColorColorless)
 	if err != nil {
 		log.Fatalf("Failed to create player: %v", err)
 	}
@@ -109,11 +145,23 @@ func main() {
 
 	duelScreen := screens.NewDuelScreen(player, &enemy, lvl, 0, nil, nil)
 
-	g := &testGame{duelScreen: duelScreen}
+	g := &testGame{duelScreen: duelScreen, maxFrames: *profileFrames}
 
 	ebiten.SetWindowSize(1024, 768)
 	ebiten.SetWindowTitle("Duel Test - X Spells")
 	if err := ebiten.RunGame(g); err != nil && err != ebiten.Termination {
 		log.Fatal(err)
+	}
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatalf("Failed to create memory profile: %v", err)
+		}
+		defer f.Close()
+		runtime.GC()
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatalf("Failed to write memory profile: %v", err)
+		}
 	}
 }

@@ -21,11 +21,11 @@ import (
 // 64×64 cells. The floor diamond sits in the lower portion of each cell
 // (roughly y=24..y=56), with walls extending up into the top portion.
 //
-//   row 1 col 0    → plain floor diamond
-//   row 0 col 8    → treasure chest overlay
-//   row 0 col 9    → scroll / trivia overlay
-//   row 0 col 10   → dice overlay
-//   row 1 col 8    → rocky bedrock (unwalkable)
+//	row 1 col 0    → plain floor diamond
+//	row 0 col 8    → treasure chest overlay
+//	row 0 col 9    → scroll / trivia overlay
+//	row 0 col 10   → dice overlay
+//	row 1 col 8    → rocky bedrock (unwalkable)
 const (
 	dungeonSheetCols    = 12
 	dungeonCellPixels   = 64
@@ -353,7 +353,7 @@ func (s *DungeonScreen) cell(row, col int) *ebiten.Image {
 }
 
 // drawCharacter renders a walking-sprite character on the diamond floor of
-// tile p. The floor diamond centre sits at (32, 40) within each 64×64 cell;
+// tile p. The floor diamond center sits at (32, 40) within each 64×64 cell;
 // the character's feet line up with that point.
 func (s *DungeonScreen) drawCharacter(screen *ebiten.Image, p image.Point, frames characterFrames, dir, frame int) {
 	sprite := frameAt(frames.sprite, dir, frame)
@@ -536,7 +536,7 @@ func makeOverlayButtons(takeText, leaveText string) []*elements.Button {
 	})
 	leave := elements.NewButtonFromConfig(elements.ButtonConfig{
 		Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
-		Text: leaveText, Font: font, ID: "leave",
+		Text: leaveText, Font: font, ID: buttonIDLeave,
 		X: startX + takeW + 20, Y: 460,
 	})
 	return []*elements.Button{take, leave}

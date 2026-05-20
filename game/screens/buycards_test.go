@@ -20,10 +20,9 @@ func TestBuyCard_PurchaseLogic(t *testing.T) {
 	}
 
 	screen := &BuyCardsScreen{
-		City:        city,
-		Player:      player,
-		PreviewIdx:  0,
-		PreviewType: "card",
+		City:       city,
+		Player:     player,
+		PreviewIdx: 0,
 	}
 
 	screen.buyCard()
@@ -59,10 +58,9 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 	}
 
 	screen := &BuyCardsScreen{
-		City:        city,
-		Player:      player,
-		PreviewIdx:  0,
-		PreviewType: "card",
+		City:       city,
+		Player:     player,
+		PreviewIdx: 0,
 	}
 
 	screen.buyCard()

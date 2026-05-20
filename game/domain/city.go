@@ -29,16 +29,23 @@ const (
 	TierCapital CityTier = 3
 )
 
+const (
+	cityTierHamlet  = "Hamlet"
+	cityTierTown    = "Town"
+	cityTierCapital = "Capital"
+	cityTierUnknown = "Unknown"
+)
+
 func (ct CityTier) String() string {
 	switch ct {
 	case TierHamlet:
-		return "Hamlet"
+		return cityTierHamlet
 	case TierTown:
-		return "Town"
+		return cityTierTown
 	case TierCapital:
-		return "Capital"
+		return cityTierCapital
 	default:
-		return "Unknown"
+		return cityTierUnknown
 	}
 }
 

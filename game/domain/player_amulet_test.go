@@ -8,7 +8,7 @@ import (
 
 func TestPlayerAmuletFunctionality(t *testing.T) {
 	img := ebiten.NewImage(10, 10)
-	player, err := NewPlayer("TestPlayer", img, false, DifficultyEasy)
+	player, err := NewPlayer("TestPlayer", img, false, DifficultyEasy, ColorColorless)
 	if err != nil {
 		t.Fatalf("Failed to create player: %v", err)
 	}

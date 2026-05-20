@@ -22,16 +22,16 @@ var castleRogues = map[domain.ColorMask]string{
 
 // castleSpec records the (row, col) of each of the four sprites a colored
 // castle needs across its sheet: intact castle + shadow, and the destroyed
-// pair. Most colors put intact/destroyed on neighbouring columns and the
+// pair. Most colors put intact/destroyed on neighboring columns and the
 // shadow two rows below the castle, but Black on Castles1 uses a different
-// layout (castle/shadow side-by-side; intact/destroyed on neighbouring rows),
+// layout (castle/shadow side-by-side; intact/destroyed on neighboring rows),
 // so we encode each sprite explicitly rather than deriving it.
 type castleSpec struct {
-	sheet            int // 1 → Castles1, 2 → Castles2
-	intactCastle     [2]int
-	intactShadow     [2]int
-	destroyedCastle  [2]int
-	destroyedShadow  [2]int
+	sheet           int // 1 → Castles1, 2 → Castles2
+	intactCastle    [2]int
+	intactShadow    [2]int
+	destroyedCastle [2]int
+	destroyedShadow [2]int
 }
 
 var castleSpecs = map[domain.ColorMask]castleSpec{
@@ -171,7 +171,7 @@ func pickCastleLocation(candidates, placed []image.Point, minDists []int) (image
 
 // addCastleSprites stamps the shadow first (lower z-order), then the castle on
 // top. The exact (row, col) for each sprite is taken from the spec so each
-// color's quirky layout is honoured.
+// color's quirky layout is honored.
 func addCastleSprites(tile *Tile, sheet [][]*ebiten.Image, spec castleSpec, destroyed bool) {
 	castleRC := spec.intactCastle
 	shadowRC := spec.intactShadow

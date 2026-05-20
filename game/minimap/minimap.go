@@ -27,7 +27,8 @@ type MiniMap struct {
 }
 
 const (
-	SCALE = 1.6
+	SCALE        = 1.6
+	doneButtonID = "Done"
 )
 
 func NewMiniMap(l *world.Level) *MiniMap {
@@ -92,12 +93,12 @@ func NewMiniMap(l *world.Level) *MiniMap {
 	buttons[2].ID = "City Map"
 
 	buttons[3].ButtonText = elements.ButtonText{
-		Text:      "Done",
+		Text:      doneButtonID,
 		Font:      fontFace,
 		TextColor: color.White,
 		VAlign:    elements.AlignBottom,
 	}
-	buttons[3].ID = "Done"
+	buttons[3].ID = doneButtonID
 	return &MiniMap{
 		terrainSprite: s,
 		frame:         frameImg,
@@ -218,7 +219,6 @@ func (m *MiniMap) isQuestTarget(cityName string) bool {
 	return q != nil && q.Type == domain.QuestTypeDelivery && q.TargetCity != nil && q.TargetCity.Name == cityName
 }
 
-
 func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	m.blinkCounter++
 
@@ -228,7 +228,7 @@ func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui
 	for i := range m.buttons {
 		b := m.buttons[i]
 		b.Update(options, scale, W, H)
-		if b.ID == "Done" && b.IsClicked() {
+		if b.ID == doneButtonID && b.IsClicked() {
 			return screenui.WorldScr, nil, nil
 		}
 	}

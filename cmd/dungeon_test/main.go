@@ -64,7 +64,7 @@ func (g *testGame) Layout(_, _ int) (int, int) {
 func main() {
 	logging.Enable(logging.Duel)
 
-	player, err := domain.NewPlayer("Test", nil, false, domain.DifficultyEasy)
+	player, err := domain.NewPlayer("Test", nil, false, domain.DifficultyEasy, domain.ColorColorless)
 	if err != nil {
 		log.Fatalf("Failed to create player: %v", err)
 	}

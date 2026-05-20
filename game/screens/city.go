@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	SCALE = 1.6
+	SCALE         = 1.6
+	buttonIDLeave = "leave"
 )
 
 type CityScreen struct {

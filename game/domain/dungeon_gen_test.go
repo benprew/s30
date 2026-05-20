@@ -123,7 +123,7 @@ func TestGenerateDungeonRestrictedCardsAtDeadEnds(t *testing.T) {
 				}
 			}
 			if open != 1 {
-				t.Errorf("restricted-card chest at (%d,%d) has %d open neighbours, expected 1 (dead end)", x, y, open)
+				t.Errorf("restricted-card chest at (%d,%d) has %d open neighbors, expected 1 (dead end)", x, y, open)
 			}
 		}
 	}

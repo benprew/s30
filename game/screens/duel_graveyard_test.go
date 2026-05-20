@@ -10,7 +10,7 @@ import (
 
 func setupGraveyardTest() *DuelScreen {
 	state := &interactive.GameState{
-		Step:         "Precombat Main",
+		Step:         stepPrecombatMain,
 		ActivePlayer: "You",
 		You: interactive.PlayerState{
 			ID:   uuid.New(),

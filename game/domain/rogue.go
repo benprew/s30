@@ -88,11 +88,11 @@ func analyzeColors(collection CardCollection) (string, []string) {
 
 	// Map single letter colors to full names
 	colorMap := map[string]string{
-		"W": "White",
-		"U": "Blue",
-		"B": "Black",
-		"R": "Red",
-		"G": "Green",
+		"W": colorNameWhite,
+		"U": colorNameBlue,
+		"B": colorNameBlack,
+		"R": colorNameRed,
+		"G": colorNameGreen,
 	}
 
 	if fullColor, ok := colorMap[primaryColor]; ok {
@@ -100,7 +100,7 @@ func analyzeColors(collection CardCollection) (string, []string) {
 	}
 
 	// Default to colorless for no colors found
-	return "Colorless", colors
+	return colorNameColorless, colors
 }
 
 func loadRogues() map[string]*Character {

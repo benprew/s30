@@ -36,7 +36,7 @@ type Player struct {
 
 const TicksPerDay = 5000.0
 
-func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty) (*Player, error) {
+func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty, color ColorMask) (*Player, error) {
 	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
 	if err != nil {
 		return nil, err
@@ -57,8 +57,10 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 		}
 	}
 
-	colors := []ColorMask{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
-	color := colors[rand.Intn(len(colors))]
+	if color == ColorColorless {
+		colors := []ColorMask{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
+		color = colors[rand.Intn(len(colors))]
+	}
 	deckGen := DeckBuilder(difficulty, color, time.Now().UnixNano())
 	deck := deckGen.CreateStartingDeck()
 

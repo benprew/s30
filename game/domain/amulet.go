@@ -8,6 +8,16 @@ type Amulet struct {
 	Description string
 }
 
+const (
+	colorNameWhite     = "White"
+	colorNameBlue      = "Blue"
+	colorNameBlack     = "Black"
+	colorNameRed       = "Red"
+	colorNameGreen     = "Green"
+	colorNameColorless = "Colorless"
+	colorNameUnknown   = "Unknown"
+)
+
 func NewAmulet(color ColorMask) Amulet {
 	var name, description string
 
@@ -56,16 +66,16 @@ func GetAllAmuletColors() []ColorMask {
 func ColorMaskToString(color ColorMask) string {
 	switch color {
 	case ColorWhite:
-		return "White"
+		return colorNameWhite
 	case ColorBlue:
-		return "Blue"
+		return colorNameBlue
 	case ColorBlack:
-		return "Black"
+		return colorNameBlack
 	case ColorRed:
-		return "Red"
+		return colorNameRed
 	case ColorGreen:
-		return "Green"
+		return colorNameGreen
 	default:
-		return "Unknown"
+		return colorNameUnknown
 	}
 }

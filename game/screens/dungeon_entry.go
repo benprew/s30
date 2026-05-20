@@ -53,7 +53,7 @@ func (s *DungeonEntryScreen) setupButtons() {
 	})
 	leave := elements.NewButtonFromConfig(elements.ButtonConfig{
 		Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
-		Text: "Leave", Font: fontFace, ID: "leave",
+		Text: "Leave", Font: fontFace, ID: buttonIDLeave,
 		X: startX + enterW + 20, Y: 600,
 	})
 	s.Buttons = []*elements.Button{enter, leave}
@@ -75,7 +75,7 @@ func (s *DungeonEntryScreen) Update(W, H int, scale float64) (screenui.ScreenNam
 			}
 			s.Dungeon.RevealFrom(s.Dungeon.Entrance)
 			return screenui.DungeonScr, NewDungeonScreen(s.Player, s.Level), nil
-		case "leave":
+		case buttonIDLeave:
 			return screenui.WorldScr, nil, nil
 		}
 	}
