@@ -130,7 +130,10 @@ def add_world_sprites_to_rogues_toml():
             continue
 
         # Append sprite lines
-        sprite_lines = f'walking_sprite = "{enemy_code}.spr.png"\nwalking_shadow_sprite = "{shadow}.spr.png"\n'
+        sprite_lines = (
+            f'walking_sprite = "{enemy_code}.spr.png"\n'
+            f'walking_shadow_sprite = "{shadow}.spr.png"\n'
+        )
 
         with open(filepath, "a") as f:
             if not content.endswith("\n"):

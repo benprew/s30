@@ -4,16 +4,14 @@ Visualize sprite connection pairs by showing connected sprites side-by-side.
 """
 
 import argparse
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
 from pathlib import Path
+
 from analyze_edges import (
-    extract_sprites,
-    extract_all_edges,
-    analyze_connections,
     CORNER_POSITIONS,
-    COMPATIBLE_EDGES,
+    analyze_connections,
+    extract_sprites,
 )
+from PIL import Image, ImageDraw
 
 
 def get_sprite_offset_for_connection(from_edge, to_edge):
@@ -158,7 +156,10 @@ def create_connection_pair_visualization(
         )
 
     # Add labels
-    title = f"Sprite {sprite_id_a} [{edge_a}] ← ({similarity:.1f}%) → Sprite {sprite_id_b} [{edge_b}]"
+    title = (
+        f"Sprite {sprite_id_a} [{edge_a}] ← ({similarity:.1f}%) → "
+        f"Sprite {sprite_id_b} [{edge_b}]"
+    )
     draw.text((10, 10), title, fill=(0, 0, 0))
 
     # Label sprites
@@ -199,8 +200,10 @@ def main():
 
     print(f"Loading sprites from {sprite_path}...")
     sprites = extract_sprites(sprite_path, cols=4, rows=7)
+    sprite_count = len(sprites) * len(sprites[0])
     print(
-        f"Extracted {len(sprites)} rows x {len(sprites[0])} cols = {len(sprites) * len(sprites[0])} sprites"
+        f"Extracted {len(sprites)} rows x {len(sprites[0])} cols = "
+        f"{sprite_count} sprites"
     )
 
     print("Analyzing edge connections...")
@@ -236,7 +239,9 @@ def main():
                     sprite_b = sprites[row_b][col_b]
 
                     print(
-                        f"  Creating pair: Sprite ({row},{col}) [{direction_a}] ← → Sprite {sprite_id_b} [{direction_b}] ({similarity:.1f}%)"
+                        f"  Creating pair: Sprite ({row},{col}) "
+                        f"[{direction_a}] ← → Sprite {sprite_id_b} "
+                        f"[{direction_b}] ({similarity:.1f}%)"
                     )
 
                     vis = create_connection_pair_visualization(
@@ -249,9 +254,10 @@ def main():
                         similarity,
                     )
 
-                    output_file = (
-                        output_dir
-                        / f"pair_{row}_{col}_{direction_a.replace('->', '_')}__to__{row_b}_{col_b}_{direction_b.replace('->', '_')}.png"
+                    output_file = output_dir / (
+                        f"pair_{row}_{col}_{direction_a.replace('->', '_')}"
+                        f"__to__{row_b}_{col_b}_"
+                        f"{direction_b.replace('->', '_')}.png"
                     )
                     vis.save(output_file)
                     pair_count += 1

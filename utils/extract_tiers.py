@@ -16,7 +16,6 @@ import re
 import sys
 from pathlib import Path
 
-
 # TOML keys are derived from tier labels.
 TIER_KEY_OVERRIDES = {
     "Played in most decks of their colors": "played_in_most_decks",
@@ -25,8 +24,21 @@ TIER_KEY_OVERRIDES = {
 
 # Words kept lowercase in the middle of a card name (MTG title-case convention).
 SMALL_WORDS = {
-    "a", "an", "and", "at", "by", "for", "from", "in", "of",
-    "on", "or", "the", "to", "vs", "with",
+    "a",
+    "an",
+    "and",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "vs",
+    "with",
 }
 
 

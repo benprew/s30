@@ -32,11 +32,25 @@ def has_ability_type(card: dict, ability_type: str) -> bool:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Find cards with specific abilities")
-    parser.add_argument("--name", "-n", help="Find cards matching this name (case-insensitive substring)")
-    parser.add_argument("--keyword", "-k", help="Find cards with this keyword (e.g., Flying, Reach)")
-    parser.add_argument("--type", "-t", help="Find cards with this ability type (e.g., Keyword, Activated, Triggered)")
-    parser.add_argument("--list-keywords", action="store_true", help="List all unique keywords")
-    parser.add_argument("--list-types", action="store_true", help="List all unique ability types")
+    parser.add_argument(
+        "--name",
+        "-n",
+        help="Find cards matching this name (case-insensitive substring)",
+    )
+    parser.add_argument(
+        "--keyword", "-k", help="Find cards with this keyword (e.g., Flying, Reach)"
+    )
+    parser.add_argument(
+        "--type",
+        "-t",
+        help="Find cards with this ability type (e.g., Keyword, Activated, Triggered)",
+    )
+    parser.add_argument(
+        "--list-keywords", action="store_true", help="List all unique keywords"
+    )
+    parser.add_argument(
+        "--list-types", action="store_true", help="List all unique ability types"
+    )
     args = parser.parse_args()
 
     script_dir = Path(__file__).parent.parent

@@ -4,27 +4,32 @@ Visualize sprite connections by drawing edges and labeling them with potential m
 """
 
 import argparse
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
 from pathlib import Path
+
 from analyze_edges import (
-    extract_sprites, extract_all_edges, analyze_connections,
-    CORNER_POSITIONS, COMPATIBLE_EDGES, are_edges_compatible
+    CORNER_POSITIONS,
+    analyze_connections,
+    extract_sprites,
 )
+from PIL import Image, ImageDraw
 
 
 def draw_corner_markers(draw, sprite_width, sprite_height, radius=3):
     """Draw markers at each corner position."""
     colors = {
-        0: (255, 0, 0),    # Red - top
-        1: (0, 255, 0),    # Green - right
-        2: (0, 0, 255),    # Blue - bottom
+        0: (255, 0, 0),  # Red - top
+        1: (0, 255, 0),  # Green - right
+        2: (0, 0, 255),  # Blue - bottom
         3: (255, 255, 0),  # Yellow - left
     }
 
     for corner_id, (x, y) in CORNER_POSITIONS.items():
         color = colors[corner_id]
-        draw.ellipse([x-radius, y-radius, x+radius, y+radius], fill=color, outline=(255,255,255))
+        draw.ellipse(
+            [x - radius, y - radius, x + radius, y + radius],
+            fill=color,
+            outline=(255, 255, 255),
+        )
 
 
 def draw_edge_line(draw, from_corner, to_corner, color=(255, 0, 255), width=2):
@@ -41,7 +46,7 @@ def create_sprite_visualization(sprite_img, sprite_id, edges, connections):
     canvas_width = sprite_img.width + 2 * margin
     canvas_height = sprite_img.height + 2 * margin
 
-    canvas = Image.new('RGBA', (canvas_width, canvas_height), (255, 255, 255, 255))
+    canvas = Image.new("RGBA", (canvas_width, canvas_height), (255, 255, 255, 255))
     draw = ImageDraw.Draw(canvas)
 
     # Paste sprite in center
@@ -54,38 +59,40 @@ def create_sprite_visualization(sprite_img, sprite_id, edges, connections):
     for corner_id, (x, y) in CORNER_POSITIONS.items():
         color_map = {0: (255, 0, 0), 1: (0, 255, 0), 2: (0, 0, 255), 3: (255, 255, 0)}
         color = color_map[corner_id]
-        draw_shifted.ellipse([
-            sprite_x + x - 3, sprite_y + y - 3,
-            sprite_x + x + 3, sprite_y + y + 3
-        ], fill=color, outline=(0, 0, 0))
+        draw_shifted.ellipse(
+            [sprite_x + x - 3, sprite_y + y - 3, sprite_x + x + 3, sprite_y + y + 3],
+            fill=color,
+            outline=(0, 0, 0),
+        )
 
     # Draw edges
     edge_colors = {
-        '0->1': (255, 100, 100),
-        '1->0': (255, 150, 150),
-        '1->2': (100, 255, 100),
-        '2->1': (150, 255, 150),
-        '2->3': (100, 100, 255),
-        '3->2': (150, 150, 255),
-        '3->0': (255, 255, 100),
-        '0->3': (255, 255, 150),
+        "0->1": (255, 100, 100),
+        "1->0": (255, 150, 150),
+        "1->2": (100, 255, 100),
+        "2->1": (150, 255, 150),
+        "2->3": (100, 100, 255),
+        "3->2": (150, 150, 255),
+        "3->0": (255, 255, 100),
+        "0->3": (255, 255, 150),
     }
 
     y_offset = 10
 
     for direction, edge in edges.items():
-        from_corner = int(direction.split('->')[0])
-        to_corner = int(direction.split('->')[1])
+        from_corner = int(direction.split("->")[0])
+        to_corner = int(direction.split("->")[1])
 
         color = edge_colors.get(direction, (255, 0, 255))
 
         # Draw edge line
         x1, y1 = CORNER_POSITIONS[from_corner]
         x2, y2 = CORNER_POSITIONS[to_corner]
-        draw_shifted.line([
-            sprite_x + x1, sprite_y + y1,
-            sprite_x + x2, sprite_y + y2
-        ], fill=color, width=3)
+        draw_shifted.line(
+            [sprite_x + x1, sprite_y + y1, sprite_x + x2, sprite_y + y2],
+            fill=color,
+            width=3,
+        )
 
         # Add label
         if direction in connections[sprite_id]:
@@ -95,8 +102,13 @@ def create_sprite_visualization(sprite_img, sprite_id, edges, connections):
             y_offset += 20
 
             # Show top 3 matches
-            for i, (other_id, other_dir, other_len, similarity) in enumerate(matches[:3]):
-                match_text = f"  → Sprite{other_id} [{other_dir}] ({other_len}px) {similarity:.1f}%"
+            for i, (other_id, other_dir, other_len, similarity) in enumerate(
+                matches[:3]
+            ):
+                match_text = (
+                    f"  → Sprite{other_id} [{other_dir}] "
+                    f"({other_len}px) {similarity:.1f}%"
+                )
                 draw.text((10, y_offset), match_text, fill=(100, 100, 100))
                 y_offset += 15
 
@@ -110,20 +122,27 @@ def create_sprite_visualization(sprite_img, sprite_id, edges, connections):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Visualize sprite edge connections')
-    parser.add_argument('--output-dir', default='sprite_visualizations',
-                       help='Directory to save visualization images')
+    parser = argparse.ArgumentParser(description="Visualize sprite edge connections")
+    parser.add_argument(
+        "--output-dir",
+        default="sprite_visualizations",
+        help="Directory to save visualization images",
+    )
     args = parser.parse_args()
 
     # Create output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
 
-    sprite_path = '../../assets/art/sprites/world/land/Cstline1.spr.png'
+    sprite_path = "../../assets/art/sprites/world/land/Cstline1.spr.png"
 
     print(f"Loading sprites from {sprite_path}...")
     sprites = extract_sprites(sprite_path, cols=4, rows=7)
-    print(f"Extracted {len(sprites)} rows x {len(sprites[0])} cols = {len(sprites) * len(sprites[0])} sprites")
+    sprite_count = len(sprites) * len(sprites[0])
+    print(
+        f"Extracted {len(sprites)} rows x {len(sprites[0])} cols = "
+        f"{sprite_count} sprites"
+    )
 
     print("Analyzing edge connections...")
     connections, all_edges = analyze_connections(sprites)
@@ -160,5 +179,5 @@ def main():
     print(f"\nDone! Visualizations saved to {output_dir}/")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -23,7 +23,7 @@ def get_expected_filenames(cards_data):
     expected_files = set()
 
     for card in cards_data:
-        # Try both processed format (CardName, SetID, CollectorNo) and raw format (name, set, collector_number)
+        # Support both processed and raw card data formats.
         card_name = card.get("CardName") or card.get("name", "")
         set_code = card.get("SetID") or card.get("set", "")
         collector_number = card.get("CollectorNo") or card.get("collector_number", "")

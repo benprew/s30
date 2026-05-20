@@ -9,10 +9,11 @@ to each other in the tile map.
 
 import argparse
 import json
-from PIL import Image
-import numpy as np
-from typing import List, Tuple, Dict
 from dataclasses import dataclass
+from typing import Dict, List, Tuple
+
+import numpy as np
+from PIL import Image
 
 
 @dataclass
@@ -169,7 +170,7 @@ def extract_edge(
     # Check if edge actually starts from the "from" corner
     # First few pixels from the starting corner should be non-transparent
     if len(edge_pixels) > 0:
-        # Check if the first non-transparent pixel is within the first 5 pixels from start
+        # Check if the first non-transparent pixel is near the start.
         first_non_transparent_idx = None
         for i, (x, y) in enumerate(line_pixels[: min(10, len(line_pixels))]):
             # Check band around this position
@@ -189,7 +190,7 @@ def extract_edge(
                 first_non_transparent_idx = i
                 break
 
-        # If first non-transparent pixel is too far from start, this edge doesn't start here
+        # If it starts too far from the corner, this edge doesn't start here.
         if first_non_transparent_idx is None or first_non_transparent_idx > 5:
             edge_pixels = []
 
@@ -334,7 +335,9 @@ def print_connections(connections: Dict, all_edges: Dict, show_pixels: bool = Fa
                 for other_id, other_direction, other_length, similarity in matches[:5]:
                     other_row, other_col = other_id
                     print(
-                        f"    Connects to: Sprite ({other_row},{other_col}) [{other_direction}] (length: {other_length}) (similarity: {similarity:.1f}%)"
+                        "    Connects to: "
+                        f"Sprite ({other_row},{other_col}) [{other_direction}] "
+                        f"(length: {other_length}) (similarity: {similarity:.1f}%)"
                     )
 
                     if show_pixels:
@@ -368,9 +371,7 @@ def generate_tile_map(
             elif direction in connections[sprite_id]:
                 edge_length, matches = connections[sprite_id][direction]
                 if matches:
-                    connect_edges[direction] = [
-                        f"{m[0][0]},{m[0][1]}" for m in matches
-                    ]
+                    connect_edges[direction] = [f"{m[0][0]},{m[0][1]}" for m in matches]
 
         tile_map[tile_key] = {"full": full_edges, "connect": connect_edges}
 
@@ -395,8 +396,10 @@ def main():
 
     print(f"Loading sprites from {sprite_path}...")
     sprites = extract_sprites(sprite_path, cols=4, rows=7)
+    sprite_count = len(sprites) * len(sprites[0])
     print(
-        f"Extracted {len(sprites)} rows x {len(sprites[0])} cols = {len(sprites) * len(sprites[0])} water transition sprites"
+        f"Extracted {len(sprites)} rows x {len(sprites[0])} cols = "
+        f"{sprite_count} water transition sprites"
     )
     print()
 
@@ -439,7 +442,9 @@ def main():
                     if alpha > 128:
                         found_non_transparent = True
                         print(
-                            f"  Position {i}: center({x}, {y}) -> FOUND non-transparent at offset {offset}: ({check_x}, {check_y}) alpha={alpha}"
+                            f"  Position {i}: center({x}, {y}) -> FOUND "
+                            f"non-transparent at offset {offset}: "
+                            f"({check_x}, {check_y}) alpha={alpha}"
                         )
                         break
             if not found_non_transparent:

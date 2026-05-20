@@ -17,7 +17,7 @@ import urllib.request
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 try:
     import zstandard as zstd
@@ -85,7 +85,8 @@ def download_and_process_card(
             with zipfile.ZipFile(zip_path, "r") as zf:
                 if resized_filename in zf.namelist():
                     logger.info(
-                        f"Skipping {card_name} ({set_code}-{collector_number}) - already exists in zip"
+                        f"Skipping {card_name} ({set_code}-{collector_number}) "
+                        "- already exists in zip"
                     )
                     return True, ""
 
@@ -142,7 +143,10 @@ def download_and_process_card(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Download and process Magic: The Gathering card images from Scryfall JSON data."
+        description=(
+            "Download and process Magic: The Gathering card images "
+            "from Scryfall JSON data."
+        )
     )
     parser.add_argument(
         "json_file", help="Path to JSON or JSON.zst file containing card data"

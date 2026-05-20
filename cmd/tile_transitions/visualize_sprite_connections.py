@@ -5,16 +5,14 @@ Shows the central sprite with all its connected neighbors arranged around it.
 """
 
 import argparse
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
 from pathlib import Path
+
 from analyze_edges import (
-    extract_sprites,
-    extract_all_edges,
-    analyze_connections,
     CORNER_POSITIONS,
-    COMPATIBLE_EDGES,
+    analyze_connections,
+    extract_sprites,
 )
+from PIL import Image, ImageDraw
 
 
 def get_sprite_offset_for_connection(from_edge, to_edge):
@@ -221,7 +219,10 @@ def create_sprite_connections_visualization(
 
         # Label below the pair
         label_y = base_y + pair_height - 15
-        label_text = f"{conn['edge_a']} ↔ ({sprite_id_b[0]},{sprite_id_b[1]}) [{conn['edge_b']}] {conn['similarity']:.1f}%"
+        label_text = (
+            f"{conn['edge_a']} ↔ ({sprite_id_b[0]},{sprite_id_b[1]}) "
+            f"[{conn['edge_b']}] {conn['similarity']:.1f}%"
+        )
         draw.text((base_x + 5, label_y), label_text, fill=(60, 60, 60))
 
     return canvas
@@ -250,12 +251,14 @@ def main():
 
     print(f"Loading sprites from {sprite_path}...")
     sprites = extract_sprites(sprite_path, cols=4, rows=7)
+    sprite_count = len(sprites) * len(sprites[0])
     print(
-        f"Extracted {len(sprites)} rows x {len(sprites[0])} cols = {len(sprites) * len(sprites[0])} sprites"
+        f"Extracted {len(sprites)} rows x {len(sprites[0])} cols = "
+        f"{sprite_count} sprites"
     )
 
     print("Analyzing edge connections (max edge length: 50.0)...")
-    connections, all_edges = analyze_connections(sprites, max_edge_length=40.0)
+    connections, all_edges = analyze_connections(sprites, edge_threshold=40.0)
     print()
 
     print(f"Generating connection visualizations in {output_dir}/...")
@@ -281,9 +284,7 @@ def main():
                 vis.save(output_file)
                 created_count += 1
 
-    print(
-        f"\nDone! Generated {created_count} sprite connection visualizations in {output_dir}/"
-    )
+    print(f"\nDone! Generated {created_count} visualizations in {output_dir}/")
 
 
 if __name__ == "__main__":

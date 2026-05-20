@@ -12,7 +12,7 @@ Usage:
     python3 utils/train_card_classifier.py --bottom 25            # show worst 25%
     python3 utils/train_card_classifier.py --top 10               # show best 10%
     python3 utils/train_card_classifier.py --type creature        # filter by type
-    python3 utils/train_card_classifier.py --bottom 30 --type creature  # worst 30% of creatures
+    python3 utils/train_card_classifier.py --bottom 30 --type creature
     python3 utils/train_card_classifier.py --output scores.tsv
 """
 
@@ -235,7 +235,6 @@ def score_card(
     tl = card["TypeLine"].lower()
     is_creature = "creature" in tl or "summon" in tl
     is_instant = "instant" in tl
-    is_sorcery = "sorcery" in tl
     is_enchantment = "enchantment" in tl
     is_artifact = "artifact" in tl
     is_land = "land" in tl
@@ -334,7 +333,6 @@ def score_card(
 
     # Activation cost for repeatable abilities: count mana symbols before the colon
     activation_cost = 0
-    needs_tap = False
     if repeatable_removal:
         pattern = hard_removal_pattern if repeatable_hard_removal else ping_pattern
         act_match = re.search(
@@ -343,9 +341,7 @@ def score_card(
         if act_match:
             symbols = re.findall(r"\{([^}]+)\}", act_match.group(1))
             for s in symbols:
-                if s == "T":
-                    needs_tap = True
-                elif s.isdigit():
+                if s.isdigit():
                     activation_cost += int(s)
                 elif s in ("W", "U", "B", "R", "G", "C"):
                     activation_cost += 1
@@ -534,7 +530,6 @@ def score_card(
         if pm["activated_removal"]:
             repeatable_removal = True
             activation_cost = pm["activated_removal_cost"]
-            needs_tap = pm["activated_removal_needs_tap"]
 
     # ── IMPACT (0-10) ──
     # How much does this card alter the game state?
@@ -1050,7 +1045,7 @@ def validate(results: list[tuple[str, float, str, dict[str, float]]]) -> None:
     # Show biggest misranks
     diffs = [(name, score, TIER_SCORES[tier], tier) for name, score, tier in labeled]
     diffs.sort(key=lambda x: abs(x[1] - x[2]), reverse=True)
-    print(f"\nBiggest misranks (top 10):")
+    print("\nBiggest misranks (top 10):")
     print(f"  {'Card':30s} {'Computed':>8s} {'Tier':>8s} {'Diff':>6s}  Tier label")
     for name, comp, tier_sc, tier_name in diffs[:10]:
         diff = comp - tier_sc
@@ -1067,7 +1062,7 @@ def print_ranked(
     # Apply type filter first
     if type_filter:
         tf = type_filter.lower()
-        results = [r for r in results if tf in r[3].get("type_line", "").lower()]
+        results = [r for r in results if tf in str(r[3].get("type_line", "")).lower()]
         # Re-sort after filtering
         results.sort(key=lambda r: -r[1])
 
@@ -1152,7 +1147,10 @@ def main() -> None:
         "--type",
         type=str,
         default="",
-        help="Filter by card type (creature, instant, sorcery, enchantment, artifact, land)",
+        help=(
+            "Filter by card type "
+            "(creature, instant, sorcery, enchantment, artifact, land)"
+        ),
     )
     parser.add_argument(
         "--output",

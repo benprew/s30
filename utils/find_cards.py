@@ -15,8 +15,14 @@ def load_scryfall_cards(path: Path) -> list[dict]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Find cards in scryfall_cards.json.zst")
-    parser.add_argument("--name", "-n", help="Find cards matching this name (case-insensitive substring)")
+    parser = argparse.ArgumentParser(
+        description="Find cards in scryfall_cards.json.zst"
+    )
+    parser.add_argument(
+        "--name",
+        "-n",
+        help="Find cards matching this name (case-insensitive substring)",
+    )
     args = parser.parse_args()
 
     script_dir = Path(__file__).parent.parent

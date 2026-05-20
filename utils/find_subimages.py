@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+
 from PIL import Image
 
 
@@ -30,6 +31,7 @@ def find_subimages(image_path, interactive=False):
             # Ensure image is in RGBA format for consistent color handling
             img = img.convert("RGBA")
             pixels = img.load()
+            assert pixels is not None
             width, height = img.size
 
             if width == 0 or height == 0:
@@ -98,7 +100,7 @@ def find_subimages(image_path, interactive=False):
                                     is_valid = False
                                     break
 
-                        # Right edge: column to right must be separator or image boundary
+                        # Right edge must be separator or image boundary.
                         if is_valid and start_x + sub_width < width:
                             for j in range(start_y, start_y + sub_height):
                                 if pixels[start_x + sub_width, j] != separator_color:
@@ -127,14 +129,20 @@ def find_subimages(image_path, interactive=False):
 
             if interactive:
                 named_subimages = {}
-                print(f"\nFound {len(subimage_infos)} rectangles. Please name each one:", file=sys.stderr)
-                print("(Press Enter to skip or use auto-generated name)\n", file=sys.stderr)
+                print(
+                    f"\nFound {len(subimage_infos)} rectangles. Please name each one:",
+                    file=sys.stderr,
+                )
+                print(
+                    "(Press Enter to skip or use auto-generated name)\n",
+                    file=sys.stderr,
+                )
 
                 for i, info in enumerate(subimage_infos):
                     print(f"Rectangle {i}:", file=sys.stderr)
                     print(f"  Position: ({info['x']}, {info['y']})", file=sys.stderr)
                     print(f"  Size: {info['width']}x{info['height']}", file=sys.stderr)
-                    print(f"  Name: ", end="", file=sys.stderr)
+                    print("  Name: ", end="", file=sys.stderr)
                     sys.stderr.flush()
 
                     name = input().strip()
@@ -147,7 +155,10 @@ def find_subimages(image_path, interactive=False):
                         while name in named_subimages:
                             name = f"{original_name}_{counter}"
                             counter += 1
-                        print(f"  (Name already used, using '{name}' instead)", file=sys.stderr)
+                        print(
+                            f"  (Name already used, using '{name}' instead)",
+                            file=sys.stderr,
+                        )
 
                     named_subimages[name] = info
                     print(file=sys.stderr)
@@ -167,7 +178,10 @@ def find_subimages(image_path, interactive=False):
 def main():
     """Parses command line arguments and runs the subimage finding process."""
     parser = argparse.ArgumentParser(
-        description="Find subimages in a sprite sheet separated by the color at pixel (0,0) and output their coordinates and dimensions as JSON."
+        description=(
+            "Find subimages in a sprite sheet separated by the color at "
+            "pixel (0,0) and output their coordinates and dimensions as JSON."
+        )
     )
     parser.add_argument(
         "image_file", help="Path to the sprite sheet image file (e.g., PNG)."
@@ -176,7 +190,10 @@ def main():
         "--interactive",
         "-i",
         action="store_true",
-        help="Interactive mode: prompt for name of each rectangle. Output will be a JSON map instead of a list.",
+        help=(
+            "Interactive mode: prompt for name of each rectangle. "
+            "Output will be a JSON map instead of a list."
+        ),
     )
     parser.add_argument(
         "--output",
@@ -189,7 +206,7 @@ def main():
     json_output = find_subimages(args.image_file, interactive=args.interactive)
 
     if args.output:
-        with open(args.output, 'w') as f:
+        with open(args.output, "w") as f:
             f.write(json_output)
         print(f"Wrote output to {args.output}", file=sys.stderr)
     else:

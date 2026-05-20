@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
-import cv2
 import sys
-from skimage.metrics import structural_similarity as ssim
+
+import cv2  # ty:ignore[unresolved-import]
+from skimage import metrics as skimage_metrics  # ty:ignore[unresolved-import]
+
+ssim = skimage_metrics.structural_similarity
 
 
 def compare_images(img1, img2):

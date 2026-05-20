@@ -3,12 +3,12 @@ import os
 import re
 
 import numpy as np
-import torch
-import torch.nn as nn
+import torch  # ty:ignore[unresolved-import]
+import torch.nn as nn  # ty:ignore[unresolved-import]
 from scipy.stats import spearmanr
-from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, Dataset
-from transformers import AutoModel, AutoTokenizer
+from sklearn.model_selection import train_test_split  # ty:ignore[unresolved-import]
+from torch.utils.data import DataLoader, Dataset  # ty:ignore[unresolved-import]
+from transformers import AutoModel, AutoTokenizer  # ty:ignore[unresolved-import]
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -113,7 +113,7 @@ def load_data(scryfall_path: str, scores_path: str) -> tuple[list[dict], list[di
         label = list(COLOR_TO_IDX.keys())[gid] if gid < 5 else "C"
         print(f"  Color group {label}: {len(color_groups[gid])} cards")
 
-    return records, color_groups
+    return records, color_groups  # ty:ignore[invalid-return-type]
 
 
 # ── Color pool embedding cache ────────────────────────────────────────────────
@@ -257,7 +257,10 @@ def train():
 
     print("Precomputing color pool embeddings...")
     color_pool_cache = build_color_pool_cache(
-        color_groups, tokenizer, model.encoder, MAX_LENGTH
+        color_groups,  # ty:ignore[invalid-argument-type]
+        tokenizer,
+        model.encoder,
+        MAX_LENGTH,
     )
 
     train_ds = MTGDataset(train_records, tokenizer, color_pool_cache, MAX_LENGTH)
