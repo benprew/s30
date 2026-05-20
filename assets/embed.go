@@ -203,6 +203,20 @@ var (
 	//go:embed art/screens/start/Title.pic.png
 	StartTitle_png []byte
 
+	//go:embed art/screens/start/Menu2.pic.png
+	StartMenu2_png []byte
+	//go:embed art/screens/start/Menu2-Norm.pic.png
+	StartMenu2Norm_png []byte
+	//go:embed art/screens/start/Menu2-Hi.pic.png
+	StartMenu2Hi_png []byte
+
+	//go:embed art/screens/start/Menu3.pic.png
+	StartMenu3_png []byte
+	//go:embed art/screens/start/Menu3-But1.pic.png
+	StartMenu3But1_png []byte
+	//go:embed art/screens/start/Menu3but.pic.png
+	StartMenu3but_png []byte
+
 	// Random encounter backgrounds
 	//go:embed art/screens/rand_encounter/*.png
 	RandEncounterFS embed.FS
