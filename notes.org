@@ -1,18 +1,190 @@
-* UI
-- [] Show target when enemy cast spells (draw arrow)
-- [] artifacts that aren't creatures go to 2nd row
-- [] UI for X spells (like disintegrate)
-- [X] bug with Sprite registry, is not showing images correctly in duel and rogue faces
-* Card Rules needed
-- [] Forcefield - went from 1 life to 3 life?
-- [] Raging River + UI needs
-- [] Wall of Dust - prevent untapping next turn
-- [] Animate Dead - can only be played on dead creatures
-- [] Keldon Warlord - not counting himself?
-- [] power surge - incorrectly calculating untapped cards?
+claude --resume 69a40323-26d9-4d2d-b297-6c1f7ed72d35
 
-- [] animate wall - wall's still can't attack
-- [] crystal rod ability doesn't show up after casting a spell
+* Engine Oracle
+I want to build an oracle verification system for mage-go.
+
+This will consist of 2 major pieces: Recording and Replaying
+
+Recording:
+
+XMage is the gold standard for this and I want to record a game XMage plays against 2 AI opponents.
+
+Take a snapshot every time the player has the opportunity to take an action. Game state excluding library and all the available actions the player could've taken at that step including text names of the action to take and legal targets, if any. (aside: Does XMage have targeting in available actions, or is that a "sub-choice" of the action?)
+
+Also, triggered events can be ordered on the stack by the controlling player when more than 1 triggered event fires. Capture the ordering also, since ordering can affect game state after resolution.
+
+This recording should be formatted to json and written to a  file once the game completes.
+
+Verify src/xmage/Mage.Tests/src/test/java/org/mage/test/selfplay provides these features.
+
+* Targeting DSL fixes
+  - 220 call sites use a target: WithTarget(...) (127) + NewTargetedSpell(...) (93)
+  - 108 NewSpellAbility calls — many of these are untargeted (sweepers like Wrath of God, global effects like Howling Mine, Earthquake-style "each player/creature")
+  - ~37 mana/equip/keyword abilities that don't target at all
+
+  So "most need a target" is more like ~55%. That's a meaningful minority of untargeted effects, and crucially — "target" is a rules-engine concept in MTG, not just
+  an English word. Targeted effects check hexproof/shroud/protection (target.go:85, CanBeTargetedBy); sweepers don't. Collapsing the two would break those checks.
+
+  Looking at what already exists at target.go:11-20 and the PermanentSelector system in doc.go:386:
+
+  - Targets (Target interface) — for "target X" rules text. Already composable via PermanentFilter combinators: Or(IsArtifact, IsEnchantment),
+  Not(HasColorFilter(Black)), And(...) (target.go:280, doc.go:301-307). Also has TargetAnyTarget() for "creature or player".
+  - Selectors (ToSource, ToTarget, ToAllMatching(filter), ToGathered) — for non-targeted effects like Wrath, Berserk's self-boost, Earthquake. Already composable via
+  the same filter combinators (doc.go:189-195).
+
+  So the composability you want is already there — it just lives in PermanentFilter/CardFilter, not on Target itself. Extending the abstraction probably means adding
+  more filter combinators (e.g. a Union(filterA, filterB) if it doesn't exist, or IsAttacking And HasColor(Green)) rather than restructuring Effect.
+
+  Where the current API does have a wart: WithTarget and Targeting(selector) are two different chains that look similar at a card-author's call site. If you want to
+  unify the call shape, the cleaner move is making every effect declare a Selector where Selector has two concrete impls — Targeted(target) and Untargeted(selector) —
+   and the engine dispatches hexproof checks based on which. That preserves the rules distinction while giving one uniform call site.
+
+  The "NoTarget sentinel" version is risky because the rules distinction would have to live somewhere else (a flag on the effect?) and is easy to forget when
+  authoring a card.
+
+* Engine
+
+
+- remove BoostUntilEndOfTurn from DSL and update tests to use new Boost
+- what are createTokenAttacking/Blocking effects?
+- PutOnBattlefieldAttacking seems specific, why not PutOnBattlefield and have a way to specify whether it's attacking or blocking
+- game_mutator is basically GameReader at this point, refactor to new file name
+- [x] card has IsToken() - a card is never a token, remove it
+- [x] also weird checks for if tokens are in the graveyard, tokens can't go to the graveyard only cards can
+- preventAttackingUntilEndOfTurn is too specific, prevent attacking is fine, make the length definable
+- [x] weird inStep checks, wtf does that even mean? - removed
+
+- The engine does not yet implement timestamp ordering or dependencies within a
+layer — effects are applied in insertion order. This is correct when only one
+effect occupies a layer, but may produce wrong results when multiple effects
+compete within the same layer.
+
+DealDamage(Fixed(1)),
+DealDamageToPlayers(Fixed(1), SelectController()),
+
+- [ ] add an "animate artifact" effect that turns an artifact into a creature with P/T equal to casting cost and add it to cards that animate artifacts (titania's song, phrexian gremlins, animate artifact, etc)
+- [ ] why is there DealDamageToCreatures and DealDamageToPlayers effects? Just have a DealDamage effect and then allow specifying targets Have to clarify between possible
+targets and actual targets. ex AnyTarget vs EachPlayer vs AllCreatures, etc
+- [x] make sure replacement effects like regen and forcefield drop off at the end of your turn. Also, note them on the card somehow?
+
+Lets unify spells and non-mana abilities in the game engine. Spells and Abilities both share these common traits:
+- cost - can be mana cost, or tap, or sacrifice a creature, or discard a card, etc
+- effect - effect on resolution
+- targets - if the effect specifies a target, valid target is the target, otherwise can be something like AllCreatures, AnyCreature, AnyPlayer, AnyOpponent, etc
+
+identify any issues
+
+
+
+
+* UI
+- [] high tier enemies shouldn't give basic lands as rewards
+
+- [] better UI for knowing what options are available. Maybe cards with an action get yellow border instead?
+- [] Show hand cards at the bottom of the screen, angled to look like a hand and a slight zoom effect when you mouse over them
+
+- [X] Bug when loading game and going into a city and going to buy cards. All card images show up as the first card in the store, but are actually different cards.
+- [X] in duel.go Show target when enemy cast spells (draw arrow)
+- [X] in duel.go lands go to 3rd row. non-creature permanents go to 2nd row. When a non-creature permanent becomes a creature, move it to the 1st row
+- [X] UI for X spells (like disintegrate)
+- [X] bug with Sprite registry, is not showing images correctly in duel and rogue faces
+- [X] in duel.go Add graveyard, clicking on graveyard shows cards
+* Card Rules needed
+- [] Implement Fellwar Stone
+
+- [] Raging River + UI needs
+- [] Deathgrip - no way to choose spell to counter (maybe show the stack as a UI?)
+
+- [X] Kudzu should allow player to choose which land to target instead of auto-selecting land
+- [X] Island Sanctuary triggers after card is drawn
+- [X] Desert doesn't deal damage, add damage ability
+- [X] lucky charms (crystal rod, ivory cup, etc) should cost 1 to activate and should be optional
+- [X] jalum tome triggers on cast, it's an ability not an ETB effect
+- [X] Jade Statue - shouldn't be able to attack the 1st turn it's played
+- [X] Forcefield - went from 1 life to 3 life?
+- [X] Animate Dead - only play on dead creatures, not living creatures
+* AI - mage-go
+Lets improve AI combat, we can use the heuristic or search AI, but here's what I'm thinking:
+
+1. If it's the AI's turn, calculate how much damage it could push through with optimal blocks from opponent (no spells played from hand, but can use abilities on board). Calculate the game state after optimal combat (opponent life, opponent board, AI board)
+
+2. If the AI is being attacked, do the same thing, but with opponent's attacking creatures. Calculate optimal combat and evaluate the board state after combat.
+
+3. Trickery - If the AI has instant boots/damage or boost/damage abilities, don't play them until after blockers are declared (or only play them to save a creature that's about to be killed with another instant (ex. lightning bolt)), but calculate them when evaluating optimal combat.
+
+Write a plan for this and suggest a couple of ways to do this and pros/cons of each approach. Also call out any missing details needed for the plan.
+
+
+** Tests to write
+Why isn't the AI attacking in this board position? It should be able to kill the player by activating the Flying Carpet or just attacking into the player. The player will be forced to bock all creatures, killing the Scathe Zombies w/Abu Jafar and losing Pikemen, Blacksmith and Abu Jafar
+
+Board state
+AI - Life:11
+- Drudge Skeletons
+- Scathe Zombies w/2 Unholy Strength
+- Lost Soul
+
+- Bad Moon (x2)
+
+- Flying Carpet (x2)
+
+- Swamp x5
+
+- Cards in hand: 0
+
+Player - Life:3
+
+- Pikemen
+- Argivian Blacksmith w/ Artifact Ward and Lance
+- Abu Ja'Far
+
+- Ivory Cup
+- Plains x6
+
+- Cards in hand: 2
+
+
+** Nits
+- AI with pinger always chooses the 1st creature, should look for lethal pings or pings against player also (eval board state)
+- UI: when casting phantasmal terrain on a land, the land type should changes or somehow signify what type of land it is now.
+
+- Implement Desert deal damage ability
+
+
+
+
+
+
+* IN PROGRESS World
+
+
+When generating the level, make 5 zones, 1 for each color of magic. In each zone put the wizard's castle for that color.
+
+For now, when the player touches a wizard's castle they enter a duel with the wizard of that castle. The rogue they are dueling is one of the 5 level 11 rogues, per the color of the deck (ex. Great Druid is the green castle wizard)
+
+Also, when generating terrain for the level generate an appropriate type of terrain near the castle (ex. near blue generate sand, near black -swamp, near green, forest, etc)
+
+The sprites for a wizard's castle are in Castles1 and Castle2.
+
+** Castles1 layout:
+2 columns
+6 rows
+
+| White Castle         | White Castle Destroyed |
+| Blue Castle          | Blue Castle Destroyed  |
+| White shadow         | White Destroy shadow   |
+| Black castle         | Black shadow           |
+| Black castle destroy | black destroy shadow   |
+
+** Castle2 layout:
+2 columns
+4 rows
+
+| green castle | green castle destroyed |
+| red castle   | red castle destroyed   |
+| green shadow | green destroy shadow   |
+| red shadow   | red destroy shadow     |
+
 
 * Polish/Engagement Loop
   ---
@@ -120,18 +292,9 @@
    risk, grow stronger, push further" — which is the classic roguelike loop that keeps players
   coming back.
 
-* Blog Post:
-Change in S30 since the alpha:
 
-- Switch to mage-go rules engine (based on XMage) - much better support for cards rules!
-- Sounds! (press M to mute)
-- AI is smarter - heuristic-based but also working on a MinMax AI with search
-- Lots of duel UI improvements - combat visuals, aura rendering, card choices
-- More wiseman boons!
-
-- More platforms supported (Intel Mac, Windows ARM, Android) - Note: android is very much WIP
-
-* New Game/Loading screen
+* DONE New Game/Loading screen
+CLOSED: [2026-04-18 Sat 21:08]
 
 * TODO Use local storage for saving/loading game from WASM
 * TODO fix basalt monolith

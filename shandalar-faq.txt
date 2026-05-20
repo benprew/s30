@@ -743,11 +743,11 @@ Gauntlet
   town/village. Here is a short table which I think works.
 
     Rate	Land Price Colorless Land
-        ----    ---------- --------------
-        50%     10         50
-        75%     15         75
-        100%    20         100
-        150%    25         125
+    ----    ---------- --------------
+    50%     10         50
+    75%     15         75
+    100%    20         100
+    150%    25         125
     200%    30         150
 
   Usually Towns have a higher rate than villages. It also seems that the

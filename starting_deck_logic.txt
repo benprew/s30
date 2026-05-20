@@ -1,0 +1,186 @@
+// pseudo code for starting deck logic
+
+void
+sub_4BDD0A()
+{
+  signed int v0; // eax
+  signed int v1; // ST2C_4
+  signed int v2; // eax
+  int v3; // ST28_4
+  int v4; // [sp+18h] [bp-10h]
+  signed int i; // [sp+1Ch] [bp-Ch]
+  signed int j; // [sp+1Ch] [bp-Ch]
+  signed int k; // [sp+1Ch] [bp-Ch]
+  int l; // [sp+1Ch] [bp-Ch]
+  signed int m; // [sp+1Ch] [bp-Ch]
+  signed int n; // [sp+1Ch] [bp-Ch]
+  signed int ii; // [sp+1Ch] [bp-Ch]
+  signed int jj; // [sp+1Ch] [bp-Ch]
+  signed int kk; // [sp+1Ch] [bp-Ch]
+
+  if (!ai_is_speculating)
+    {
+      for (i = 0; i < 500; ++i)
+        deck[i] = -1;
+      if (!dword_78DF34)
+        {
+          for (j = 0; j < 7; ++j)
+            {
+              dword_8C73F0[j] = 0;
+              dword_8C7408[j] = -1;
+            }
+          dword_78CEE4 |= 1 << 2 * Dword_4ED861;
+          dword_5863C8[8 * Dword_4ED861] = 0;
+          v4 = 1 << Dword_4ED861;
+          switch (opponent_skill)
+            {
+              case 0:   // apprentice
+                if ((unsigned int)v4 < 1 & COLOR_TEST_WHITE)
+                  generate_random_deck((color_test_t)v4, 13, 7, 15, 1, 1);
+                else
+                  generate_random_deck((color_test_t)v4, 13, 12, 10, 1, 1);
+                break;
+
+              case 1:   // magician
+                generate_random_deck((color_test_t)v4, 11, 4, 12, 1, 1);
+                v0 = sub_4BDCCC(v4);    // picks a random color other than v4
+                generate_random_deck((color_test_t)v0, 4, 3, 4, 0, 1);
+                break;
+
+              case 2:   // sorcerer
+                generate_random_deck((color_test_t)v4, 9, 3, 9, 1, 1);
+                v1 = sub_4BDCCC(v4);    // picks a random color other than v4
+                generate_random_deck((color_test_t)v1, 5, 3, 4, 0, 1);
+                v2 = sub_4BDCCC(v1 | v4);       // picks a random color other than v4 or v1
+                generate_random_deck((color_test_t)v2, 4, 3, 3, 0, 1);
+                break;
+
+              case 3:   // wizard
+                generate_random_deck((color_test_t)v4, 6, 3, 5, 1, 1);
+                generate_random_deck(COLOR_TEST_COLORLESS, 11, 5, 14, 0, 1);
+                break;
+
+              default:
+                break;
+            }
+          dword_789930 = 0;
+          for (k = 0; k < 5; ++k)
+            num_amulets[k] = 0;
+          ++dword_78990C[Dword_4ED861];
+          for (l = 0; 3 - opponent_skill > l; ++l)
+            {
+              v3 = internal_rand(5);
+              ++num_amulets[v3];
+            }
+          for (m = 0; m < 128; ++m)
+            dword_789940[25 * m] = -1;
+          for (n = 0; n < 8; ++n)
+            dword_78CE20[6 * n] = -1;
+          for (ii = 0; ii < 1000; ++ii)
+            byte_789500[0] = 0;
+          for (jj = 0; jj < 4; ++jj)
+            UNKNOWN_usually_8_but_is_sometimes_16_in_dungeons[jj] = 8;
+          for (kk = 0; kk < 150; ++kk)
+            deck[kk] |= 0x10000u;
+          Dword_4ED861 = -1;
+        }
+    }
+}
+
+int
+generate_random_deck(color_test_t color, int num_basic_lands, int num_enchantments_and_artifacts, int num_creatures, int any_sorcery_or_enchantment_or_creature, int allow_artifacts)
+{
+  color_test_t v7; // [sp+Ch] [bp-1Ch]
+  color_test_t col; // [sp+10h] [bp-18h]
+  int v9; // [sp+14h] [bp-14h]
+  signed int v10; // [sp+18h] [bp-10h]
+  int i; // [sp+1Ch] [bp-Ch]
+  int j; // [sp+1Ch] [bp-Ch]
+  int v13; // [sp+1Ch] [bp-Ch]
+  signed int v14; // [sp+20h] [bp-8h]
+  signed int v15; // [sp+24h] [bp-4h]
+
+  for (i = 0; num_basic_lands > i; ++i)
+    {
+      v10 = C_pick_random_iid_of_given_type_and_color(TYPE_LAND, color);// This call replaced with one to C_pick_random_iid_of_basic_land_of_given_type_and_color
+      if (colors_friendly_enough((color_test_t)cards_data[v10].color, color, 0)
+          && v10 <= 4
+          && cards_data[v10].expansion & (PTR_EXPANSION_FOURTH_EDITION_INTERNAL | PTR_EXPANSION_FOURTH_EDITION_RAW | 0x1))
+        insert_iid_into_deck_sorted(v10);
+      else
+        --i;
+    }
+  for (j = 0; num_enchantments_and_artifacts > j; ++j)
+    {
+      if (allow_artifacts)
+        v9 = rand() & 1;
+      else
+        v9 = 0;
+      if (v9)
+        col = COLOR_TEST_COLORLESS;
+      else
+        col = color;
+      v10 = C_pick_random_iid_of_given_type_and_color((unsigned int)v9 < 1 ? TYPE_ENCHANTMENT : TYPE_ARTIFACT, col);
+      if (!opponent_skill && cards_data[v10].static_ability & (KEYWORD_ISLANDWALK | KEYWORD_SWAMPWALK)
+          || BYTE1(cards_data[v10].extra_ability) & (EA_UNK800_1 | EA_UNK100_1))
+        --j;
+      else
+        {
+          if (cards_data[v10].type & TYPE_ENCHANTMENT)
+            v9 = 0;
+          if (v9)
+            v7 = 1;
+          else
+            v7 = color;
+          if (colors_friendly_enough((color_test_t)cards_data[v10].color, v7, 0)
+              && C_card_data_rarity(v10) <= ((j & 1u) < 1) + 1
+              && cards_data[v10].expansion & (PTR_EXPANSION_FOURTH_EDITION_INTERNAL | PTR_EXPANSION_FOURTH_EDITION_RAW | 0x1))
+            insert_iid_into_deck_sorted(v10);
+          else
+            --j;
+        }
+    }
+  v13 = 0;
+  v14 = 0;
+  while (num_creatures > v13)
+    {
+      v10 = C_pick_random_iid_of_given_type_and_color(TYPE_CREATURE, color);
+      if (opponent_skill <= 3 && cards_data[v10].static_ability & (KEYWORD_ISLANDWALK | KEYWORD_SWAMPWALK)
+          || BYTE1(cards_data[v10].extra_ability) & (EA_UNK800_1 | EA_UNK100_1))
+        {
+          --v13;
+          --v14;
+        }
+      else
+        {
+          if (v14 >= 1000)
+            v15 = 1;
+          else
+            v15 = sub_4BB1CF(v10) >= 1;
+          if (colors_friendly_enough((color_test_t)cards_data[v10].color, color, 0)
+              && C_card_data_rarity(v10) <= ((v13 & 1u) < 1) + 1
+              && v15
+              && cards_data[v10].expansion & (PTR_EXPANSION_FOURTH_EDITION_INTERNAL | PTR_EXPANSION_FOURTH_EDITION_RAW | 0x1))
+            insert_iid_into_deck_sorted(v10);
+          else
+            --v13;
+        }
+      ++v13;
+      ++v14;
+    }
+  if (any_sorcery_or_enchantment_or_creature)
+    {
+      do
+        {
+          do
+            v10 = C_pick_random_iid_of_given_type_and_color(TYPE_SORCERY | TYPE_ENCHANTMENT | TYPE_CREATURE, COLOR_TEST_COLORLESS);
+          while (!colors_friendly_enough((color_test_t)cards_data[v10].color, color, 1));
+        } while (C_card_data_rarity(v10) < 3
+                 || sub_4BB1CF(v10) <= 0
+                 || !opponent_skill && cards_data[v10].static_ability & (KEYWORD_ISLANDWALK | KEYWORD_SWAMPWALK)
+                 || BYTE1(cards_data[v10].extra_ability) & (EA_UNK800_1 | EA_UNK100_1)
+                 || !(cards_data[v10].expansion & (PTR_EXPANSION_FOURTH_EDITION_INTERNAL | PTR_EXPANSION_FOURTH_EDITION_RAW | 0x1)));
+    }
+  insert_iid_into_deck_sorted(v10);
+  return 0;
+}

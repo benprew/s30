@@ -1,0 +1,271 @@
+/*
+ * Starting deck / opponent setup logic.
+ * Cleaned-up translation of the decompiled sub_4BDD0A and generate_random_deck.
+ *
+ * Original symbol names from the binary are preserved in comments so the
+ * mapping back to IDA can be reconstructed.
+ */
+
+#include <stdlib.h>
+#include <string.h>
+
+#define DECK_SIZE              500
+#define DECK_INIT_FLAG_LIMIT   150   /* original loop ran kk < 150 */
+#define HAND_SIZE              7
+#define NUM_AMULET_COLORS      5
+#define NUM_OPPONENT_SLOTS     8
+#define EVENT_FLAGS_SIZE       1000
+
+#define EXPANSION_4ED_MASK \
+    (PTR_EXPANSION_FOURTH_EDITION_INTERNAL | PTR_EXPANSION_FOURTH_EDITION_RAW | 0x1)
+#define BAD_LANDWALK_MASK      (KEYWORD_ISLANDWALK | KEYWORD_SWAMPWALK)
+#define BAD_EXTRA_ABILITY_MASK (EA_UNK800_1 | EA_UNK100_1)
+
+/* --- Externs (original names in trailing comments) ------------------------ */
+
+extern int  ai_is_speculating;
+extern int  opponent_skill;
+
+extern int  current_opponent_idx;        /* Dword_4ED861 */
+extern int  skip_opponent_setup;         /* dword_78DF34 — gates one-time init */
+extern int  opponents_active_mask;       /* dword_78CEE4 */
+extern int  opponent_records[];          /* dword_5863C8, stride 8 */
+extern int  opponent_encounter_count[];  /* dword_78990C, indexed by opp idx */
+
+extern int  hand_card_counts[HAND_SIZE]; /* dword_8C73F0 */
+extern int  hand_card_iids[HAND_SIZE];   /* dword_8C7408 */
+
+extern int  turn_counter;                /* dword_789930 — exact purpose unknown */
+extern int  world_entity_table[];        /* dword_789940, 128 records of stride 25 */
+extern int  castle_state[];              /* dword_78CE20, 8 records of stride 6 */
+extern char event_flags[EVENT_FLAGS_SIZE]; /* byte_789500 */
+extern int  encounter_size[4];           /* UNKNOWN_usually_8_but_is_sometimes_16_in_dungeons */
+
+extern int  deck[DECK_SIZE];
+extern int  num_amulets[NUM_AMULET_COLORS];
+extern card_data_t cards_data[];
+
+/* --- Helpers (original names in trailing comments) ----------------------- */
+
+extern int  pick_random_other_color(int color_mask);                                /* sub_4BDCCC */
+extern int  card_quality_score(int iid);                                            /* sub_4BB1CF */
+extern int  internal_rand(int n);
+extern int  C_pick_random_iid_of_given_type_and_color(int type, color_test_t color);
+extern int  C_card_data_rarity(int iid);
+extern int  colors_friendly_enough(color_test_t a, color_test_t b, int slack);
+extern void insert_iid_into_deck_sorted(int iid);
+
+
+static int card_has_banned_ability(int iid, int allow_landwalk)
+{
+    if (!allow_landwalk && (cards_data[iid].static_ability & BAD_LANDWALK_MASK))
+        return 1;
+    if (BYTE1(cards_data[iid].extra_ability) & BAD_EXTRA_ABILITY_MASK)
+        return 1;
+    return 0;
+}
+
+static int card_is_4ed(int iid)
+{
+    return (cards_data[iid].expansion & EXPANSION_4ED_MASK) != 0;
+}
+
+/* Max rarity allowed alternates between 1 and 2 as the deck fills up. */
+static int max_rarity_for_slot(int slot)
+{
+    return ((slot & 1) == 0) + 1;
+}
+
+
+int generate_random_deck(color_test_t color,
+                         int num_basic_lands,
+                         int num_enchantments_and_artifacts,
+                         int num_creatures,
+                         int add_wild_card,
+                         int allow_artifacts)
+{
+    int iid = 0;
+
+    /* Basic lands: only the five vanilla basics (iid <= 4) from 4th Edition. */
+    for (int i = 0; i < num_basic_lands; ++i) {
+        iid = C_pick_random_iid_of_given_type_and_color(TYPE_LAND, color);
+        if (colors_friendly_enough(cards_data[iid].color, color, 0)
+            && iid <= 4
+            && card_is_4ed(iid)) {
+            insert_iid_into_deck_sorted(iid);
+        } else {
+            --i;
+        }
+    }
+
+    /* Enchantments and artifacts (artifacts are colorless). */
+    for (int j = 0; j < num_enchantments_and_artifacts; ++j) {
+        int pick_artifact = allow_artifacts ? (rand() & 1) : 0;
+        color_test_t col = pick_artifact ? COLOR_TEST_COLORLESS : color;
+        int type = pick_artifact ? TYPE_ARTIFACT : TYPE_ENCHANTMENT;
+
+        iid = C_pick_random_iid_of_given_type_and_color(type, col);
+
+        if (card_has_banned_ability(iid, opponent_skill /*allow_landwalk*/)) {
+            --j;
+            continue;
+        }
+
+        /* Enchantments are never colorless even if we rolled "artifact". */
+        if (cards_data[iid].type & TYPE_ENCHANTMENT)
+            pick_artifact = 0;
+
+        color_test_t color_req = pick_artifact ? COLOR_TEST_COLORLESS : color;
+        if (colors_friendly_enough(cards_data[iid].color, color_req, 0)
+            && C_card_data_rarity(iid) <= max_rarity_for_slot(j)
+            && card_is_4ed(iid)) {
+            insert_iid_into_deck_sorted(iid);
+        } else {
+            --j;
+        }
+    }
+
+    /* Creatures. After 1000 attempts we stop requiring a quality score. */
+    int placed = 0;
+    int attempts = 0;
+    while (placed < num_creatures) {
+        iid = C_pick_random_iid_of_given_type_and_color(TYPE_CREATURE, color);
+
+        int allow_landwalk = (opponent_skill > 3);
+        if (card_has_banned_ability(iid, allow_landwalk)) {
+            /* Retry without advancing either counter. */
+            continue;
+        }
+
+        int good_enough = (attempts >= 1000) ? 1 : (card_quality_score(iid) >= 1);
+        if (colors_friendly_enough(cards_data[iid].color, color, 0)
+            && C_card_data_rarity(iid) <= max_rarity_for_slot(placed)
+            && good_enough
+            && card_is_4ed(iid)) {
+            insert_iid_into_deck_sorted(iid);
+            ++placed;
+        }
+        ++attempts;
+    }
+
+    /* Optional "wild" card: any sorcery/enchantment/creature of high rarity. */
+    if (add_wild_card) {
+        int type = TYPE_SORCERY | TYPE_ENCHANTMENT | TYPE_CREATURE;
+        for (;;) {
+            do {
+                iid = C_pick_random_iid_of_given_type_and_color(type, COLOR_TEST_COLORLESS);
+            } while (!colors_friendly_enough(cards_data[iid].color, color, 1));
+
+            if (C_card_data_rarity(iid) < 3)                  continue;
+            if (card_quality_score(iid) <= 0)                 continue;
+            if (card_has_banned_ability(iid, opponent_skill)) continue;
+            if (!card_is_4ed(iid))                            continue;
+            break;
+        }
+        insert_iid_into_deck_sorted(iid);
+    }
+
+    return 0;
+}
+
+
+/*
+ * Build the current opponent's starting deck and reset the surrounding world
+ * state. Called once per new opponent encounter.
+ *
+ * Original: sub_4BDD0A.
+ */
+void init_opponent_encounter(void)
+{
+    if (ai_is_speculating)
+        return;
+
+    for (int i = 0; i < DECK_SIZE; ++i)
+        deck[i] = -1;
+
+    if (skip_opponent_setup)
+        return;
+
+    /* Clear the opponent's opening hand slots. */
+    for (int j = 0; j < HAND_SIZE; ++j) {
+        hand_card_counts[j] = 0;
+        hand_card_iids[j] = -1;
+    }
+
+    opponents_active_mask |= 1 << (2 * current_opponent_idx);
+    opponent_records[8 * current_opponent_idx] = 0;
+
+    color_test_t color_mask = (color_test_t)(1 << current_opponent_idx);
+
+    switch (opponent_skill) {
+    case 0:   /* apprentice */
+        /*
+         * Original test was the decompiler's garbled
+         *   ((unsigned)v4 < 1 & COLOR_TEST_WHITE)
+         * which is always false. Preserved as such; almost certainly a bug
+         * in the original or a missed branch in the decompile.
+         */
+        generate_random_deck(color_mask, 13, 12, 10, 1, 1);
+        break;
+
+    case 1:   /* magician */
+        generate_random_deck(color_mask, 11, 4, 12, 1, 1);
+        {
+            int c2 = pick_random_other_color(color_mask);
+            generate_random_deck((color_test_t)c2, 4, 3, 4, 0, 1);
+        }
+        break;
+
+    case 2:   /* sorcerer */
+        generate_random_deck(color_mask, 9, 3, 9, 1, 1);
+        {
+            int c2 = pick_random_other_color(color_mask);
+            generate_random_deck((color_test_t)c2, 5, 3, 4, 0, 1);
+            int c3 = pick_random_other_color(c2 | color_mask);
+            generate_random_deck((color_test_t)c3, 4, 3, 3, 0, 1);
+        }
+        break;
+
+    case 3:   /* wizard */
+        generate_random_deck(color_mask, 6, 3, 5, 1, 1);
+        generate_random_deck(COLOR_TEST_COLORLESS, 11, 5, 14, 0, 1);
+        break;
+
+    default:
+        break;
+    }
+
+    turn_counter = 0;
+    memset(num_amulets, 0, sizeof(num_amulets));
+    ++opponent_encounter_count[current_opponent_idx];
+
+    /* Lower-skill opponents get more amulets (3 - skill draws). */
+    for (int l = 0; l < 3 - opponent_skill; ++l)
+        ++num_amulets[internal_rand(NUM_AMULET_COLORS)];
+
+    /* Reset per-encounter tables. Strides match the original layout. */
+    for (int m = 0; m < 128; ++m)
+        world_entity_table[25 * m] = -1;
+    for (int n = 0; n < NUM_OPPONENT_SLOTS; ++n)
+        castle_state[6 * n] = -1;
+
+    /*
+     * The original literally wrote event_flags[0] = 0 a thousand times. That
+     * is almost certainly a decompiler bug for memset(event_flags, 0, 1000).
+     */
+    memset(event_flags, 0, sizeof(event_flags));
+
+    for (int jj = 0; jj < 4; ++jj)
+        encounter_size[jj] = 8;
+
+    /*
+     * Original ORed 0x10000 into deck[0..149]. The loop above just set every
+     * deck slot to -1, so this OR is a no-op on a two's-complement int. Kept
+     * here only because removing it would diverge from the binary if deck[]
+     * is in fact narrower than int somewhere we haven't seen.
+     */
+    for (int kk = 0; kk < DECK_INIT_FLAG_LIMIT; ++kk)
+        deck[kk] |= 0x10000u;
+
+    current_opponent_idx = -1;
+}
