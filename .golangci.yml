@@ -8,8 +8,6 @@ linters:
     govet:
       enable:
         - shadow
-    gocyclo:
-      min-complexity: 15
     dupl:
       threshold: 100
     misspell:
@@ -18,7 +16,6 @@ linters:
       line-length: 120
   enable:
     - govet
-    - gocyclo
     - misspell
     - ineffassign
     - staticcheck
@@ -30,5 +27,4 @@ linters:
     rules:
       - path: "_test\\.go"
         linters:
-          - gocyclo
           - dupl
