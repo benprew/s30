@@ -9,6 +9,8 @@ python-version = "3.11"
 
 [dependency-groups]
 dev = [
+    "numpy>=2.4.4",
     "pillow>=12.2.0",
+    "scipy>=1.17.1",
     "zstandard>=0.25.0",
 ]
