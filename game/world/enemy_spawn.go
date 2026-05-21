@@ -16,6 +16,7 @@ const (
 	castleSpawnLevelBonus    = 2
 	castleColorWeight        = 4
 	normalEnemyWeight        = 1
+	enemySpawnRadius         = 500.0
 	extraCardsPerEnemyLevel  = 10
 	combatsPerEnemyLevel     = 3
 	daysPerEnemyLevel        = 20
@@ -53,6 +54,10 @@ func progressionEnemyMaxLevel(player *domain.Player, combatsCompleted int, defea
 	level += combatsCompleted / combatsPerEnemyLevel
 	level += defeatedCastles / castlesPerEnemyLevelBump
 	return min(maxRandomEnemyLevel, max(baseEnemySpawnLevel, level))
+}
+
+func isWithinEnemySpawnRadius(distance float64) bool {
+	return distance <= enemySpawnRadius
 }
 
 func powerfulCardProgressionLevels(collection domain.CardCollection) int {

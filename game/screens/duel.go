@@ -473,21 +473,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		if s.viewingGraveyard != nil {
-			s.viewingGraveyard = nil
-		} else if s.isChoosingAbility() {
-			s.exitAbilityChoosingMode()
-		} else if s.isChoosingX() {
-			s.exitXChoosingMode()
-		} else if s.targetingCardID != uuid.Nil {
-			if s.selectedTargetID != uuid.Nil {
-				s.selectedTargetID = uuid.Nil
-			} else {
-				s.exitTargetingMode()
-			}
-		} else {
-			return screenui.WorldScr, nil, nil
-		}
+		s.handleEscape()
 	}
 
 	s.frameCount++
@@ -540,6 +526,29 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	return screenui.DuelScr, nil, nil
+}
+
+func (s *DuelScreen) handleEscape() {
+	if s.viewingGraveyard != nil {
+		s.viewingGraveyard = nil
+		return
+	}
+	if s.isChoosingAbility() {
+		s.exitAbilityChoosingMode()
+		return
+	}
+	if s.isChoosingX() {
+		s.exitXChoosingMode()
+		return
+	}
+	if s.targetingCardID == uuid.Nil {
+		return
+	}
+	if s.selectedTargetID != uuid.Nil {
+		s.selectedTargetID = uuid.Nil
+		return
+	}
+	s.exitTargetingMode()
 }
 
 const (

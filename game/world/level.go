@@ -391,7 +391,7 @@ func (l *Level) SpawnEnemies(count int) error {
 			dx := x - pLoc.X
 			dy := y - pLoc.Y
 			distance := math.Sqrt(float64(dx*dx + dy*dy))
-			if distance >= 500.0 {
+			if isWithinEnemySpawnRadius(distance) {
 				foundPosition = true
 				break
 			}

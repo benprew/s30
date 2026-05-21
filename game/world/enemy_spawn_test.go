@@ -69,6 +69,18 @@ func TestProgressionEnemyMaxLevelScalesWithPowerfulCards(t *testing.T) {
 	}
 }
 
+func TestIsWithinEnemySpawnRadiusAllowsNearbyEnemies(t *testing.T) {
+	if !isWithinEnemySpawnRadius(499.9) {
+		t.Fatal("expected enemies to spawn within 500px of the player")
+	}
+	if !isWithinEnemySpawnRadius(500.0) {
+		t.Fatal("expected enemies to spawn at the 500px boundary")
+	}
+	if isWithinEnemySpawnRadius(500.1) {
+		t.Fatal("expected enemies outside 500px to be rejected")
+	}
+}
+
 func TestEnemySpawnProfileNearCastlePrefersCastleColorAndStrongerEnemies(t *testing.T) {
 	level := &Level{
 		CombatsCompleted: 0,
