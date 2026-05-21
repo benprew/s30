@@ -46,6 +46,7 @@ type Level struct {
 
 	ticksSinceLastInteraction int
 	totalTicks                int
+	CombatsCompleted          int
 }
 
 // NewLevel returns a new randomly generated Level.
@@ -369,27 +370,44 @@ func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 }
 
 func (l *Level) SpawnEnemies(count int) error {
-	// Enemy character types to choose from
-	enemyTypes := domain.Rogues
-
-	var rogueNames []string
-	for name, char := range enemyTypes {
-		if char.Level <= 10 {
-			rogueNames = append(rogueNames, name)
-		}
-	}
-
 	pLoc := l.Player.Loc()
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	for i := 0; i < count; i++ {
 		var enemy domain.Enemy
 		var err error
+		var x, y int
+		foundPosition := false
+
+		for attempts := 0; attempts < 100; attempts++ {
+			x = rng.Intn(l.LevelW())
+			y = rng.Intn(l.LevelH())
+
+			pos := image.Point{X: x, Y: y}
+			if l.IsWaterAtPixel(pos) {
+				continue
+			}
+
+			dx := x - pLoc.X
+			dy := y - pLoc.Y
+			distance := math.Sqrt(float64(dx*dx + dy*dy))
+			if distance >= 500.0 {
+				foundPosition = true
+				break
+			}
+		}
+		if !foundPosition {
+			return fmt.Errorf("no valid enemy spawn position available")
+		}
 
 		// Try to find an enemy with a valid walking sprite
-		maxAttempts := len(rogueNames)
+		profile := l.enemySpawnProfileAt(l.PixelToTile(image.Point{X: x, Y: y}))
+		maxAttempts := len(domain.Rogues)
 		for attempt := 0; attempt < maxAttempts; attempt++ {
-			// Choose a random enemy type
-			enemyType := rogueNames[rand.Intn(len(rogueNames))]
+			enemyType, ok := chooseEnemyName(rng, domain.Rogues, profile)
+			if !ok {
+				return fmt.Errorf("no enemies available")
+			}
 
 			// Load the enemy sprite
 			enemy, err = domain.NewEnemy(enemyType)
@@ -407,30 +425,9 @@ func (l *Level) SpawnEnemies(count int) error {
 		if enemy.Character.WalkingSprite == nil {
 			return fmt.Errorf("no enemies with valid walking sprites available")
 		}
-		var x, y int
-
-		// Set random position (avoiding player's immediate area and water)
-		minDistance := 500.0
-		for {
-			x = rand.Intn(l.LevelW())
-			y = rand.Intn(l.LevelH())
-
-			pos := image.Point{X: x, Y: y}
-			if l.IsWaterAtPixel(pos) {
-				continue
-			}
-
-			dx := x - pLoc.X
-			dy := y - pLoc.Y
-			distance := math.Sqrt(float64(dx*dx + dy*dy))
-
-			if distance < minDistance {
-				break
-			}
-		}
 
 		enemy.SetLoc(image.Point{X: x, Y: y})
-		enemy.MoveSpeed = 5 + rand.Intn(7)
+		enemy.MoveSpeed = 5 + rng.Intn(7)
 
 		l.Enemies = append(l.Enemies, enemy)
 	}
@@ -602,6 +599,10 @@ func (l *Level) RemoveEnemyAt(idx int) {
 		return
 	}
 	l.Enemies = append(l.Enemies[:idx], l.Enemies[idx+1:]...)
+}
+
+func (l *Level) RecordCombatCompleted() {
+	l.CombatsCompleted++
 }
 
 func (l *Level) GetEnemyAt(idx int) *domain.Enemy {

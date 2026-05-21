@@ -1499,6 +1499,7 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 		wonCards = append(wonCards, s.enemyAnteCard)
 	}
 
+	s.lvl.RecordCombatCompleted()
 	s.lvl.RemoveEnemyAt(s.idx)
 	if defeatedCastle := s.lvl.HandleCastleDuelOutcome(true); defeatedCastle != nil {
 		bonus := domain.RandomPowerfulCardsForColor(defeatedCastle.Color, 5)
@@ -1520,6 +1521,7 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 		lostCards = append(lostCards, s.anteCard)
 	}
 
+	s.lvl.RecordCombatCompleted()
 	s.lvl.RemoveEnemyAt(s.idx)
 	s.lvl.HandleCastleDuelOutcome(false)
 
