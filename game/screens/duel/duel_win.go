@@ -1,4 +1,4 @@
-package screens
+package duel
 
 import (
 	"fmt"
@@ -76,11 +76,11 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.textbox.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
 	const (
-		cardStartX     = 20.0
-		cardStartY     = 20.0
-		cardSpacingX   = 260.0
-		cardSpacingY   = 360.0
-		cardsPerRow    = 4
+		cardStartX   = 20.0
+		cardStartY   = 20.0
+		cardSpacingX = 260.0
+		cardSpacingY = 360.0
+		cardsPerRow  = 4
 	)
 	for i, c := range s.cards {
 		img, err := c.CardImage(domain.CardViewFull)
