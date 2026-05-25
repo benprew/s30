@@ -136,6 +136,14 @@ type DuelScreen struct {
 	prevOppCreatureLen int
 
 	viewingGraveyard *duelPlayer
+
+	inMulligan         bool
+	mulliganCount      int
+	mulliganBottoming  bool
+	mulliganSelected   map[uuid.UUID]bool
+	mulliganKeepBtn    *elements.Button
+	mulliganMullBtn    *elements.Button
+	mulliganConfirmBtn *elements.Button
 }
 
 type mouseStateType int
@@ -181,6 +189,8 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 	s.self.handY = 430
 	s.opponent.handX = 860
 	s.opponent.handY = 310
+
+	s.initMulligan()
 
 	return s
 }
@@ -258,7 +268,9 @@ func (s *DuelScreen) initGameState() {
 		len(s.aiPlayer.Library()), len(s.aiPlayer.Hand()),
 		s.human.Life(), s.aiPlayer.Life())
 	logging.Printf(logging.Duel, "Game init: IsGameOver=%v Winner=%q\n", s.game.IsGameOver(), s.game.Winner())
+}
 
+func (s *DuelScreen) startGameLoop() {
 	go interactive.RunGameLoop(s.game, 0, 300*time.Millisecond)
 }
 
@@ -516,6 +528,11 @@ const (
 )
 
 func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	if s.inMulligan {
+		s.updateMulliganUI(W, H)
+		return screenui.DuelScr, nil, nil
+	}
+
 	s.drainMessages()
 	s.drainChoiceRequests()
 
@@ -1703,6 +1720,11 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.Fill(color.RGBA{30, 30, 30, 255})
 
+	if s.inMulligan {
+		s.drawMulliganUI(screen, W, H)
+		return
+	}
+
 	if s.lastMsg == nil {
 		return
 	}
@@ -2562,6 +2584,245 @@ func (s *DuelScreen) combatStatusMessage(step string, isMyTurn bool) string {
 			return "Your combat phase"
 		}
 		return fmt.Sprintf("%s's combat phase", s.opponent.name)
+	}
+}
+
+func (s *DuelScreen) initMulligan() {
+	s.inMulligan = true
+	s.mulliganCount = 0
+	s.mulliganBottoming = false
+	s.mulliganSelected = make(map[uuid.UUID]bool)
+
+	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
+	if err != nil {
+		logging.Printf(logging.Duel, "Error loading mulligan button sprites: %v\n", err)
+		return
+	}
+	fontFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 16}
+	mkBtn := func(label string) *elements.Button {
+		btn := elements.NewButton(btnSprites[0][0], btnSprites[0][1], btnSprites[0][2], 0, 0, 1.0)
+		btn.ButtonText = elements.ButtonText{
+			Text:      label,
+			Font:      fontFace,
+			TextColor: color.White,
+			HAlign:    elements.AlignCenter,
+			VAlign:    elements.AlignMiddle,
+		}
+		return btn
+	}
+	s.mulliganKeepBtn = mkBtn("Keep")
+	s.mulliganMullBtn = mkBtn("Mulligan")
+	s.mulliganConfirmBtn = mkBtn("Confirm")
+}
+
+// aiMulliganDecision runs a simple heuristic mulligan for the AI (London
+// rules): keep hands with 2-5 lands, otherwise mulligan up to 2 times. After
+// mulligans, place N cards from hand on the bottom of the library where N is
+// the number of mulligans taken.
+func (s *DuelScreen) aiMulliganDecision() {
+	mulls := 0
+	for mulls < 2 {
+		lands := 0
+		for _, c := range s.aiPlayer.Hand() {
+			if dc := s.getDomainCard(c.Name()); dc != nil && dc.CardType == domain.CardTypeLand {
+				lands++
+			}
+		}
+		if lands >= 2 && lands <= 5 {
+			break
+		}
+		for _, c := range s.aiPlayer.Hand() {
+			if _, ok := s.aiPlayer.RemoveFromHand(c.ID()); ok {
+				s.aiPlayer.AddToLibrary(c)
+			}
+		}
+		s.aiPlayer.ShuffleLibrary()
+		for range 7 {
+			s.aiPlayer.DrawCard()
+		}
+		mulls++
+	}
+	if mulls == 0 {
+		return
+	}
+	lib := s.aiPlayer.Library()
+	hand := s.aiPlayer.Hand()
+	for i := 0; i < mulls && len(hand) > 0; i++ {
+		worst := hand[len(hand)-1]
+		for _, c := range hand {
+			dc := s.getDomainCard(c.Name())
+			if dc != nil && dc.CardType == domain.CardTypeLand {
+				worst = c
+				break
+			}
+		}
+		if c, ok := s.aiPlayer.RemoveFromHand(worst.ID()); ok {
+			lib = append(lib, c)
+		}
+		hand = s.aiPlayer.Hand()
+	}
+	s.aiPlayer.SetLibrary(lib)
+}
+
+func (s *DuelScreen) doHumanMulligan() {
+	hand := s.human.Hand()
+	for _, c := range hand {
+		if _, ok := s.human.RemoveFromHand(c.ID()); ok {
+			s.human.AddToLibrary(c)
+		}
+	}
+	s.human.ShuffleLibrary()
+	for range 7 {
+		s.human.DrawCard()
+	}
+	s.mulliganCount++
+	s.mulliganSelected = make(map[uuid.UUID]bool)
+	if s.mulliganCount >= 7 {
+		s.finishMulligan()
+	}
+}
+
+func (s *DuelScreen) finishMulligan() {
+	if s.mulliganCount > 0 {
+		lib := s.human.Library()
+		for id := range s.mulliganSelected {
+			if c, ok := s.human.RemoveFromHand(id); ok {
+				lib = append(lib, c)
+			}
+		}
+		s.human.SetLibrary(lib)
+	}
+	s.aiMulliganDecision()
+	s.inMulligan = false
+	s.mulliganSelected = nil
+	s.startGameLoop()
+}
+
+const (
+	mulliganCardW   = 120
+	mulliganCardGap = 12
+)
+
+func (s *DuelScreen) mulliganCardRects(W, H int) []image.Rectangle {
+	hand := s.human.Hand()
+	n := len(hand)
+	if n == 0 {
+		return nil
+	}
+	totalW := n*mulliganCardW + (n-1)*mulliganCardGap
+	startX := (W - totalW) / 2
+	cardH := int(float64(mulliganCardW) * 1.4)
+	y := (H - cardH) / 2
+	rects := make([]image.Rectangle, n)
+	for i := range hand {
+		x := startX + i*(mulliganCardW+mulliganCardGap)
+		rects[i] = image.Rect(x, y, x+mulliganCardW, y+cardH)
+	}
+	return rects
+}
+
+func (s *DuelScreen) updateMulliganUI(W, H int) {
+	cardRects := s.mulliganCardRects(W, H)
+	hand := s.human.Hand()
+
+	if s.mulliganBottoming && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		mx, my := ebiten.CursorPosition()
+		for i, r := range cardRects {
+			if mx >= r.Min.X && mx < r.Max.X && my >= r.Min.Y && my < r.Max.Y {
+				id := hand[i].ID()
+				if s.mulliganSelected[id] {
+					delete(s.mulliganSelected, id)
+				} else if len(s.mulliganSelected) < s.mulliganCount {
+					s.mulliganSelected[id] = true
+				}
+				break
+			}
+		}
+	}
+
+	btnW, btnH := 160, 40
+	btnY := H - 80
+	if s.mulliganBottoming {
+		s.mulliganConfirmBtn.MoveTo((W-btnW)/2, btnY)
+		s.mulliganConfirmBtn.Update(&ebiten.DrawImageOptions{}, 1.0, W, H)
+		if s.mulliganConfirmBtn.IsClicked() && len(s.mulliganSelected) == s.mulliganCount {
+			s.finishMulligan()
+		}
+	} else {
+		s.mulliganKeepBtn.MoveTo(W/2-btnW-10, btnY)
+		s.mulliganKeepBtn.Update(&ebiten.DrawImageOptions{}, 1.0, W, H)
+		if s.mulliganCount < 7 {
+			s.mulliganMullBtn.MoveTo(W/2+10, btnY)
+			s.mulliganMullBtn.Update(&ebiten.DrawImageOptions{}, 1.0, W, H)
+		}
+		if s.mulliganKeepBtn.IsClicked() {
+			if s.mulliganCount == 0 {
+				s.finishMulligan()
+			} else {
+				s.mulliganBottoming = true
+			}
+		} else if s.mulliganCount < 7 && s.mulliganMullBtn.IsClicked() {
+			s.doHumanMulligan()
+		}
+	}
+	_ = btnH
+}
+
+func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
+	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{20, 20, 30, 255}, false)
+
+	var title string
+	if s.mulliganBottoming {
+		title = fmt.Sprintf("Select %d card(s) to put on the bottom of your library (%d selected)",
+			s.mulliganCount, len(s.mulliganSelected))
+	} else if s.mulliganCount == 0 {
+		title = "Opening hand — Keep or Mulligan?"
+	} else {
+		title = fmt.Sprintf("Mulligan #%d — Keep this hand or take another mulligan?", s.mulliganCount)
+	}
+	t := elements.NewText(20, title, 0, 30)
+	t.HAlign = elements.AlignCenter
+	t.BoundsW = float64(W)
+	t.Color = color.White
+	t.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+
+	hand := s.human.Hand()
+	rects := s.mulliganCardRects(W, H)
+	for i, c := range hand {
+		r := rects[i]
+		domainCard := s.getDomainCard(c.Name())
+		drawn := false
+		if domainCard != nil {
+			if img, err := domainCard.CardImage(domain.CardViewFull); err == nil && img != nil {
+				scale := float64(r.Dx()) / float64(img.Bounds().Dx())
+				opts := &ebiten.DrawImageOptions{}
+				opts.GeoM.Scale(scale, scale)
+				opts.GeoM.Translate(float64(r.Min.X), float64(r.Min.Y))
+				screen.DrawImage(img, opts)
+				drawn = true
+			}
+		}
+		if !drawn {
+			vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y),
+				float32(r.Dx()), float32(r.Dy()), color.RGBA{60, 60, 80, 255}, false)
+			nameTxt := elements.NewText(12, c.Name(), r.Min.X+4, r.Min.Y+4)
+			nameTxt.Color = color.White
+			nameTxt.BoundsW = float64(r.Dx() - 8)
+			nameTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		}
+		if s.mulliganBottoming && s.mulliganSelected[c.ID()] {
+			vector.StrokeRect(screen, float32(r.Min.X)-2, float32(r.Min.Y)-2,
+				float32(r.Dx())+4, float32(r.Dy())+4, 3, color.RGBA{255, 80, 80, 255}, false)
+		}
+	}
+
+	if s.mulliganBottoming {
+		s.mulliganConfirmBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+	} else {
+		s.mulliganKeepBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		if s.mulliganCount < 7 {
+			s.mulliganMullBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		}
 	}
 }
 
