@@ -246,3 +246,17 @@ func LoadTTFFont(fontBytes []byte) (font.Face, error) {
 
 	return face, nil
 }
+
+func LoadButtonMap(spriteFile []byte, mapFile []byte) []*ebiten.Image {
+	sprInfo, err := LoadSprInfoFromJSON(mapFile)
+	if err != nil {
+		panic(err)
+	}
+
+	frameSprite, err := LoadSubimages(spriteFile, &sprInfo)
+	if err != nil {
+		panic(err)
+	}
+
+	return frameSprite
+}

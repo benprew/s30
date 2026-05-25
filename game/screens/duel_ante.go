@@ -299,11 +299,11 @@ func selectEnemyAnteCard(deck domain.Deck) *domain.Card {
 }
 
 func loadVisageBorder() []*ebiten.Image {
-	return loadButtonMap(assets.DuelAnteBorder_png, assets.DuelAnteBorderMap_json)
+	return imageutil.LoadButtonMap(assets.DuelAnteBorder_png, assets.DuelAnteBorderMap_json)
 }
 
 func loadPlayerStatsUI() []*ebiten.Image {
-	return loadButtonMap(assets.DuelAnteStats_png, assets.DuelAnteStatsMap_json)
+	return imageutil.LoadButtonMap(assets.DuelAnteStats_png, assets.DuelAnteStatsMap_json)
 }
 
 func (s *DuelAnteScreen) WonCards() []*domain.Card {

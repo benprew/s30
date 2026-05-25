@@ -49,7 +49,7 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 		city.CardsForSale = domain.MkCards()
 	}
 
-	sprite := loadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
+	sprite := imageutil.LoadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
 	title := imageutil.ScaleImage(ebiten.NewImageFromImage(sprite[4]), SCALE)
 
 	// Use LoadSpriteSheet to extract the card frame from Buybuttons.spr.png (6x2 grid, frame at 0,0)
@@ -200,7 +200,7 @@ func (s *BuyCardsScreen) buyCard() {
 }
 
 func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Button {
-	sprite := loadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
+	sprite := imageutil.LoadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
 		Size:   32,
@@ -254,18 +254,4 @@ func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Butto
 	fmt.Println("Buttons:", len(buttons))
 
 	return buttons
-}
-
-func loadButtonMap(spriteFile []byte, mapFile []byte) []*ebiten.Image {
-	sprInfo, err := imageutil.LoadSprInfoFromJSON(mapFile)
-	if err != nil {
-		panic(err)
-	}
-
-	frameSprite, err := imageutil.LoadSubimages(spriteFile, &sprInfo)
-	if err != nil {
-		panic(err)
-	}
-
-	return frameSprite
 }
