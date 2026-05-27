@@ -41,6 +41,21 @@ const (
 	DifficultyExpert Difficulty = 3
 )
 
+func DifficultyToString(d Difficulty) string {
+	switch d {
+	case DifficultyEasy:
+		return "Apprentice"
+	case DifficultyMedium:
+		return "Magician"
+	case DifficultyHard:
+		return "Sorcerer"
+	case DifficultyExpert:
+		return "Wizard"
+	default:
+		return "Unknown"
+	}
+}
+
 type DeckGenerator struct {
 	deck        Deck
 	difficulty  Difficulty

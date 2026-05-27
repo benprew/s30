@@ -2,6 +2,25 @@ package domain
 
 import "testing"
 
+func TestDifficultyToString(t *testing.T) {
+	tests := []struct {
+		difficulty Difficulty
+		expected   string
+	}{
+		{DifficultyEasy, "Apprentice"},
+		{DifficultyMedium, "Magician"},
+		{DifficultyHard, "Sorcerer"},
+		{DifficultyExpert, "Wizard"},
+		{Difficulty(99), "Unknown"},
+	}
+
+	for _, test := range tests {
+		if got := DifficultyToString(test.difficulty); got != test.expected {
+			t.Errorf("DifficultyToString(%d) = %s, expected %s", test.difficulty, got, test.expected)
+		}
+	}
+}
+
 func TestShouldSkipCardVintageRestricted(t *testing.T) {
 	dg := &DeckGenerator{difficulty: DifficultyEasy}
 

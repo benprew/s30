@@ -11,13 +11,15 @@ import (
 
 type SaveInfo struct {
 	Name    string
+	GameID  string
 	SavedAt time.Time
 	Path    string
 }
 
-// ListSaves returns metadata for all save files in the given directory,
-// sorted by modification time (newest first). If the directory doesn't exist,
-// it returns an empty slice with no error.
+// ListSaves returns metadata for the save files in the given directory, keeping
+// only the latest save of each game (grouped by GameID) and sorted newest
+// first. If the directory doesn't exist, it returns an empty slice with no
+// error.
 func ListSaves(saveDir string) ([]SaveInfo, error) {
 	entries, err := os.ReadDir(saveDir)
 	if err != nil {
@@ -44,7 +46,26 @@ func ListSaves(saveDir string) ([]SaveInfo, error) {
 		return saves[i].SavedAt.After(saves[j].SavedAt)
 	})
 
-	return saves, nil
+	return dedupByGame(saves), nil
+}
+
+// dedupByGame keeps only the first (newest) save of each game. Saves predating
+// game ids (empty GameID) are grouped by path so each remains visible.
+func dedupByGame(saves []SaveInfo) []SaveInfo {
+	seen := make(map[string]bool, len(saves))
+	deduped := make([]SaveInfo, 0, len(saves))
+	for _, s := range saves {
+		key := s.GameID
+		if key == "" {
+			key = s.Path
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		deduped = append(deduped, s)
+	}
+	return deduped
 }
 
 // SaveDir returns the default save directory path.
@@ -64,6 +85,7 @@ func parseSaveInfo(path string) (SaveInfo, error) {
 
 	var header struct {
 		Name    string    `json:"name"`
+		GameID  string    `json:"game_id"`
 		SavedAt time.Time `json:"saved_at"`
 	}
 	if err := json.Unmarshal(data, &header); err != nil {
@@ -72,7 +94,34 @@ func parseSaveInfo(path string) (SaveInfo, error) {
 
 	return SaveInfo{
 		Name:    header.Name,
+		GameID:  header.GameID,
 		SavedAt: header.SavedAt,
 		Path:    path,
 	}, nil
+}
+
+// pruneOldSaves removes every save of game gameID except keepPath, enforcing
+// the "only keep the latest version" rule after a fresh save is written.
+func pruneOldSaves(saveDir, gameID, keepPath string) {
+	if gameID == "" {
+		return
+	}
+	entries, err := os.ReadDir(saveDir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
+			continue
+		}
+		path := filepath.Join(saveDir, e.Name())
+		if path == keepPath {
+			continue
+		}
+		info, err := parseSaveInfo(path)
+		if err != nil || info.GameID != gameID {
+			continue
+		}
+		os.Remove(path)
+	}
 }

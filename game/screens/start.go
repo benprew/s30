@@ -58,12 +58,15 @@ var difficultyOrder = []domain.Difficulty{
 	domain.DifficultyExpert, // Wizard
 }
 
-var difficultyLabelText = []string{
-	"Apprentice",
-	"Magician",
-	"Sorcerer",
-	"Wizard",
-}
+// difficultyLabelText is parallel to difficultyOrder, sharing the same names
+// used in save files via domain.DifficultyToString.
+var difficultyLabelText = func() []string {
+	labels := make([]string, len(difficultyOrder))
+	for i, d := range difficultyOrder {
+		labels[i] = domain.DifficultyToString(d)
+	}
+	return labels
+}()
 
 type colorBlurb struct {
 	Name string

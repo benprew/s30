@@ -110,6 +110,7 @@ func (g *Game) handleStartTransition() error {
 	if err != nil {
 		return fmt.Errorf("failed to create new level: %s", err)
 	}
+	level.SetIdentity(world.NewGameID(), startScr.SelectedDifficulty, startScr.SelectedColor)
 	if err := g.initWorld(level); err != nil {
 		return err
 	}
@@ -120,7 +121,7 @@ func (g *Game) handleStartTransition() error {
 func (g *Game) Update() error {
 	if ebiten.IsWindowBeingClosed() {
 		if g.player != nil {
-			if err := g.SaveGame("autosave"); err != nil {
+			if err := g.SaveGame(); err != nil {
 				fmt.Printf("Error auto-saving: %v\n", err)
 			}
 		}
@@ -133,7 +134,7 @@ func (g *Game) Update() error {
 
 	if g.player != nil {
 		if inpututil.IsKeyJustPressed(ebiten.KeyF5) {
-			if err := g.SaveGame("quicksave"); err != nil {
+			if err := g.SaveGame(); err != nil {
 				fmt.Printf("Error saving game: %v\n", err)
 			} else {
 				fmt.Println("Game saved!")
@@ -141,10 +142,12 @@ func (g *Game) Update() error {
 		}
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyR) {
+			cur := g.Level()
 			l, err := world.NewLevel(g.player)
 			if err != nil {
 				return fmt.Errorf("failed to create new level: %s", err)
 			}
+			l.SetIdentity(cur.GameID, cur.Difficulty, cur.PlayerColor)
 			g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(l)
 		}
 	}
@@ -272,9 +275,9 @@ func (g *Game) updateBGM(screen screenui.ScreenName) {
 	}
 }
 
-func (g *Game) SaveGame(saveName string) error {
+func (g *Game) SaveGame() error {
 	level := g.Level()
-	savePath, err := save.SaveGame(level, saveName)
+	savePath, err := save.SaveGame(level)
 	if err != nil {
 		return fmt.Errorf("failed to save game: %w", err)
 	}

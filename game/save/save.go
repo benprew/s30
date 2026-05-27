@@ -10,8 +10,12 @@ import (
 	"github.com/benprew/s30/game/world"
 )
 
-func SaveGame(level *world.Level, saveName string) (string, error) {
-	jsonData, err := serializeSave(level, saveName)
+// SaveGame writes the level to disk using the game's stable name and keeps only
+// the latest save of that game by pruning any earlier ones.
+func SaveGame(level *world.Level) (string, error) {
+	saveName := level.SaveName()
+
+	jsonData, err := serializeSave(level)
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize save data: %w", err)
 	}
@@ -30,12 +34,15 @@ func SaveGame(level *world.Level, saveName string) (string, error) {
 		return "", fmt.Errorf("failed to write save file: %w", err)
 	}
 
+	pruneOldSaves(saveDir, level.GameID, savePath)
+
 	return savePath, nil
 }
 
-func serializeSave(level *world.Level, saveName string) ([]byte, error) {
+func serializeSave(level *world.Level) ([]byte, error) {
 	saveData := &SaveData{
-		Name:    saveName,
+		Name:    level.SaveName(),
+		GameID:  level.GameID,
 		Version: 1,
 		SavedAt: time.Now(),
 		World:   level,
