@@ -41,6 +41,21 @@ const (
 	stepFirstStrikeDamage = "First Strike Damage"
 )
 
+// Minimum time each game message stays on screen before the next one is shown,
+// so phases don't flash past faster than the player can follow. Enemy actions
+// and life-total changes linger longer because those are the moments the player
+// most needs to register (e.g. a Ball Lightning being cast and connecting).
+const (
+	phaseDisplayDelay = 100 * time.Millisecond
+	enemyPhaseDelay   = 300 * time.Millisecond
+	lifeChangeDelay   = 600 * time.Millisecond
+)
+
+const (
+	lossLifeAnimationDuration = 900 * time.Millisecond
+	lossLifeHoldDuration      = 500 * time.Millisecond
+)
+
 type duelPlayer struct {
 	name         string
 	boardBg      *ebiten.Image
@@ -48,6 +63,13 @@ type duelPlayer struct {
 	lifeBg       *ebiten.Image
 	graveyardImg *ebiten.Image
 	handX, handY int
+}
+
+type lifeCounterAnimation struct {
+	started   bool
+	startedAt time.Time
+	from      int
+	to        int
 }
 
 type DuelScreen struct {
@@ -116,9 +138,10 @@ type DuelScreen struct {
 
 	cardImageMap map[string]*domain.Card
 
-	frameCount  int
-	warningMsg  string
-	lastMsgTime time.Time
+	frameCount   int
+	warningMsg   string
+	lastMsgTime  time.Time
+	nextMsgDelay time.Duration
 
 	anteCard      *domain.Card
 	enemyAnteCard *domain.Card
@@ -134,6 +157,9 @@ type DuelScreen struct {
 	prevOppGraveLen    int
 	prevYouCreatureLen int
 	prevOppCreatureLen int
+
+	selfLifeAnimation     lifeCounterAnimation
+	opponentLifeAnimation lifeCounterAnimation
 
 	viewingGraveyard *duelPlayer
 
@@ -275,7 +301,11 @@ func (s *DuelScreen) startGameLoop() {
 }
 
 func (s *DuelScreen) drainMessages() {
-	if time.Since(s.lastMsgTime) < 50*time.Millisecond {
+	delay := s.nextMsgDelay
+	if delay <= 0 {
+		delay = phaseDisplayDelay
+	}
+	if time.Since(s.lastMsgTime) < delay {
 		return
 	}
 	select {
@@ -283,9 +313,12 @@ func (s *DuelScreen) drainMessages() {
 		if !ok {
 			return
 		}
+		prev := s.lastMsg
 		s.lastMsg = &msg
 		s.refreshDamageAssignmentPrompt(&msg)
 		s.lastMsgTime = time.Now()
+		s.startLossAnimationFromMessage(prev, &msg, s.lastMsgTime)
+		s.nextMsgDelay = phaseDelay(prev, &msg)
 		s.checkSoundTriggers(&msg)
 		if logging.Enabled(logging.Duel) {
 			optNames := make([]string, len(msg.Options))
@@ -298,6 +331,135 @@ func (s *DuelScreen) drainMessages() {
 	default:
 		return
 	}
+}
+
+// phaseDelay returns how long cur should stay on screen before the next message
+// is shown. Enemy turns and life-total changes get a longer dwell so the player
+// can follow what happened instead of phases racing past.
+func phaseDelay(prev, cur *interactive.GameMsg) time.Duration {
+	if cur == nil || cur.State == nil {
+		return phaseDisplayDelay
+	}
+	delay := phaseDisplayDelay
+	if cur.State.ActivePlayer != cur.State.You.Name {
+		delay = max(delay, enemyPhaseDelay)
+	}
+	if prev != nil && prev.State != nil &&
+		(cur.State.You.Life != prev.State.You.Life ||
+			cur.State.Opponent.Life != prev.State.Opponent.Life ||
+			permanentDamageChanged(prev.State, cur.State) ||
+			newDamageLog(prev.Log, cur.Log)) {
+		delay = max(delay, lifeChangeDelay)
+	}
+	return delay
+}
+
+func permanentDamageChanged(prev, cur *interactive.GameState) bool {
+	prevDamage := permanentDamageByID(prev.You.Battlefield, prev.Opponent.Battlefield)
+	for _, perm := range cur.You.Battlefield {
+		if damage, ok := prevDamage[perm.ID]; ok && damage != perm.Damage {
+			return true
+		}
+	}
+	for _, perm := range cur.Opponent.Battlefield {
+		if damage, ok := prevDamage[perm.ID]; ok && damage != perm.Damage {
+			return true
+		}
+	}
+	return false
+}
+
+func permanentDamageByID(groups ...[]interactive.PermanentState) map[uuid.UUID]int {
+	damage := make(map[uuid.UUID]int)
+	for _, group := range groups {
+		for _, perm := range group {
+			damage[perm.ID] = perm.Damage
+		}
+	}
+	return damage
+}
+
+func newDamageLog(prev, cur []string) bool {
+	if len(cur) <= len(prev) {
+		return false
+	}
+	for _, line := range cur[len(prev):] {
+		if strings.Contains(line, " deals ") && strings.Contains(line, " damage to ") {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *DuelScreen) startLossAnimationFromMessage(prev, cur *interactive.GameMsg, now time.Time) {
+	if cur == nil || cur.State == nil || !cur.GameOver {
+		return
+	}
+	fromYou := cur.State.You.Life
+	fromOpponent := cur.State.Opponent.Life
+	if prev != nil && prev.State != nil {
+		fromYou = prev.State.You.Life
+		fromOpponent = prev.State.Opponent.Life
+	}
+	if cur.State.You.Life <= 0 {
+		s.selfLifeAnimation.start(fromYou, cur.State.You.Life, now)
+	}
+	if cur.State.Opponent.Life <= 0 {
+		s.opponentLifeAnimation.start(fromOpponent, cur.State.Opponent.Life, now)
+	}
+}
+
+func (a *lifeCounterAnimation) start(from, to int, now time.Time) {
+	if a.started {
+		return
+	}
+	a.started = true
+	a.startedAt = now
+	a.from = from
+	a.to = to
+}
+
+func (s *DuelScreen) displayedSelfLife(now time.Time) int {
+	fallback := 0
+	if s.lastMsg != nil && s.lastMsg.State != nil {
+		fallback = s.lastMsg.State.You.Life
+	}
+	return s.displayedLife(s.selfLifeAnimation, fallback, now)
+}
+
+func (s *DuelScreen) displayedOpponentLife(now time.Time) int {
+	fallback := 0
+	if s.lastMsg != nil && s.lastMsg.State != nil {
+		fallback = s.lastMsg.State.Opponent.Life
+	}
+	return s.displayedLife(s.opponentLifeAnimation, fallback, now)
+}
+
+func (s *DuelScreen) displayedLife(animation lifeCounterAnimation, fallback int, now time.Time) int {
+	if !animation.started {
+		return fallback
+	}
+	elapsed := now.Sub(animation.startedAt)
+	if elapsed <= 0 {
+		return animation.from
+	}
+	if elapsed >= lossLifeAnimationDuration {
+		return animation.to
+	}
+	progress := float64(elapsed) / float64(lossLifeAnimationDuration)
+	life := float64(animation.from) + float64(animation.to-animation.from)*progress
+	return int(math.Round(life))
+}
+
+func (s *DuelScreen) lossAnimationComplete(now time.Time) bool {
+	return s.selfLifeAnimation.complete(now) && s.opponentLifeAnimation.complete(now)
+}
+
+func (a lifeCounterAnimation) complete(now time.Time) bool {
+	if !a.started {
+		return true
+	}
+	return now.Sub(a.startedAt) >= lossLifeAnimationDuration+lossLifeHoldDuration
 }
 
 func (s *DuelScreen) drainChoiceRequests() {
@@ -591,6 +753,9 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 			s.lastMsg.Winner, s.lastMsg.State.Step, s.lastMsg.State.Turn,
 			s.lastMsg.State.You.Life, s.lastMsg.State.Opponent.Life,
 			s.lastMsg.State.You.LibraryCount, s.lastMsg.State.Opponent.LibraryCount)
+		if !s.lossAnimationComplete(time.Now()) {
+			return screenui.DuelScr, nil, nil
+		}
 		if s.lastMsg.Winner == "You" {
 			return s.handleWin()
 		}
@@ -2145,7 +2310,8 @@ func (s *DuelScreen) drawDamageControls(screen *ebiten.Image, pos image.Point, a
 }
 
 func (s *DuelScreen) drawCreatureStats(screen *ebiten.Image, perm interactive.PermanentState, pos image.Point) {
-	statText := fmt.Sprintf("%d/%d", perm.Power, perm.Toughness)
+	power, toughness := displayedCreatureStats(perm)
+	statText := creatureStatsText(perm)
 	textX := pos.X + fieldCardW - len(statText)*8 - 2
 	textY := pos.Y + fieldCardH - 18
 	bg := elements.NewText(16, statText, textX-1, textY-1)
@@ -2154,14 +2320,23 @@ func (s *DuelScreen) drawCreatureStats(screen *ebiten.Image, perm interactive.Pe
 	stat := elements.NewText(16, statText, textX, textY)
 
 	domainCard := s.getDomainCard(perm.Name)
-	if domainCard != nil && (perm.Power > domainCard.Power || perm.Toughness > domainCard.Toughness) {
+	if domainCard != nil && (power > domainCard.Power || toughness > domainCard.Toughness) {
 		stat.Color = color.RGBA{100, 255, 100, 255}
-	} else if domainCard != nil && (perm.Power < domainCard.Power || perm.Toughness < domainCard.Toughness) {
+	} else if domainCard != nil && (power < domainCard.Power || toughness < domainCard.Toughness) {
 		stat.Color = color.RGBA{255, 100, 100, 255}
 	} else {
 		stat.Color = color.RGBA{255, 255, 255, 255}
 	}
 	stat.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+}
+
+func creatureStatsText(perm interactive.PermanentState) string {
+	power, toughness := displayedCreatureStats(perm)
+	return fmt.Sprintf("%d/%d", power, toughness)
+}
+
+func displayedCreatureStats(perm interactive.PermanentState) (int, int) {
+	return perm.Power, max(perm.Toughness-perm.Damage, 0)
 }
 
 // getAIBlockerArrows returns a map of AI blocker ID -> player attacker ID
@@ -2426,8 +2601,9 @@ func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
 	s.drawGraveyard(screen, s.opponent)
 	s.drawGraveyard(screen, s.self)
 
-	drawLife(screen, s.opponent, s.lastMsg.State.Opponent.Life, 0)
-	drawLife(screen, s.self, s.lastMsg.State.You.Life, 671)
+	now := time.Now()
+	drawLife(screen, s.opponent, s.displayedOpponentLife(now), 0)
+	drawLife(screen, s.self, s.displayedSelfLife(now), 671)
 }
 
 func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
@@ -2445,7 +2621,7 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 		if domainCard != nil && domainCard.CardType == domain.CardTypeCreature {
 			power, toughness := domainCard.Power, domainCard.Toughness
 			if s.cardPreviewPerm != nil {
-				power, toughness = s.cardPreviewPerm.Power, s.cardPreviewPerm.Toughness
+				power, toughness = displayedCreatureStats(*s.cardPreviewPerm)
 			}
 			imgW := s.cardPreviewImg.Bounds().Dx()
 			imgH := s.cardPreviewImg.Bounds().Dy()
