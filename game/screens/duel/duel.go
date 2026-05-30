@@ -56,6 +56,11 @@ const (
 	lossLifeHoldDuration      = 500 * time.Millisecond
 )
 
+const (
+	attackerLiftOffset   = 20.0
+	attackerLiftDuration = 150 * time.Millisecond
+)
+
 type duelPlayer struct {
 	name         string
 	boardBg      *ebiten.Image
@@ -70,6 +75,12 @@ type lifeCounterAnimation struct {
 	startedAt time.Time
 	from      int
 	to        int
+}
+
+type attackerLiftAnimation struct {
+	startedAt time.Time
+	from      float64
+	to        float64
 }
 
 type DuelScreen struct {
@@ -103,20 +114,13 @@ type DuelScreen struct {
 	cardPreviewName        string
 	cardPreviewPerm        *interactive.PermanentState
 
-	mouseState     mouseStateType
-	mouseStartX    int
-	mouseStartY    int
-	dragTargetX    *int
-	dragTargetY    *int
-	dragOffsetX    int
-	dragOffsetY    int
-	draggingCardID uuid.UUID
-	cardPositions  map[uuid.UUID]image.Point
+	cardPositions map[uuid.UUID]image.Point
 
 	cardImgCache map[cardImgKey]cardImgEntry
 
 	cardActions      map[uuid.UUID][]interactive.ActionOption
 	pendingAttackers map[uuid.UUID]bool
+	attackerLifts    map[uuid.UUID]*attackerLiftAnimation
 	pendingBlockers  map[uuid.UUID]uuid.UUID
 	selectedBlocker  uuid.UUID
 
@@ -172,14 +176,6 @@ type DuelScreen struct {
 	mulliganConfirmBtn *elements.Button
 }
 
-type mouseStateType int
-
-const (
-	mouseIdle mouseStateType = iota
-	mousePotentialDrag
-	mouseDragging
-)
-
 type cardImgKey struct {
 	name  string
 	width int
@@ -204,6 +200,7 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 		pendingAttackers: make(map[uuid.UUID]bool),
+		attackerLifts:    make(map[uuid.UUID]*attackerLiftAnimation),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
 	}
@@ -460,6 +457,89 @@ func (a lifeCounterAnimation) complete(now time.Time) bool {
 		return true
 	}
 	return now.Sub(a.startedAt) >= lossLifeAnimationDuration+lossLifeHoldDuration
+}
+
+func (s *DuelScreen) attackerLiftY(id uuid.UUID, now time.Time) float64 {
+	anim, ok := s.attackerLifts[id]
+	if !ok {
+		return 0
+	}
+	elapsed := now.Sub(anim.startedAt)
+	if elapsed <= 0 {
+		return anim.from
+	}
+	if elapsed >= attackerLiftDuration {
+		return anim.to
+	}
+	progress := float64(elapsed) / float64(attackerLiftDuration)
+	return anim.from + (anim.to-anim.from)*progress
+}
+
+func (s *DuelScreen) startAttackerLift(id uuid.UUID, to float64, now time.Time) {
+	if s.attackerLifts == nil {
+		s.attackerLifts = make(map[uuid.UUID]*attackerLiftAnimation)
+	}
+	s.attackerLifts[id] = &attackerLiftAnimation{
+		startedAt: now,
+		from:      s.attackerLiftY(id, now),
+		to:        to,
+	}
+}
+
+func (s *DuelScreen) syncAttackerLifts(now time.Time) {
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return
+	}
+	targets := s.attackerLiftTargets()
+	for id, target := range targets {
+		if anim, ok := s.attackerLifts[id]; ok && anim.to == target {
+			continue
+		}
+		s.startAttackerLift(id, target, now)
+	}
+	for id, anim := range s.attackerLifts {
+		if _, ok := targets[id]; ok || anim.to == 0 {
+			continue
+		}
+		s.startAttackerLift(id, 0, now)
+	}
+}
+
+func (s *DuelScreen) attackerLiftTargets() map[uuid.UUID]float64 {
+	targets := make(map[uuid.UUID]float64)
+	state := s.lastMsg.State
+	if state.ActivePlayer == "You" && state.Step == stepDeclareAttackers {
+		for id := range s.pendingAttackers {
+			targets[id] = -attackerLiftOffset
+		}
+		for id, anim := range s.attackerLifts {
+			if anim.to != 0 {
+				targets[id] = anim.to
+			}
+		}
+		return targets
+	}
+	if !isCombatStep(state.Step) {
+		return targets
+	}
+	for _, perm := range state.You.Battlefield {
+		if perm.Attacking {
+			targets[perm.ID] = -attackerLiftOffset
+		}
+	}
+	for _, perm := range state.Opponent.Battlefield {
+		if perm.Attacking {
+			targets[perm.ID] = attackerLiftOffset
+		}
+	}
+	if state.Step == stepEndOfCombat {
+		for id, anim := range s.attackerLifts {
+			if anim.to != 0 {
+				targets[id] = anim.to
+			}
+		}
+	}
+	return targets
 }
 
 func (s *DuelScreen) drainChoiceRequests() {
@@ -821,12 +901,6 @@ func permRowFor(perm interactive.PermanentState) permRow {
 }
 
 func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPlayer, idx int, total int, row permRow) image.Point {
-	if perm.ID == s.draggingCardID {
-		if pos, ok := s.cardPositions[perm.ID]; ok {
-			return pos
-		}
-	}
-
 	rowGap := 20
 	rowH := fieldCardH + rowGap
 	totalH := 3*fieldCardH + 2*rowGap
@@ -898,11 +972,13 @@ func (s *DuelScreen) fieldPermAtPoint(mx, my int, dp *duelPlayer) *interactive.P
 	if ps == nil {
 		return nil
 	}
+	now := time.Now()
 	for _, row := range allPermRows {
 		perms := s.fieldPerms(*ps, row)
 		for i := len(perms) - 1; i >= 0; i-- {
 			perm := perms[i]
 			pos := s.getFieldCardPos(perm, dp, i, len(perms), row)
+			pos.Y += int(math.Round(s.attackerLiftY(perm.ID, now)))
 			if mx >= pos.X && mx < pos.X+fieldCardW {
 				auras := s.attachedPerms(perm.ID)
 				for j := len(auras) - 1; j >= 0; j-- {
@@ -939,6 +1015,7 @@ func (s *DuelScreen) refreshCardActions() {
 	step := s.lastMsg.State.Step
 	inDeclareAttackers := s.lastMsg.State.ActivePlayer == "You" &&
 		step == stepDeclareAttackers
+	s.syncAttackerLifts(time.Now())
 	if !inDeclareAttackers && len(s.pendingAttackers) > 0 {
 		s.pendingAttackers = make(map[uuid.UUID]bool)
 	}
@@ -1099,8 +1176,10 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 		if actions, ok := s.cardActions[perm.ID]; ok && hasActionType(actions, interactive.ActionSelectAttackers) {
 			if s.pendingAttackers[perm.ID] {
 				delete(s.pendingAttackers, perm.ID)
+				s.startAttackerLift(perm.ID, 0, time.Now())
 			} else {
 				s.pendingAttackers[perm.ID] = true
+				s.startAttackerLift(perm.ID, -attackerLiftOffset, time.Now())
 			}
 			return
 		}
@@ -1287,13 +1366,6 @@ func (s *DuelScreen) exitTargetingMode() {
 }
 
 func (s *DuelScreen) updateTargetingMouse(mx, my int) {
-	if s.mouseState != mouseIdle {
-		s.dragTargetX = nil
-		s.dragTargetY = nil
-		s.draggingCardID = uuid.Nil
-		s.mouseState = mouseIdle
-	}
-
 	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		return
 	}
@@ -1389,91 +1461,11 @@ func (s *DuelScreen) getCardArtImg(name string, targetW int) *ebiten.Image {
 	return scaled
 }
 
-func (s *DuelScreen) panelHeaderBounds(dp *duelPlayer, px, py int) image.Rectangle {
-	w, h := 145, 51
-	if dp.handBg != nil {
-		b := dp.handBg.Bounds()
-		w, h = b.Dx(), b.Dy()
-	}
-	return image.Rect(px, py, px+w, py+h)
-}
-
-const dragThreshold = 4
-
 func (s *DuelScreen) updateMouse(mx, my int) {
-	switch s.mouseState {
-	case mouseIdle:
-		if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			return
-		}
-		s.mouseStartX = mx
-		s.mouseStartY = my
-
-		pt := image.Pt(mx, my)
-		type dragTarget struct {
-			bounds image.Rectangle
-			x, y   *int
-		}
-		targets := []dragTarget{
-			{s.panelHeaderBounds(s.self, s.self.handX, s.self.handY), &s.self.handX, &s.self.handY},
-			{s.panelHeaderBounds(s.opponent, s.opponent.handX, s.opponent.handY), &s.opponent.handX, &s.opponent.handY},
-		}
-		for _, t := range targets {
-			if pt.In(t.bounds) {
-				s.dragTargetX = t.x
-				s.dragTargetY = t.y
-				s.dragOffsetX = mx - *t.x
-				s.dragOffsetY = my - *t.y
-				s.mouseState = mouseDragging
-				return
-			}
-		}
-
-		for _, dp := range []*duelPlayer{s.self, s.opponent} {
-			if perm := s.fieldPermAtPoint(mx, my, dp); perm != nil {
-				s.draggingCardID = perm.ID
-				s.mouseState = mousePotentialDrag
-				return
-			}
-		}
-
-		s.handleClick(mx, my)
-
-	case mousePotentialDrag:
-		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
-			s.handleClick(s.mouseStartX, s.mouseStartY)
-			s.draggingCardID = uuid.Nil
-			s.mouseState = mouseIdle
-			return
-		}
-		dx := mx - s.mouseStartX
-		dy := my - s.mouseStartY
-		if dx*dx+dy*dy >= dragThreshold*dragThreshold {
-			pos := s.cardPositions[s.draggingCardID]
-			s.dragOffsetX = s.mouseStartX - pos.X
-			s.dragOffsetY = s.mouseStartY - pos.Y
-			s.mouseState = mouseDragging
-		}
-
-	case mouseDragging:
-		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
-			s.dragTargetX = nil
-			s.dragTargetY = nil
-			s.draggingCardID = uuid.Nil
-			s.mouseState = mouseIdle
-			return
-		}
-		if s.draggingCardID != uuid.Nil {
-			pos := s.cardPositions[s.draggingCardID]
-			pos.X = mx - s.dragOffsetX
-			pos.Y = my - s.dragOffsetY
-			s.cardPositions[s.draggingCardID] = pos
-		}
-		if s.dragTargetX != nil {
-			*s.dragTargetX = mx - s.dragOffsetX
-			*s.dragTargetY = my - s.dragOffsetY
-		}
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return
 	}
+	s.handleClick(mx, my)
 }
 
 func (s *DuelScreen) hasPendingMenaceViolation() bool {
@@ -2151,10 +2143,13 @@ func (s *DuelScreen) targetNameByID(id uuid.UUID) string {
 }
 
 func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps interactive.PlayerState) {
+	now := time.Now()
 	for _, row := range allPermRows {
 		perms := s.fieldPerms(ps, row)
 		for i, perm := range perms {
 			pos := s.getFieldCardPos(perm, dp, i, len(perms), row)
+			pos.Y += int(math.Round(s.attackerLiftY(perm.ID, now)))
+			s.cardPositions[perm.ID] = pos
 
 			auras := s.attachedPerms(perm.ID)
 			// reverse order so it draws correctly on the screen
