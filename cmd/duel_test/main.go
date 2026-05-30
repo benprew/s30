@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	_ "git.sr.ht/~cdcarter/mage-go/cards"
+	_ "github.com/benprew/mage-go/cards"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"

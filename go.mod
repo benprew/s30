@@ -3,9 +3,9 @@ module github.com/benprew/s30
 go 1.25.1
 
 require (
-	git.sr.ht/~cdcarter/mage-go v0.0.0-00010101000000-000000000000
 	github.com/BurntSushi/toml v1.5.0
 	github.com/aquilax/go-perlin v1.1.0
+	github.com/benprew/mage-go v0.0.0-20260530034641-af34487c779d
 	github.com/google/uuid v1.6.0
 	github.com/hajimehoshi/ebiten/v2 v2.9.9
 	github.com/klauspost/compress v1.18.0
@@ -26,5 +26,3 @@ require (
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 )
-
-replace git.sr.ht/~cdcarter/mage-go => ../mage-go

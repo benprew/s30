@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	_ "git.sr.ht/~cdcarter/mage-go/cards"
-	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
-	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
-	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai"
-	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive/ai/heuristic"
+	_ "github.com/benprew/mage-go/cards"
+	mage "github.com/benprew/mage-go/pkg/mage"
+	"github.com/benprew/mage-go/pkg/mage/interactive"
+	"github.com/benprew/mage-go/pkg/mage/interactive/ai"
+	"github.com/benprew/mage-go/pkg/mage/interactive/ai/heuristic"
 )
 
 const testCardMountain = "Mountain"

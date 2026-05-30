@@ -4,7 +4,7 @@ import (
 	"image"
 	"testing"
 
-	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
+	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/google/uuid"
 )
 

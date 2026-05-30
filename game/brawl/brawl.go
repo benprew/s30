@@ -1,7 +1,7 @@
 package brawl
 
 import (
-	mage "git.sr.ht/~cdcarter/mage-go/pkg/mage"
+	mage "github.com/benprew/mage-go/pkg/mage"
 )
 
 type Brawl struct {

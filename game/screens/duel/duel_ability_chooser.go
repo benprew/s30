@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"image/color"
 
-	"git.sr.ht/~cdcarter/mage-go/pkg/mage/interactive"
+	"github.com/benprew/mage-go/pkg/mage/interactive"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
