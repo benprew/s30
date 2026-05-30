@@ -789,9 +789,15 @@ func (s *DuelScreen) handleEscape() {
 }
 
 const (
-	handCardOverlap = 20
-	fieldCardW      = 100
-	fieldCardH      = 83
+	handCardOverlap              = 20
+	fieldCardW                   = 100
+	fieldCardH                   = 83
+	battlefieldCreatureStatsSize = 20
+	creatureStatsRightPadding    = 3
+	creatureStatsBottomInset     = 22
+	cardPreviewCreatureStatsSize = 24
+	cardPreviewStatsRightPadding = 6
+	cardPreviewStatsBottomInset  = 31
 )
 
 type permRow int
@@ -2312,12 +2318,14 @@ func (s *DuelScreen) drawDamageControls(screen *ebiten.Image, pos image.Point, a
 func (s *DuelScreen) drawCreatureStats(screen *ebiten.Image, perm interactive.PermanentState, pos image.Point) {
 	power, toughness := displayedCreatureStats(perm)
 	statText := creatureStatsText(perm)
-	textX := pos.X + fieldCardW - len(statText)*8 - 2
-	textY := pos.Y + fieldCardH - 18
-	bg := elements.NewText(16, statText, textX-1, textY-1)
+	stat := elements.NewText(battlefieldCreatureStatsSize, statText, 0, 0)
+	textW, _ := stat.Measure()
+	textPos := creatureStatsTextPosition(pos, textW)
+	bg := elements.NewText(battlefieldCreatureStatsSize, statText, textPos.X-1, textPos.Y-1)
 	bg.Color = color.RGBA{0, 0, 0, 200}
 	bg.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-	stat := elements.NewText(16, statText, textX, textY)
+	stat.X = textPos.X
+	stat.Y = textPos.Y
 
 	domainCard := s.getDomainCard(perm.Name)
 	if domainCard != nil && (power > domainCard.Power || toughness > domainCard.Toughness) {
@@ -2328,6 +2336,13 @@ func (s *DuelScreen) drawCreatureStats(screen *ebiten.Image, perm interactive.Pe
 		stat.Color = color.RGBA{255, 255, 255, 255}
 	}
 	stat.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+}
+
+func creatureStatsTextPosition(pos image.Point, textWidth float64) image.Point {
+	return image.Point{
+		X: pos.X + fieldCardW - int(math.Ceil(textWidth)) - creatureStatsRightPadding,
+		Y: pos.Y + fieldCardH - creatureStatsBottomInset,
+	}
 }
 
 func creatureStatsText(perm interactive.PermanentState) string {
@@ -2626,12 +2641,18 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 			imgW := s.cardPreviewImg.Bounds().Dx()
 			imgH := s.cardPreviewImg.Bounds().Dy()
 			statText := fmt.Sprintf("%d/%d", power, toughness)
-			textX := previewX + imgW - len(statText)*9 - 4
-			textY := previewY + imgH - 22
-			bg := elements.NewText(16, statText, textX-1, textY-1)
+			stat := elements.NewText(cardPreviewCreatureStatsSize, statText, 0, 0)
+			textW, _ := stat.Measure()
+			textPos := cardPreviewStatsTextPosition(
+				image.Point{X: previewX, Y: previewY},
+				image.Point{X: imgW, Y: imgH},
+				textW,
+			)
+			bg := elements.NewText(cardPreviewCreatureStatsSize, statText, textPos.X-1, textPos.Y-1)
 			bg.Color = color.RGBA{0, 0, 0, 200}
 			bg.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-			stat := elements.NewText(16, statText, textX, textY)
+			stat.X = textPos.X
+			stat.Y = textPos.Y
 			if s.cardPreviewPerm != nil && (power > domainCard.Power || toughness > domainCard.Toughness) {
 				stat.Color = color.RGBA{100, 255, 100, 255}
 			} else if s.cardPreviewPerm != nil && (power < domainCard.Power || toughness < domainCard.Toughness) {
@@ -2641,6 +2662,13 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 			}
 			stat.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
+	}
+}
+
+func cardPreviewStatsTextPosition(pos image.Point, size image.Point, textWidth float64) image.Point {
+	return image.Point{
+		X: pos.X + size.X - int(math.Ceil(textWidth)) - cardPreviewStatsRightPadding,
+		Y: pos.Y + size.Y - cardPreviewStatsBottomInset,
 	}
 }
 
