@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -1110,10 +1111,10 @@ func (s *DuelScreen) fieldPermAtPoint(mx, my int, dp *duelPlayer) *interactive.P
 			pos.Y += int(math.Round(s.attackerLiftY(perm.ID, now)))
 			if mx >= pos.X && mx < pos.X+fieldCardW {
 				auras := s.attachedPerms(perm.ID)
-				for j := len(auras) - 1; j >= 0; j-- {
+				for j, auraCopy := range slices.Backward(auras) {
 					auraY := pos.Y - (j+1)*14
 					if my >= auraY && my < auraY+14 {
-						auraCopy := auras[j]
+
 						return &auraCopy
 					}
 				}
@@ -1230,10 +1231,8 @@ func (s *DuelScreen) isValidBlock(blockerID, attackerID uuid.UUID) bool {
 		if opt.Type != interactive.ActionSelectBlockers || opt.PermanentID != blockerID {
 			continue
 		}
-		for _, target := range opt.ValidTargets {
-			if target == attackerID {
-				return true
-			}
+		if slices.Contains(opt.ValidTargets, attackerID) {
+			return true
 		}
 	}
 	return false
@@ -1260,10 +1259,8 @@ func (s *DuelScreen) canBeBlocked(attackerID uuid.UUID) bool {
 		if opt.Type != interactive.ActionSelectBlockers {
 			continue
 		}
-		for _, target := range opt.ValidTargets {
-			if target == attackerID {
-				return true
-			}
+		if slices.Contains(opt.ValidTargets, attackerID) {
+			return true
 		}
 	}
 	return false
@@ -1668,12 +1665,7 @@ func (s *DuelScreen) removePendingMenaceViolations() {
 }
 
 func hasKeyword(keywords []string, kw string) bool {
-	for _, k := range keywords {
-		if k == kw {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keywords, kw)
 }
 
 func (s *DuelScreen) submitPendingAndPass() {
@@ -2118,10 +2110,7 @@ func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {
 	cardW := 150
 	gap := 12
 	startY := 60
-	cols := (W - gap) / (cardW + gap)
-	if cols < 1 {
-		cols = 1
-	}
+	cols := max((W-gap)/(cardW+gap), 1)
 	totalW := cols*cardW + (cols-1)*gap
 	startX := (W - totalW) / 2
 
@@ -2336,8 +2325,8 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 
 			auras := s.attachedPerms(perm.ID)
 			// reverse order so it draws correctly on the screen
-			for j := len(auras) - 1; j >= 0; j-- {
-				aura := auras[j]
+			for j, aura := range slices.Backward(auras) {
+
 				auraY := pos.Y - (j+1)*14
 				auraImg := s.getCardArtImg(aura.Name, fieldCardW)
 				if auraImg != nil {
@@ -2782,10 +2771,7 @@ func (s *DuelScreen) drawGraveyard(screen *ebiten.Image, dp *duelPlayer) {
 		return
 	}
 	artH := art.Bounds().Dy()
-	offsetY := bounds.Min.Y + (graveyardH-artH)/2
-	if offsetY < bounds.Min.Y {
-		offsetY = bounds.Min.Y
-	}
+	offsetY := max(bounds.Min.Y+(graveyardH-artH)/2, bounds.Min.Y)
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(bounds.Min.X), float64(offsetY))
 	screen.DrawImage(art, opts)
