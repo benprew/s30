@@ -114,15 +114,7 @@ type DuelScreen struct {
 	cardPreviewName        string
 	cardPreviewPerm        *interactive.PermanentState
 
-	mouseState     mouseStateType
-	mouseStartX    int
-	mouseStartY    int
-	dragTargetX    *int
-	dragTargetY    *int
-	dragOffsetX    int
-	dragOffsetY    int
-	draggingCardID uuid.UUID
-	cardPositions  map[uuid.UUID]image.Point
+	cardPositions map[uuid.UUID]image.Point
 
 	cardImgCache map[cardImgKey]cardImgEntry
 
@@ -183,14 +175,6 @@ type DuelScreen struct {
 	mulliganMullBtn    *elements.Button
 	mulliganConfirmBtn *elements.Button
 }
-
-type mouseStateType int
-
-const (
-	mouseIdle mouseStateType = iota
-	mousePotentialDrag
-	mouseDragging
-)
 
 type cardImgKey struct {
 	name  string
@@ -917,12 +901,6 @@ func permRowFor(perm interactive.PermanentState) permRow {
 }
 
 func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPlayer, idx int, total int, row permRow) image.Point {
-	if perm.ID == s.draggingCardID {
-		if pos, ok := s.cardPositions[perm.ID]; ok {
-			return pos
-		}
-	}
-
 	rowGap := 20
 	rowH := fieldCardH + rowGap
 	totalH := 3*fieldCardH + 2*rowGap
@@ -1388,13 +1366,6 @@ func (s *DuelScreen) exitTargetingMode() {
 }
 
 func (s *DuelScreen) updateTargetingMouse(mx, my int) {
-	if s.mouseState != mouseIdle {
-		s.dragTargetX = nil
-		s.dragTargetY = nil
-		s.draggingCardID = uuid.Nil
-		s.mouseState = mouseIdle
-	}
-
 	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		return
 	}
@@ -1490,91 +1461,11 @@ func (s *DuelScreen) getCardArtImg(name string, targetW int) *ebiten.Image {
 	return scaled
 }
 
-func (s *DuelScreen) panelHeaderBounds(dp *duelPlayer, px, py int) image.Rectangle {
-	w, h := 145, 51
-	if dp.handBg != nil {
-		b := dp.handBg.Bounds()
-		w, h = b.Dx(), b.Dy()
-	}
-	return image.Rect(px, py, px+w, py+h)
-}
-
-const dragThreshold = 4
-
 func (s *DuelScreen) updateMouse(mx, my int) {
-	switch s.mouseState {
-	case mouseIdle:
-		if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			return
-		}
-		s.mouseStartX = mx
-		s.mouseStartY = my
-
-		pt := image.Pt(mx, my)
-		type dragTarget struct {
-			bounds image.Rectangle
-			x, y   *int
-		}
-		targets := []dragTarget{
-			{s.panelHeaderBounds(s.self, s.self.handX, s.self.handY), &s.self.handX, &s.self.handY},
-			{s.panelHeaderBounds(s.opponent, s.opponent.handX, s.opponent.handY), &s.opponent.handX, &s.opponent.handY},
-		}
-		for _, t := range targets {
-			if pt.In(t.bounds) {
-				s.dragTargetX = t.x
-				s.dragTargetY = t.y
-				s.dragOffsetX = mx - *t.x
-				s.dragOffsetY = my - *t.y
-				s.mouseState = mouseDragging
-				return
-			}
-		}
-
-		for _, dp := range []*duelPlayer{s.self, s.opponent} {
-			if perm := s.fieldPermAtPoint(mx, my, dp); perm != nil {
-				s.draggingCardID = perm.ID
-				s.mouseState = mousePotentialDrag
-				return
-			}
-		}
-
-		s.handleClick(mx, my)
-
-	case mousePotentialDrag:
-		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
-			s.handleClick(s.mouseStartX, s.mouseStartY)
-			s.draggingCardID = uuid.Nil
-			s.mouseState = mouseIdle
-			return
-		}
-		dx := mx - s.mouseStartX
-		dy := my - s.mouseStartY
-		if dx*dx+dy*dy >= dragThreshold*dragThreshold {
-			pos := s.cardPositions[s.draggingCardID]
-			s.dragOffsetX = s.mouseStartX - pos.X
-			s.dragOffsetY = s.mouseStartY - pos.Y
-			s.mouseState = mouseDragging
-		}
-
-	case mouseDragging:
-		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
-			s.dragTargetX = nil
-			s.dragTargetY = nil
-			s.draggingCardID = uuid.Nil
-			s.mouseState = mouseIdle
-			return
-		}
-		if s.draggingCardID != uuid.Nil {
-			pos := s.cardPositions[s.draggingCardID]
-			pos.X = mx - s.dragOffsetX
-			pos.Y = my - s.dragOffsetY
-			s.cardPositions[s.draggingCardID] = pos
-		}
-		if s.dragTargetX != nil {
-			*s.dragTargetX = mx - s.dragOffsetX
-			*s.dragTargetY = my - s.dragOffsetY
-		}
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return
 	}
+	s.handleClick(mx, my)
 }
 
 func (s *DuelScreen) hasPendingMenaceViolation() bool {
