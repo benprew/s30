@@ -2240,9 +2240,10 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 				float32(fieldCardW), float32(fieldCardH),
 				2, borderColor, false)
 		} else {
-			star := elements.NewText(14, "*", pos.X+2, pos.Y+2)
-			star.Color = color.RGBA{255, 255, 0, 255}
-			star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+			vector.StrokeRect(screen,
+				float32(pos.X), float32(pos.Y),
+				float32(fieldCardW), float32(fieldCardH),
+				2, color.RGBA{255, 140, 0, 255}, false)
 		}
 	}
 
@@ -2504,12 +2505,21 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps inte
 			nameTxt.Color = color.RGBA{220, 220, 220, 255}
 			nameTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
+	}
 
-		if _, hasAction := s.cardActions[card.ID]; hasAction {
-			star := elements.NewText(14, "*", dp.handX+2, y+2)
-			star.Color = color.RGBA{255, 255, 0, 255}
-			star.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+	for i, card := range ps.Hand {
+		if _, hasAction := s.cardActions[card.ID]; !hasAction {
+			continue
 		}
+		y := dp.handY + handBgH + i*handCardOverlap
+		cardH := handCardOverlap
+		if i == len(ps.Hand)-1 {
+			if cardImg := s.getCardArtImg(card.Name, handBgW); cardImg != nil {
+				cardH = cardImg.Bounds().Dy()
+			}
+		}
+		vector.StrokeRect(screen, float32(dp.handX), float32(y),
+			float32(handBgW), float32(cardH), 2, color.RGBA{255, 140, 0, 255}, false)
 	}
 }
 
