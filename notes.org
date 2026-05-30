@@ -1,4 +1,138 @@
-claude --resume 69a40323-26d9-4d2d-b297-6c1f7ed72d35
+* AI
+** Forge
+Forge’s combat AI is mostly rule-based heuristics, not deep game-tree search.
+
+Entry points are in forge-ai/src/main/java/forge/ai/AiController.java:1297: attacking delegates to AiAttackController.declareAttackers, blocking to AiBlockController.assignBlockersForCombat.
+
+For attacks, forge-ai/src/main/java/forge/ai/AiAttackController.java:806 does roughly this:
+
+1. Pick a defender: weak opponent, planeswalker near ultimate, or battle depending on context.
+2. Add forced attackers first: must-attack, end-of-turn-leaves-play attackers, attack requirements.
+3. Detect special plans like lethal assault, Exalted, attackMax, Reconnaissance, Lightmine Field, Revenge of Ravens.
+4. Estimate board pressure: AI attackers, opponent next-turn attackers, unblocked damage, counterattack damage, numeric advantage.
+5. Convert that into aiAggression from 0 to 6.
+   0 stays home, 1 mostly unblockables, 2-4 increasingly willing to trade, 5 all-out, 6 special/max/exalted style.
+6. For each possible attacker, call shouldAttack.
+
+The "should this attack?" logic is in forge-ai/src/main/java/forge/ai/AiAttackController.java:1452. It first avoids using creatures with important tap abilities, then checks isEffectiveAttacker, then computes SpellAbilityFactors: can this be killed, can it kill blockers, is it unblockable, are blockers dangerous, does it
+have lifelink/wither/afflict/annihilator/trample, etc. The final decision is a switch on aiAggression.
+
+For blocking, forge-ai/src/main/java/forge/ai/AiBlockController.java:1071 is staged:
+
+1. Sort available blockers weak-to-strong.
+2. makeGoodBlocks: profitable or safe blocks first.
+3. makeGangBlocks: double/triple blocks when they can kill something valuable.
+4. If life is in danger, make trade blocks, then chump blocks.
+5. Reinforce against trample if still in danger.
+6. If not in danger, add blockers to finish off attackers already blocked but not killed.
+7. Apply required blocks, planeswalker-saving chumps, menace/nonlethal gang blocks, then validate legality.
+
+The card "heuristic" is mainly forge-ai/src/main/java/forge/ai/CreatureEvaluator.java:29. It gives creatures a numeric value from power, toughness, mana value, evasion, first/double strike, deathtouch, lifelink, trample, infect, vigilance, protection, indestructible, hexproof, mana abilities, bad drawbacks, etc. Combat uses that score to prefer losing worse creatures and killing better ones.
+
+Combat outcome prediction lives in forge-ai/src/main/java/forge/ai/ComputerUtilCombat.java:171: it predicts unblocked damage/poison, life danger, first strike, prevention/replacement, indestructible/regeneration/shields, deathtouch, flanking, pump-like bonuses, and whether a blocker kills an attacker or vice versa. So "what to block/attack with" is a mix of legality, tactical death prediction, life-danger checks, and creature-value comparison.
+
+** Argentum
+It is not pure search. Combat is a hybrid: heuristic construction first, then bounded simulation/local search.
+
+For combat declarations, Strategist bypasses the generic action search and delegates directly to CombatAdvisor for DeclareAttackers / DeclareBlockers: ai/src/main/
+kotlin/com/wingedsheep/ai/engine/Strategist.kt:41.
+
+Attack choice flow:
+- Starts with a heuristic seed: lethal alpha check, mandatory attackers, evasive/vigilance/indestructible/no-blocker attackers, survives-all-blockers cases,
+  trample-through cases, and isProfitableAttack: ai/src/main/kotlin/com/wingedsheep/ai/engine/CombatAdvisor.kt:65.
+- Then runs local search at declare attackers: try add/remove one attacker, simulate full combat, and keep improvements under a 1 second deadline: ai/src/main/
+  kotlin/com/wingedsheep/ai/engine/CombatAdvisor.kt:171.
+
+Block choice flow:
+- Sorts attackers by effectiveDamage, then builds a heuristic blocking plan: ai/src/main/kotlin/com/wingedsheep/ai/engine/CombatAdvisor.kt:229.
+- The heuristic passes are free kills, profitable trades, surviving blockers for damage prevention, then gang blocks: ai/src/main/kotlin/com/wingedsheep/ai/engine/
+  CombatAdvisor.kt:484.
+- If useSimulation = true, it improves the seed via bounded local search, capped at MAX_BLOCK_SIMULATIONS = 10: ai/src/main/kotlin/com/wingedsheep/ai/engine/
+  CombatAdvisor.kt:35.
+
+There are definitely heuristics involved in ordering:
+- Block mutation generation tries removals/additions/moves based on value, effective damage, cheapest blockers, and legal block checks before simulating: ai/src/main/kotlin/com/wingedsheep/ai/engine/CombatAdvisor.kt:430.
+- Combat values come from CombatMath.creatureValue / combatTradeValue, weighting power, toughness, flying, deathtouch, first strike, double strike, lifelink, trample, indestructible, etc.: ai/src/main/kotlin/com/wingedsheep/ai/engine/CombatMath.kt:679.
+- Trade willingness is life-scaled, so the AI accepts worse trades when low on life: ai/src/main/kotlin/com/wingedsheep/ai/engine/CombatMath.kt:605.
+
+The generic non-combat search also uses heuristics for move ordering: it quick-simulates actions, sorts by 1-ply evaluation, then only deeper-searches capped top candidates with alpha-beta: ai/src/main/kotlin/com/wingedsheep/ai/engine/Searcher.kt:244. The board evaluator itself is heuristic too: life, board presence, card advantage, threat assessment, and tempo weights: ai/src/main/kotlin/com/wingedsheep/ai/engine/AIPlayer.kt:179.
+
+So the short version: combat choices are heuristic-seeded, simulation-validated local search; general actions use shallow/deeper minimax-style search with heuristic move ordering.
+
+*** Game state representation
+In AI search, it is closest to immutable snapshot branching, not an event journal or undo log.
+
+GameState is a Kotlin data class described as an “immutable snapshot of the entire game state” and the engine API is explicitly pure: (GameState, Action) -> (GameState, Events) in rules-engine/src/main/kotlin/com/wingedsheep/engine/state/GameState.kt:21. State changes use copy(...), withEntity, updateEntity, addToZone, removeFromZone, etc., each returning a new GameState instead of mutating the old one, e.g. rules-engine/src/main/kotlin/com/wingedsheep/engine/state/
+GameState.kt:136.
+
+For AI search specifically, ai/src/main/kotlin/com/wingedsheep/ai/engine/GameSimulator.kt:11 says it directly: because GameState is immutable, simulating an action is just calling process() on the same state, with no rollback or cleanup needed. Searcher branches by repeatedly calling simulator.simulate(state, action.action) and evaluating the returned result.state; see ai/src/main/kotlin/com/wingedsheep/ai/engine/Searcher.kt:51 and deeper plies at ai/src/main/kotlin/com/wingedsheep/ai/engine/Searcher.kt:126.
+
+So the shape is:
+
+root GameState
+  simulate(action A) -> new GameState A
+  simulate(action B) -> new GameState B
+  simulate(action C) -> new GameState C
+
+No journal replay. No undo stack inside search. No mutable board with reversible deltas.
+
+Events do exist, but they are descriptive output, not the source of truth. ExecutionResult returns both state and events; events describe what happened for UI, triggers, logs, undo policy, etc. The state itself is already materialized. See rules-engine/src/main/kotlin/com/wingedsheep/engine/core/ExecutionResult.kt:14.
+
+There is also a layering system, but that is for Magic continuous effects, not for recording history. GameState.projectedState lazily computes a ProjectedState by applying continuous effects in layer order once per immutable state instance; see rules-engine/src/main/kotlin/com/wingedsheep/engine/state/GameState.kt:104 and
+rules-engine/src/main/kotlin/com/wingedsheep/engine/mechanics/layers/StateProjector.kt:24.
+
+The only caveat: this is “copy-on-write-ish” at the API level, but not a custom persistent data structure engine. Kotlin copy, Map +, and List + are used to build replacement snapshots. So search trades rollback complexity for allocation/copy cost. The repo even has a StateCloneBenchmark measuring copy(), updateEntity, and moveToZone, which confirms this is a known performance axis.
+
+
+** mage-go
+Lets improve AI combat, we can use the heuristic or search AI, but here's what I'm thinking:
+
+1. If it's the AI's turn, calculate how much damage it could push through with optimal blocks from opponent (no spells played from hand, but can use abilities on board). Calculate the game state after optimal combat (opponent life, opponent board, AI board)
+
+2. If the AI is being attacked, do the same thing, but with opponent's attacking creatures. Calculate optimal combat and evaluate the board state after combat.
+
+3. Trickery - If the AI has instant boots/damage or boost/damage abilities, don't play them until after blockers are declared (or only play them to save a creature that's about to be killed with another instant (ex. lightning bolt)), but calculate them when evaluating optimal combat.
+
+Write a plan for this and suggest a couple of ways to do this and pros/cons of each approach. Also call out any missing details needed for the plan.
+
+*** Tests to write
+Why isn't the AI attacking in this board position? It should be able to kill the player by activating the Flying Carpet or just attacking into the player. The player will be forced to bock all creatures, killing the Scathe Zombies w/Abu Jafar and losing Pikemen, Blacksmith and Abu Jafar
+
+Board state
+AI - Life:11
+- Drudge Skeletons
+- Scathe Zombies w/2 Unholy Strength
+- Lost Soul
+
+- Bad Moon (x2)
+
+- Flying Carpet (x2)
+
+- Swamp x5
+
+- Cards in hand: 0
+
+Player - Life:3
+
+- Pikemen
+- Argivian Blacksmith w/ Artifact Ward and Lance
+- Abu Ja'Far
+
+- Ivory Cup
+- Plains x6
+
+- Cards in hand: 2
+
+*** Nits
+- AI with pinger always chooses the 1st creature, should look for lethal pings or pings against player also (eval board state)
+- UI: when casting phantasmal terrain on a land, the land type should changes or somehow signify what type of land it is now.
+
+- Implement Desert deal damage ability
+
+
+
+
+
 
 * Engine Oracle
 I want to build an oracle verification system for mage-go.
@@ -103,58 +237,6 @@ identify any issues
 - [X] Jade Statue - shouldn't be able to attack the 1st turn it's played
 - [X] Forcefield - went from 1 life to 3 life?
 - [X] Animate Dead - only play on dead creatures, not living creatures
-* AI - mage-go
-Lets improve AI combat, we can use the heuristic or search AI, but here's what I'm thinking:
-
-1. If it's the AI's turn, calculate how much damage it could push through with optimal blocks from opponent (no spells played from hand, but can use abilities on board). Calculate the game state after optimal combat (opponent life, opponent board, AI board)
-
-2. If the AI is being attacked, do the same thing, but with opponent's attacking creatures. Calculate optimal combat and evaluate the board state after combat.
-
-3. Trickery - If the AI has instant boots/damage or boost/damage abilities, don't play them until after blockers are declared (or only play them to save a creature that's about to be killed with another instant (ex. lightning bolt)), but calculate them when evaluating optimal combat.
-
-Write a plan for this and suggest a couple of ways to do this and pros/cons of each approach. Also call out any missing details needed for the plan.
-
-
-** Tests to write
-Why isn't the AI attacking in this board position? It should be able to kill the player by activating the Flying Carpet or just attacking into the player. The player will be forced to bock all creatures, killing the Scathe Zombies w/Abu Jafar and losing Pikemen, Blacksmith and Abu Jafar
-
-Board state
-AI - Life:11
-- Drudge Skeletons
-- Scathe Zombies w/2 Unholy Strength
-- Lost Soul
-
-- Bad Moon (x2)
-
-- Flying Carpet (x2)
-
-- Swamp x5
-
-- Cards in hand: 0
-
-Player - Life:3
-
-- Pikemen
-- Argivian Blacksmith w/ Artifact Ward and Lance
-- Abu Ja'Far
-
-- Ivory Cup
-- Plains x6
-
-- Cards in hand: 2
-
-
-** Nits
-- AI with pinger always chooses the 1st creature, should look for lethal pings or pings against player also (eval board state)
-- UI: when casting phantasmal terrain on a land, the land type should changes or somehow signify what type of land it is now.
-
-- Implement Desert deal damage ability
-
-
-
-
-
-
 * IN PROGRESS World
 
 
