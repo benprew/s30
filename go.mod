@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/aquilax/go-perlin v1.1.0
-	github.com/benprew/mage-go v0.0.0-20260530034641-af34487c779d
+	github.com/benprew/mage-go v0.4.0
 	github.com/google/uuid v1.6.0
 	github.com/hajimehoshi/ebiten/v2 v2.9.9
 	github.com/klauspost/compress v1.18.0
