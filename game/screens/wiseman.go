@@ -347,29 +347,36 @@ func (s *WisemanScreen) questEnemyMaxLevel() int {
 
 const wisemanFallbackEnemyLevel = 2
 
-// randomRogueName picks a rogue whose level is at or below maxLevel. If no
-// rogue qualifies (e.g. maxLevel is below the weakest rogue) it falls back to
-// the lowest-level rogue available so a quest can still be offered.
+// randomRogueName picks a random rogue whose level is in (0, maxLevel]. Quest
+// levels are always at least baseEnemySpawnLevel and the weakest rogue is level
+// 1, so a qualifying rogue normally always exists; the fallback only guards
+// against a caller passing a cap below every rogue's level (avoids a panic on
+// rand.Intn(0)).
 func randomRogueName(maxLevel int) string {
 	var names []string
-	lowestName := ""
-	lowestLevel := 0
 	for name, char := range domain.Rogues {
-		if char.Level <= 0 {
-			continue
-		}
-		if lowestName == "" || char.Level < lowestLevel {
-			lowestName = name
-			lowestLevel = char.Level
-		}
-		if char.Level <= maxLevel {
+		if char.Level > 0 && char.Level <= maxLevel {
 			names = append(names, name)
 		}
 	}
 	if len(names) == 0 {
-		return lowestName
+		return lowestLevelRogueName()
 	}
 	return names[rand.Intn(len(names))]
+}
+
+// lowestLevelRogueName returns the name of the weakest rogue (lowest positive
+// level), used as a guaranteed-valid fallback enemy.
+func lowestLevelRogueName() string {
+	name := ""
+	level := 0
+	for n, char := range domain.Rogues {
+		if char.Level > 0 && (name == "" || char.Level < level) {
+			name = n
+			level = char.Level
+		}
+	}
+	return name
 }
 
 func (s *WisemanScreen) randomRewardType() domain.RewardType {
