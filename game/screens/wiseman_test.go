@@ -212,6 +212,29 @@ func TestQuestBoonSkippedWithActiveQuest(t *testing.T) {
 	}
 }
 
+func TestRandomRogueNameRespectsMaxLevel(t *testing.T) {
+	for _, maxLevel := range []int{1, 3, 5, 8} {
+		for range 50 {
+			name := randomRogueName(maxLevel)
+			rogue, ok := domain.Rogues[name]
+			if !ok {
+				t.Fatalf("randomRogueName returned unknown rogue %q", name)
+			}
+			if rogue.Level <= 0 || rogue.Level > maxLevel {
+				t.Fatalf("randomRogueName(%d) returned %q with level %d, want 1..%d",
+					maxLevel, name, rogue.Level, maxLevel)
+			}
+		}
+	}
+}
+
+func TestRandomRogueNameFallsBackBelowLowestLevel(t *testing.T) {
+	name := randomRogueName(0)
+	if _, ok := domain.Rogues[name]; !ok {
+		t.Fatalf("randomRogueName(0) returned unknown rogue %q", name)
+	}
+}
+
 func TestPickBoonNoQuestWithActiveQuest(t *testing.T) {
 	city := &domain.City{Name: "TestCity"}
 	player := &domain.Player{

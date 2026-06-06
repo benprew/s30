@@ -29,6 +29,12 @@ type enemySpawnProfile struct {
 	preferredColor string
 }
 
+// EnemySpawnMaxLevelAt returns the highest enemy level appropriate to spawn
+// near the given tile, factoring in player progression and nearby castles.
+func (l *Level) EnemySpawnMaxLevelAt(tile image.Point) int {
+	return l.enemySpawnProfileAt(tile).maxLevel
+}
+
 func (l *Level) enemySpawnProfileAt(tile image.Point) enemySpawnProfile {
 	profile := enemySpawnProfile{
 		maxLevel: progressionEnemyMaxLevel(l.Player, l.CombatsCompleted, l.defeatedCastleCount()),

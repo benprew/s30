@@ -271,7 +271,7 @@ func (s *WisemanScreen) generateDeliveryQuest() {
 }
 
 func (s *WisemanScreen) generateDefeatEnemyQuest() {
-	enemyName := s.randomRogueName()
+	enemyName := randomRogueName(s.questEnemyMaxLevel())
 
 	rewardType := domain.RewardAmulet
 	if rand.Float32() < 0.3 {
@@ -325,15 +325,38 @@ func (s *WisemanScreen) spawnQuestEnemy(enemyName string) {
 	}
 }
 
-func (s *WisemanScreen) randomRogueName() string {
+// questEnemyMaxLevel returns the highest enemy level appropriate for a quest
+// from this city, scaled to player progression so quests stay winnable.
+func (s *WisemanScreen) questEnemyMaxLevel() int {
+	if s.Level == nil {
+		return wisemanFallbackEnemyLevel
+	}
+	return s.Level.EnemySpawnMaxLevelAt(image.Point{X: s.City.X, Y: s.City.Y})
+}
+
+const wisemanFallbackEnemyLevel = 2
+
+// randomRogueName picks a rogue whose level is at or below maxLevel. If no
+// rogue qualifies (e.g. maxLevel is below the weakest rogue) it falls back to
+// the lowest-level rogue available so a quest can still be offered.
+func randomRogueName(maxLevel int) string {
 	var names []string
+	lowestName := ""
+	lowestLevel := 0
 	for name, char := range domain.Rogues {
-		if char.Level <= 10 {
+		if char.Level <= 0 {
+			continue
+		}
+		if lowestName == "" || char.Level < lowestLevel {
+			lowestName = name
+			lowestLevel = char.Level
+		}
+		if char.Level <= maxLevel {
 			names = append(names, name)
 		}
 	}
 	if len(names) == 0 {
-		return "Goblin Lord"
+		return lowestName
 	}
 	return names[rand.Intn(len(names))]
 }
