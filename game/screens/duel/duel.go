@@ -167,6 +167,8 @@ type DuelScreen struct {
 
 	viewingGraveyard *duelPlayer
 
+	handCollapsed bool
+
 	inMulligan         bool
 	mulliganCount      int
 	mulliganBottoming  bool
@@ -790,6 +792,10 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		s.handleEscape()
 	}
 
+	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
+		s.toggleHand()
+	}
+
 	s.frameCount++
 
 	if s.choiceRequest != nil {
@@ -1050,7 +1056,26 @@ func (s *DuelScreen) panelCardH(dp *duelPlayer) int {
 	return 51
 }
 
+// toggleHand collapses or expands the player's hand. Collapsing hides the hand
+// card list so it no longer covers the player's attackers during combat, while
+// the header bar stays visible so the hand can be expanded again.
+func (s *DuelScreen) toggleHand() {
+	s.handCollapsed = !s.handCollapsed
+}
+
+// pointInHandHeader reports whether the point is over the hand header bar, which
+// stays clickable in both collapsed and expanded states to toggle the hand.
+func (s *DuelScreen) pointInHandHeader(mx, my int, dp *duelPlayer) bool {
+	w := s.panelCardW(dp)
+	headerH := s.panelCardH(dp)
+	return mx >= dp.handX && mx < dp.handX+w &&
+		my >= dp.handY && my < dp.handY+headerH
+}
+
 func (s *DuelScreen) handCardIdxAtPoint(mx, my, panelX, panelY int, count int, dp *duelPlayer) int {
+	if dp == s.self && s.handCollapsed {
+		return -1
+	}
 	headerH := s.panelCardH(dp)
 	w := s.panelCardW(dp)
 	cardListY := panelY + headerH
@@ -1155,6 +1180,10 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 	}
 	if s.lastMsg.Prompt == interactive.PromptAssignCombatDamage {
 		s.handleDamageAssignmentClick(mx, my)
+		return
+	}
+	if s.pointInHandHeader(mx, my, s.self) {
+		s.toggleHand()
 		return
 	}
 	hand := s.lastMsg.State.You.Hand
@@ -2479,10 +2508,13 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps inte
 	screen.DrawImage(dp.handBg, opts)
 
 	label := fmt.Sprintf("Your Hand (%d)", ps.HandCount)
+	if dp == s.self && s.handCollapsed {
+		label = fmt.Sprintf("Your Hand (%d) [+]", ps.HandCount)
+	}
 	txt := elements.NewText(16, label, dp.handX+15, dp.handY+13)
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	if dp != s.self {
+	if dp != s.self || s.handCollapsed {
 		return
 	}
 
