@@ -90,7 +90,7 @@ func (s *WisemanScreen) determineState() {
 			s.handleExpiredQuest(q)
 			return
 		}
-		if s.isQuestRelevantCity(q) {
+		if isQuestRelevantCity(q, s.City) {
 			s.handleActiveQuest()
 			return
 		}
@@ -129,12 +129,33 @@ func (s *WisemanScreen) determineState() {
 	}
 }
 
-func (s *WisemanScreen) isQuestRelevantCity(q *domain.Quest) bool {
+// QuestRewardReady reports whether the player has a completed but unclaimed
+// quest whose reward can be collected in this city. This is used on town entry
+// to pop the wiseman reward screen immediately.
+func QuestRewardReady(city *domain.City, player *domain.Player) bool {
+	q := player.ActiveQuest
+	if q == nil || q.DaysRemaining <= 0 {
+		return false
+	}
+	return isQuestRelevantCity(q, city) && isQuestComplete(q, city)
+}
+
+func isQuestRelevantCity(q *domain.Quest, city *domain.City) bool {
 	switch q.Type {
 	case domain.QuestTypeDelivery:
-		return q.OriginCity.Name == s.City.Name || q.TargetCity.Name == s.City.Name
+		return q.OriginCity.Name == city.Name || q.TargetCity.Name == city.Name
 	case domain.QuestTypeDefeatEnemy:
-		return q.OriginCity.Name == s.City.Name
+		return q.OriginCity.Name == city.Name
+	}
+	return false
+}
+
+func isQuestComplete(q *domain.Quest, city *domain.City) bool {
+	switch q.Type {
+	case domain.QuestTypeDelivery:
+		return q.TargetCity.Name == city.Name
+	case domain.QuestTypeDefeatEnemy:
+		return q.OriginCity.Name == city.Name && q.IsCompleted
 	}
 	return false
 }
@@ -142,7 +163,7 @@ func (s *WisemanScreen) isQuestRelevantCity(q *domain.Quest) bool {
 func (s *WisemanScreen) handleActiveQuest() {
 	q := s.Player.ActiveQuest
 
-	if s.isQuestComplete(q) {
+	if isQuestComplete(q, s.City) {
 		s.State = WisemanStateReward
 		s.TextLines = []string{"You have completed the quest!", "Here is your reward."}
 		return
@@ -185,16 +206,6 @@ func (s *WisemanScreen) handleExpiredQuest(q *domain.Quest) {
 	}
 
 	s.loadStory()
-}
-
-func (s *WisemanScreen) isQuestComplete(q *domain.Quest) bool {
-	switch q.Type {
-	case domain.QuestTypeDelivery:
-		return q.TargetCity.Name == s.City.Name
-	case domain.QuestTypeDefeatEnemy:
-		return q.OriginCity.Name == s.City.Name && q.IsCompleted
-	}
-	return false
 }
 
 func (s *WisemanScreen) generateQuest() {

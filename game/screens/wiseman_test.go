@@ -212,6 +212,114 @@ func TestQuestBoonSkippedWithActiveQuest(t *testing.T) {
 	}
 }
 
+func TestQuestRewardReadyDefeatEnemyAtOrigin(t *testing.T) {
+	originCity := &domain.City{Name: "QuestTown"}
+	player := &domain.Player{
+		ActiveQuest: &domain.Quest{
+			Type:          domain.QuestTypeDefeatEnemy,
+			OriginCity:    originCity,
+			DaysRemaining: 10,
+			IsCompleted:   true,
+		},
+	}
+
+	if !QuestRewardReady(originCity, player) {
+		t.Error("Expected reward ready at origin city for completed defeat-enemy quest")
+	}
+}
+
+func TestQuestRewardReadyDeliveryAtTarget(t *testing.T) {
+	targetCity := &domain.City{Name: "TargetTown"}
+	player := &domain.Player{
+		ActiveQuest: &domain.Quest{
+			Type:          domain.QuestTypeDelivery,
+			OriginCity:    &domain.City{Name: "QuestTown"},
+			TargetCity:    targetCity,
+			DaysRemaining: 10,
+		},
+	}
+
+	if !QuestRewardReady(targetCity, player) {
+		t.Error("Expected reward ready at target city for delivery quest")
+	}
+}
+
+func TestQuestRewardNotReadyWhenIncomplete(t *testing.T) {
+	originCity := &domain.City{Name: "QuestTown"}
+	player := &domain.Player{
+		ActiveQuest: &domain.Quest{
+			Type:          domain.QuestTypeDefeatEnemy,
+			OriginCity:    originCity,
+			DaysRemaining: 10,
+			IsCompleted:   false,
+		},
+	}
+
+	if QuestRewardReady(originCity, player) {
+		t.Error("Expected reward not ready for incomplete defeat-enemy quest")
+	}
+}
+
+func TestQuestRewardNotReadyAtUnrelatedCity(t *testing.T) {
+	other := &domain.City{Name: "OtherTown"}
+	player := &domain.Player{
+		ActiveQuest: &domain.Quest{
+			Type:          domain.QuestTypeDelivery,
+			OriginCity:    &domain.City{Name: "QuestTown"},
+			TargetCity:    &domain.City{Name: "TargetTown"},
+			DaysRemaining: 10,
+		},
+	}
+
+	if QuestRewardReady(other, player) {
+		t.Error("Expected reward not ready at unrelated city")
+	}
+}
+
+func TestQuestRewardNotReadyAfterClaimed(t *testing.T) {
+	originCity := &domain.City{Name: "QuestTown", WisemanBoon: domain.BoonQuest}
+	player := &domain.Player{
+		ActiveQuest: &domain.Quest{
+			Type:          domain.QuestTypeDefeatEnemy,
+			OriginCity:    originCity,
+			DaysRemaining: 10,
+			IsCompleted:   true,
+		},
+	}
+
+	if !QuestRewardReady(originCity, player) {
+		t.Fatal("Expected reward ready before claiming")
+	}
+
+	s := &WisemanScreen{City: originCity, Player: player}
+	s.determineState()
+	if s.State != WisemanStateReward {
+		t.Fatalf("Expected reward state, got %d", s.State)
+	}
+	s.giveReward()
+	player.ActiveQuest = nil
+
+	if QuestRewardReady(originCity, player) {
+		t.Error("Expected reward not ready after claiming")
+	}
+}
+
+func TestQuestRewardNotReadyWhenExpired(t *testing.T) {
+	originCity := &domain.City{Name: "QuestTown"}
+	player := &domain.Player{
+		ActiveQuest: &domain.Quest{
+			Type:          domain.QuestTypeDefeatEnemy,
+			OriginCity:    originCity,
+			DaysRemaining: 0,
+			IsCompleted:   true,
+		},
+	}
+
+	if QuestRewardReady(originCity, player) {
+		t.Error("Expected reward not ready when quest expired")
+	}
+}
+
 func TestPickBoonNoQuestWithActiveQuest(t *testing.T) {
 	city := &domain.City{Name: "TestCity"}
 	player := &domain.Player{
