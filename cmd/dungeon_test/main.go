@@ -1,9 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"sort"
+	"math/rand"
 	"time"
 
 	_ "github.com/benprew/mage-go/cards"
@@ -15,73 +16,124 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// dungeonEnemyPool returns a small set of rogue characters with sprites loaded
-// so the dungeon generator has real enemies to place.
-func dungeonEnemyPool(n int) []*domain.Character {
-	names := make([]string, 0, len(domain.Rogues))
-	for name := range domain.Rogues {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	if n > len(names) {
-		n = len(names)
-	}
-	out := make([]*domain.Character, 0, n)
-	for _, name := range names[:n] {
-		c := domain.Rogues[name]
-		if err := c.LoadImages(); err != nil {
-			log.Fatalf("load images for %s: %v", name, err)
-		}
-		out = append(out, c)
-	}
-	return out
-}
-
+// testGame drives the dungeon screen and follows screen transitions the same
+// way game.go does, so walking into an enemy actually starts (and resolves) a
+// duel before returning to the dungeon. It terminates once the player leaves
+// the dungeon — either by pressing ESC or by losing a duel and being expelled.
 type testGame struct {
-	dungeonScreen *screens.DungeonScreen
+	screens map[screenui.ScreenName]screenui.Screen
+	current screenui.ScreenName
 }
 
 func (g *testGame) Update() error {
-	name, _, err := g.dungeonScreen.Update(1024, 768, 1.0)
+	name, screen, err := g.screens[g.current].Update(1024, 768, 1.0)
 	if err != nil {
 		return err
 	}
-	if name == screenui.WorldScr {
-		fmt.Println("Left dungeon.")
-		return ebiten.Termination
+	if screen != nil {
+		g.screens[name] = screen
 	}
+	if name != g.current {
+		switch name {
+		case screenui.DuelScr:
+			fmt.Println("Duel started!")
+		case screenui.DuelWinScr:
+			fmt.Println("You won the duel!")
+		case screenui.DuelLoseScr:
+			fmt.Println("You lost the duel!")
+		case screenui.WorldScr:
+			fmt.Println("Left the dungeon.")
+			return ebiten.Termination
+		}
+	}
+	g.current = name
 	return nil
 }
 
 func (g *testGame) Draw(screen *ebiten.Image) {
-	g.dungeonScreen.Draw(screen, 1024, 768, 1.0)
+	if s, ok := g.screens[g.current]; ok {
+		s.Draw(screen, 1024, 768, 1.0)
+	}
 }
 
 func (g *testGame) Layout(_, _ int) (int, int) {
 	return 1024, 768
 }
 
+func colorFromName(name string) domain.ColorMask {
+	switch name {
+	case "white", "W":
+		return domain.ColorWhite
+	case "blue", "U":
+		return domain.ColorBlue
+	case "black", "B":
+		return domain.ColorBlack
+	case "red", "R":
+		return domain.ColorRed
+	case "green", "G":
+		return domain.ColorGreen
+	default:
+		return domain.ColorRed
+	}
+}
+
+func selectRestrictedCards(cards []*domain.Card, rng *rand.Rand) []*domain.Card {
+	seen := make(map[string]bool)
+	pool := make([]*domain.Card, 0)
+	for _, card := range cards {
+		if !card.VintageRestricted || seen[card.CardName] {
+			continue
+		}
+		seen[card.CardName] = true
+		pool = append(pool, card)
+	}
+	if len(pool) == 0 {
+		return nil
+	}
+
+	rng.Shuffle(len(pool), func(i, j int) {
+		pool[i], pool[j] = pool[j], pool[i]
+	})
+
+	maxCount := 4
+	if len(pool) < maxCount {
+		maxCount = len(pool)
+	}
+	count := rng.Intn(maxCount) + 1
+	return pool[:count]
+}
+
 func main() {
+	colorName := flag.String("color", "red", "dungeon color (white/blue/black/red/green)")
+	enemies := flag.Int("enemies", 3, "number of enemies to place in the dungeon")
+	flag.Parse()
+
 	logging.Enable(logging.Duel)
 
-	player, err := domain.NewPlayer("Test", nil, false, domain.DifficultyEasy, domain.ColorColorless)
+	color := colorFromName(*colorName)
+
+	player, err := domain.NewPlayer("Test", nil, false, domain.DifficultyEasy, color)
 	if err != nil {
 		log.Fatalf("Failed to create player: %v", err)
 	}
 
 	seed := time.Now().UnixNano()
+	restrictedCards := selectRestrictedCards(domain.CARDS, rand.New(rand.NewSource(seed)))
+
 	dungeon := domain.GenerateDungeon(domain.DungeonGenOptions{
-		Name:          "Test Dungeon",
-		Level:         1,
-		Color:         domain.ColorRed,
-		CreatureSize:  domain.CreatureSizeSmall,
-		GridSize:      11,
-		NumEnemies:    3,
-		NumDice:       2,
-		NumScrolls:    1,
-		NumGoldChests: 2,
-		EnemyPool:     dungeonEnemyPool(4),
-		Seed:          seed,
+		Name:            "Test Dungeon",
+		Level:           1,
+		Color:           color,
+		CreatureSize:    domain.CreatureSizeSmall,
+		GridSize:        11,
+		NumEnemies:      *enemies,
+		NumDice:         10,
+		NumScrolls:      1,
+		NumGoldChests:   2,
+		RestrictedCards: restrictedCards,
+		EnemyPool:       domain.DungeonEnemyPool(color),
+		DiceCardPool:    player.GetDuelDeck().NonLandCards(),
+		Seed:            seed,
 	})
 
 	player.DungeonState = &domain.DungeonState{
@@ -96,9 +148,12 @@ func main() {
 		Dungeons: []*domain.Dungeon{dungeon},
 	}
 
-	dungeonScreen := screens.NewDungeonScreen(player, lvl)
-
-	g := &testGame{dungeonScreen: dungeonScreen}
+	g := &testGame{
+		screens: map[screenui.ScreenName]screenui.Screen{
+			screenui.DungeonScr: screens.NewDungeonScreen(player, lvl),
+		},
+		current: screenui.DungeonScr,
+	}
 
 	ebiten.SetWindowSize(1024, 768)
 	ebiten.SetWindowTitle("Dungeon Test")
