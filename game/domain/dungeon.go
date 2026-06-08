@@ -1,6 +1,9 @@
 package domain
 
-import "image"
+import (
+	"fmt"
+	"image"
+)
 
 type DungeonTileType int
 
@@ -162,8 +165,46 @@ type DungeonState struct {
 	CurrentDungeon *Dungeon
 	Position       image.Point
 	DungeonLife    int
-	DiceAdvantages []DiceEffect
 	CollectedCards []*Card
+}
+
+// ApplyDice applies a dice tile's effect to the dungeon state and clears the
+// tile. Life effects accumulate for the whole dungeon; card grants are queued
+// for the next duel. Returns a human-readable description of what happened, or
+// "" if the tile is not an unspent dice tile.
+func (st *DungeonState) ApplyDice(tile *DungeonTile, p *Player) string {
+	if tile == nil || tile.Type != DungeonTileDice || tile.Dice == nil {
+		return ""
+	}
+	effect := tile.Dice
+	desc := DescribeDiceEffect(effect)
+	if effect.LifeMod != 0 {
+		p.BonusDuelLife += effect.LifeMod
+	}
+	if effect.Card != nil {
+		p.BonusDuelCards = append(p.BonusDuelCards, effect.Card)
+	}
+	tile.Dice = nil
+	tile.Type = DungeonTileEmpty
+	return desc
+}
+
+// DescribeDiceEffect renders a dice effect as a short sentence for the dungeon
+// overlay and the in-duel notice.
+func DescribeDiceEffect(e *DiceEffect) string {
+	if e == nil {
+		return ""
+	}
+	if e.Card != nil {
+		return fmt.Sprintf("Start your next duel with %s in play", e.Card.CardName)
+	}
+	if e.LifeMod > 0 {
+		return fmt.Sprintf("+%d life for duels in this dungeon", e.LifeMod)
+	}
+	if e.LifeMod < 0 {
+		return fmt.Sprintf("%d life for duels in this dungeon", e.LifeMod)
+	}
+	return "The dice fizzle — nothing happens"
 }
 
 // CollectReward applies the reward at `tile` to the player and the dungeon
@@ -187,6 +228,17 @@ func (st *DungeonState) CollectReward(tile *DungeonTile, player *Player) {
 		}
 	}
 	tile.Reward = nil
+	tile.Type = DungeonTileEmpty
+}
+
+// DefeatEnemy clears a defeated enemy from its tile, turning it back into an
+// empty corridor so the player can continue exploring. No-op if the tile is not
+// an enemy tile.
+func (st *DungeonState) DefeatEnemy(tile *DungeonTile) {
+	if tile == nil || tile.Type != DungeonTileEnemy {
+		return
+	}
+	tile.Enemy = nil
 	tile.Type = DungeonTileEmpty
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"math/rand"
+	"strings"
 )
 
 type DungeonGenOptions struct {
@@ -15,6 +16,7 @@ type DungeonGenOptions struct {
 	CardRestriction *CardRestriction
 	RestrictedCards []*Card
 	EnemyPool       []*Character
+	DiceCardPool    []*Card
 	GridSize        int
 	NumEnemies      int
 	NumDice         int
@@ -117,7 +119,7 @@ func GenerateDungeon(opts DungeonGenOptions) *Dungeon {
 
 	placeOnEmpty(opts.NumDice, func(t *DungeonTile, r *rand.Rand) {
 		t.Type = DungeonTileDice
-		t.Dice = rollDiceEffect(opts.Level, r)
+		t.Dice = rollDiceEffect(opts.Level, r, opts.DiceCardPool)
 	})
 
 	placeOnEmpty(opts.NumScrolls, func(t *DungeonTile, r *rand.Rand) {
@@ -277,16 +279,86 @@ func takeFirst(slice []image.Point, ok func(image.Point) bool) (image.Point, boo
 	return image.Point{}, false
 }
 
-func rollDiceEffect(level int, rng *rand.Rand) *DiceEffect {
+// rollDiceEffect rolls a single dice tile's effect for a dungeon of the given
+// level and color. Apprentice (level 1) dungeons never roll a disadvantage;
+// higher levels occasionally do. Advantages are either bonus life (more on
+// easier levels) or a free card that starts the next duel in play (powerful
+// creatures on easier levels, weaker creatures or mana on harder ones).
+func rollDiceEffect(level int, rng *rand.Rand, cardPool []*Card) *DiceEffect {
 	allowDisadvantage := level >= 2
 	if allowDisadvantage && rng.Intn(4) == 0 {
 		return &DiceEffect{Type: DiceDisadvantage, LifeMod: -(1 + rng.Intn(3))}
 	}
+
+	// Half the advantages are a free card, half are bonus life.
 	if rng.Intn(2) == 0 {
-		bonus := max(4-level, 1)
-		return &DiceEffect{Type: DiceAdvantage, LifeMod: bonus + rng.Intn(2)}
+		if card := randomDiceCard(rng, cardPool); card != nil {
+			return &DiceEffect{Type: DiceAdvantage, Card: card}
+		}
 	}
-	return &DiceEffect{Type: DiceAdvantage}
+
+	// Easier dungeons give more life (~3-4), harder ones less (~1-2).
+	bonus := max(4-level, 1)
+	return &DiceEffect{Type: DiceAdvantage, LifeMod: bonus + rng.Intn(2)}
+}
+
+// randomDiceCard picks the free card granted by a dice advantage from the
+// player's own deck (cardPool, which the caller supplies with lands already
+// excluded). Drawing from the deck guarantees the grant is a real, playable
+// card the duel can put into play. Returns nil when the pool is empty, in which
+// case the caller falls back to a life bonus.
+func randomDiceCard(rng *rand.Rand, cardPool []*Card) *Card {
+	eligible := make([]*Card, 0, len(cardPool))
+	for _, c := range cardPool {
+		if !canStartOnEmptyBattlefieldFromDice(c) {
+			continue
+		}
+		eligible = append(eligible, c)
+	}
+	if len(eligible) == 0 {
+		return nil
+	}
+	return eligible[rng.Intn(len(eligible))]
+}
+
+func canStartOnEmptyBattlefieldFromDice(card *Card) bool {
+	if card == nil || isAuraLike(card) {
+		return false
+	}
+
+	switch card.CardType {
+	case CardTypeCreature, CardTypeArtifact, CardTypeEnchantment:
+		return true
+	default:
+		return false
+	}
+}
+
+func isAuraLike(card *Card) bool {
+	if containsCaseInsensitive(card.Subtypes, "Aura") || containsCaseInsensitive(card.Keywords, "Enchant") {
+		return true
+	}
+	if strings.Contains(strings.ToLower(card.TypeLine), "aura") {
+		return true
+	}
+	for _, ability := range card.ParsedAbilities {
+		if ability.TargetSpec != nil && strings.EqualFold(ability.TargetSpec.Condition, "enchant") {
+			return true
+		}
+		if strings.HasPrefix(strings.ToLower(ability.RawText), "enchant ") {
+			return true
+		}
+	}
+	return false
+}
+
+func containsCaseInsensitive(values []string, want string) bool {
+	for _, value := range values {
+		if strings.EqualFold(value, want) {
+			return true
+		}
+	}
+	return false
 }
 
 // AllRestrictedCardsReachable verifies that every restricted-card treasure

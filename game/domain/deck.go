@@ -9,6 +9,20 @@ const (
 	ExcludeVintageRestricted
 )
 
+// NonLandCards returns the distinct non-land cards in the deck. It is the pool
+// a dungeon die draws from when granting a card "in play" for the next duel, so
+// the grant is always a card the player actually runs.
+func (d Deck) NonLandCards() []*Card {
+	cards := make([]*Card, 0, len(d))
+	for card := range d {
+		if card.CardType == CardTypeLand {
+			continue
+		}
+		cards = append(cards, card)
+	}
+	return cards
+}
+
 func (d Deck) ValidAnteCards(exclusions ...AnteExclusion) []*Card {
 	excludeBasicLand := false
 	excludeVintage := false

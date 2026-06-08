@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/ui/imageutil"
 )
+
+const MaxRandomEnemyLevel = 10 // this excludes the color wizards and Arzakon
 
 // details for the "rogues" in the game (aka your enemies)
 var Rogues = loadRogues()
@@ -49,6 +52,28 @@ func (c *Character) LoadImages() error {
 		c.ShadowSprite = spr
 	}
 	return nil
+}
+
+// DungeonEnemyPool returns the rogue characters used to populate the enemy
+// tiles of a dungeon of the given color. Rogues whose primary color matches the
+// dungeon are returned; if the color has no matching rogues the full roster is
+// used so a dungeon always has opponents. The result is sorted by name so
+// seeded dungeon generation stays reproducible (map iteration order is not).
+func DungeonEnemyPool(color ColorMask) []*Character {
+	target := ColorMaskToString(color)
+	var matched, all []*Character
+	for _, c := range Rogues {
+		all = append(all, c)
+		if c.PrimaryColor == target && c.Level < MaxRandomEnemyLevel {
+			matched = append(matched, c)
+		}
+	}
+	pool := matched
+	if len(pool) == 0 {
+		pool = all
+	}
+	sort.Slice(pool, func(i, j int) bool { return pool[i].Name < pool[j].Name })
+	return pool
 }
 
 func analyzeColors(collection CardCollection) (string, []string) {

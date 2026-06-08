@@ -11,7 +11,6 @@ import (
 
 const (
 	baseEnemySpawnLevel      = 2
-	maxRandomEnemyLevel      = 10
 	castleSpawnInfluence     = 8
 	castleSpawnLevelBonus    = 2
 	castleColorWeight        = 4
@@ -37,7 +36,7 @@ func (l *Level) EnemySpawnMaxLevelAt(tile image.Point) int {
 
 func (l *Level) enemySpawnProfileAt(tile image.Point) enemySpawnProfile {
 	profile := enemySpawnProfile{
-		maxLevel: progressionEnemyMaxLevel(l.Player, l.CombatsCompleted, l.defeatedCastleCount()),
+		maxLevel: progressionEnemyMaxLevel(l.Player, l.CombatsWon, l.defeatedCastleCount()),
 	}
 
 	castle := l.closestActiveCastleWithin(tile, castleSpawnInfluence)
@@ -45,7 +44,7 @@ func (l *Level) enemySpawnProfileAt(tile image.Point) enemySpawnProfile {
 		return profile
 	}
 
-	profile.maxLevel = min(maxRandomEnemyLevel, profile.maxLevel+castleSpawnLevelBonus)
+	profile.maxLevel = min(domain.MaxRandomEnemyLevel, profile.maxLevel+castleSpawnLevelBonus)
 	profile.preferredColor = domain.ColorMaskToString(castle.Color)
 	return profile
 }
@@ -59,7 +58,7 @@ func progressionEnemyMaxLevel(player *domain.Player, combatsCompleted int, defea
 	}
 	level += combatsCompleted / combatsPerEnemyLevel
 	level += defeatedCastles / castlesPerEnemyLevelBump
-	return min(maxRandomEnemyLevel, max(baseEnemySpawnLevel, level))
+	return min(domain.MaxRandomEnemyLevel, max(baseEnemySpawnLevel, level))
 }
 
 func isWithinEnemySpawnRadius(distance float64) bool {
@@ -96,17 +95,11 @@ func powerfulCardProgressionLevels(collection domain.CardCollection) int {
 }
 
 func chooseEnemyName(rng *rand.Rand, rogues map[string]*domain.Character, profile enemySpawnProfile) (string, bool) {
-	names := weightedEnemyNames(rogues, profile, false)
-	if len(names) == 0 {
-		names = weightedEnemyNames(rogues, profile, true)
-	}
-	if len(names) == 0 {
-		return "", false
-	}
+	names := weightedEnemyNames(rogues, profile)
 	return names[rng.Intn(len(names))], true
 }
 
-func weightedEnemyNames(rogues map[string]*domain.Character, profile enemySpawnProfile, ignoreProgression bool) []string {
+func weightedEnemyNames(rogues map[string]*domain.Character, profile enemySpawnProfile) []string {
 	keys := make([]string, 0, len(rogues))
 	for name := range rogues {
 		keys = append(keys, name)
@@ -116,10 +109,7 @@ func weightedEnemyNames(rogues map[string]*domain.Character, profile enemySpawnP
 	names := []string{}
 	for _, name := range keys {
 		rogue := rogues[name]
-		if rogue == nil || rogue.Level <= 0 || rogue.Level > maxRandomEnemyLevel {
-			continue
-		}
-		if !ignoreProgression && rogue.Level > profile.maxLevel {
+		if rogue == nil || rogue.Level > profile.maxLevel {
 			continue
 		}
 

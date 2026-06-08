@@ -4,6 +4,9 @@ default:
 pprof:
 	go run . -pprof 127.0.0.1:6060 -v mtg,duel
 
+dungeon:
+	go run ./cmd/dungeon_test
+
 test:
 	go test -count=10 ./...
 

@@ -43,6 +43,13 @@ func (l *Level) placeDungeons(numDungeons, minDistance int, seed int64, dungeonS
 	castleLocs := l.castleTileLocations()
 	placed := []image.Point{}
 
+	// Dice grant a card from the player's own deck (lands excluded), so the
+	// pool is shared across every dungeon placed in this world.
+	var diceCardPool []*domain.Card
+	if l.Player != nil {
+		diceCardPool = l.Player.GetDuelDeck().NonLandCards()
+	}
+
 	for _, loc := range candidates {
 		if len(placed) >= numDungeons {
 			break
@@ -55,16 +62,19 @@ func (l *Level) placeDungeons(numDungeons, minDistance int, seed int64, dungeonS
 		}
 
 		idx := len(placed)
+		color := dungeonColors[idx%len(dungeonColors)]
 		dungeon := domain.GenerateDungeon(domain.DungeonGenOptions{
 			Name:          dungeonName(idx),
 			Level:         1,
-			Color:         dungeonColors[idx%len(dungeonColors)],
+			Color:         color,
 			CreatureSize:  domain.CreatureSizeSmall,
 			GridSize:      11,
 			NumEnemies:    3,
 			NumDice:       2,
 			NumScrolls:    1,
 			NumGoldChests: 2,
+			EnemyPool:     domain.DungeonEnemyPool(color),
+			DiceCardPool:  diceCardPool,
 			Seed:          seed + int64(idx),
 		})
 		dungeon.MapTile = loc

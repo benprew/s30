@@ -2,7 +2,6 @@ package world
 
 import (
 	"image"
-	"math/rand"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
@@ -83,7 +82,7 @@ func TestIsWithinEnemySpawnRadiusAllowsNearbyEnemies(t *testing.T) {
 
 func TestEnemySpawnProfileNearCastlePrefersCastleColorAndStrongerEnemies(t *testing.T) {
 	level := &Level{
-		CombatsCompleted: 0,
+		CombatsWon: 0,
 		Player: &domain.Player{
 			Character: domain.Character{
 				CardCollection: domain.NewCardCollection(),
@@ -113,7 +112,7 @@ func TestChooseEnemyNameFiltersByProgressionAndWeightsCastleColor(t *testing.T) 
 		"Too Early": {Name: "Too Early", Level: 5, PrimaryColor: "Blue"},
 	}
 
-	names := weightedEnemyNames(rogues, enemySpawnProfile{maxLevel: 4, preferredColor: "Red"}, false)
+	names := weightedEnemyNames(rogues, enemySpawnProfile{maxLevel: 4, preferredColor: "Red"})
 	counts := map[string]int{}
 	for _, name := range names {
 		counts[name]++
@@ -130,13 +129,5 @@ func TestChooseEnemyNameFiltersByProgressionAndWeightsCastleColor(t *testing.T) 
 	}
 	if counts["Blue Low"] != normalEnemyWeight {
 		t.Fatalf("blue weight = %d, want %d", counts["Blue Low"], normalEnemyWeight)
-	}
-
-	name, ok := chooseEnemyName(rand.New(rand.NewSource(1)), rogues, enemySpawnProfile{maxLevel: 1})
-	if !ok {
-		t.Fatal("chooseEnemyName fallback returned !ok")
-	}
-	if name == "Boss" {
-		t.Fatal("chooseEnemyName fallback selected castle boss")
 	}
 }
