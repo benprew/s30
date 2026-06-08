@@ -6,6 +6,7 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/assets"
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
@@ -41,7 +42,7 @@ const (
 
 // dungeonCharScale shrinks the 248×174 walking-sprite cells down to fit on a
 // 64-wide diamond. Tuned by eye against dungeon_ex.png.
-const dungeonCharScale = 0.4
+const dungeonCharScale = 0.6
 
 // charAnchor{X,Y} is the figure's feet position within a 248×174 walking
 // sheet cell. Measured from the non-transparent bbox in Ego_F.spr.png across
@@ -50,7 +51,7 @@ const dungeonCharScale = 0.4
 // diamond instead of leaving it floating above.
 const (
 	charAnchorX = 110.0
-	charAnchorY = 100.0
+	charAnchorY = 80.0
 )
 
 type characterFrames struct {
@@ -70,6 +71,8 @@ type DungeonScreen struct {
 	overlayActive bool
 	overlayTile   image.Point
 	overlayBtns   []*elements.Button
+	overlayTitle  string
+	overlayBody   string
 }
 
 func NewDungeonScreen(player *domain.Player, level *world.Level) *DungeonScreen {
@@ -109,6 +112,9 @@ func (s *DungeonScreen) cacheEnemySprites(d *domain.Dungeon) {
 			}
 			if _, ok := s.enemyFrames[tile.Enemy]; ok {
 				continue
+			}
+			if tile.Enemy.WalkingSprite == nil {
+				_ = tile.Enemy.LoadImages()
 			}
 			s.enemyFrames[tile.Enemy] = scaleCharacterFrames(
 				tile.Enemy.WalkingSprite, tile.Enemy.ShadowSprite, dungeonCharScale,
@@ -205,25 +211,58 @@ func (s *DungeonScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 	tile.Visited = true
 	dungeon.RevealFrom(target)
 
+	if tile.Type == domain.DungeonTileEnemy && tile.Enemy != nil {
+		return s.startDungeonDuel(tile)
+	}
+
 	if tile.Type == domain.DungeonTileTreasure && tile.Reward != nil {
 		s.openTreasureOverlay(target)
+	}
+
+	if tile.Type == domain.DungeonTileDice && tile.Dice != nil {
+		s.openDiceOverlay(target)
 	}
 	return screenui.DungeonScr, nil, nil
 }
 
-func (s *DungeonScreen) exitDungeon() screenui.ScreenName {
-	st := s.dungeonState()
-	if st != nil {
-		s.Player.Life = st.DungeonLife
+// startDungeonDuel begins a duel against the rogue on `tile`. Dungeon duels are
+// immediate: there is no ante screen and no bribe option.
+func (s *DungeonScreen) startDungeonDuel(tile *domain.DungeonTile) (screenui.ScreenName, screenui.Screen, error) {
+	if am := gameaudio.Get(); am != nil {
+		am.PlaySFX(gameaudio.EnemySFXForName(tile.Enemy.Name))
 	}
-	s.Player.DungeonState = nil
+	enemy := domain.NewEnemyFromCharacter(tile.Enemy)
+	duel := NewDungeonDuelScreen(s.Player, &enemy, s.dungeonState(), tile)
+	return screenui.DuelScr, duel, nil
+}
+
+func (s *DungeonScreen) exitDungeon() screenui.ScreenName {
+	s.Player.ExitDungeon()
 	return screenui.WorldScr
 }
 
 func (s *DungeonScreen) openTreasureOverlay(p image.Point) {
+	st := s.dungeonState()
 	s.overlayActive = true
 	s.overlayTile = p
+	s.overlayTitle = "Treasure!"
+	s.overlayBody = rewardDescriptionText(st.CurrentDungeon.Tile(p).Reward)
 	s.overlayBtns = makeOverlayButtons("Take", "Leave")
+}
+
+// openDiceOverlay applies the dice tile at p immediately (a dice roll cannot be
+// refused) and shows an informational overlay describing the result.
+func (s *DungeonScreen) openDiceOverlay(p image.Point) {
+	st := s.dungeonState()
+	desc := st.ApplyDice(st.CurrentDungeon.Tile(p), s.Player)
+	if desc == "" {
+		return
+	}
+	s.overlayActive = true
+	s.overlayTile = p
+	s.overlayTitle = "The Dice are Cast!"
+	s.overlayBody = desc
+	s.overlayBtns = []*elements.Button{makeOverlayButton("Continue", buttonIDLeave, 512)}
 }
 
 func (s *DungeonScreen) updateOverlay(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
@@ -258,6 +297,8 @@ func (s *DungeonScreen) collectCurrentReward() {
 func (s *DungeonScreen) closeOverlay() {
 	s.overlayActive = false
 	s.overlayBtns = nil
+	s.overlayTitle = ""
+	s.overlayBody = ""
 }
 
 func (s *DungeonScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
@@ -416,7 +457,14 @@ func (s *DungeonScreen) drawHUD(screen *ebiten.Image, dungeon *domain.Dungeon, s
 	name.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
 	st := s.dungeonState()
-	stats := elements.NewText(18, fmt.Sprintf("Life: %d   Cards collected: %d", st.DungeonLife, len(st.CollectedCards)), 30, 65)
+	statsText := fmt.Sprintf("Life: %d   Cards collected: %d", st.DungeonLife, len(st.CollectedCards))
+	if bonus := s.Player.BonusDuelLife; bonus != 0 {
+		statsText += fmt.Sprintf("   Dice life: %+d", bonus)
+	}
+	if len(s.Player.BonusDuelCards) > 0 {
+		statsText += fmt.Sprintf("   Dice card: %s", s.Player.BonusDuelCards[len(s.Player.BonusDuelCards)-1].CardName)
+	}
+	stats := elements.NewText(18, statsText, 30, 65)
 	stats.Color = color.RGBA{R: 220, G: 220, B: 240, A: 255}
 	stats.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
@@ -426,12 +474,6 @@ func (s *DungeonScreen) drawHUD(screen *ebiten.Image, dungeon *domain.Dungeon, s
 }
 
 func (s *DungeonScreen) drawOverlay(screen *ebiten.Image, scale float64) {
-	st := s.dungeonState()
-	tile := st.CurrentDungeon.Tile(s.overlayTile)
-	if tile == nil || tile.Reward == nil {
-		return
-	}
-
 	dim := ebiten.NewImage(1024, 768)
 	dim.Fill(color.RGBA{R: 0, G: 0, B: 0, A: 180})
 	screen.DrawImage(dim, &ebiten.DrawImageOptions{})
@@ -445,12 +487,11 @@ func (s *DungeonScreen) drawOverlay(screen *ebiten.Image, scale float64) {
 	op.GeoM.Translate(float64(px), float64(py))
 	screen.DrawImage(panel, op)
 
-	title := elements.NewText(28, "Treasure!", px+30, py+30)
+	title := elements.NewText(28, s.overlayTitle, px+30, py+30)
 	title.Color = color.White
 	title.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
-	desc := rewardDescriptionText(tile.Reward)
-	body := elements.NewText(20, desc, px+30, py+90)
+	body := elements.NewText(20, s.overlayBody, px+30, py+90)
 	body.Color = color.RGBA{R: 230, G: 230, B: 240, A: 255}
 	body.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
@@ -540,4 +581,20 @@ func makeOverlayButtons(takeText, leaveText string) []*elements.Button {
 		X: startX + takeW + 20, Y: 460,
 	})
 	return []*elements.Button{take, leave}
+}
+
+// makeOverlayButton builds a single overlay button horizontally centered on
+// centerX.
+func makeOverlayButton(label, id string, centerX int) *elements.Button {
+	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
+	if err != nil {
+		panic(err)
+	}
+	font := &text.GoTextFace{Source: fonts.MtgFont, Size: 18}
+	w, _ := elements.TextButtonSize(label, font)
+	return elements.NewButtonFromConfig(elements.ButtonConfig{
+		Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
+		Text: label, Font: font, ID: id,
+		X: centerX - w/2, Y: 460,
+	})
 }

@@ -30,7 +30,7 @@ type Player struct {
 	IsMale          bool
 	mouseMoving     bool
 	BonusDuelLife   int
-	BonusDuelCards  []*Card
+	BonusDuelCards  []*Card // One-time bonus cards that start in play in the next duel
 	DungeonState    *DungeonState
 }
 
@@ -266,6 +266,17 @@ func (p *Player) GetDuelDeck() Deck {
 
 func (p *Player) RemoveCard(c *Card) error {
 	return p.CardCollection.DecrementCardCount(c)
+}
+
+// ExitDungeon leaves the current dungeon, restoring the player's overworld life
+// from the dungeon life pool and clearing the dungeon state. No-op when the
+// player is not in a dungeon.
+func (p *Player) ExitDungeon() {
+	if p.DungeonState == nil {
+		return
+	}
+	p.Life = p.DungeonState.DungeonLife
+	p.DungeonState = nil
 }
 
 func (p *Player) AddAmulet(amulet Amulet) {

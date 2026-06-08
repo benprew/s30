@@ -83,11 +83,21 @@ type attackerLiftAnimation struct {
 	to        float64
 }
 
+// dungeonDuelContext marks a duel as taking place inside a dungeon. When set,
+// the duel skips the overworld level bookkeeping (which is keyed by enemy index)
+// and instead resolves against the dungeon tile, returning to the dungeon
+// screen afterwards.
+type dungeonDuelContext struct {
+	state *domain.DungeonState
+	tile  *domain.DungeonTile
+}
+
 type DuelScreen struct {
-	player *domain.Player
-	enemy  *domain.Enemy
-	lvl    *world.Level
-	idx    int
+	player  *domain.Player
+	enemy   *domain.Enemy
+	lvl     *world.Level
+	idx     int
+	dungeon *dungeonDuelContext
 
 	game     *mage.Game
 	human    *interactive.HumanPlayer
@@ -149,6 +159,10 @@ type DuelScreen struct {
 
 	anteCard      *domain.Card
 	enemyAnteCard *domain.Card
+
+	// diceNotice describes the dungeon dice effects active for this duel, shown
+	// as a banner at the top of the screen. Empty for ordinary duels.
+	diceNotice string
 
 	choiceRequest  *interactive.ChoiceRequest
 	choiceButtons  []*elements.Button
@@ -218,6 +232,37 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 	return s
 }
 
+// NewDungeonDuelScreen starts a duel against a dungeon enemy. There is no ante
+// screen or bribe option inside a dungeon: the duel begins immediately when the
+// player lands on the enemy's tile. Ante cards are still wagered, mirroring an
+// overworld duel.
+func NewDungeonDuelScreen(player *domain.Player, enemy *domain.Enemy, state *domain.DungeonState, tile *domain.DungeonTile) *DuelScreen {
+	var anteCard *domain.Card
+	var enemyAnteCard *domain.Card
+	s := NewDuelScreen(player, enemy, nil, -1, anteCard, enemyAnteCard)
+	s.dungeon = &dungeonDuelContext{state: state, tile: tile}
+	s.diceNotice = diceNotice(player.BonusDuelLife, player.BonusDuelCards)
+	return s
+}
+
+// diceNotice builds the banner text summarizing the dice effects in force for a
+// dungeon duel. Returns "" when there are no effects.
+func diceNotice(lifeBonus int, cards []*domain.Card) string {
+	var parts []string
+	if lifeBonus > 0 {
+		parts = append(parts, fmt.Sprintf("+%d starting life", lifeBonus))
+	} else if lifeBonus < 0 {
+		parts = append(parts, fmt.Sprintf("%d starting life", lifeBonus))
+	}
+	for _, c := range cards {
+		parts = append(parts, fmt.Sprintf("%s in play", c.CardName))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "Dice: " + strings.Join(parts, ", ")
+}
+
 func buildCardImageMap(decks ...domain.Deck) map[string]*domain.Card {
 	m := make(map[string]*domain.Card)
 	for _, deck := range decks {
@@ -252,7 +297,9 @@ func (s *DuelScreen) initGameState() {
 		}
 		s.human.AddToLibrary(c)
 	}
+	bonusPermanents := s.player.BonusDuelCards
 	s.player.BonusDuelLife = 0
+	s.player.BonusDuelCards = nil
 	s.player.BonusDuelCards = nil
 	for card, count := range s.enemy.Character.GetActiveDeck() {
 		for range count {
@@ -281,6 +328,8 @@ func (s *DuelScreen) initGameState() {
 	}
 	logging.Printf(logging.Duel, "Cards drawn\n")
 
+	s.putBonusPermanentsInPlay(bonusPermanents)
+
 	s.cardImageMap = buildCardImageMap(s.player.GetDuelDeck(), s.enemy.Character.GetActiveDeck())
 
 	s.self = &duelPlayer{name: "You"}
@@ -291,6 +340,21 @@ func (s *DuelScreen) initGameState() {
 		len(s.aiPlayer.Library()), len(s.aiPlayer.Hand()),
 		s.human.Life(), s.aiPlayer.Life())
 	logging.Printf(logging.Duel, "Game init: IsGameOver=%v Winner=%q\n", s.game.IsGameOver(), s.game.Winner())
+}
+
+// putBonusPermanentsInPlay drops each bonus card directly onto the human
+// player's battlefield before the game loop starts. Used by dungeon dice that
+// grant a card "in play" for the duel.
+func (s *DuelScreen) putBonusPermanentsInPlay(cards []*domain.Card) {
+	for _, card := range cards {
+		c, err := mage.CreateCard(card.CardName)
+		if err != nil {
+			logging.Printf(logging.Duel, "Failed to create bonus permanent %s: %v\n", card.CardName, err)
+			continue
+		}
+		c.SetOwner(s.human.PlayerID())
+		s.game.PutOnBattlefield(c, s.human.PlayerID())
+	}
 }
 
 func (s *DuelScreen) startGameLoop() {
@@ -1845,13 +1909,18 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 
 	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())
 
+	if s.dungeon != nil {
+		s.dungeon.state.DefeatEnemy(s.dungeon.tile)
+		return screenui.DungeonScr, nil, nil
+	}
+
 	wonCards := []*domain.Card{}
 	if s.enemyAnteCard != nil {
 		s.player.CardCollection.AddCard(s.enemyAnteCard, 1)
 		wonCards = append(wonCards, s.enemyAnteCard)
 	}
 
-	s.lvl.RecordCombatCompleted()
+	s.lvl.RecordCombatWin()
 	s.lvl.RemoveEnemyAt(s.idx)
 	if defeatedCastle := s.lvl.HandleCastleDuelOutcome(true); defeatedCastle != nil {
 		bonus := domain.RandomPowerfulCardsForColor(defeatedCastle.Color, 5)
@@ -1873,7 +1942,13 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 		lostCards = append(lostCards, s.anteCard)
 	}
 
-	s.lvl.RecordCombatCompleted()
+	if s.dungeon != nil {
+		// Losing a duel inside a dungeon expels the player back to the overworld.
+		s.player.ExitDungeon()
+		return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
+	}
+
+	s.lvl.RecordCombatWin()
 	s.lvl.RemoveEnemyAt(s.idx)
 	s.lvl.HandleCastleDuelOutcome(false)
 
@@ -1904,10 +1979,30 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawHandPanel(screen, s.opponent, s.lastMsg.State.Opponent)
 	s.drawHandPanel(screen, s.self, s.lastMsg.State.You)
 	s.drawCardPreview(screen, H)
+	s.drawDiceNotice(screen, W)
 	s.drawGraveyardView(screen, W, H)
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
 	s.drawAbilityChoosingUI(screen, W, H)
+}
+
+// drawDiceNotice renders the dungeon dice banner across the top of the screen.
+func (s *DuelScreen) drawDiceNotice(screen *ebiten.Image, W int) {
+	if s.diceNotice == "" {
+		return
+	}
+	face := &text.GoTextFace{Source: fonts.MtgFont, Size: 16}
+	tw, th := text.Measure(s.diceNotice, face, 0)
+	const padX, padY = 16.0, 6.0
+	bw := tw + padX*2
+	bh := th + padY*2
+	bx := (float64(W) - bw) / 2
+	const by = 2.0
+	vector.FillRect(screen, float32(bx), float32(by), float32(bw), float32(bh), color.RGBA{20, 16, 40, 220}, false)
+	vector.StrokeRect(screen, float32(bx), float32(by), float32(bw), float32(bh), 1, color.RGBA{200, 180, 90, 255}, false)
+	txt := elements.NewText(16, s.diceNotice, int(bx+padX), int(by+padY))
+	txt.Color = color.RGBA{240, 220, 130, 255}
+	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 }
 
 func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {

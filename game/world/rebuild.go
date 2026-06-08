@@ -188,7 +188,32 @@ func (l *Level) RebuildSprites() error {
 		}
 	}
 
+	l.rebuildDungeonEnemies()
+
 	return nil
+}
+
+// rebuildDungeonEnemies re-links each dungeon enemy tile to the shared rogue
+// Character from the registry. JSON unmarshalling produces a detached copy per
+// tile; re-linking restores the canonical character (with its deck) and lets
+// the sprites load lazily when the dungeon is entered.
+func (l *Level) rebuildDungeonEnemies() {
+	for _, d := range l.Dungeons {
+		if d == nil {
+			continue
+		}
+		for y := range d.Grid {
+			for x := range d.Grid[y] {
+				tile := &d.Grid[y][x]
+				if tile.Type != domain.DungeonTileEnemy || tile.Enemy == nil {
+					continue
+				}
+				if rogue, ok := domain.Rogues[tile.Enemy.Name]; ok {
+					tile.Enemy = rogue
+				}
+			}
+		}
+	}
 }
 
 func (l *Level) rebuildRoads() {

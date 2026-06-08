@@ -23,6 +23,10 @@ type DuelWinScreen struct {
 	cards      []*domain.Card
 	textbox    *elements.Button
 	Background *ebiten.Image
+	// ReturnScr is the screen to return to once the player dismisses the win
+	// screen. Defaults to the overworld; dungeon duels override it so the player
+	// resumes exploring the dungeon.
+	ReturnScr screenui.ScreenName
 }
 
 func (s *DuelWinScreen) IsFramed() bool { return false }
@@ -67,6 +71,7 @@ func NewWinDuelScreen(cards []*domain.Card) *DuelWinScreen {
 		cards:      cards,
 		Background: bgImg,
 		textbox:    tb,
+		ReturnScr:  screenui.WorldScr,
 	}
 }
 
@@ -97,7 +102,7 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 func (s *DuelWinScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		return screenui.WorldScr, nil, nil
+		return s.ReturnScr, nil, nil
 	}
 	return screenui.DuelWinScr, nil, nil
 }

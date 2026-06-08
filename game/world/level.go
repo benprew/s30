@@ -53,7 +53,7 @@ type Level struct {
 
 	ticksSinceLastInteraction int
 	totalTicks                int
-	CombatsCompleted          int
+	CombatsWon                int
 }
 
 // NewLevel returns a new randomly generated Level.
@@ -608,8 +608,8 @@ func (l *Level) RemoveEnemyAt(idx int) {
 	l.Enemies = append(l.Enemies[:idx], l.Enemies[idx+1:]...)
 }
 
-func (l *Level) RecordCombatCompleted() {
-	l.CombatsCompleted++
+func (l *Level) RecordCombatWin() {
+	l.CombatsWon++
 }
 
 func (l *Level) GetEnemyAt(idx int) *domain.Enemy {

@@ -42,6 +42,13 @@ func NewEnemy(name string) (Enemy, error) {
 	return e, nil
 }
 
+// NewEnemyFromCharacter wraps an already-loaded rogue Character as an Enemy.
+// Dungeon encounters take their opponent from a dungeon tile rather than from
+// the Rogues registry by name, so they build the Enemy directly.
+func NewEnemyFromCharacter(c *Character) Enemy {
+	return Enemy{Character: c}
+}
+
 func (c *Enemy) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 	screen.DrawImage(c.Character.ShadowSprite[c.Direction][c.Frame], options)
 	screen.DrawImage(c.Character.WalkingSprite[c.Direction][c.Frame], options)

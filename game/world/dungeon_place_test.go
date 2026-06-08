@@ -3,6 +3,8 @@ package world
 import (
 	"image"
 	"testing"
+
+	"github.com/benprew/s30/game/domain"
 )
 
 func TestPlaceDungeonsRespectsCount(t *testing.T) {
@@ -53,6 +55,30 @@ func TestPlaceDungeonsHonorsMinDistance(t *testing.T) {
 				t.Errorf("dungeons %d and %d only %d apart (min %d)", i, j, d, minDist)
 			}
 		}
+	}
+}
+
+func TestPlaceDungeonsPopulatesEnemyTilesWithRogues(t *testing.T) {
+	l := createTestLevel(20, 20)
+	l.placeDungeons(5, 2, 1, nil)
+
+	enemyTiles := 0
+	for _, d := range l.Dungeons {
+		for y := range d.Grid {
+			for x := range d.Grid[y] {
+				tile := d.Grid[y][x]
+				if tile.Type != domain.DungeonTileEnemy {
+					continue
+				}
+				enemyTiles++
+				if tile.Enemy == nil {
+					t.Errorf("enemy tile at (%d,%d) in %s has no rogue character", x, y, d.Name)
+				}
+			}
+		}
+	}
+	if enemyTiles == 0 {
+		t.Fatal("expected dungeons to contain enemy tiles")
 	}
 }
 
