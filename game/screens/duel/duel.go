@@ -2508,13 +2508,22 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps inte
 	screen.DrawImage(dp.handBg, opts)
 
 	label := fmt.Sprintf("Your Hand (%d)", ps.HandCount)
-	if dp == s.self && s.handCollapsed {
+	if dp != s.self {
+		label = fmt.Sprintf("%s's Hand (%d)", dp.name, ps.HandCount)
+	} else if s.handCollapsed {
 		label = fmt.Sprintf("Your Hand (%d) [+]", ps.HandCount)
 	}
 	txt := elements.NewText(16, label, dp.handX+15, dp.handY+13)
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	if dp != s.self || s.handCollapsed {
+	if dp == s.self && s.handCollapsed {
+		return
+	}
+
+	// The opponent's hand is only populated when the engine reveals it
+	// (interactive.RevealOpponentHand, a debug aid); otherwise it is empty and
+	// nothing below draws.
+	if dp != s.self && len(ps.Hand) == 0 {
 		return
 	}
 
@@ -2532,6 +2541,10 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps inte
 			nameTxt.Color = color.RGBA{220, 220, 220, 255}
 			nameTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
+	}
+
+	if dp != s.self {
+		return
 	}
 
 	for i, card := range ps.Hand {

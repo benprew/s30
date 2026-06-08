@@ -1,12 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"sort"
 	"time"
 
 	_ "github.com/benprew/mage-go/cards"
+	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"
@@ -62,6 +64,11 @@ func (g *testGame) Layout(_, _ int) (int, int) {
 }
 
 func main() {
+	showOpponentHand := flag.Bool("show-opponent-hand", false, "reveal the opponent's hand in dungeon duels (debug)")
+	flag.Parse()
+
+	interactive.RevealOpponentHand = *showOpponentHand
+
 	logging.Enable(logging.Duel)
 
 	player, err := domain.NewPlayer("Test", nil, false, domain.DifficultyEasy, domain.ColorColorless)

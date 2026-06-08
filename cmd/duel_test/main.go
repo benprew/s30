@@ -10,6 +10,7 @@ import (
 	"runtime/pprof"
 
 	_ "github.com/benprew/mage-go/cards"
+	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"
@@ -95,7 +96,10 @@ func main() {
 	memprofile := flag.String("memprofile", "", "write memory profile to file")
 	profileFrames := flag.Int("profileframes", 0, "terminate after this many update frames")
 	rogue := flag.String("rogue", "", "fight this rogue instead of picking randomly")
+	showOpponentHand := flag.Bool("show-opponent-hand", false, "reveal the opponent's hand (debug)")
 	flag.Parse()
+
+	interactive.RevealOpponentHand = *showOpponentHand
 
 	if *memprofile != "" {
 		runtime.MemProfileRate = 1
