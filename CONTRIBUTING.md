@@ -30,6 +30,10 @@ Fedora:
 make fedorabuilddeps
 ```
 
+Nix:
+
+There is a `flake.nix` in the project. Activate it by putting `use flake` in an `.envrc` file and running `direnv allow`.
+
 For the art/asset pipeline scripts under `utils/` you'll also want
 ImageMagick and pngquant:
 
