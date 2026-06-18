@@ -17,10 +17,10 @@ winarmbuild:
 	GOOS=windows GOARCH=arm64 go build -o s30_arm64.exe
 
 macbuild:
-	GOOS=darwin GOARCH=amd64 go build -o s30_mac
+	MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o s30_mac
 
 macarmbuild:
-	GOOS=darwin GOARCH=arm64 go build -o s30_mac_arm
+	MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o s30_mac_arm
 
 # https://ebitengine.org/en/documents/webassembly.html
 webbuild:
@@ -44,6 +44,7 @@ fedorabuilddeps:
 	sudo dnf install -y libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel android-tools alsa-lib-devel java-21-openjdk-devel
 
 lint:
+	go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -fix ./...
 	golangci-lint run --fix
 	.venv/bin/ruff check --fix .
 	.venv/bin/ruff format .
