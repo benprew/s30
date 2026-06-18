@@ -3,6 +3,8 @@ package duel
 import (
 	"testing"
 
+	mage "github.com/benprew/mage-go/pkg/mage"
+	"github.com/benprew/mage-go/pkg/mage/core"
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/google/uuid"
 )
@@ -84,5 +86,46 @@ func TestPhaseDelay_NilPrev_UsesBase(t *testing.T) {
 func TestPhaseDelay_NilState_UsesBase(t *testing.T) {
 	if got := phaseDelay(nil, &interactive.GameMsg{}); got != phaseDisplayDelay {
 		t.Errorf("want %v, got %v", phaseDisplayDelay, got)
+	}
+}
+
+func TestDrainChoiceRequests_SyncsLiveStepBeforeShowingChoice(t *testing.T) {
+	toTUI := make(chan interactive.GameMsg, 1)
+	fromTUI := make(chan interactive.PriorityAction, 1)
+	choiceReqs := make(chan interactive.ChoiceRequest, 1)
+	choiceResps := make(chan interactive.ChoiceResponse, 1)
+	human := interactive.NewHumanPlayerWithChannels("You", toTUI, fromTUI, choiceReqs, choiceResps)
+	opponent := mage.NewBasePlayer("Opponent")
+	game := mage.NewGame(human, opponent)
+	game.SetStep(core.Upkeep)
+
+	s := &DuelScreen{
+		game:  game,
+		human: human,
+		lastMsg: &interactive.GameMsg{
+			State: &interactive.GameState{
+				Step:         stepPrecombatMain,
+				ActivePlayer: "Opponent",
+				You:          interactive.PlayerState{Name: "You", Life: 20},
+				Opponent:     interactive.PlayerState{Name: "Opponent", Life: 20},
+			},
+		},
+	}
+	choiceReqs <- interactive.ChoiceRequest{
+		Type:   interactive.ChoiceMay,
+		Reason: "pay upkeep",
+		Options: []interactive.ChoiceOption{
+			{Label: "Yes"},
+			{Label: "No"},
+		},
+	}
+
+	s.drainChoiceRequests()
+
+	if s.choiceRequest == nil {
+		t.Fatal("expected pending choice request")
+	}
+	if got := s.lastMsg.State.Step; got != "Upkeep" {
+		t.Fatalf("expected choice to sync visible step to Upkeep, got %q", got)
 	}
 }

@@ -376,23 +376,44 @@ func (s *DuelScreen) drainMessages() {
 		if !ok {
 			return
 		}
-		prev := s.lastMsg
-		s.lastMsg = &msg
-		s.refreshDamageAssignmentPrompt(&msg)
-		s.lastMsgTime = time.Now()
-		s.startLossAnimationFromMessage(prev, &msg, s.lastMsgTime)
-		s.nextMsgDelay = phaseDelay(prev, &msg)
-		s.checkSoundTriggers(&msg)
-		if logging.Enabled(logging.Duel) {
-			optNames := make([]string, len(msg.Options))
-			for i, o := range msg.Options {
-				optNames[i] = fmt.Sprintf("%s(%s)", o.Type, o.CardName)
-			}
-			logging.Printf(logging.Duel, "MSG: turn=%d step=%q active=%q prompt=%v options=%v gameover=%v\n",
-				msg.State.Turn, msg.State.Step, msg.State.ActivePlayer, msg.Prompt, optNames, msg.GameOver)
-		}
+		s.applyGameMsg(msg)
 	default:
 		return
+	}
+}
+
+func (s *DuelScreen) applyGameMsg(msg interactive.GameMsg) {
+	prev := s.lastMsg
+	s.lastMsg = &msg
+	s.refreshDamageAssignmentPrompt(&msg)
+	s.lastMsgTime = time.Now()
+	s.startLossAnimationFromMessage(prev, &msg, s.lastMsgTime)
+	s.nextMsgDelay = phaseDelay(prev, &msg)
+	s.checkSoundTriggers(&msg)
+	if logging.Enabled(logging.Duel) {
+		optNames := make([]string, len(msg.Options))
+		for i, o := range msg.Options {
+			optNames[i] = fmt.Sprintf("%s(%s)", o.Type, o.CardName)
+		}
+		logging.Printf(logging.Duel, "MSG: turn=%d step=%q active=%q prompt=%v options=%v gameover=%v\n",
+			msg.State.Turn, msg.State.Step, msg.State.ActivePlayer, msg.Prompt, optNames, msg.GameOver)
+	}
+}
+
+func (s *DuelScreen) drainQueuedMessages() {
+	if s.human == nil {
+		return
+	}
+	for {
+		select {
+		case msg, ok := <-s.human.ToTUI():
+			if !ok {
+				return
+			}
+			s.applyGameMsg(msg)
+		default:
+			return
+		}
 	}
 }
 
@@ -615,6 +636,7 @@ func (s *DuelScreen) drainChoiceRequests() {
 			if !ok {
 				return
 			}
+			s.syncStateForChoice()
 			s.choiceRequest = &req
 			if logging.Enabled(logging.Duel) {
 				optLabels := make([]string, len(req.Options))
@@ -628,6 +650,43 @@ func (s *DuelScreen) drainChoiceRequests() {
 			return
 		}
 	}
+}
+
+func (s *DuelScreen) syncStateForChoice() {
+	s.drainQueuedMessages()
+	if s.game == nil || s.human == nil {
+		return
+	}
+	state := interactive.SnapshotGameState(s.game, s.humanPlayerIndex())
+	if state == nil {
+		return
+	}
+	msg := interactive.GameMsg{
+		State:   state,
+		Prompt:  interactive.PromptNone,
+		Log:     append([]string(nil), s.lastLog()...),
+		CanUndo: s.lastMsg != nil && s.lastMsg.CanUndo,
+	}
+	s.applyGameMsg(msg)
+}
+
+func (s *DuelScreen) humanPlayerIndex() int {
+	if s.game == nil || s.human == nil {
+		return 0
+	}
+	for i, p := range s.game.AllPlayers() {
+		if p.PlayerID() == s.human.PlayerID() {
+			return i
+		}
+	}
+	return 0
+}
+
+func (s *DuelScreen) lastLog() []string {
+	if s.lastMsg == nil {
+		return nil
+	}
+	return s.lastMsg.Log
 }
 
 func (s *DuelScreen) refreshDamageAssignmentPrompt(msg *interactive.GameMsg) {
