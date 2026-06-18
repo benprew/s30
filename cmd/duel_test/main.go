@@ -32,17 +32,20 @@ func xTestDeck() domain.Deck {
 		deck[card] = count
 	}
 
-	add("Fireball", 4)
-	add("Earthquake", 2)
-	add("Lightning Bolt", 4)
-	add("Rod of Ruin", 3)
-	add("Jade Statue", 2)
-	add("Kird Ape", 4)
-	add("Fire Elemental", 3)
-	add("Sol Ring", 2)
-	add("Mishra's Factory", 3)
-	add("Mountain", 14)
-	add("Forest", 6)
+	// add("Fireball", 4)
+	// add("Earthquake", 2)
+	// add("Lightning Bolt", 4)
+	// add("Rod of Ruin", 3)
+	// add("Jade Statue", 2)
+	// add("Kird Ape", 4)
+	// add("Fire Elemental", 3)
+	// add("Sol Ring", 2)
+	// add("Mishra's Factory", 3)
+	// add("Mountain", 14)
+	// add("Forest", 6)
+	add("Force of Nature", 10)
+	add("Llanowar Elves", 10)
+	add("Forest", 40)
 
 	return deck
 }
@@ -134,6 +137,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create player: %v", err)
 	}
+	player.Life = 999
 
 	// Replace player's deck with our X-spell test deck
 	player.CardCollection = domain.NewCardCollection()
