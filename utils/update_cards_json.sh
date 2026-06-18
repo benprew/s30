@@ -42,7 +42,7 @@ mkdir -p "$ASSETS_DIR"
 # Note: past is the Astral Cards Set
 echo "Processing cards with jq filter..."
 # if ! jq 'map(select((.set == "2ed" or .set == "arn" or .set == "leg" or .set == "atq" or .set == "drk" or .set == "past" or .set == "fem" or .set == "phpr"))) | map({
-if ! jq 'map(select((.set == "2ed" or .set == "arn" or .set == "4ed"  or .set == "past" or .set == "atq" ))) | map({
+if ! jq 'map(select((.set == "2ed" or .set == "arn" or .set == "4ed"  or .set == "past" or .set == "atq" or .set == "phpr"))) | map({
   CardName: .name,
   ManaCost: .mana_cost,
   Colors: .colors,
