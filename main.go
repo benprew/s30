@@ -17,7 +17,7 @@ func main() {
 	flag.Parse()
 
 	if *verbose != "" {
-		for _, s := range strings.Split(*verbose, ",") {
+		for s := range strings.SplitSeq(*verbose, ",") {
 			logging.Enable(logging.Subsystem(strings.TrimSpace(s)))
 		}
 	}

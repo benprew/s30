@@ -9,24 +9,24 @@ import (
 
 type CardDragData struct {
 	ID   string
-	Card interface{}
+	Card any
 }
 
 func (cdd *CardDragData) GetID() string {
 	return cdd.ID
 }
 
-func (cdd *CardDragData) GetData() interface{} {
+func (cdd *CardDragData) GetData() any {
 	return cdd.Card
 }
 
 type DraggableButton struct {
 	*elements.Button
 	isDraggable bool
-	dragData    interface{}
+	dragData    any
 }
 
-func NewDraggableButton(button *elements.Button, data interface{}) *DraggableButton {
+func NewDraggableButton(button *elements.Button, data any) *DraggableButton {
 	return &DraggableButton{
 		Button:      button,
 		isDraggable: true,

@@ -442,8 +442,8 @@ func (s *WisemanScreen) prepareActiveText() {
 func (s *WisemanScreen) findRandomCity() *domain.City {
 	var cities []*domain.City
 	w, h := s.Level.Size()
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
+	for y := range h {
+		for x := range w {
 			tile := s.Level.Tile(image.Point{X: x, Y: y})
 			if tile != nil && tile.IsCity && tile.City.Name != s.City.Name {
 				cities = append(cities, &tile.City)
@@ -474,7 +474,7 @@ func (s *WisemanScreen) giveReward() {
 		}
 	case domain.RewardAmulet:
 		count := 1 + rand.Intn(3)
-		for i := 0; i < count; i++ {
+		for range count {
 			s.Player.AddAmulet(domain.NewAmulet(q.AmuletColor))
 		}
 		if am != nil {
@@ -664,8 +664,8 @@ func (s *WisemanScreen) giveEnemyDeckInfo() {
 func (s *WisemanScreen) findWorldMagicCity() *domain.City {
 	var cities []*domain.City
 	w, h := s.Level.Size()
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
+	for y := range h {
+		for x := range w {
 			tile := s.Level.Tile(image.Point{X: x, Y: y})
 			if tile != nil && tile.IsCity && tile.City.HasWorldMagic() {
 				cities = append(cities, &tile.City)
@@ -719,11 +719,11 @@ func loadStories() []string {
 	content := string(assets.Advblocks_txt)
 	var stories []string
 
-	parts := strings.Split(content, "STARTBLOCK")
-	for _, part := range parts {
-		end := strings.Index(part, "ENDBLOCK")
-		if end != -1 {
-			story := strings.TrimSpace(part[:end])
+	parts := strings.SplitSeq(content, "STARTBLOCK")
+	for part := range parts {
+		before, _, ok := strings.Cut(part, "ENDBLOCK")
+		if ok {
+			story := strings.TrimSpace(before)
 			if story != "" {
 				stories = append(stories, story)
 			}

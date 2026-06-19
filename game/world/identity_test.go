@@ -18,7 +18,7 @@ func TestSaveName(t *testing.T) {
 
 func TestNewGameIDUnique(t *testing.T) {
 	seen := make(map[string]bool)
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		id := NewGameID()
 		if id == "" {
 			t.Fatal("NewGameID() returned empty string")

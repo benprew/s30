@@ -281,10 +281,7 @@ func (sl *ScrollableList) scrollFastForward() {
 	newOffset := sl.currentOffset + sl.visibleCount
 	if newOffset >= len(sl.items) {
 		// Go to the last page
-		sl.currentOffset = len(sl.items) - sl.visibleCount
-		if sl.currentOffset < 0 {
-			sl.currentOffset = 0
-		}
+		sl.currentOffset = max(len(sl.items)-sl.visibleCount, 0)
 	} else {
 		sl.currentOffset = newOffset
 	}
@@ -300,11 +297,7 @@ func (sl *ScrollableList) scrollBackward() {
 // scrollFastBackward moves the list backward by one page
 func (sl *ScrollableList) scrollFastBackward() {
 	newOffset := sl.currentOffset - sl.visibleCount
-	if newOffset < 0 {
-		sl.currentOffset = 0
-	} else {
-		sl.currentOffset = newOffset
-	}
+	sl.currentOffset = max(newOffset, 0)
 }
 
 // Update handles button clicks and scrolling
@@ -337,10 +330,7 @@ func (sl *ScrollableList) Update(opts *ebiten.DrawImageOptions, scale float64, s
 	}
 
 	// Update visible items positions
-	endIdx := sl.currentOffset + sl.visibleCount
-	if endIdx > len(sl.items) {
-		endIdx = len(sl.items)
-	}
+	endIdx := min(sl.currentOffset+sl.visibleCount, len(sl.items))
 
 	if sl.orientation == OrientationVertical {
 		// Vertical: Stack items starting after top buttons
@@ -382,10 +372,7 @@ func (sl *ScrollableList) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptio
 	sl.ffBtn.Draw(screen, identityOpts, scale)
 
 	// Draw visible items
-	endIdx := sl.currentOffset + sl.visibleCount
-	if endIdx > len(sl.items) {
-		endIdx = len(sl.items)
-	}
+	endIdx := min(sl.currentOffset+sl.visibleCount, len(sl.items))
 
 	for i := sl.currentOffset; i < endIdx; i++ {
 		sl.items[i].Draw(screen, identityOpts, scale)

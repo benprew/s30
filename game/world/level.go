@@ -384,7 +384,7 @@ func (l *Level) SpawnEnemies(count int) error {
 		return fmt.Errorf("no valid enemy spawn position available")
 	}
 
-	for i := 0; i < count; i++ {
+	for range count {
 		var enemy domain.Enemy
 		var err error
 		tile := spawnTiles[rng.Intn(len(spawnTiles))]
@@ -393,7 +393,7 @@ func (l *Level) SpawnEnemies(count int) error {
 		// Try to find an enemy with a valid walking sprite
 		profile := l.enemySpawnProfileAt(tile)
 		maxAttempts := len(domain.Rogues)
-		for attempt := 0; attempt < maxAttempts; attempt++ {
+		for range maxAttempts {
 			enemyType, ok := chooseEnemyName(rng, domain.Rogues, profile)
 			if !ok {
 				return fmt.Errorf("no enemies available")
@@ -440,7 +440,7 @@ func (l *Level) SpawnEnemyNear(enemyName string, tile image.Point) error {
 	center := l.TileToPixel(tile)
 	spread := l.TileWidth * 2
 	x, y := center.X, center.Y
-	for attempts := 0; attempts < 20; attempts++ {
+	for range 20 {
 		x = center.X + rand.Intn(spread) - spread/2
 		y = center.Y + rand.Intn(spread) - spread/2
 		x = max(0, min(x, l.LevelW()-1))

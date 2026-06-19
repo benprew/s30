@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"image/color"
+	"strings"
 	"sync/atomic"
 
 	"github.com/benprew/s30/game/ui/fonts"
@@ -60,18 +61,19 @@ func (lg *LoadingGame) Draw(screen *ebiten.Image) {
 
 	screen.Fill(color.Black)
 
-	msg := "Loading"
+	var msg strings.Builder
+	msg.WriteString("Loading")
 	for range lg.dots {
-		msg += "."
+		msg.WriteString(".")
 	}
 
 	face := &text.GoTextFace{Source: fonts.MtgFont, Size: 32}
-	w, h := text.Measure(msg, face, 0)
+	w, h := text.Measure(msg.String(), face, 0)
 
 	opts := text.DrawOptions{}
 	opts.GeoM.Translate((1024-w)/2, (768-h)/2)
 	opts.ColorScale.ScaleWithColor(color.White)
-	text.Draw(screen, msg, face, &opts)
+	text.Draw(screen, msg.String(), face, &opts)
 }
 
 func (lg *LoadingGame) Layout(outsideWidth, outsideHeight int) (int, int) {

@@ -8,7 +8,7 @@ import (
 
 type DragData interface {
 	GetID() string
-	GetData() interface{}
+	GetData() any
 }
 
 type Draggable interface {

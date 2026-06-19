@@ -65,7 +65,7 @@ func TestApplyDiceNoOpOnNonDiceTile(t *testing.T) {
 
 func TestRollDiceEffectApprenticeNeverDisadvantage(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		e := rollDiceEffect(1, rng, nil)
 		if e.Type == DiceDisadvantage {
 			t.Fatalf("apprentice (level 1) dungeons must never roll a disadvantage")
@@ -76,7 +76,7 @@ func TestRollDiceEffectApprenticeNeverDisadvantage(t *testing.T) {
 func TestRollDiceEffectHigherLevelsCanGiveDisadvantage(t *testing.T) {
 	rng := rand.New(rand.NewSource(2))
 	sawDisadvantage := false
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		if rollDiceEffect(5, rng, nil).Type == DiceDisadvantage {
 			sawDisadvantage = true
 			break
@@ -91,7 +91,7 @@ func TestRollDiceEffectAdvantageIsLifeOrCard(t *testing.T) {
 	rng := rand.New(rand.NewSource(3))
 	pool := []*Card{{CardName: "Serra Angel", CardType: CardTypeCreature}}
 	sawLife, sawCard := false, false
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		e := rollDiceEffect(1, rng, pool)
 		if e.Type != DiceAdvantage {
 			continue
@@ -112,7 +112,7 @@ func TestRollDiceEffectAdvantageIsLifeOrCard(t *testing.T) {
 
 func TestRollDiceEffectWithoutPoolNeverGrantsCard(t *testing.T) {
 	rng := rand.New(rand.NewSource(4))
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		if e := rollDiceEffect(1, rng, nil); e.Card != nil {
 			t.Fatalf("no card should be granted when the deck pool is empty, got %q", e.Card.CardName)
 		}
@@ -126,7 +126,7 @@ func TestRollDiceEffectCardGrantsComeFromDeckPool(t *testing.T) {
 		{CardName: "Sol Ring", CardType: CardTypeArtifact},
 	}
 	inPool := map[string]bool{"Serra Angel": true, "Sol Ring": true}
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		if e := rollDiceEffect(1, rng, pool); e.Card != nil && !inPool[e.Card.CardName] {
 			t.Fatalf("granted card %q is not from the deck pool", e.Card.CardName)
 		}
@@ -136,7 +136,7 @@ func TestRollDiceEffectCardGrantsComeFromDeckPool(t *testing.T) {
 func TestRandomDiceCardExcludesLands(t *testing.T) {
 	rng := rand.New(rand.NewSource(6))
 	pool := []*Card{{CardName: "Mountain", CardType: CardTypeLand}}
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if c := randomDiceCard(rng, pool); c != nil {
 			t.Fatalf("lands must never be granted, got %q", c.CardName)
 		}
@@ -160,7 +160,7 @@ func TestRandomDiceCardOnlyGrantsCardsThatCanStartOnBattlefield(t *testing.T) {
 		"Crusade":     true,
 	}
 
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		card := randomDiceCard(rng, pool)
 		if card == nil {
 			t.Fatal("expected an eligible card")

@@ -33,7 +33,7 @@ func TestColorDistribution(t *testing.T) {
 	colorCounts := make(map[domain.ColorMask]int)
 	numCities := 20
 
-	for i := 0; i < numCities; i++ {
+	for i := range numCities {
 		color := assignAmuletColor(i)
 		colorCounts[color]++
 	}

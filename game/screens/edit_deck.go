@@ -809,10 +809,7 @@ func (s *EditDeckScreen) getVisibleCollectionItems(collectionY int) []Collection
 	visibleCount := s.CollectionList.GetVisibleCount()
 
 	// Calculate end index for visible items
-	endIdx := currentOffset + visibleCount
-	if endIdx > len(items) {
-		endIdx = len(items)
-	}
+	endIdx := min(currentOffset+visibleCount, len(items))
 
 	// The items are positioned horizontally starting after left nav buttons
 	leftNavWidth := 128 // ffBackBtn + fwdBackBtn width
@@ -885,10 +882,7 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 		totalCards += display.Count
 
 		if display.Card.ManaCost != "" {
-			cmc := parseCMC(display.Card.ManaCost)
-			if cmc >= 7 {
-				cmc = 7
-			}
+			cmc := min(parseCMC(display.Card.ManaCost), 7)
 			cmcCounts[cmc] += display.Count
 		}
 
@@ -930,10 +924,7 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 		bx := curveX + i*(barWidth+barGap)
 
 		if count > 0 && maxCount > 0 {
-			barHeight := int(maxBarHeight * float64(count) / float64(maxCount))
-			if barHeight < 2 {
-				barHeight = 2
-			}
+			barHeight := max(int(maxBarHeight*float64(count)/float64(maxCount)), 2)
 			bar := ebiten.NewImage(barWidth, barHeight)
 			bar.Fill(color.RGBA{180, 180, 220, 255})
 
@@ -991,8 +982,8 @@ func (s *EditDeckScreen) drawCountOverlay(screen *ebiten.Image, scale float64, x
 	countBgSize := 30
 	countBg := ebiten.NewImage(countBgSize, countBgSize)
 
-	for bgY := 0; bgY < countBgSize; bgY++ {
-		for bgX := 0; bgX < countBgSize; bgX++ {
+	for bgY := range countBgSize {
+		for bgX := range countBgSize {
 			dx := bgX - countBgSize/2
 			dy := bgY - countBgSize/2
 			if dx*dx+dy*dy <= (countBgSize/2)*(countBgSize/2) {

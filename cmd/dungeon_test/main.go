@@ -96,10 +96,7 @@ func selectRestrictedCards(cards []*domain.Card, rng *rand.Rand) []*domain.Card 
 		pool[i], pool[j] = pool[j], pool[i]
 	})
 
-	maxCount := 4
-	if len(pool) < maxCount {
-		maxCount = len(pool)
-	}
+	maxCount := min(len(pool), 4)
 	count := rng.Intn(maxCount) + 1
 	return pool[:count]
 }

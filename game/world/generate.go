@@ -56,12 +56,12 @@ func generateTerrain(w, h int) [][]float64 {
 	forests := make([][]float64, h)
 
 	// Generate base terrain
-	for y := 0; y < h; y++ {
+	for y := range h {
 		terrain[y] = make([]float64, w)
 		rivers[y] = make([]float64, w)
 		forests[y] = make([]float64, w)
 
-		for x := 0; x < w; x++ {
+		for x := range w {
 			nx := float64(x) / float64(w)
 			ny := float64(y) / float64(h)
 
@@ -104,9 +104,9 @@ func generateTerrain(w, h int) [][]float64 {
 
 	// Smooth transitions
 	smoothTerrain := make([][]float64, h)
-	for y := 0; y < h; y++ {
+	for y := range h {
 		smoothTerrain[y] = make([]float64, w)
-		for x := 0; x < w; x++ {
+		for x := range w {
 			sum := 0.0
 			count := 0.0
 
@@ -302,11 +302,8 @@ func (l *Level) placeCities(validLocations []image.Point, citySprites [][]*ebite
 		})
 
 		// Assign each world magic to a random city
-		numToAssign := len(availableWorldMagics)
-		if numToAssign > len(shuffledCities) {
-			numToAssign = len(shuffledCities)
-		}
-		for i := 0; i < numToAssign; i++ {
+		numToAssign := min(len(availableWorldMagics), len(shuffledCities))
+		for i := range numToAssign {
 			tile := l.Tile(shuffledCities[i])
 			if tile != nil && tile.IsCity {
 				tile.City.AssignedWorldMagic = availableWorldMagics[i]

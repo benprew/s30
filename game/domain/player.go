@@ -6,6 +6,7 @@ import (
 	"maps"
 	"math"
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/benprew/s30/game/ui"
@@ -294,7 +295,7 @@ func (p *Player) GetAmuletCount() map[ColorMask]int {
 func (p *Player) GetAmulets() []Amulet {
 	amulets := make([]Amulet, 0)
 	for color, count := range p.Amulets {
-		for i := 0; i < count; i++ {
+		for range count {
 			amulets = append(amulets, NewAmulet(color))
 		}
 	}
@@ -313,12 +314,7 @@ func (p *Player) RemoveAmulet(color ColorMask) error {
 }
 
 func (p *Player) HasWorldMagic(magic *WorldMagic) bool {
-	for _, m := range p.WorldMagics {
-		if m == magic {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(p.WorldMagics, magic)
 }
 
 func (p *Player) AddWorldMagic(magic *WorldMagic) {

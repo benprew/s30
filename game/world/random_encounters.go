@@ -46,14 +46,14 @@ func (l *Level) LoadRandomEncounterSprites() error {
 func (l *Level) SpawnEncounters(count int) {
 	pLoc := l.Player.Loc()
 
-	for i := 0; i < count; i++ {
+	for range count {
 		var tileX, tileY int // Tile coords
 
 		maxAttempts := 100
 		valid := false
 		spriteIdx := 0
 
-		for attempt := 0; attempt < maxAttempts; attempt++ {
+		for range maxAttempts {
 			// Random tile coordinates
 			tileX = rand.Intn(l.W)
 			tileY = rand.Intn(l.H)

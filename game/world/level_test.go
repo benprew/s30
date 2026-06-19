@@ -18,9 +18,9 @@ func createTestLevel(w, h int) *Level {
 		// Initialize other fields if necessary for the function being tested
 		// roadSprites, roadSpriteInfo might not be needed for BFS logic itself
 	}
-	for y := 0; y < h; y++ {
+	for y := range h {
 		l.Tiles[y] = make([]*Tile, w)
-		for x := 0; x < w; x++ {
+		for x := range w {
 			// Default to Plains, can be overridden in tests
 			l.Tiles[y][x] = &Tile{TerrainType: TerrainPlains}
 		}
@@ -33,7 +33,7 @@ func TestConnectCityBFS(t *testing.T) {
 		name           string
 		levelSetup     func(*Level) // Function to modify the base level for the test case
 		start          image.Point
-		expectedPath   []image.Point       // nil if no path expected
+		expectedPath   []image.Point     // nil if no path expected
 		roadSprites    [][]*ebiten.Image // Sprites for roads
 		roadSpriteInfo [][]string        // Maps sprite index to direction string (e.g., "N", "NE")
 	}{
@@ -167,12 +167,12 @@ func TestTileToPixel(t *testing.T) {
 		x, y         int
 		wantX, wantY int
 	}{
-		{0, 0, 100, 50},   // Row 0, Col 0: px=0, py=0 -> center (100, 50)
-		{1, 0, 300, 50},   // Row 0, Col 1: px=200, py=0 -> center (300, 50)
-		{0, 1, 200, 100},  // Row 1, Col 0: px=0+100, py=50 -> center (200, 100)
-		{1, 1, 400, 100},  // Row 1, Col 1: px=200+100, py=50 -> center (400, 100)
-		{0, 2, 100, 150},  // Row 2, Col 0: px=0, py=100 -> center (100, 150)
-		{2, 3, 600, 200},  // Row 3, Col 2: px=400+100, py=150 -> center (600, 200)
+		{0, 0, 100, 50},  // Row 0, Col 0: px=0, py=0 -> center (100, 50)
+		{1, 0, 300, 50},  // Row 0, Col 1: px=200, py=0 -> center (300, 50)
+		{0, 1, 200, 100}, // Row 1, Col 0: px=0+100, py=50 -> center (200, 100)
+		{1, 1, 400, 100}, // Row 1, Col 1: px=200+100, py=50 -> center (400, 100)
+		{0, 2, 100, 150}, // Row 2, Col 0: px=0, py=100 -> center (100, 150)
+		{2, 3, 600, 200}, // Row 3, Col 2: px=400+100, py=150 -> center (600, 200)
 	}
 
 	for _, tc := range testCases {

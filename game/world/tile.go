@@ -2,6 +2,7 @@ package world
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/benprew/s30/game/domain"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -23,11 +24,11 @@ type Tile struct {
 	encounterSprites  []*PositionedSprite // Random encounters
 	IsCity            bool                // Indicates if this tile represents a city
 	City              domain.City
-	IsDungeon         bool             // Indicates if this tile holds a dungeon entrance
-	Dungeon           *domain.Dungeon  // Non-nil when IsDungeon is true
-	IsCastle          bool             // Indicates if this tile holds a wizard's castle
-	Castle            *domain.Castle   // Non-nil when IsCastle is true
-	TerrainType       int              // Added terrain type
+	IsDungeon         bool            // Indicates if this tile holds a dungeon entrance
+	Dungeon           *domain.Dungeon // Non-nil when IsDungeon is true
+	IsCastle          bool            // Indicates if this tile holds a wizard's castle
+	Castle            *domain.Castle  // Non-nil when IsCastle is true
+	TerrainType       int             // Added terrain type
 }
 
 // AddSprite adds a sprite to the Tile.
@@ -93,10 +94,8 @@ func (t *Tile) AddRoadSprite(s *ebiten.Image) {
 	}
 	// Check if this specific sprite is already added to prevent duplicates
 	// from path overlaps or multiple connections to the same tile.
-	for _, existing := range t.roadSprites {
-		if existing == s {
-			return // Already have this exact sprite instance
-		}
+	if slices.Contains(t.roadSprites, s) {
+		return // Already have this exact sprite instance
 	}
 	t.roadSprites = append(t.roadSprites, s)
 }

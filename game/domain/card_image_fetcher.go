@@ -134,16 +134,14 @@ func PreloadCardImages(priorityCards []*Card) {
 
 	var wg sync.WaitGroup
 	for range numWorkers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for card := range ch {
 				if _, loaded := cardImages.Load(card.cardID); loaded {
 					continue
 				}
 				fetchAndCacheCardImage(card)
 			}
-		}()
+		})
 	}
 
 	prioritySet := make(map[string]bool, len(priorityCards))

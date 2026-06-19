@@ -472,15 +472,12 @@ func (s *StartScreen) loadSaveList() {
 	}
 	fontFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 18}
 
-	maxVisible := 8
-	if len(saves) < maxVisible {
-		maxVisible = len(saves)
-	}
+	maxVisible := min(len(saves), 8)
 
 	centerX := 512
 	startY := 330
 
-	for i := 0; i < maxVisible; i++ {
+	for i := range maxVisible {
 		sv := saves[i]
 		label := fmt.Sprintf("%s  -  %s", sv.Name, sv.SavedAt.Format("Jan 02 2006 15:04"))
 		btnW, btnH := elements.TextButtonSize(label, fontFace)

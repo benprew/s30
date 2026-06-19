@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	_ "image/png" // Import for PNG decoding side effects
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/image/font"
@@ -47,9 +48,9 @@ func LoadSpriteSheet(sprWidth, sprHeight int, file []byte) ([][]*ebiten.Image, e
 	}
 
 	s := make([][]*ebiten.Image, sprHeight)
-	for y := 0; y < sprHeight; y++ {
+	for y := range sprHeight {
 		s[y] = make([]*ebiten.Image, sprWidth)
-		for x := 0; x < sprWidth; x++ {
+		for x := range sprWidth {
 			s[y][x] = spriteAt(x, y)
 		}
 	}
@@ -187,11 +188,11 @@ type RowSpec struct {
 // rowSpecs defines the structure of each row (count, width, height).
 // Returns a 2D slice where each sub-slice represents a row of sprites.
 func LoadVariableRowSpriteSheet(rowSpecs []RowSpec, file []byte) ([][]*ebiten.Image, error) {
-	specKey := ""
+	var specKey strings.Builder
 	for _, s := range rowSpecs {
-		specKey += fmt.Sprintf("%d:%d:%d,", s.Count, s.Width, s.Height)
+		specKey.WriteString(fmt.Sprintf("%d:%d:%d,", s.Count, s.Width, s.Height))
 	}
-	key := cacheKey(file, "varsheet:"+specKey)
+	key := cacheKey(file, "varsheet:"+specKey.String())
 	if cached, ok := registryGet(key); ok {
 		return cached.([][]*ebiten.Image), nil
 	}

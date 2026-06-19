@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"math/rand"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -167,7 +168,7 @@ func (g *TileGrid) createRandomPattern(seed int64) {
 
 	// Create random clusters of water
 	numWater := (g.width * g.height) / 3 // Approx 33% water
-	for i := 0; i < numWater; i++ {
+	for range numWater {
 		rx := r.Intn(g.width)
 		ry := r.Intn(g.height)
 		g.tiles[ry][rx] = Water
@@ -474,13 +475,7 @@ func (g *TileGrid) findSmartTransitionPair(edge string, openStart, openEnd bool,
 				}
 				spriteKey2 := fmt.Sprintf("%d,%d", c2.row, c2.col)
 
-				isConnected := false
-				for _, connectedKey := range connectList {
-					if connectedKey == spriteKey2 {
-						isConnected = true
-						break
-					}
-				}
+				isConnected := slices.Contains(connectList, spriteKey2)
 
 				if isConnected {
 					score := 0

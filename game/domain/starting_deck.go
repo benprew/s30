@@ -130,7 +130,7 @@ func (dg *DeckGenerator) generateRandomDeck(
 	numCreatures int,
 	allowArtifacts bool,
 ) {
-	for i := 0; i < numBasicLands; i++ {
+	for range numBasicLands {
 		card := dg.pickBasicLand(color)
 		if card != nil {
 			dg.addCardToDeck(card)
@@ -139,7 +139,7 @@ func (dg *DeckGenerator) generateRandomDeck(
 		}
 	}
 
-	for i := 0; i < numEnchantmentsAndArtifacts; i++ {
+	for range numEnchantmentsAndArtifacts {
 		var cardColor ColorMask
 		var cardType CardType
 
@@ -158,7 +158,7 @@ func (dg *DeckGenerator) generateRandomDeck(
 		dg.addCardToDeck(card)
 	}
 
-	for i := 0; i < numCreatures; i++ {
+	for range numCreatures {
 		card := dg.pickWeakCard([]CardType{CardTypeCreature}, color)
 		if card == nil {
 			continue
@@ -213,7 +213,7 @@ func (dg *DeckGenerator) pickWeakCard(cardTypes []CardType, color ColorMask) *Ca
 	if len(candidates) == 0 {
 		return nil
 	}
-	for attempt := 0; attempt < maxPickAttempts; attempt++ {
+	for range maxPickAttempts {
 		card := candidates[dg.rng.Intn(len(candidates))]
 		if dg.shouldSkipCard(card) {
 			continue
