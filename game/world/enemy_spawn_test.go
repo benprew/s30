@@ -2,6 +2,7 @@ package world
 
 import (
 	"image"
+	"math/rand"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
@@ -77,6 +78,46 @@ func TestIsWithinEnemySpawnRadiusAllowsNearbyEnemies(t *testing.T) {
 	}
 	if isWithinEnemySpawnRadius(500.1) {
 		t.Fatal("expected enemies outside 500px to be rejected")
+	}
+}
+
+func TestEnemySpawnTilesFindsSparseValidTile(t *testing.T) {
+	level := createTestLevel(3, 3)
+	level.TileWidth = 200
+	level.TileHeight = 100
+	for y := 0; y < level.H; y++ {
+		for x := 0; x < level.W; x++ {
+			level.Tile(image.Point{X: x, Y: y}).TerrainType = TerrainWater
+		}
+	}
+
+	validTile := image.Point{X: 1, Y: 1}
+	level.Tile(validTile).TerrainType = TerrainPlains
+	level.Player = &domain.Player{}
+	level.Player.SetLoc(level.TileToPixel(validTile))
+
+	tiles := level.enemySpawnTiles(level.Player.Loc())
+	if len(tiles) != 1 {
+		t.Fatalf("enemySpawnTiles() returned %d tiles, want 1: %v", len(tiles), tiles)
+	}
+	if tiles[0] != validTile {
+		t.Fatalf("enemySpawnTiles()[0] = %v, want %v", tiles[0], validTile)
+	}
+}
+
+func TestRandomEnemySpawnPositionWithinTileMapsBackToTile(t *testing.T) {
+	level := createTestLevel(3, 3)
+	level.TileWidth = 200
+	level.TileHeight = 100
+	rng := rand.New(rand.NewSource(1))
+
+	for _, tile := range []image.Point{{X: 0, Y: 0}, {X: 1, Y: 1}, {X: 2, Y: 2}} {
+		for range 100 {
+			position := level.randomEnemySpawnPositionInTile(rng, tile)
+			if got := level.PixelToTile(position); got != tile {
+				t.Fatalf("PixelToTile(%v) = %v, want %v", position, got, tile)
+			}
+		}
 	}
 }
 

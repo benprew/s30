@@ -65,6 +65,53 @@ func isWithinEnemySpawnRadius(distance float64) bool {
 	return distance <= enemySpawnRadius
 }
 
+func (l *Level) enemySpawnTiles(origin image.Point) []image.Point {
+	tiles := []image.Point{}
+	for y := 0; y < l.H; y++ {
+		for x := 0; x < l.W; x++ {
+			tileLocation := image.Point{X: x, Y: y}
+			tile := l.Tile(tileLocation)
+			if tile == nil || tile.TerrainType == TerrainWater {
+				continue
+			}
+
+			position := l.clampLevelPixel(l.TileToPixel(tileLocation))
+			dx := position.X - origin.X
+			dy := position.Y - origin.Y
+			distance := math.Sqrt(float64(dx*dx + dy*dy))
+			if isWithinEnemySpawnRadius(distance) {
+				tiles = append(tiles, tileLocation)
+			}
+		}
+	}
+	return tiles
+}
+
+func (l *Level) randomEnemySpawnPositionInTile(rng *rand.Rand, tile image.Point) image.Point {
+	x := tile.X * l.TileWidth
+	if tile.Y%2 != 0 {
+		x += l.TileWidth / 2
+	}
+	y := tile.Y * l.TileHeight / 2
+
+	width := max(l.TileWidth, 1)
+	height := max(l.TileHeight/2, 1)
+	return l.clampLevelPixel(image.Point{
+		X: x + rng.Intn(width),
+		Y: y + rng.Intn(height),
+	})
+}
+
+func (l *Level) clampLevelPixel(position image.Point) image.Point {
+	if levelW := l.LevelW(); levelW > 0 {
+		position.X = min(max(position.X, 0), levelW-1)
+	}
+	if levelH := l.LevelH(); levelH > 0 {
+		position.Y = min(max(position.Y, 0), levelH-1)
+	}
+	return position
+}
+
 func powerfulCardProgressionLevels(collection domain.CardCollection) int {
 	if collection == nil {
 		return 0

@@ -379,36 +379,19 @@ func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 func (l *Level) SpawnEnemies(count int) error {
 	pLoc := l.Player.Loc()
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	spawnTiles := l.enemySpawnTiles(pLoc)
+	if len(spawnTiles) == 0 {
+		return fmt.Errorf("no valid enemy spawn position available")
+	}
 
 	for i := 0; i < count; i++ {
 		var enemy domain.Enemy
 		var err error
-		var x, y int
-		foundPosition := false
-
-		for attempts := 0; attempts < 100; attempts++ {
-			x = rng.Intn(l.LevelW())
-			y = rng.Intn(l.LevelH())
-
-			pos := image.Point{X: x, Y: y}
-			if l.IsWaterAtPixel(pos) {
-				continue
-			}
-
-			dx := x - pLoc.X
-			dy := y - pLoc.Y
-			distance := math.Sqrt(float64(dx*dx + dy*dy))
-			if isWithinEnemySpawnRadius(distance) {
-				foundPosition = true
-				break
-			}
-		}
-		if !foundPosition {
-			return fmt.Errorf("no valid enemy spawn position available")
-		}
+		tile := spawnTiles[rng.Intn(len(spawnTiles))]
+		position := l.randomEnemySpawnPositionInTile(rng, tile)
 
 		// Try to find an enemy with a valid walking sprite
-		profile := l.enemySpawnProfileAt(l.PixelToTile(image.Point{X: x, Y: y}))
+		profile := l.enemySpawnProfileAt(tile)
 		maxAttempts := len(domain.Rogues)
 		for attempt := 0; attempt < maxAttempts; attempt++ {
 			enemyType, ok := chooseEnemyName(rng, domain.Rogues, profile)
@@ -433,7 +416,7 @@ func (l *Level) SpawnEnemies(count int) error {
 			return fmt.Errorf("no enemies with valid walking sprites available")
 		}
 
-		enemy.SetLoc(image.Point{X: x, Y: y})
+		enemy.SetLoc(position)
 		enemy.MoveSpeed = 5 + rng.Intn(7)
 
 		l.Enemies = append(l.Enemies, enemy)
