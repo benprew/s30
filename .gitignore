@@ -14,3 +14,5 @@ s30_android.apk/
 .DS_Store
 go.work
 go.work.sum
+.orchestrate/
+tasks.org
