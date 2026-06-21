@@ -11,6 +11,7 @@ are all welcome.
 - **Go 1.25 or newer** (see `go.mod` for the exact version).
 - **A C toolchain** and the X11 / OpenGL / ALSA headers that Ebiten needs
   at build time.
+- **uv** for the card-art build pipeline.
 - **Git** and **make**.
 
 Runtime platform support is whatever
@@ -34,24 +35,20 @@ Nix:
 
 There is a `flake.nix` in the project. Activate it by putting `use flake` in an `.envrc` file and running `direnv allow`.
 
-For the art/asset pipeline scripts under `utils/` you'll also want
-ImageMagick and pngquant:
-
-```sh
-make devdeps
-```
+Install the Python dependencies for the art/asset pipeline:
 
 On macOS and Windows the Go toolchain + Ebiten's prebuilt dependencies are
 normally enough — no extra system packages needed.
 
 ### Build & run
 
-Clone and run the game:
+Clone and build the game:
 
 ```sh
 git clone https://github.com/benprew/s30.git
 cd s30
-make           # runs `go run . -v mtg,duel`
+make       # downloads card art and builds self-contained dist/s30
+make run   # runs the game with embedded card art
 ```
 
 Run tests:
@@ -60,21 +57,18 @@ Run tests:
 make test      # go test -count=10 ./...
 ```
 
-Cross-compile release binaries:
+Making builds for your OS:
 
 ```sh
-make winbuild       # Windows x86_64 → s30.exe
-make winarmbuild    # Windows ARM64  → s30_arm64.exe
-make macbuild       # macOS Intel    → s30_mac
-make macarmbuild    # macOS ARM      → s30_mac_arm
-make webbuild       # WebAssembly    → s30.wasm
-make androidbuild   # Android APK    → s30_android.apk (WIP)
+make winbuild       # Windows x86_64 → dist/s30.exe
+make macbuild       # macOS → dist/s30_mac
+make build          # linux build → dist/s30
 ```
 
-The Android build additionally needs `gradle`, a JDK (21), and
-`ebitenmobile` — see the `androidbuild` target in the Makefile.
+Every Make binary target caches its generated card archive under `assets/art/`
+and embeds it in the output. Both the archive and `dist/` are ignored by Git.
 
-Once `make` and `make test` both run cleanly, you're ready to hack.
+Once `make build` and `make test` both run cleanly, you're ready to hack.
 
 ## Project layout
 
@@ -91,11 +85,10 @@ mobile/      Ebitenmobile glue for the Android build
 ## Useful dev commands
 
 ```sh
-python3 utils/find_cards.py --keyword Flying        # Find cards by keyword
-python3 utils/find_cards.py --name "Lightning Bolt" # Find cards by name
-python3 utils/find_cards.py --list-keywords         # List all keywords
-python3 utils/find_cards.py --list-types            # List all ability types
-go run ./cmd/mtg_test                               # AI-vs-AI sim
+python3 utils/find_cards.py   # Find cards by name/keyword/ability
+go run ./cmd/mtg_test         # AI-vs-AI sim
+go run ./cmd/duel_test        # player-vs-AI sim
+go run ./cmd/dungeon_test     # dungeon run with sample starting deck
 ```
 
 ## How to contribute
@@ -150,37 +143,17 @@ before starting to avoid duplicate work.
 
 ### Gameplay / engagement loop
 
-- **Zone-based enemy difficulty.** Today all level 1–10 enemies can spawn
-  anywhere. Filter the rogue pool in `SpawnEnemies()`
-  (`game/world/level.go`) by distance from the nearest city or from map
-  center, so inner rings stay safe and mountains/marshes are dangerous.
-- **Visible enemy tier indicators.** Tint, aura, or a floating level
-  number above enemies so the player can make informed risk/reward
-  decisions before engaging.
-- **Progressive spawning over time.** Tie the spawn pool to days elapsed,
-  duels won, or amulets collected to give the game a natural difficulty
-  ramp.
 - **Reward scaling / gold bounties** on higher-level enemies, plus a
   city-side "wanted board" of specific rogues.
-- **Card trader in cities** — let players sell unwanted cards for gold so
-  commons aren't dead weight.
 - **More random encounters.** `RandomEncounterScr` exists but is thin.
   Treasure, healing springs, wandering merchants, and choice events
   ("trade 3 commons for a random rare") would all fit.
-- **Flee / retreat mechanic** in `DuelAnteScr` — food cost with a % chance
-  based on level difference, partial gold loss on success.
 - **Quest-driven exploration.** Quest enemies with distinct map markers,
   chained quests, and world-altering rewards (clear a zone, unlock a shop
   tier).
 
 ### Rules engine / duels
 
-- **MinMax-with-search AI.** There's a heuristic AI today; a proper search
-  AI is in progress and could use help.
-- **Combat bug fixes.** There's a running list in `notes.org` — e.g.
-  creatures with 0 power incorrectly being unable to attack (merchant
-  ship), discard-to-7 triggering at the wrong step, and various edge cases
-  around auras and targeting.
 - **Phase pacing.** When phases jump, the UI should roll them forward
   visibly (~50ms each) instead of snapping.
 - **AI spell telegraphing.** Pause + show targets when the AI casts a

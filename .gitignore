@@ -1,5 +1,6 @@
 output*.png
 /s30
+/dist/
 s30.wasm
 assets/art/carddata/*
 .agcli

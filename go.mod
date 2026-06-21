@@ -1,6 +1,6 @@
 module github.com/benprew/s30
 
-go 1.25.1
+go 1.26.4
 
 require (
 	github.com/BurntSushi/toml v1.5.0
@@ -22,7 +22,9 @@ require (
 	github.com/jfreymuth/oggvorbis v1.0.5 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/tools v0.37.0 // indirect
 )

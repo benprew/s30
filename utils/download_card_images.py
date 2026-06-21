@@ -6,18 +6,19 @@ Supports both regular JSON and zstandard-compressed JSON (.zst) files.
 """
 
 import argparse
+import io
 import json
 import logging
 import re
-import shutil
-import subprocess
 import sys
 import tempfile
 import urllib.request
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
+
+from PIL import Image
 
 try:
     import zstandard as zstd
@@ -27,6 +28,8 @@ except ImportError:
     HAS_ZSTD = False
 
 logger = logging.getLogger(__name__)
+
+CARD_WIDTH = 245
 
 # TODO: the transform cards have 2 images in for a single card.
 # Probably save the first image as the untransformed name?
@@ -64,12 +67,21 @@ def sanitize_filename(name: str) -> str:
     return name.strip("-")
 
 
+def image_filename(card_data: Dict[str, Any]) -> str:
+    """Return the archive filename used for a card image."""
+    card_name = card_data.get("CardName", "")
+    set_code = card_data.get("SetID", "")
+    collector_number = card_data.get("CollectorNo", "")
+    sanitized_name = sanitize_filename(card_name)
+    return f"{set_code}-{collector_number}-200-{sanitized_name}.png"
+
+
 def download_and_process_card(
-    card_data: Dict[str, Any], zip_path: Path, output_dir: Path
+    card_data: Dict[str, Any], existing_files: Set[str], output_dir: Path
 ) -> tuple[bool, str]:
     """Download and process a single card image, saving to output_dir."""
+    card_name = card_data.get("CardName", "")
     try:
-        card_name = card_data.get("CardName", "")
         set_code = card_data.get("SetID", "")
         collector_number = card_data.get("CollectorNo", "")
         png_url = card_data.get("PngURL")
@@ -78,60 +90,35 @@ def download_and_process_card(
             logger.error(f"No PNG URL found for {card_name}")
             return False, ""
 
-        sanitized_name = sanitize_filename(card_name)
-        resized_filename = f"{set_code}-{collector_number}-200-{sanitized_name}.png"
+        resized_filename = image_filename(card_data)
 
-        if zip_path.exists():
-            with zipfile.ZipFile(zip_path, "r") as zf:
-                if resized_filename in zf.namelist():
-                    logger.info(
-                        f"Skipping {card_name} ({set_code}-{collector_number}) "
-                        "- already exists in zip"
-                    )
-                    return True, ""
+        if resized_filename in existing_files:
+            logger.info(
+                f"Skipping {card_name} ({set_code}-{collector_number}) "
+                "- already exists in zip"
+            )
+            return True, ""
 
         logger.info(f"Processing {card_name} ({set_code}-{collector_number})")
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            original_path = temp_path / "original.png"
-            resized_path = temp_path / "resized.png"
+        logger.info(f"Downloading from {png_url}")
+        with urllib.request.urlopen(png_url, timeout=30) as response:
+            image_data = response.read()
 
-            logger.info(f"Downloading from {png_url}")
-            urllib.request.urlretrieve(png_url, original_path)
-
-            resize_size = "245x"
-            logger.info(f"Resizing to {resize_size} width")
-            convert_cmd = [
-                "convert",
-                str(original_path),
-                "-resize",
-                resize_size,
-                str(resized_path),
-            ]
-
-            result = subprocess.run(convert_cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                logger.error(f"Error resizing image: {result.stderr}")
-                return False, ""
-
-            logger.info("Compressing with pngquant")
-            pngquant_cmd = [
-                "pngquant",
-                "--quality=60-80",
-                "--force",
-                "--strip",
-                "--output",
-                str(resized_path),
-                str(resized_path),
-            ]
-
-            result = subprocess.run(pngquant_cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                logger.warning(f"pngquant failed: {result.stderr}")
-
-            output_path = output_dir / resized_filename
-            shutil.copy(resized_path, output_path)
+        output_path = output_dir / resized_filename
+        with Image.open(io.BytesIO(image_data)) as original:
+            target_height = round(original.height * CARD_WIDTH / original.width)
+            logger.info(f"Resizing to {CARD_WIDTH}x{target_height}")
+            resized = original.resize(
+                (CARD_WIDTH, target_height), Image.Resampling.LANCZOS
+            )
+            if resized.mode == "RGBA":
+                resized = resized.quantize(colors=256, method=Image.Quantize.FASTOCTREE)
+            else:
+                resized = resized.convert("RGB").quantize(
+                    colors=256, method=Image.Quantize.MEDIANCUT
+                )
+            resized.save(output_path, format="PNG", optimize=True)
 
         print(f"Completed: {card_name} ({set_code}-{collector_number})")
         return True, resized_filename
@@ -167,19 +154,6 @@ def main() -> None:
     zip_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        subprocess.run(["convert", "--version"], capture_output=True, check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        logger.error(
-            "ImageMagick 'convert' command not found. Please install ImageMagick."
-        )
-        sys.exit(1)
-
-    try:
-        subprocess.run(["pngquant", "--version"], capture_output=True, check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        logger.warning("pngquant not found. Images will be resized but not compressed.")
-
-    try:
         cards_data = load_json_file(args.json_file)
     except Exception as e:
         logger.error(f"Error reading JSON file: {e}")
@@ -189,11 +163,26 @@ def main() -> None:
         logger.error("JSON file should contain an array of card objects")
         sys.exit(1)
 
+    if not cards_data:
+        logger.error("Card data is empty")
+        sys.exit(1)
+
     logger.info(f"Processing {len(cards_data)} cards...")
 
     success_count: int = 0
     max_workers: int = min(8, len(cards_data))
     processed_files: List[str] = []
+
+    existing_files: Set[str] = set()
+    if zip_path.exists():
+        try:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                existing_files = set(zf.namelist())
+        except zipfile.BadZipFile as e:
+            logger.error(f"Invalid existing ZIP archive: {e}")
+            sys.exit(1)
+
+    expected_files = {image_filename(card) for card in cards_data}
 
     with tempfile.TemporaryDirectory() as temp_output_dir:
         output_dir = Path(temp_output_dir)
@@ -201,7 +190,7 @@ def main() -> None:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_card = {
                 executor.submit(
-                    download_and_process_card, card, zip_path, output_dir
+                    download_and_process_card, card, existing_files, output_dir
                 ): i
                 for i, card in enumerate(cards_data, 1)
             }
@@ -225,6 +214,12 @@ def main() -> None:
                     logger.info(f"Added {filename}")
 
     print(f"Completed: {success_count}/{len(cards_data)} cards processed successfully")
+
+    available_files = existing_files | set(processed_files)
+    missing_files = expected_files - available_files
+    if success_count != len(cards_data) or missing_files:
+        logger.error(f"Failed to produce {len(missing_files)} card images")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

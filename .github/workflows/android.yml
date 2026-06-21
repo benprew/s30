@@ -16,6 +16,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Download and process card images
+        run: uv run python utils/download_card_images.py assets/card_info/scryfall_cards.json.zst
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -40,6 +45,7 @@ jobs:
           mkdir -p ./mobile/android/s30
           go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind \
             -target android \
+            -tags embedded_card_images \
             -javapkg com.benprew.s30 \
             -o ./mobile/android/s30/s30.aar \
             ./mobile

@@ -308,26 +308,31 @@ The physical view describes how the software maps to hardware and deployment tar
 
 | Target | OS | Arch | Output | CGO |
 |--------|----|------|--------|-----|
-| Linux desktop | linux | amd64 | `s30` | Yes |
-| Linux ARM | linux | arm64 | `s30` | Yes |
-| macOS Intel | darwin | amd64 | `s30_mac` | Yes |
-| macOS Apple Silicon | darwin | arm64 | `s30_mac_arm` | Yes |
-| Windows | windows | amd64 | `s30.exe` | Yes |
-| Windows ARM | windows | arm64 | `s30_arm64.exe` | Yes |
-| WebAssembly | js | wasm | `s30.wasm` | No |
-| Android | android | multi-arch | `app-release.apk` | Yes (NDK) |
+| Linux desktop | linux | amd64 | `dist/s30` | Yes |
+| Linux ARM | linux | arm64 | release workflow | Yes |
+| macOS Intel | darwin | amd64 | `dist/s30_mac` | Yes |
+| macOS Apple Silicon | darwin | arm64 | `dist/s30_mac_arm` | Yes |
+| Windows | windows | amd64 | `dist/s30.exe` | Yes |
+| Windows ARM | windows | arm64 | `dist/s30_arm64.exe` | Yes |
+| WebAssembly | js | wasm | `dist/s30.wasm` | No |
+| Android | android | multi-arch | `dist/s30_android.apk` | Yes (NDK) |
 
 ### Asset Packaging
 
-All game assets (sprites, fonts, card data, configs) are **compiled into the binary** via Go's `embed` package. The resulting executable is fully self-contained — no external asset files needed at runtime.
-
-The one exception is **card artwork**: card images are fetched at runtime from the Scryfall API via HTTP and cached in memory (`sync.Map`). This is the only network dependency.
+Sprites, fonts, card data, and configs are compiled into the binary via Go's
+`embed` package. Every Make binary target and GitHub release build downloads
+card artwork into an ignored ZIP archive and compiles it into the binary with
+the `embedded_card_images` build tag. A clean checkout therefore does not need
+the ZIP to exist before the build starts. At launch, every image in the archive
+is decoded into the cache; an absent image still falls back to its Scryfall URL.
+Direct Go builds without the tag remain supported and fetch artwork on demand.
 
 ```
-Binary (self-contained)
+Embedded binary (self-contained when the archive is complete)
 ├── Embedded: sprites, fonts, card DB, configs, UI art
-└── Runtime fetch: card artwork from Scryfall API (HTTP GET)
-                   └── Cached in sync.Map (memory only)
+├── Embedded: generated card artwork ZIP
+│             └── Decoded into sync.Map at launch
+└── Fallback: missing card artwork from Scryfall API (HTTP GET)
 ```
 
 ### Android Deployment

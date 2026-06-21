@@ -30,7 +30,8 @@ const (
 	CardViewFull CardView = iota
 	CardViewArtOnly
 )
-const CardArtHeight = 200
+const CardArtHeight = 193
+const CardFullWidth = 245
 
 type EntityID int
 

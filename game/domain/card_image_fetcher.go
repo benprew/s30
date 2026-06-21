@@ -1,12 +1,15 @@
 package domain
 
 import (
+	"archive/zip"
 	"bytes"
 	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"net/http"
+	"path"
+	"strings"
 	"sync"
 
 	"github.com/benprew/s30/assets"
@@ -22,8 +25,6 @@ var labeledBlankCards sync.Map
 
 var blankCardOnce sync.Once
 var blankCardImage *ebiten.Image
-
-const cardTargetWidth = 228
 
 func blankCard() *ebiten.Image {
 	blankCardOnce.Do(func() {
@@ -72,6 +73,71 @@ func resizeToWidth(src image.Image, targetWidth int) image.Image {
 	return dst
 }
 
+func cacheCardImage(id string, img image.Image) {
+	if img.Bounds().Dx() != CardFullWidth {
+		img = resizeToWidth(img, CardFullWidth)
+	}
+	cardImages.Store(id, ebiten.NewImageFromImage(img))
+}
+
+func cardIDFromImageFilename(name string) (string, bool) {
+	name = path.Base(name)
+	if !strings.HasSuffix(strings.ToLower(name), ".png") {
+		return "", false
+	}
+
+	id := strings.TrimSuffix(name, path.Ext(name))
+	if before, after, found := strings.Cut(id, "-200-"); found {
+		id = before + "-" + after
+	}
+	return id, id != ""
+}
+
+func loadCardImagesFromArchive(data []byte) (int, error) {
+	reader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return 0, fmt.Errorf("open embedded card image archive: %w", err)
+	}
+
+	loaded := 0
+	for _, file := range reader.File {
+		id, ok := cardIDFromImageFilename(file.Name)
+		if !ok {
+			continue
+		}
+
+		entry, err := file.Open()
+		if err != nil {
+			fmt.Printf("WARN: Failed to open embedded card image %s: %v\n", file.Name, err)
+			continue
+		}
+		img, decodeErr := png.Decode(entry)
+		closeErr := entry.Close()
+		if decodeErr != nil {
+			fmt.Printf("WARN: Failed to decode embedded card image %s: %v\n", file.Name, decodeErr)
+			continue
+		}
+		if closeErr != nil {
+			fmt.Printf("WARN: Failed to close embedded card image %s: %v\n", file.Name, closeErr)
+			continue
+		}
+
+		cacheCardImage(id, img)
+		loaded++
+	}
+
+	return loaded, nil
+}
+
+// LoadEmbeddedCardImages loads all artwork included in the binary into the
+// card image cache. Builds without embedded artwork have nothing to load.
+func LoadEmbeddedCardImages() (int, error) {
+	if len(assets.CardImagesZip) == 0 {
+		return 0, nil
+	}
+	return loadCardImagesFromArchive(assets.CardImagesZip)
+}
+
 func fetchAndCacheCardImage(card *Card) {
 	id := card.cardID
 	if card.PngURL == "" {
@@ -101,8 +167,7 @@ func fetchAndCacheCardImage(card *Card) {
 		return
 	}
 
-	resized := resizeToWidth(img, cardTargetWidth)
-	cardImages.Store(id, ebiten.NewImageFromImage(resized))
+	cacheCardImage(id, img)
 }
 
 func CollectPriorityCards(player *Player) []*Card {

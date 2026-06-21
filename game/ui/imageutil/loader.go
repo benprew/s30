@@ -190,7 +190,7 @@ type RowSpec struct {
 func LoadVariableRowSpriteSheet(rowSpecs []RowSpec, file []byte) ([][]*ebiten.Image, error) {
 	var specKey strings.Builder
 	for _, s := range rowSpecs {
-		specKey.WriteString(fmt.Sprintf("%d:%d:%d,", s.Count, s.Width, s.Height))
+		fmt.Fprintf(&specKey, "%d:%d:%d,", s.Count, s.Width, s.Height)
 	}
 	key := cacheKey(file, "varsheet:"+specKey.String())
 	if cached, ok := registryGet(key); ok {

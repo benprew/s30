@@ -41,6 +41,14 @@ func (g *Game) Level() *world.Level {
 }
 
 func NewGame() (*Game, error) {
+	loadedCardImages, err := domain.LoadEmbeddedCardImages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded card images: %w", err)
+	}
+	if loadedCardImages > 0 {
+		fmt.Printf("Loaded %d embedded card images\n", loadedCardImages)
+	}
+
 	scale := 1.0
 	screenW := int(1024 * scale)
 	screenH := int(768 * scale)

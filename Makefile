@@ -1,8 +1,17 @@
-default:
-	go run . -v mtg,duel
+CARD_IMAGES := assets/art/cardimages.zip
+CARD_DATA := assets/card_info/scryfall_cards.json.zst
+DIST_DIR := dist
+EMBEDDED_TAG := embedded_card_images
 
-pprof:
-	go run . -pprof 127.0.0.1:6060 -v mtg,duel
+.PHONY: default run pprof dungeon test embeddedbuild cardimages winbuild macbuild webbuild builddeps fedorabuilddeps lint
+
+default: build
+
+run: cardimages
+	go run -tags $(EMBEDDED_TAG) . -v mtg,duel
+
+pprof: cardimages
+	go run -tags $(EMBEDDED_TAG) . -pprof 127.0.0.1:6060 -v mtg,duel
 
 dungeon:
 	go run ./cmd/dungeon_test
@@ -10,31 +19,27 @@ dungeon:
 test:
 	go test -count=10 ./...
 
-winbuild:
-	GOOS=windows GOARCH=amd64 go build -o s30.exe
+cardimages:
+	uv run python utils/download_card_images.py $(CARD_DATA)
+	test -f $(CARD_IMAGES)
 
-winarmbuild:
-	GOOS=windows GOARCH=arm64 go build -o s30_arm64.exe
+build: cardimages
+	mkdir -p $(DIST_DIR)
+	go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30 .
 
-macbuild:
-	MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o s30_mac
+winbuild: cardimages
+	mkdir -p $(DIST_DIR)
+	GOOS=windows GOARCH=amd64 go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30.exe
 
-macarmbuild:
-	MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o s30_mac_arm
+macbuild: cardimages
+	mkdir -p $(DIST_DIR)
+	MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30_mac_arm
 
 # https://ebitengine.org/en/documents/webassembly.html
-webbuild:
-	GOOS=js GOARCH=wasm go build -o s30.wasm github.com/benprew/s30
-	scp s30.wasm /usr/local/go/lib/wasm/wasm_exec.js index.html main.html throwingbones@throwingbones:/var/www/html/throwingbones/ben/s30/
-
-androidbuild:
-	go mod download
-	go get github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.9
-	mkdir -p ./mobile/android/s30
-	go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind -target android -javapkg com.benprew.s30 -o ./mobile/android/s30/s30.aar ./mobile
-	cd mobile/android && gradle assembleRelease
-	cp mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk s30_android.apk
-	@echo "Built s30_android.apk"
+webbuild: cardimages
+	mkdir -p $(DIST_DIR)
+	GOOS=js GOARCH=wasm go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30.wasm github.com/benprew/s30
+	scp $(DIST_DIR)/s30.wasm /usr/local/go/lib/wasm/wasm_exec.js index.html main.html throwingbones@throwingbones:/var/www/html/throwingbones/ben/s30/
 
 builddeps:
 	sudo apt-get install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libxxf86vm-dev
@@ -49,6 +54,3 @@ lint:
 	.venv/bin/ruff check --fix .
 	.venv/bin/ruff format .
 	.venv/bin/ty check .
-
-devdeps:
-	sudo apt install imagemagick pngquant
