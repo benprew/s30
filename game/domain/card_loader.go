@@ -37,6 +37,7 @@ type CardJSON struct {
 	Artist            string
 	PriceUSD          string
 	PngURL            string
+	BorderCropURL     string
 	VintageRestricted bool
 }
 
@@ -179,7 +180,8 @@ func (cj *CardJSON) ToCard() *Card {
 			SetName:     cj.SetName,
 			CollectorNo: cj.CollectorNo,
 		},
-		PngURL: cj.PngURL,
+		PngURL:        cj.PngURL,
+		BorderCropURL: cj.BorderCropURL,
 		cardID: fmt.Sprintf("%s-%s-%s",
 			cj.SetID, cj.CollectorNo, sanitizeFilename(cj.CardName)),
 		CardName:          cj.CardName,

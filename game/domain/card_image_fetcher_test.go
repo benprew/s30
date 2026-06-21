@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"path"
 	"sync/atomic"
 	"testing"
 )
@@ -17,8 +19,8 @@ func TestLoadCardImagesFromArchiveCachesEveryValidImage(t *testing.T) {
 	t.Cleanup(cardImages.Clear)
 
 	archive := cardImageArchive(t, map[string]image.Image{
-		"tst-1-200-first-card.png":  solidCardImage(color.RGBA{R: 0xff, A: 0xff}),
-		"tst-2-200-second-card.png": solidCardImage(color.RGBA{G: 0xff, A: 0xff}),
+		"tst-1-200-first-card.jpg":   solidCardImage(color.RGBA{R: 0xff, A: 0xff}),
+		"tst-2-200-second-card.jpeg": solidCardImage(color.RGBA{G: 0xff, A: 0xff}),
 	})
 
 	loaded, err := loadCardImagesFromArchive(archive)
@@ -47,17 +49,17 @@ func TestFetchAndCacheCardImageUsesURLWhenImageIsMissing(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requests.Add(1)
-		w.Header().Set("Content-Type", "image/png")
-		if err := png.Encode(w, solidCardImage(color.RGBA{B: 0xff, A: 0xff})); err != nil {
+		w.Header().Set("Content-Type", "image/jpeg")
+		if err := jpeg.Encode(w, solidCardImage(color.RGBA{B: 0xff, A: 0xff}), nil); err != nil {
 			t.Errorf("encode response: %v", err)
 		}
 	}))
 	t.Cleanup(server.Close)
 
 	card := &Card{
-		CardName: "Remote Card",
-		PngURL:   server.URL,
-		cardID:   "tst-3-remote-card",
+		CardName:      "Remote Card",
+		BorderCropURL: server.URL,
+		cardID:        "tst-3-remote-card",
 	}
 	fetchAndCacheCardImage(card)
 
@@ -79,8 +81,15 @@ func cardImageArchive(t *testing.T, images map[string]image.Image) []byte {
 		if err != nil {
 			t.Fatalf("create ZIP entry: %v", err)
 		}
-		if err := png.Encode(entry, img); err != nil {
-			t.Fatalf("encode ZIP entry: %v", err)
+		var encodeErr error
+		switch path.Ext(name) {
+		case ".jpg", ".jpeg":
+			encodeErr = jpeg.Encode(entry, img, nil)
+		default:
+			encodeErr = png.Encode(entry, img)
+		}
+		if encodeErr != nil {
+			t.Fatalf("encode ZIP entry: %v", encodeErr)
 		}
 	}
 	if err := writer.Close(); err != nil {

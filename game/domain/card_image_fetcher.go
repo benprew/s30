@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/png"
 	"net/http"
 	"path"
 	"strings"
 	"sync"
+
+	_ "image/jpeg"
+	_ "image/png"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/ui/fonts"
@@ -82,7 +84,8 @@ func cacheCardImage(id string, img image.Image) {
 
 func cardIDFromImageFilename(name string) (string, bool) {
 	name = path.Base(name)
-	if !strings.HasSuffix(strings.ToLower(name), ".png") {
+	ext := strings.ToLower(path.Ext(name))
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
 		return "", false
 	}
 
@@ -111,7 +114,7 @@ func loadCardImagesFromArchive(data []byte) (int, error) {
 			fmt.Printf("WARN: Failed to open embedded card image %s: %v\n", file.Name, err)
 			continue
 		}
-		img, decodeErr := png.Decode(entry)
+		img, _, decodeErr := image.Decode(entry)
 		closeErr := entry.Close()
 		if decodeErr != nil {
 			fmt.Printf("WARN: Failed to decode embedded card image %s: %v\n", file.Name, decodeErr)
@@ -140,13 +143,13 @@ func LoadEmbeddedCardImages() (int, error) {
 
 func fetchAndCacheCardImage(card *Card) {
 	id := card.cardID
-	if card.PngURL == "" {
-		fmt.Printf("WARN: No PngURL for card: %s\n", card.CardName)
+	if card.BorderCropURL == "" {
+		fmt.Printf("WARN: No BorderCropURL for card: %s\n", card.CardName)
 		cardImages.Store(id, blankCard())
 		return
 	}
 
-	resp, err := http.Get(card.PngURL)
+	resp, err := http.Get(card.BorderCropURL)
 	if err != nil {
 		fmt.Printf("WARN: Failed to fetch card image for %s: %v\n", card.CardName, err)
 		cardImages.Store(id, blankCard())
@@ -160,9 +163,9 @@ func fetchAndCacheCardImage(card *Card) {
 		return
 	}
 
-	img, err := png.Decode(resp.Body)
+	img, _, err := image.Decode(resp.Body)
 	if err != nil {
-		fmt.Printf("WARN: Failed to decode PNG for %s: %v\n", card.CardName, err)
+		fmt.Printf("WARN: Failed to decode card image for %s: %v\n", card.CardName, err)
 		cardImages.Store(id, blankCard())
 		return
 	}

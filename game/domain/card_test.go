@@ -81,6 +81,9 @@ func TestCardJSONRoundTripRestoresFullCard(t *testing.T) {
 	if restored.PngURL != original.PngURL {
 		t.Errorf("PngURL = %q, want %q", restored.PngURL, original.PngURL)
 	}
+	if restored.BorderCropURL != original.BorderCropURL {
+		t.Errorf("BorderCropURL = %q, want %q", restored.BorderCropURL, original.BorderCropURL)
+	}
 	if restored.ManaCost != original.ManaCost {
 		t.Errorf("ManaCost = %q, want %q", restored.ManaCost, original.ManaCost)
 	}

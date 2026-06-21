@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script to download and process Magic: The Gathering card images from Scryfall JSON data.
-Downloads, resizes and optimizes PNG images.
+Downloads Scryfall border crops and stores resized, optimized JPEG images.
 Supports both regular JSON and zstandard-compressed JSON (.zst) files.
 """
 
@@ -30,6 +30,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 CARD_WIDTH = 245
+JPEG_QUALITY = 80
 
 # TODO: the transform cards have 2 images in for a single card.
 # Probably save the first image as the untransformed name?
@@ -73,7 +74,7 @@ def image_filename(card_data: Dict[str, Any]) -> str:
     set_code = card_data.get("SetID", "")
     collector_number = card_data.get("CollectorNo", "")
     sanitized_name = sanitize_filename(card_name)
-    return f"{set_code}-{collector_number}-200-{sanitized_name}.png"
+    return f"{set_code}-{collector_number}-200-{sanitized_name}.jpg"
 
 
 def download_and_process_card(
@@ -84,10 +85,10 @@ def download_and_process_card(
     try:
         set_code = card_data.get("SetID", "")
         collector_number = card_data.get("CollectorNo", "")
-        png_url = card_data.get("PngURL")
+        border_crop_url = card_data.get("BorderCropURL")
 
-        if not png_url:
-            logger.error(f"No PNG URL found for {card_name}")
+        if not border_crop_url:
+            logger.error(f"No border crop URL found for {card_name}")
             return False, ""
 
         resized_filename = image_filename(card_data)
@@ -101,8 +102,8 @@ def download_and_process_card(
 
         logger.info(f"Processing {card_name} ({set_code}-{collector_number})")
 
-        logger.info(f"Downloading from {png_url}")
-        with urllib.request.urlopen(png_url, timeout=30) as response:
+        logger.info(f"Downloading from {border_crop_url}")
+        with urllib.request.urlopen(border_crop_url, timeout=30) as response:
             image_data = response.read()
 
         output_path = output_dir / resized_filename
@@ -112,13 +113,14 @@ def download_and_process_card(
             resized = original.resize(
                 (CARD_WIDTH, target_height), Image.Resampling.LANCZOS
             )
-            if resized.mode == "RGBA":
-                resized = resized.quantize(colors=256, method=Image.Quantize.FASTOCTREE)
-            else:
-                resized = resized.convert("RGB").quantize(
-                    colors=256, method=Image.Quantize.MEDIANCUT
-                )
-            resized.save(output_path, format="PNG", optimize=True)
+            resized.convert("RGB").save(
+                output_path,
+                format="JPEG",
+                quality=JPEG_QUALITY,
+                optimize=True,
+                progressive=True,
+                subsampling="4:2:0",
+            )
 
         print(f"Completed: {card_name} ({set_code}-{collector_number})")
         return True, resized_filename
@@ -126,6 +128,19 @@ def download_and_process_card(
     except Exception as e:
         logger.error(f"Error processing {card_name}: {e}")
         return False, ""
+
+
+def retain_archive_files(zip_path: Path, filenames: Set[str]) -> None:
+    """Atomically remove archive entries that are not in filenames."""
+    temporary_path = zip_path.with_suffix(f"{zip_path.suffix}.tmp")
+    try:
+        with zipfile.ZipFile(zip_path, "r") as source:
+            with zipfile.ZipFile(temporary_path, "w") as destination:
+                for filename in sorted(filenames):
+                    destination.writestr(filename, source.read(filename))
+        temporary_path.replace(zip_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def main() -> None:
@@ -220,6 +235,10 @@ def main() -> None:
     if success_count != len(cards_data) or missing_files:
         logger.error(f"Failed to produce {len(missing_files)} card images")
         sys.exit(1)
+
+    if available_files != expected_files:
+        logger.info("Removing obsolete files from zip archive...")
+        retain_archive_files(zip_path, expected_files)
 
 
 if __name__ == "__main__":

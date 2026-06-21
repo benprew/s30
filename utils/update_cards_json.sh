@@ -10,7 +10,7 @@ ASSETS_DIR="$PROJECT_ROOT/assets/card_info"
 # Oracle Cards file info
 #
 # Use default cards set from Scryfall bulk data API
-# https://data.scryfall.io/default-cards/default-cards-20250807213540.json
+# https://data.scryfall.io/default-cards/default-cards-20260620211138.json
 #
 # Details about the bulk data api:
 # https://scryfall.com/docs/api/bulk-data
@@ -65,7 +65,8 @@ if ! jq 'map(select((.set == "2ed" or .set == "arn" or .set == "4ed"  or .set ==
   PriceUSD: (if .prices.usd then (.prices.usd) else .prices.eur end),
   VintageRestricted: (if .legalities.vintage == "restricted" then true else false end),
   PngURL: .image_uris.png,
-  ArtURL: .image_uris.art_crop
+  ArtURL: .image_uris.art_crop,
+  BorderCropURL: .image_uris.border_crop
 })' < "$INPUT_FILE" > "$OUTPUT_JSON"; then
     echo "Error: Failed to process cards with jq"
     exit 1

@@ -30,7 +30,7 @@ const (
 	CardViewFull CardView = iota
 	CardViewArtOnly
 )
-const CardArtHeight = 193
+const CardArtHeight = 215
 const CardFullWidth = 245
 
 type EntityID int
@@ -99,6 +99,7 @@ type Card struct {
 	CardName string
 	CardSet
 	PngURL            string
+	BorderCropURL     string
 	cardID            string
 	ManaCost          string   // ex. {3}{G}{R}
 	ManaProduction    []string // This only has the possible colors of production

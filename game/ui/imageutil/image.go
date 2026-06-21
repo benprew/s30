@@ -27,6 +27,7 @@ func ScaleImageInd(img *ebiten.Image, scaleX, scaleY float64) *ebiten.Image {
 
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Scale(scaleX, scaleY)
+	opts.Filter = ebiten.FilterLinear // for readability (from codex)
 	newImg.DrawImage(img, opts)
 	return newImg
 }
