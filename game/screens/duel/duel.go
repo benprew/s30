@@ -787,9 +787,12 @@ func (s *DuelScreen) loadImages() {
 	phaseImg := loadDuelImage("Winbk_Phase.pic.png")
 	if phaseImg != nil {
 		s.phaseDefaultBg = phaseImg.SubImage(image.Rect(0, 0, 41, 760)).(*ebiten.Image)
-		s.phaseActiveImgs = make([]*ebiten.Image, 18)
-		for r := range 18 {
-			s.phaseActiveImgs[r] = phaseImg.SubImage(image.Rect(41, r*42, 82, (r+1)*42)).(*ebiten.Image)
+		s.phaseActiveImgs = make([]*ebiten.Image, phaseCount*2)
+		for idx := range phaseCount {
+			for _, isPlayer := range []bool{false, true} {
+				slot := phaseOverlaySlot(idx, isPlayer)
+				s.phaseActiveImgs[slot] = phaseImg.SubImage(phaseOverlayBounds(idx, isPlayer)).(*ebiten.Image)
+			}
 		}
 	}
 	s.self.boardBg = imageutil.ScaleImageInd(loadDuelImage(fmt.Sprintf("Terr_%smana.pic.png", playerColor)), 1.02, 1.01)
@@ -2150,17 +2153,47 @@ func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
 
 	step := s.lastMsg.State.Step
 	idx := phaseIndex(step)
-	var row int
-	if s.lastMsg.State.ActivePlayer == "You" {
-		row = 10 + idx
-	} else {
-		row = idx
+	if idx < 0 {
+		return
 	}
-	if row < len(s.phaseActiveImgs) && s.phaseActiveImgs[row] != nil {
+	isPlayer := s.lastMsg.State.ActivePlayer == "You"
+	slot := phaseOverlaySlot(idx, isPlayer)
+
+	if slot >= 0 && slot < len(s.phaseActiveImgs) && s.phaseActiveImgs[slot] != nil {
+		pos := phasePOS(idx, isPlayer)
 		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(phaseX, float64(4+row*42))
-		screen.DrawImage(s.phaseActiveImgs[row], opts)
+		opts.GeoM.Translate(phaseX+float64(pos.X-s.phaseDefaultBg.Bounds().Dx()), float64(4+pos.Y))
+		screen.DrawImage(s.phaseActiveImgs[slot], opts)
 	}
+}
+
+const phaseCount = 8
+
+var phaseImgSize = image.Point{35, 40}
+
+// phasePOS returns the source position of an active phase in the phase sprite sheet.
+func phasePOS(idx int, isPlayer bool) image.Point {
+	y := 0
+	if isPlayer {
+		y = 431
+	} else {
+		y = 2
+	}
+	y += 41 * idx
+
+	return image.Point{44, y}
+}
+
+func phaseOverlaySlot(idx int, isPlayer bool) int {
+	if isPlayer {
+		return phaseCount + idx
+	}
+	return idx
+}
+
+func phaseOverlayBounds(idx int, isPlayer bool) image.Rectangle {
+	pos := phasePOS(idx, isPlayer)
+	return image.Rectangle{Min: pos, Max: pos.Add(phaseImgSize)}
 }
 
 func phaseIndex(step string) int {
@@ -2176,13 +2209,13 @@ func phaseIndex(step string) int {
 		stepCombatDamage:      4,
 		stepEndOfCombat:       4,
 		"Postcombat Main":     5,
-		"End Step":            6,
+		"End Step":            7,
 		"Cleanup":             6,
 	}
 	if idx, ok := phaseMap[step]; ok {
 		return idx
 	}
-	return 0
+	return -1
 }
 
 func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, ps *interactive.PlayerState, startY, boardH int) {
