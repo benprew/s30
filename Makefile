@@ -39,7 +39,10 @@ macbuild: cardimages
 webbuild: cardimages
 	mkdir -p $(DIST_DIR)
 	GOOS=js GOARCH=wasm go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30.wasm github.com/benprew/s30
-	scp $(DIST_DIR)/s30.wasm /usr/local/go/lib/wasm/wasm_exec.js index.html main.html throwingbones@throwingbones:/var/www/html/throwingbones/ben/s30/
+	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" index.html main.html $(DIST_DIR)/
+
+webdeploy: webbuild
+	scp $(DIST_DIR)/s30.wasm $(DIST_DIR)/wasm_exec.js $(DIST_DIR)/index.html $(DIST_DIR)/main.html throwingbones@throwingbones:/var/www/html/throwingbones/ben/s30/
 
 builddeps:
 	sudo apt-get install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libxxf86vm-dev

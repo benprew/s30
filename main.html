@@ -1,8 +1,104 @@
-<!DOCTYPE html>
-<script src="wasm_exec.js"></script>
-<script>
- const go = new Go();
- WebAssembly.instantiateStreaming(fetch("s30.wasm"), go.importObject).then(result => {
-   go.run(result.instance);
- });
-</script>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shandalar 30</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      gap: 12px;
+      text-align: center;
+    }
+
+    progress {
+      width: 320px;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loader">
+    <div id="status">Downloading game…</div>
+    <progress id="progress" max="100"></progress>
+    <div id="downloaded"></div>
+  </div>
+
+  <script src="wasm_exec.js"></script>
+  <script>
+    async function start() {
+      const status = document.getElementById("status");
+      const progress = document.getElementById("progress");
+      const downloaded = document.getElementById("downloaded");
+
+      try {
+        const response = await fetch("s30.wasm");
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const total = Number(response.headers.get("Content-Length"));
+        const reader = response.body.getReader();
+        const chunks = [];
+        let received = 0;
+
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done) {
+            break;
+          }
+
+          chunks.push(value);
+          received += value.length;
+
+          if (total) {
+            const percent = Math.min(100, received / total * 100);
+            progress.value = percent;
+            downloaded.textContent = `${Math.round(percent)}%`;
+          } else {
+            progress.removeAttribute("value");
+            downloaded.textContent = `${(received / 1024 / 1024).toFixed(1)} MB`;
+          }
+        }
+
+        status.textContent = "Starting game…";
+        progress.value = 100;
+        downloaded.textContent = "";
+
+        const wasm = new Uint8Array(received);
+        let offset = 0;
+        for (const chunk of chunks) {
+          wasm.set(chunk, offset);
+          offset += chunk.length;
+        }
+
+        const go = new Go();
+        const result = await WebAssembly.instantiate(wasm, go.importObject);
+
+        document.getElementById("loader").remove();
+        await go.run(result.instance);
+      } catch (error) {
+        status.textContent = `Unable to load game: ${error.message}`;
+        progress.hidden = true;
+        downloaded.textContent = "";
+        console.error(error);
+      }
+    }
+
+    start();
+  </script>
+</body>
+</html>
