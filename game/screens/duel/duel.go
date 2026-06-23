@@ -184,13 +184,16 @@ type DuelScreen struct {
 
 	handCollapsed bool
 
-	inMulligan         bool
-	mulliganCount      int
-	mulliganBottoming  bool
-	mulliganSelected   map[uuid.UUID]bool
-	mulliganKeepBtn    *elements.Button
-	mulliganMullBtn    *elements.Button
-	mulliganConfirmBtn *elements.Button
+	inMulligan          bool
+	mulliganCount       int
+	mulliganBottoming   bool
+	mulliganSelected    map[uuid.UUID]bool
+	mulliganKeepBtn     *elements.Button
+	mulliganMullBtn     *elements.Button
+	mulliganConfirmBtn  *elements.Button
+	mulliganPreviewImg  *ebiten.Image
+	mulliganPreviewIdx  int
+	mulliganPreviewName string
 }
 
 type cardImgKey struct {
@@ -2986,6 +2989,7 @@ func (s *DuelScreen) initMulligan() {
 	s.mulliganCount = 0
 	s.mulliganBottoming = false
 	s.mulliganSelected = make(map[uuid.UUID]bool)
+	s.mulliganPreviewIdx = -1
 
 	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
 	if err != nil {
@@ -3093,8 +3097,9 @@ func (s *DuelScreen) finishMulligan() {
 }
 
 const (
-	mulliganCardW   = 120
-	mulliganCardGap = 12
+	mulliganCardW         = 120
+	mulliganCardGap       = 12
+	mulliganPreviewMargin = 20
 )
 
 func (s *DuelScreen) mulliganCardRects(W, H int) []image.Rectangle {
@@ -3118,18 +3123,16 @@ func (s *DuelScreen) mulliganCardRects(W, H int) []image.Rectangle {
 func (s *DuelScreen) updateMulliganUI(W, H int) {
 	cardRects := s.mulliganCardRects(W, H)
 	hand := s.human.Hand()
+	mx, my := ebiten.CursorPosition()
+	s.updateMulliganPreview(cardRects, mx, my)
 
 	if s.mulliganBottoming && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		mx, my := ebiten.CursorPosition()
-		for i, r := range cardRects {
-			if mx >= r.Min.X && mx < r.Max.X && my >= r.Min.Y && my < r.Max.Y {
-				id := hand[i].ID()
-				if s.mulliganSelected[id] {
-					delete(s.mulliganSelected, id)
-				} else if len(s.mulliganSelected) < s.mulliganCount {
-					s.mulliganSelected[id] = true
-				}
-				break
+		if i := rectIndexAtPoint(cardRects, mx, my); i >= 0 {
+			id := hand[i].ID()
+			if s.mulliganSelected[id] {
+				delete(s.mulliganSelected, id)
+			} else if len(s.mulliganSelected) < s.mulliganCount {
+				s.mulliganSelected[id] = true
 			}
 		}
 	}
@@ -3162,6 +3165,59 @@ func (s *DuelScreen) updateMulliganUI(W, H int) {
 	_ = btnH
 }
 
+func rectIndexAtPoint(rects []image.Rectangle, x, y int) int {
+	point := image.Pt(x, y)
+	for i, rect := range rects {
+		if point.In(rect) {
+			return i
+		}
+	}
+	return -1
+}
+
+func (s *DuelScreen) updateMulliganPreview(rects []image.Rectangle, mx, my int) {
+	idx := rectIndexAtPoint(rects, mx, my)
+	if idx < 0 {
+		s.mulliganPreviewImg = nil
+		s.mulliganPreviewIdx = -1
+		s.mulliganPreviewName = ""
+		return
+	}
+
+	card := s.human.Hand()[idx]
+	if s.mulliganPreviewImg != nil && s.mulliganPreviewName == card.Name() {
+		s.mulliganPreviewIdx = idx
+		return
+	}
+
+	domainCard := s.getDomainCard(card.Name())
+	if domainCard == nil {
+		s.mulliganPreviewImg = nil
+		s.mulliganPreviewIdx = -1
+		s.mulliganPreviewName = ""
+		return
+	}
+	img, err := domainCard.CardImage(domain.CardViewFull)
+	if err != nil || img == nil {
+		s.mulliganPreviewImg = nil
+		s.mulliganPreviewIdx = -1
+		s.mulliganPreviewName = ""
+		return
+	}
+	s.mulliganPreviewImg = img
+	s.mulliganPreviewIdx = idx
+	s.mulliganPreviewName = card.Name()
+}
+
+func mulliganPreviewPosition(W, H int, cardRect, previewBounds image.Rectangle) image.Point {
+	x := mulliganPreviewMargin
+	if cardRect.Min.X+cardRect.Dx()/2 < W/2 {
+		x = W - previewBounds.Dx() - mulliganPreviewMargin
+	}
+	y := (H - previewBounds.Dy()) / 2
+	return image.Pt(max(0, min(x, W-previewBounds.Dx())), max(0, min(y, H-previewBounds.Dy())))
+}
+
 func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{20, 20, 30, 255}, false)
 
@@ -3179,6 +3235,11 @@ func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 	t.BoundsW = float64(W)
 	t.Color = color.White
 	t.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+	hint := elements.NewText(14, "Hover a card to magnify it", 0, 64)
+	hint.HAlign = elements.AlignCenter
+	hint.BoundsW = float64(W)
+	hint.Color = color.RGBA{190, 190, 205, 255}
+	hint.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	hand := s.human.Hand()
 	rects := s.mulliganCardRects(W, H)
@@ -3209,6 +3270,7 @@ func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 				float32(r.Dx())+4, float32(r.Dy())+4, 3, color.RGBA{255, 80, 80, 255}, false)
 		}
 	}
+	s.drawMulliganPreview(screen, W, H, rects)
 
 	if s.mulliganBottoming {
 		s.mulliganConfirmBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
@@ -3218,6 +3280,22 @@ func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 			s.mulliganMullBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
 	}
+}
+
+func (s *DuelScreen) drawMulliganPreview(screen *ebiten.Image, W, H int, cardRects []image.Rectangle) {
+	if s.mulliganPreviewImg == nil || s.mulliganPreviewIdx < 0 || s.mulliganPreviewIdx >= len(cardRects) {
+		return
+	}
+
+	pos := mulliganPreviewPosition(W, H, cardRects[s.mulliganPreviewIdx], s.mulliganPreviewImg.Bounds())
+	bounds := s.mulliganPreviewImg.Bounds()
+	vector.FillRect(screen, float32(pos.X-6), float32(pos.Y-6), float32(bounds.Dx()+12),
+		float32(bounds.Dy()+12), color.RGBA{0, 0, 0, 210}, false)
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(pos.X), float64(pos.Y))
+	screen.DrawImage(s.mulliganPreviewImg, opts)
+	vector.StrokeRect(screen, float32(pos.X-2), float32(pos.Y-2), float32(bounds.Dx()+4),
+		float32(bounds.Dy()+4), 2, color.RGBA{230, 210, 120, 255}, false)
 }
 
 func hasActionType(actions []interactive.ActionOption, actionType interactive.ActionType) bool {
