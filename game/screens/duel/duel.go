@@ -2686,7 +2686,7 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps inte
 
 	label := fmt.Sprintf("Your Hand (%d)", ps.HandCount)
 	if dp != s.self {
-		label = fmt.Sprintf("%s's Hand (%d)", dp.name, ps.HandCount)
+		label = fmt.Sprintf("Opp Hand (%d)", ps.HandCount)
 	} else if s.handCollapsed {
 		label = fmt.Sprintf("Your Hand (%d) [+]", ps.HandCount)
 	}
