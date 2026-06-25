@@ -112,7 +112,24 @@ func CardsInTiers(tiers ...CardTier) []*Card {
 // always a playable spell. Returns fewer than count if the eligible pool is
 // smaller.
 func RandomPowerfulCardsForColor(color ColorMask, count int) []*Card {
-	pool := CardsInTiers(TierMandatory, TierAlmostMandatory, TierStaple)
+	return randomCardsForColorInTiers(color, count, TierMandatory, TierAlmostMandatory, TierStaple)
+}
+
+// RandomLowMidCardsForColor picks up to count unique cards of low-to-medium
+// power whose color identity matches the requested color or are colorless. It
+// draws from the mid tiers, avoiding both top-tier staples and meme-tier
+// unplayables, so it suits a modest duel reward.
+func RandomLowMidCardsForColor(color ColorMask, count int) []*Card {
+	return randomCardsForColorInTiers(color, count,
+		TierPlayedQuiteOften,
+		TierPlayedFromTimeToTime,
+		TierPlayedInSpecificArchetypes,
+		TierRarelyPlayed,
+	)
+}
+
+func randomCardsForColorInTiers(color ColorMask, count int, tiers ...CardTier) []*Card {
+	pool := CardsInTiers(tiers...)
 	seen := make(map[string]bool)
 	eligible := make([]*Card, 0, len(pool))
 	for _, c := range pool {

@@ -1997,23 +1997,21 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 		return screenui.DungeonScr, nil, nil
 	}
 
-	wonCards := []*domain.Card{}
-	if s.enemyAnteCard != nil {
-		s.player.CardCollection.AddCard(s.enemyAnteCard, 1)
-		wonCards = append(wonCards, s.enemyAnteCard)
-	}
+	choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
 
 	s.lvl.RecordCombatWin()
 	s.lvl.RemoveEnemyAt(s.idx)
+
+	bonusCards := []*domain.Card{}
 	if defeatedCastle := s.lvl.HandleCastleDuelOutcome(true); defeatedCastle != nil {
 		bonus := domain.RandomPowerfulCardsForColor(defeatedCastle.Color, 5)
 		for _, c := range bonus {
 			s.player.CardCollection.AddCard(c, 1)
-			wonCards = append(wonCards, c)
+			bonusCards = append(bonusCards, c)
 		}
 	}
 
-	return screenui.DuelWinScr, NewWinDuelScreen(wonCards), nil
+	return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, bonusCards), nil
 }
 
 func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) {

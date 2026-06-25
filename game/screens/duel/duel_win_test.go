@@ -7,6 +7,47 @@ import (
 	"github.com/benprew/s30/game/world"
 )
 
+func TestDuelWin_RequiresConfirmation(t *testing.T) {
+	mountain := domain.FindCardByName("Mountain")
+	bolt := domain.FindCardByName("Lightning Bolt")
+	forest := domain.FindCardByName("Forest")
+
+	player := &domain.Player{
+		Character: domain.Character{
+			CardCollection: domain.NewCardCollection(),
+		},
+	}
+
+	s := NewWinDuelScreen(player, []*domain.Card{mountain, bolt, forest}, nil)
+
+	if s.selected != -1 {
+		t.Fatalf("expected no card selected initially, got %d", s.selected)
+	}
+
+	// Selecting a card alone must not add it to the collection.
+	s.selectCardAt(s.choices[1].rect.Min)
+	if s.selected != 1 {
+		t.Fatalf("expected selected index 1, got %d", s.selected)
+	}
+	if _, exists := player.CardCollection[bolt]; exists {
+		t.Fatal("card added to collection before confirmation")
+	}
+
+	// Confirming with nothing selected is a no-op.
+	noSel := NewWinDuelScreen(player, []*domain.Card{mountain}, nil)
+	if noSel.confirmSelection() {
+		t.Fatal("confirmSelection returned true with no card selected")
+	}
+
+	// Confirming adds the selected card.
+	if !s.confirmSelection() {
+		t.Fatal("confirmSelection returned false with a card selected")
+	}
+	if item := player.CardCollection[bolt]; item == nil || item.Count != 1 {
+		t.Fatal("confirmed card was not added to collection")
+	}
+}
+
 func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	lightningBolt := domain.FindCardByName("Lightning Bolt")
@@ -81,10 +122,16 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 		t.Fatalf("expected DuelWinScreen, got %T", screen)
 	}
 
-	if len(winScreen.cards) != 1 {
-		t.Fatalf("expected 1 won card, got %d", len(winScreen.cards))
+	if len(winScreen.choices) != 3 {
+		t.Fatalf("expected 3 reward choices, got %d", len(winScreen.choices))
 	}
-	if winScreen.cards[0].Name() != giantGrowth.Name() {
-		t.Errorf("expected won card to be enemy ante card %q, got %q", giantGrowth.Name(), winScreen.cards[0].Name())
+	if winScreen.choices[0].card.Name() != giantGrowth.Name() {
+		t.Errorf("expected first choice to be enemy ante card %q, got %q", giantGrowth.Name(), winScreen.choices[0].card.Name())
+	}
+
+	// The reward is a choice, so nothing is added to the collection until the
+	// player picks one.
+	if _, exists := player.CardCollection[giantGrowth]; exists {
+		t.Error("enemy ante card was added to collection before the player chose it")
 	}
 }
