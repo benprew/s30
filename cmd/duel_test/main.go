@@ -43,9 +43,9 @@ func xTestDeck() domain.Deck {
 	// add("Mishra's Factory", 3)
 	// add("Mountain", 14)
 	// add("Forest", 6)
-	add("Force of Nature", 10)
+	add("Wall of Brambles", 20)
 	add("Llanowar Elves", 10)
-	add("Forest", 40)
+	add("Forest", 30)
 
 	return deck
 }

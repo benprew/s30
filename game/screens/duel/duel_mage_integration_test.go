@@ -57,15 +57,20 @@ func TestMageIntegration_PlayLandShowsOnBattlefield(t *testing.T) {
 	// Start game loop
 	go interactive.RunGameLoop(g, 0, 0)
 
-	// Wait for first message (should be main phase)
+	// The engine auto-passes priority when the player has no real actions
+	// (e.g. during upkeep), emitting state-update messages with no options.
+	// Drain those until we reach an actionable message (the main phase).
 	var msg interactive.GameMsg
-	select {
-	case msg = <-human.ToTUI():
-	case <-time.After(5 * time.Second):
-		t.Fatal("Timed out waiting for first message")
+	firstDeadline := time.After(5 * time.Second)
+	for len(msg.Options) == 0 {
+		select {
+		case msg = <-human.ToTUI():
+		case <-firstDeadline:
+			t.Fatal("Timed out waiting for an actionable message")
+		}
 	}
 
-	t.Logf("First message - Step: %s, Prompt: %v, Options: %d", msg.State.Step, msg.Prompt, len(msg.Options))
+	t.Logf("First actionable message - Step: %s, Prompt: %v, Options: %d", msg.State.Step, msg.Prompt, len(msg.Options))
 	t.Logf("  You.Hand: %d cards, You.Battlefield: %d perms", len(msg.State.You.Hand), len(msg.State.You.Battlefield))
 	t.Logf("  You.Life: %d, You.LibraryCount: %d", msg.State.You.Life, msg.State.You.LibraryCount)
 
@@ -198,8 +203,13 @@ func TestMageIntegration_CastArtifactAfterPlayingLands(t *testing.T) {
 		}
 	}
 
-	// Get initial main phase message
+	// The engine auto-passes priority when the player has no real actions
+	// (e.g. during upkeep), emitting state-update messages with no options.
+	// Drain those until we reach an actionable message (the main phase).
 	msg := getMsg()
+	for len(msg.Options) == 0 {
+		msg = getMsg()
+	}
 	t.Logf("Step: %s, Prompt: %v", msg.State.Step, msg.Prompt)
 
 	// Find and play a Mountain
