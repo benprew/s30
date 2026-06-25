@@ -6,6 +6,7 @@ Shows the central sprite with all its connected neighbors arranged around it.
 
 import argparse
 from pathlib import Path
+from typing import TypedDict
 
 from analyze_edges import (
     CORNER_POSITIONS,
@@ -13,6 +14,19 @@ from analyze_edges import (
     extract_sprites,
 )
 from PIL import Image, ImageDraw
+
+
+class ConnectionPair(TypedDict):
+    sprite: Image.Image
+    sprite_id: tuple[int, int]
+    offset: tuple[int, int]
+    edge_a: str
+    edge_b: str
+    from_a: int
+    to_a: int
+    from_b: int
+    to_b: int
+    similarity: float
 
 
 def get_sprite_offset_for_connection(from_edge, to_edge):
@@ -50,7 +64,7 @@ def create_sprite_connections_visualization(
         return None
 
     # Collect all connection pairs
-    connection_pairs = []
+    connection_pairs: list[ConnectionPair] = []
 
     for direction_a, edge_a in edges_a.items():
         if direction_a not in connections[sprite_id_a]:
