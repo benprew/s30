@@ -194,6 +194,15 @@ type DuelScreen struct {
 	mulliganPreviewImg  *ebiten.Image
 	mulliganPreviewIdx  int
 	mulliganPreviewName string
+
+	// Deck-changing quest tracking. deckConstraintMet records, per active
+	// constraint quest, whether the submitted deck satisfied its constraint at
+	// duel start; questWarnings holds player-facing notices for quests whose
+	// deck doesn't qualify. questProgressApplied guards one-time payout at
+	// game over.
+	deckConstraintMet    map[*domain.Quest]bool
+	questWarnings        []string
+	questProgressApplied bool
 }
 
 type cardImgKey struct {
@@ -340,6 +349,8 @@ func (s *DuelScreen) initGameState() {
 
 	s.self = &duelPlayer{name: "You"}
 	s.opponent = &duelPlayer{name: s.enemy.Name()}
+
+	s.evaluateQuestConstraints()
 
 	logging.Printf(logging.Duel, "Game init: human library=%d hand=%d, ai library=%d hand=%d, human life=%d, ai life=%d\n",
 		len(s.human.Library()), len(s.human.Hand()),
@@ -965,6 +976,10 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	if s.lastMsg.GameOver {
+		if !s.questProgressApplied {
+			s.applyQuestProgress(s.lastMsg.Winner == "You")
+			s.questProgressApplied = true
+		}
 		logging.Printf(logging.Duel, "GameOver! Winner=%q Step=%q Turn=%d YouLife=%d OppLife=%d YouLib=%d OppLib=%d\n",
 			s.lastMsg.Winner, s.lastMsg.State.Step, s.lastMsg.State.Turn,
 			s.lastMsg.State.You.Life, s.lastMsg.State.Opponent.Life,
@@ -1987,10 +2002,10 @@ func (s *DuelScreen) loadCardPreview(name string, perm *interactive.PermanentSta
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
-	if s.player.ActiveQuest != nil &&
-		s.player.ActiveQuest.Type == domain.QuestTypeDefeatEnemy &&
-		s.player.ActiveQuest.EnemyName == s.enemy.Character.Name {
-		s.player.ActiveQuest.IsCompleted = true
+	for _, q := range s.player.ActiveQuests {
+		if q.Type == domain.QuestTypeDefeatEnemy && q.EnemyName == s.enemy.Character.Name {
+			q.IsCompleted = true
+		}
 	}
 
 	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())

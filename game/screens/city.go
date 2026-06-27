@@ -52,7 +52,7 @@ func NewCityScreen(city *domain.City, player *domain.Player, level *world.Level)
 }
 
 func pickBoon(city *domain.City, player *domain.Player, level *world.Level) domain.BoonType {
-	allowQuest := player.ActiveQuest == nil
+	allowQuest := player.CanAcceptQuest()
 
 	var options []domain.BoonType
 	if allowQuest {

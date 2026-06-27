@@ -62,8 +62,11 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 				if am := gameaudio.Get(); am != nil {
 					am.PlaySFX(gameaudio.CastleSFXForColor(domain.ColorMaskToString(tile.City.AmuletColor)))
 				}
-				if QuestRewardReady(&tile.City, s.Level.Player) {
-					return screenui.WisemanScr, NewWisemanScreen(&tile.City, s.Level.Player, s.Level), nil
+				if rewards := s.Level.Player.RedeemFulfilledQuests(&tile.City); len(rewards) > 0 {
+					if am := gameaudio.Get(); am != nil {
+						am.PlaySFX(gameaudio.SFXFindCard)
+					}
+					return screenui.QuestRewardScr, NewQuestRewardScreen(rewards, &tile.City, s.Level.Player, s.Level), nil
 				}
 				return screenui.CityScr, NewCityScreen(&tile.City, s.Level.Player, s.Level), nil
 			}

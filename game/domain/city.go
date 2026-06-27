@@ -60,7 +60,6 @@ type City struct {
 	CardsForSale       []*Card
 	AmuletColor        ColorMask
 	AssignedWorldMagic *WorldMagic
-	QuestBanDays       int
 	IsManaLinked       bool
 	WisemanBoon        BoonType
 	BoonGranted        bool

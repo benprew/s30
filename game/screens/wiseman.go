@@ -25,9 +25,6 @@ type WisemanState int
 const (
 	WisemanStateStory WisemanState = iota
 	WisemanStateOffer
-	WisemanStateActive
-	WisemanStateReward
-	WisemanStateBanned
 )
 
 type WisemanScreen struct {
@@ -82,28 +79,11 @@ func NewWisemanScreen(city *domain.City, player *domain.Player, level *world.Lev
 	return s
 }
 
-// determineState sets the wiseman screen state based on quest progress.
+// determineState sets the wiseman screen state: it offers a quest or grants a
+// boon. Quest completion, reward, and expiry are handled outside the Wiseman
+// now (rewards are claimed by walking into any town).
 func (s *WisemanScreen) determineState() {
-	if s.Player.ActiveQuest != nil {
-		q := s.Player.ActiveQuest
-		if q.DaysRemaining <= 0 {
-			s.handleExpiredQuest(q)
-			return
-		}
-		if isQuestRelevantCity(q, s.City) {
-			s.handleActiveQuest()
-			return
-		}
-	}
-
-	if s.City.QuestBanDays > 0 {
-		s.State = WisemanStateBanned
-		s.TextLines = []string{
-			"You failed to complete your",
-			"last quest for this village.",
-			"",
-			"The people have no new quest for you.",
-		}
+	if s.maybeOfferDeckQuest() {
 		return
 	}
 
@@ -112,7 +92,7 @@ func (s *WisemanScreen) determineState() {
 		return
 	}
 
-	if s.City.WisemanBoon == domain.BoonQuest && s.Player.ActiveQuest != nil {
+	if s.City.WisemanBoon == domain.BoonQuest && !s.Player.CanAcceptQuest() {
 		s.loadStory()
 		return
 	}
@@ -129,83 +109,55 @@ func (s *WisemanScreen) determineState() {
 	}
 }
 
-// QuestRewardReady reports whether the player has a completed but unclaimed
-// quest whose reward can be collected in this city. This is used on town entry
-// to pop the wiseman reward screen immediately.
-func QuestRewardReady(city *domain.City, player *domain.Player) bool {
-	q := player.ActiveQuest
-	if q == nil || q.DaysRemaining <= 0 {
+// deckQuestOfferChance is the probability the Wiseman offers a deck-changing
+// quest (when the player has a free slot) instead of a boon / delivery quest.
+// It is a var so tests can make the offer deterministic.
+var deckQuestOfferChance float32 = 0.5
+
+// maybeOfferDeckQuest offers a deck-changing quest when the player has a free
+// quest slot. Returns true if an offer was set up.
+func (s *WisemanScreen) maybeOfferDeckQuest() bool {
+	if !s.Player.CanAcceptQuest() {
 		return false
 	}
-	return isQuestRelevantCity(q, city) && isQuestComplete(q, city)
+	if rand.Float32() >= deckQuestOfferChance {
+		return false
+	}
+	def := s.pickDeckQuestDef()
+	if def == nil {
+		return false
+	}
+
+	s.ProposedQuest = def.GenerateQuest(s.questProgressionLevel())
+	s.State = WisemanStateOffer
+	s.prepareQuestOfferText(s.ProposedQuest)
+	s.setupButtons()
+	if am := gameaudio.Get(); am != nil {
+		am.PlaySFX(gameaudio.SFXNewsflash)
+	}
+	return true
 }
 
-func isQuestRelevantCity(q *domain.Quest, city *domain.City) bool {
-	switch q.Type {
-	case domain.QuestTypeDelivery:
-		return q.OriginCity.Name == city.Name || q.TargetCity.Name == city.Name
-	case domain.QuestTypeDefeatEnemy:
-		return q.OriginCity.Name == city.Name
+// pickDeckQuestDef chooses a random deck-quest template the player isn't
+// already running, or nil if none are available.
+func (s *WisemanScreen) pickDeckQuestDef() *domain.Quest {
+	var eligible []*domain.Quest
+	for _, def := range domain.QuestDefList() {
+		if !s.Player.HasQuest(def.ID) {
+			eligible = append(eligible, def)
+		}
 	}
-	return false
+	if len(eligible) == 0 {
+		return nil
+	}
+	return eligible[rand.Intn(len(eligible))]
 }
 
-func isQuestComplete(q *domain.Quest, city *domain.City) bool {
-	switch q.Type {
-	case domain.QuestTypeDelivery:
-		return q.TargetCity.Name == city.Name
-	case domain.QuestTypeDefeatEnemy:
-		return q.OriginCity.Name == city.Name && q.IsCompleted
-	}
-	return false
-}
-
-func (s *WisemanScreen) handleActiveQuest() {
-	q := s.Player.ActiveQuest
-
-	if isQuestComplete(q, s.City) {
-		s.State = WisemanStateReward
-		s.TextLines = []string{"You have completed the quest!", "Here is your reward."}
-		return
-	}
-
-	s.State = WisemanStateActive
-	s.prepareActiveText()
-}
-
-func (s *WisemanScreen) handleExpiredQuest(q *domain.Quest) {
-	banText := []string{
-		"You failed to complete your",
-		"last quest for this village.",
-		"",
-		"The people have no new quest for you.",
-	}
-	if q.OriginCity.Name == s.City.Name {
-		s.City.QuestBanDays = 20
-		s.City.WisemanBoon = domain.BoonNone
-		s.City.BoonGranted = false
-		s.City.ProposedQuest = nil
-		s.Player.ActiveQuest = nil
-		s.State = WisemanStateBanned
-		s.TextLines = banText
-		return
-	}
-
-	if q.OriginCity != nil {
-		q.OriginCity.QuestBanDays = 20
-		q.OriginCity.WisemanBoon = domain.BoonNone
-		q.OriginCity.BoonGranted = false
-		q.OriginCity.ProposedQuest = nil
-	}
-	s.Player.ActiveQuest = nil
-
-	if s.City.QuestBanDays > 0 {
-		s.State = WisemanStateBanned
-		s.TextLines = banText
-		return
-	}
-
-	s.loadStory()
+// questProgressionLevel maps the local enemy difficulty to a 0-based reward
+// scaling level.
+func (s *WisemanScreen) questProgressionLevel() int {
+	lvl := max(s.questEnemyMaxLevel()-wisemanFallbackEnemyLevel, 0)
+	return lvl
 }
 
 func (s *WisemanScreen) generateQuest() {
@@ -240,17 +192,15 @@ func (s *WisemanScreen) generateDeliveryQuest() {
 		return
 	}
 
-	rewardType := s.randomRewardType()
+	reward := domain.RandomSingleReward(s.questProgressionLevel(), targetCity.AmuletColor)
 	s.ProposedQuest = &domain.Quest{
 		Type:          domain.QuestTypeDelivery,
 		TargetCity:    targetCity,
-		OriginCity:    s.City,
 		DaysRemaining: 20 + rand.Intn(20),
-		RewardType:    rewardType,
-		AmuletColor:   targetCity.AmuletColor,
+		Reward:        reward,
 	}
 
-	rewardText := rewardDescription(rewardType, targetCity.AmuletColor)
+	rewardText := reward.Description()
 	hooks := [][]string{
 		{
 			fmt.Sprintf("Dark forces threaten the road to %s.", targetCity.Name),
@@ -284,21 +234,15 @@ func (s *WisemanScreen) generateDeliveryQuest() {
 func (s *WisemanScreen) generateDefeatEnemyQuest() {
 	enemyName := randomRogueName(s.questEnemyMaxLevel())
 
-	rewardType := domain.RewardAmulet
-	if rand.Float32() < 0.3 {
-		rewardType = domain.RewardManaLink
-	}
-
+	reward := domain.RandomSingleReward(s.questProgressionLevel(), s.City.AmuletColor)
 	s.ProposedQuest = &domain.Quest{
 		Type:          domain.QuestTypeDefeatEnemy,
 		EnemyName:     enemyName,
-		OriginCity:    s.City,
 		DaysRemaining: 15 + rand.Intn(15),
-		RewardType:    rewardType,
-		AmuletColor:   s.City.AmuletColor,
+		Reward:        reward,
 	}
 
-	rewardText := rewardDescription(rewardType, s.City.AmuletColor)
+	rewardText := reward.Description()
 	hooks := [][]string{
 		{
 			fmt.Sprintf("A %s has been terrorizing", enemyName),
@@ -379,33 +323,10 @@ func lowestLevelRogueName() string {
 	return name
 }
 
-func (s *WisemanScreen) randomRewardType() domain.RewardType {
-	r := rand.Float32()
-	if r < 0.3 {
-		return domain.RewardManaLink
-	}
-	if r < 0.6 {
-		return domain.RewardCard
-	}
-	return domain.RewardAmulet
-}
-
-func rewardDescription(rt domain.RewardType, amuletColor domain.ColorMask) string {
-	switch rt {
-	case domain.RewardManaLink:
-		return "a mana link"
-	case domain.RewardCard:
-		return "a card"
-	case domain.RewardAmulet:
-		return fmt.Sprintf("a %s amulet", domain.ColorMaskToString(amuletColor))
-	}
-	return "a reward"
-}
-
 func (s *WisemanScreen) prepareQuestOfferText(q *domain.Quest) {
+	rewardText := q.Reward.Description()
 	switch q.Type {
 	case domain.QuestTypeDelivery:
-		rewardText := rewardDescription(q.RewardType, q.AmuletColor)
 		s.TextLines = []string{
 			fmt.Sprintf("We need a message delivered to %s.", q.TargetCity.Name),
 			fmt.Sprintf("You will be rewarded with %s.", rewardText),
@@ -413,30 +334,115 @@ func (s *WisemanScreen) prepareQuestOfferText(q *domain.Quest) {
 			"Accept the Quest?",
 		}
 	case domain.QuestTypeDefeatEnemy:
-		rewardText := rewardDescription(q.RewardType, q.AmuletColor)
 		s.TextLines = []string{
 			fmt.Sprintf("A %s threatens our village.", q.EnemyName),
 			fmt.Sprintf("Slay it and earn %s.", rewardText),
 			"",
 			"Accept the Quest?",
 		}
+	case domain.QuestTypeActionTracker:
+		s.TextLines = append(questFlavorLines(q),
+			q.Description+".",
+			fmt.Sprintf("You have %d days.", q.DaysRemaining),
+			fmt.Sprintf("Reward: %s.", rewardText),
+			"",
+			"Accept the Quest?",
+		)
+	case domain.QuestTypeDeckConstraint:
+		s.TextLines = append(questFlavorLines(q),
+			q.Description+".",
+			"Edit your deck before you duel.",
+			fmt.Sprintf("You have %d days.", q.DaysRemaining),
+			fmt.Sprintf("Reward: %s.", rewardText),
+			"",
+			"Accept the Quest?",
+		)
 	}
 }
 
-func (s *WisemanScreen) prepareActiveText() {
-	q := s.Player.ActiveQuest
-	switch q.Type {
-	case domain.QuestTypeDelivery:
-		s.TextLines = []string{
-			fmt.Sprintf("Please deliver the message to %s.", q.TargetCity.Name),
-			fmt.Sprintf("You have %d days remaining.", q.DaysRemaining),
-		}
-	case domain.QuestTypeDefeatEnemy:
-		s.TextLines = []string{
-			fmt.Sprintf("Defeat the %s!", q.EnemyName),
-			fmt.Sprintf("You have %d days remaining.", q.DaysRemaining),
-		}
+// questFlavor maps a deck-changing quest template ID to the Wiseman's spoken
+// intro, so each offer reads as a plea from the village rather than a bare
+// objective line (mirroring the delivery/defeat-enemy hooks).
+var questFlavor = map[string][]string{
+	"cast_black_red": {
+		"The old powers of shadow and flame stir again.",
+		"Wield them often, planeswalker, and the dark roads",
+		"will bend to your will.",
+	},
+	"cast_green_white": {
+		"Field and forest whisper the same ancient song.",
+		"Call upon green and white in your battles,",
+		"and the land itself will fight beside you.",
+	},
+	"cast_blue": {
+		"There is wisdom in the deep waters.",
+		"Loose the magic of the tides upon your foes",
+		"and they will drown in your cunning.",
+	},
+	"play_lands": {
+		"A planeswalker is only as strong as the land",
+		"that answers their call. Lay claim to it,",
+		"again and again, until the soil knows your name.",
+	},
+	"attack_creatures": {
+		"The time for caution has passed.",
+		"Send your creatures forth without fear --",
+		"Arzakon respects only those who strike.",
+	},
+	"destroy_enemy_creatures": {
+		"Our enemies grow bold behind their monstrous host.",
+		"Thin their ranks, planeswalker. Leave them nothing",
+		"to hide behind.",
+	},
+	"cast_instants_sorceries": {
+		"The cleverest mages win before the first blow lands.",
+		"Show me you can sling spell after spell",
+		"and turn any moment to your favor.",
+	},
+	"direct_damage": {
+		"Steel and fang are not the only weapons.",
+		"Burn your foes with raw magic alone,",
+		"and let them learn to fear your hand.",
+	},
+	"mono_color_win": {
+		"Scattered loyalties make a weak mage.",
+		"Bind yourself to a single color and triumph --",
+		"true power flows from purity of purpose.",
+	},
+	"fat_deck_win": {
+		"Some say a lean deck wins the day.",
+		"I say a planeswalker of true might can carry",
+		"a great tome of spells to victory all the same.",
+	},
+	"low_curve_win": {
+		"Patience is a luxury on the battlefield.",
+		"Win with only the swiftest, smallest creatures",
+		"and prove that speed conquers all.",
+	},
+	"no_blue_win": {
+		"The tides of the deep are not to be trusted.",
+		"Spurn the blue arts entirely and claim your win --",
+		"let no cunning current carry you.",
+	},
+	"no_attacking_win": {
+		"True mastery needs no bloodshed.",
+		"Win your duel without sending a single attacker,",
+		"and the village will sing of your restraint.",
+	},
+}
+
+// questFlavorLines returns a fresh copy of the Wiseman's flavor intro for a
+// deck-changing quest, falling back to the quest title when the template has no
+// bespoke flavor. A copy is returned so callers may append without mutating the
+// shared questFlavor map.
+func questFlavorLines(q *domain.Quest) []string {
+	if lines, ok := questFlavor[q.ID]; ok {
+		return append([]string(nil), lines...)
 	}
+	if q.Title != "" {
+		return []string{q.Title + "."}
+	}
+	return []string{"I have a task for you, planeswalker."}
 }
 
 func (s *WisemanScreen) findRandomCity() *domain.City {
@@ -454,44 +460,6 @@ func (s *WisemanScreen) findRandomCity() *domain.City {
 		return nil
 	}
 	return cities[rand.Intn(len(cities))]
-}
-
-// --- Reward ---
-
-func (s *WisemanScreen) giveReward() {
-	q := s.Player.ActiveQuest
-	if q == nil {
-		return
-	}
-
-	am := gameaudio.Get()
-	switch q.RewardType {
-	case domain.RewardManaLink:
-		s.Player.Life++
-		s.City.IsManaLinked = true
-		if am != nil {
-			am.PlaySFX(gameaudio.SFXManalink)
-		}
-	case domain.RewardAmulet:
-		count := 1 + rand.Intn(3)
-		for range count {
-			s.Player.AddAmulet(domain.NewAmulet(q.AmuletColor))
-		}
-		if am != nil {
-			am.PlaySFX(gameaudio.SFXManaball)
-		}
-	case domain.RewardCard:
-		if len(domain.CARDS) > 0 {
-			card := domain.CARDS[rand.Intn(len(domain.CARDS))]
-			s.Player.CardCollection.AddCardToDeck(card, 0, 1)
-		}
-		if am != nil {
-			am.PlaySFX(gameaudio.SFXFindCard)
-		}
-	}
-
-	q.OriginCity.BoonGranted = true
-	q.OriginCity.ProposedQuest = nil
 }
 
 // --- UI Setup ---
@@ -539,12 +507,6 @@ func (s *WisemanScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 	switch s.State {
 	case WisemanStateOffer:
 		return s.updateOffer(W, H, scale)
-	case WisemanStateReward:
-		if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			s.giveReward()
-			s.Player.ActiveQuest = nil
-			return screenui.CityScr, nil, nil
-		}
 	default:
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 			return screenui.CityScr, nil, nil
@@ -569,10 +531,23 @@ func (s *WisemanScreen) updateOffer(W, H int, scale float64) (screenui.ScreenNam
 }
 
 func (s *WisemanScreen) acceptQuest() {
-	s.Player.ActiveQuest = s.ProposedQuest
-	if s.ProposedQuest.Type == domain.QuestTypeDefeatEnemy {
-		s.spawnQuestEnemy(s.ProposedQuest.EnemyName)
+	if !s.Player.AddQuest(s.ProposedQuest) {
+		return
 	}
+	switch s.ProposedQuest.Type {
+	case domain.QuestTypeDefeatEnemy:
+		s.spawnQuestEnemy(s.ProposedQuest.EnemyName)
+		s.consumeCityQuestBoon()
+	case domain.QuestTypeDelivery:
+		s.consumeCityQuestBoon()
+	}
+}
+
+// consumeCityQuestBoon marks this city's quest boon as spent once its
+// delivery/defeat quest is taken, so the Wiseman won't re-offer it.
+func (s *WisemanScreen) consumeCityQuestBoon() {
+	s.City.BoonGranted = true
+	s.City.ProposedQuest = nil
 }
 
 func (s *WisemanScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {

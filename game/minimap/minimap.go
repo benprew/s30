@@ -215,8 +215,12 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 }
 
 func (m *MiniMap) isQuestTarget(cityName string) bool {
-	q := m.level.Player.ActiveQuest
-	return q != nil && q.Type == domain.QuestTypeDelivery && q.TargetCity != nil && q.TargetCity.Name == cityName
+	for _, q := range m.level.Player.ActiveQuests {
+		if q.Type == domain.QuestTypeDelivery && q.TargetCity != nil && q.TargetCity.Name == cityName {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {

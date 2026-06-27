@@ -7,6 +7,15 @@ import (
 	"github.com/benprew/s30/game/domain"
 )
 
+// disableDeckQuestOffers makes the Wiseman never offer a deck-changing quest for
+// the duration of a test, isolating the legacy boon/quest determineState paths
+// from the (otherwise random) deck-quest offer.
+func disableDeckQuestOffers(t *testing.T) {
+	prev := deckQuestOfferChance
+	deckQuestOfferChance = 0
+	t.Cleanup(func() { deckQuestOfferChance = prev })
+}
+
 func TestPaginateText(t *testing.T) {
 	// Placeholder
 }
@@ -82,6 +91,7 @@ func TestGrantBoonEnemyDeckInfo(t *testing.T) {
 }
 
 func TestBoonGrantedShowsStory(t *testing.T) {
+	disableDeckQuestOffers(t)
 	city := &domain.City{
 		WisemanBoon: domain.BoonBonusLife,
 		BoonGranted: true,
@@ -100,6 +110,7 @@ func TestBoonGrantedShowsStory(t *testing.T) {
 }
 
 func TestQuestBoonUsesProposedQuest(t *testing.T) {
+	disableDeckQuestOffers(t)
 	targetCity := &domain.City{Name: "TargetVille"}
 	originCity := &domain.City{
 		Name:        "OriginVille",
@@ -107,9 +118,8 @@ func TestQuestBoonUsesProposedQuest(t *testing.T) {
 		ProposedQuest: &domain.Quest{
 			Type:          domain.QuestTypeDelivery,
 			TargetCity:    targetCity,
-			OriginCity:    &domain.City{Name: "OriginVille"},
 			DaysRemaining: 25,
-			RewardType:    domain.RewardCard,
+			Reward:        domain.QuestReward{Cards: 1, CardColor: domain.ColorAny},
 		},
 	}
 	player := &domain.Player{}
@@ -138,18 +148,17 @@ func TestBoonTypeIsQuest(t *testing.T) {
 }
 
 func TestActiveQuestUnrelatedCityGrantsBoon(t *testing.T) {
-	questOrigin := &domain.City{Name: "QuestTown"}
+	disableDeckQuestOffers(t)
 	otherCity := &domain.City{
 		Name:        "OtherTown",
 		WisemanBoon: domain.BoonBonusLife,
 	}
 	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
+		ActiveQuests: []*domain.Quest{{
 			Type:          domain.QuestTypeDelivery,
-			OriginCity:    questOrigin,
 			TargetCity:    &domain.City{Name: "TargetTown"},
 			DaysRemaining: 10,
-		},
+		}},
 	}
 	s := &WisemanScreen{City: otherCity, Player: player}
 
@@ -168,47 +177,117 @@ func TestActiveQuestUnrelatedCityGrantsBoon(t *testing.T) {
 	}
 }
 
-func TestActiveQuestOriginCityShowsProgress(t *testing.T) {
-	originCity := &domain.City{
-		Name:        "QuestTown",
-		WisemanBoon: domain.BoonQuest,
-	}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDelivery,
-			OriginCity:    originCity,
-			TargetCity:    &domain.City{Name: "TargetTown"},
-			DaysRemaining: 10,
-		},
-	}
-	s := &WisemanScreen{City: originCity, Player: player}
-
-	s.determineState()
-
-	if s.State != WisemanStateActive {
-		t.Errorf("Expected active state at quest origin, got %d", s.State)
-	}
-}
-
-func TestQuestBoonSkippedWithActiveQuest(t *testing.T) {
+func TestQuestBoonSkippedWhenAtQuestCapacity(t *testing.T) {
+	disableDeckQuestOffers(t)
 	city := &domain.City{
 		Name:        "SomeCity",
 		WisemanBoon: domain.BoonQuest,
 	}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDelivery,
-			OriginCity:    &domain.City{Name: "OtherCity"},
-			TargetCity:    &domain.City{Name: "TargetCity"},
-			DaysRemaining: 10,
-		},
+	player := &domain.Player{}
+	// Fill every quest slot so the city cannot offer its quest boon.
+	for range domain.MaxActiveQuests {
+		player.AddQuest(&domain.Quest{Type: domain.QuestTypeActionTracker})
 	}
 	s := &WisemanScreen{City: city, Player: player}
 
 	s.determineState()
 
 	if s.State != WisemanStateStory {
-		t.Errorf("Expected story when quest boon city visited with active quest, got %d", s.State)
+		t.Errorf("Expected story when quest boon city visited at capacity, got %d", s.State)
+	}
+}
+
+func TestPrepareQuestOfferTextActionHasFlavor(t *testing.T) {
+	s := &WisemanScreen{}
+	q := &domain.Quest{
+		Type:          domain.QuestTypeActionTracker,
+		ID:            "cast_blue",
+		Title:         "Spells of the Deep",
+		Description:   "Cast 25 blue spells",
+		DaysRemaining: 25,
+		Reward:        domain.QuestReward{Gold: 100},
+	}
+
+	s.prepareQuestOfferText(q)
+
+	joined := strings.Join(s.TextLines, "\n")
+	if !strings.Contains(joined, "Cast 25 blue spells.") {
+		t.Errorf("expected objective in text, got: %v", s.TextLines)
+	}
+	if !strings.Contains(joined, "Accept the Quest?") {
+		t.Errorf("expected accept prompt, got: %v", s.TextLines)
+	}
+	if len(questFlavor[q.ID]) == 0 {
+		t.Fatalf("test precondition: expected bespoke flavor for %q", q.ID)
+	}
+	for _, line := range questFlavor[q.ID] {
+		if !strings.Contains(joined, line) {
+			t.Errorf("expected flavor line %q in text, got: %v", line, s.TextLines)
+		}
+	}
+}
+
+func TestPrepareQuestOfferTextConstraintHasFlavor(t *testing.T) {
+	s := &WisemanScreen{}
+	q := &domain.Quest{
+		Type:          domain.QuestTypeDeckConstraint,
+		ID:            "mono_color_win",
+		Title:         "Purity of Purpose",
+		Description:   "Win a duel with a mono-color deck",
+		DaysRemaining: 20,
+		Reward:        domain.QuestReward{Gold: 100, Cards: 1, CardColor: domain.ColorAny},
+	}
+
+	s.prepareQuestOfferText(q)
+
+	joined := strings.Join(s.TextLines, "\n")
+	if !strings.Contains(joined, "Win a duel with a mono-color deck.") {
+		t.Errorf("expected objective in text, got: %v", s.TextLines)
+	}
+	if !strings.Contains(joined, "Edit your deck before you duel.") {
+		t.Errorf("expected deck-edit hint, got: %v", s.TextLines)
+	}
+	for _, line := range questFlavor[q.ID] {
+		if !strings.Contains(joined, line) {
+			t.Errorf("expected flavor line %q in text, got: %v", line, s.TextLines)
+		}
+	}
+}
+
+func TestQuestFlavorLinesFallBackToTitle(t *testing.T) {
+	q := &domain.Quest{
+		Type:  domain.QuestTypeActionTracker,
+		ID:    "made_up_quest_with_no_flavor",
+		Title: "An Untold Trial",
+	}
+
+	lines := questFlavorLines(q)
+
+	if len(lines) == 0 {
+		t.Fatal("expected fallback flavor lines, got none")
+	}
+	if !strings.Contains(strings.Join(lines, "\n"), q.Title) {
+		t.Errorf("expected fallback to mention title %q, got: %v", q.Title, lines)
+	}
+}
+
+func TestEveryQuestDefHasFlavor(t *testing.T) {
+	for _, def := range domain.QuestDefList() {
+		if len(questFlavor[def.ID]) == 0 {
+			t.Errorf("quest %q has no flavor text", def.ID)
+		}
+	}
+}
+
+func TestQuestFlavorLinesAreCopied(t *testing.T) {
+	q := &domain.Quest{Type: domain.QuestTypeActionTracker, ID: "cast_blue"}
+
+	first := questFlavorLines(q)
+	first[0] = "mutated"
+	second := questFlavorLines(q)
+
+	if second[0] == "mutated" {
+		t.Error("questFlavorLines returned a slice aliasing the shared flavor map")
 	}
 }
 
@@ -235,129 +314,55 @@ func TestRandomRogueNameFallsBackBelowLowestLevel(t *testing.T) {
 	}
 }
 
-func TestQuestRewardReadyDefeatEnemyAtOrigin(t *testing.T) {
-	originCity := &domain.City{Name: "QuestTown"}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDefeatEnemy,
-			OriginCity:    originCity,
-			DaysRemaining: 10,
-			IsCompleted:   true,
-		},
-	}
+func TestAcceptDeliveryConsumesCityQuestBoon(t *testing.T) {
+	city := &domain.City{Name: "QuestTown", WisemanBoon: domain.BoonQuest}
+	proposed := &domain.Quest{Type: domain.QuestTypeDelivery, TargetCity: &domain.City{Name: "Target"}}
+	city.ProposedQuest = proposed
+	player := &domain.Player{}
+	s := &WisemanScreen{City: city, Player: player, ProposedQuest: proposed}
 
-	if !QuestRewardReady(originCity, player) {
-		t.Error("Expected reward ready at origin city for completed defeat-enemy quest")
-	}
-}
+	s.acceptQuest()
 
-func TestQuestRewardReadyDeliveryAtTarget(t *testing.T) {
-	targetCity := &domain.City{Name: "TargetTown"}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDelivery,
-			OriginCity:    &domain.City{Name: "QuestTown"},
-			TargetCity:    targetCity,
-			DaysRemaining: 10,
-		},
+	if len(player.ActiveQuests) != 1 || player.ActiveQuests[0] != proposed {
+		t.Fatalf("expected delivery quest to be added, have %d", len(player.ActiveQuests))
 	}
-
-	if !QuestRewardReady(targetCity, player) {
-		t.Error("Expected reward ready at target city for delivery quest")
+	if !city.BoonGranted || city.ProposedQuest != nil {
+		t.Error("accepting a city quest should mark its boon spent and clear the proposal")
 	}
 }
 
-func TestQuestRewardNotReadyWhenIncomplete(t *testing.T) {
-	originCity := &domain.City{Name: "QuestTown"}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDefeatEnemy,
-			OriginCity:    originCity,
-			DaysRemaining: 10,
-			IsCompleted:   false,
-		},
-	}
-
-	if QuestRewardReady(originCity, player) {
-		t.Error("Expected reward not ready for incomplete defeat-enemy quest")
-	}
-}
-
-func TestQuestRewardNotReadyAtUnrelatedCity(t *testing.T) {
-	other := &domain.City{Name: "OtherTown"}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDelivery,
-			OriginCity:    &domain.City{Name: "QuestTown"},
-			TargetCity:    &domain.City{Name: "TargetTown"},
-			DaysRemaining: 10,
-		},
-	}
-
-	if QuestRewardReady(other, player) {
-		t.Error("Expected reward not ready at unrelated city")
-	}
-}
-
-func TestQuestRewardNotReadyAfterClaimed(t *testing.T) {
-	originCity := &domain.City{Name: "QuestTown", WisemanBoon: domain.BoonQuest}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDefeatEnemy,
-			OriginCity:    originCity,
-			DaysRemaining: 10,
-			IsCompleted:   true,
-		},
-	}
-
-	if !QuestRewardReady(originCity, player) {
-		t.Fatal("Expected reward ready before claiming")
-	}
-
-	s := &WisemanScreen{City: originCity, Player: player}
-	s.determineState()
-	if s.State != WisemanStateReward {
-		t.Fatalf("Expected reward state, got %d", s.State)
-	}
-	s.giveReward()
-	player.ActiveQuest = nil
-
-	if QuestRewardReady(originCity, player) {
-		t.Error("Expected reward not ready after claiming")
-	}
-}
-
-func TestQuestRewardNotReadyWhenExpired(t *testing.T) {
-	originCity := &domain.City{Name: "QuestTown"}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDefeatEnemy,
-			OriginCity:    originCity,
-			DaysRemaining: 0,
-			IsCompleted:   true,
-		},
-	}
-
-	if QuestRewardReady(originCity, player) {
-		t.Error("Expected reward not ready when quest expired")
-	}
-}
-
-func TestPickBoonNoQuestWithActiveQuest(t *testing.T) {
+func TestPickBoonNoQuestAtCapacity(t *testing.T) {
 	city := &domain.City{Name: "TestCity"}
-	player := &domain.Player{
-		ActiveQuest: &domain.Quest{
-			Type:          domain.QuestTypeDelivery,
-			OriginCity:    &domain.City{Name: "Other"},
-			TargetCity:    &domain.City{Name: "Target"},
-			DaysRemaining: 10,
-		},
+	player := &domain.Player{}
+	for range domain.MaxActiveQuests {
+		player.AddQuest(&domain.Quest{Type: domain.QuestTypeActionTracker})
 	}
 
 	for range 100 {
-		boon := pickBoon(city, player, nil)
-		if boon == domain.BoonQuest {
-			t.Fatal("pickBoon should never return BoonQuest when player has active quest")
+		if pickBoon(city, player, nil) == domain.BoonQuest {
+			t.Fatal("pickBoon should never return BoonQuest when at quest capacity")
 		}
+	}
+}
+
+func TestPickBoonAllowsQuestWithFreeSlot(t *testing.T) {
+	city := &domain.City{Name: "TestCity"}
+	player := &domain.Player{
+		ActiveQuests: []*domain.Quest{{
+			Type:          domain.QuestTypeDelivery,
+			TargetCity:    &domain.City{Name: "Target"},
+			DaysRemaining: 10,
+		}},
+	}
+
+	offered := false
+	for range 100 {
+		if pickBoon(city, player, nil) == domain.BoonQuest {
+			offered = true
+			break
+		}
+	}
+	if !offered {
+		t.Error("pickBoon should be able to offer a quest when a slot is free")
 	}
 }

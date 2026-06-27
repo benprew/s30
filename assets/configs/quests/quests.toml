@@ -1,0 +1,155 @@
+# Deck-changing quests. The Wiseman offers these alongside delivery/defeat
+# quests; the efficient way to complete most of them is to re-tune your deck.
+#
+# Fields:
+#   id            unique slug
+#   type          "action" (passive tracker) or "constraint" (win under a rule)
+#   title         short scroll heading
+#   description   one-line objective shown on the quest scroll/overlay
+#   deadline_days days before the quest expires
+#   reward_tier   "standard" | "themed" | "challenge"
+#
+#   action quests:    metric, target, plus color / card_type when relevant
+#   constraint quests: constraint, plus color / n when relevant
+#
+# metric:     cast_color | play_lands | attack_creatures |
+#             destroy_enemy_creatures | cast_type | direct_damage
+# constraint: mono_color | fat_deck | low_curve | color_light | no_attacking
+# color:      WUBRG letters ("R", "RB") or a name ("red"); used by cast_color,
+#             color_light, mono_color (optional target)
+
+# --- Passive action quests ---
+
+[[quest]]
+id = "cast_black_red"
+type = "action"
+title = "Spells of Shadow & Flame"
+description = "Cast 30 black or red spells"
+metric = "cast_color"
+color = "BR"
+target = 30
+deadline_days = 25
+reward_tier = "themed"
+
+[[quest]]
+id = "cast_green_white"
+type = "action"
+title = "Spells of Field & Forest"
+description = "Cast 30 green or white spells"
+metric = "cast_color"
+color = "GW"
+target = 30
+deadline_days = 25
+reward_tier = "themed"
+
+[[quest]]
+id = "cast_blue"
+type = "action"
+title = "Spells of the Deep"
+description = "Cast 25 blue spells"
+metric = "cast_color"
+color = "U"
+target = 25
+deadline_days = 25
+reward_tier = "themed"
+
+[[quest]]
+id = "play_lands"
+type = "action"
+title = "Work the Land"
+description = "Play 40 lands"
+metric = "play_lands"
+target = 40
+deadline_days = 20
+reward_tier = "standard"
+
+[[quest]]
+id = "attack_creatures"
+type = "action"
+title = "Call to Arms"
+description = "Attack with 45 creatures"
+metric = "attack_creatures"
+target = 45
+deadline_days = 25
+reward_tier = "themed"
+
+[[quest]]
+id = "destroy_enemy_creatures"
+type = "action"
+title = "Cull the Ranks"
+description = "Destroy 20 of the enemy's creatures"
+metric = "destroy_enemy_creatures"
+target = 20
+deadline_days = 25
+reward_tier = "themed"
+
+[[quest]]
+id = "cast_instants_sorceries"
+type = "action"
+title = "The Spellslinger"
+description = "Cast 15 instants or sorceries"
+metric = "cast_type"
+card_type = "instant,sorcery"
+target = 15
+deadline_days = 25
+reward_tier = "themed"
+
+[[quest]]
+id = "direct_damage"
+type = "action"
+title = "Trial by Fire"
+description = "Deal 30 damage to enemies with spells"
+metric = "direct_damage"
+target = 30
+deadline_days = 25
+reward_tier = "themed"
+
+# --- Active deck-constraint quests ---
+
+[[quest]]
+id = "mono_color_win"
+type = "constraint"
+title = "Purity of Purpose"
+description = "Win a duel with a mono-color deck"
+constraint = "mono_color"
+deadline_days = 20
+reward_tier = "challenge"
+
+[[quest]]
+id = "fat_deck_win"
+type = "constraint"
+title = "Big and Bold"
+description = "Win a duel with a deck of more than 75 cards"
+constraint = "fat_deck"
+n = 75
+deadline_days = 20
+reward_tier = "challenge"
+
+[[quest]]
+id = "low_curve_win"
+type = "constraint"
+title = "Swift and Small"
+description = "Win using only creatures of mana value 3 or less"
+constraint = "low_curve"
+n = 3
+deadline_days = 20
+reward_tier = "challenge"
+
+[[quest]]
+id = "no_blue_win"
+type = "constraint"
+title = "Spurn the Tides"
+description = "Win a duel using no blue cards"
+constraint = "color_light"
+color = "U"
+deadline_days = 20
+reward_tier = "challenge"
+
+[[quest]]
+id = "no_attacking_win"
+type = "constraint"
+title = "Victory Without Bloodshed"
+description = "Win a duel without attacking"
+constraint = "no_attacking"
+deadline_days = 20
+reward_tier = "challenge"

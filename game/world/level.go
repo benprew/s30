@@ -204,7 +204,6 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 	oldX, oldY := l.Player.X, l.Player.Y
 	oldTimeAccumulator := l.Player.TimeAccumulator
 	oldDays := l.Player.Days
-	currentDay := l.Player.Days
 	if err := l.Player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
 		return err
 	}
@@ -213,18 +212,6 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 		l.Player.Y = oldY
 		l.Player.TimeAccumulator = oldTimeAccumulator
 		l.Player.Days = oldDays
-	}
-	if l.Player.Days > currentDay {
-		// New day, update city bans
-		for y := 0; y < l.H; y++ {
-			for x := 0; x < l.W; x++ {
-				if l.Tiles[y][x] != nil && l.Tiles[y][x].IsCity {
-					if l.Tiles[y][x].City.QuestBanDays > 0 {
-						l.Tiles[y][x].City.QuestBanDays--
-					}
-				}
-			}
-		}
 	}
 
 	for i := range l.Enemies {

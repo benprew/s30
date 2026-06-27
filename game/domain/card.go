@@ -7,6 +7,7 @@ import (
 	"image"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/benprew/s30/assets"
@@ -136,6 +137,41 @@ func (c *Card) Name() string {
 
 func (c *Card) CardID() string {
 	return c.cardID
+}
+
+// ColorMask returns the card's colors as a ColorMask (colorless = 0).
+func (c *Card) ColorMask() ColorMask {
+	var m ColorMask
+	for _, s := range c.Colors {
+		m |= colorStringToMask[s]
+	}
+	return m
+}
+
+var manaCostToken = regexp.MustCompile(`\{([^}]+)\}`)
+
+// ManaValue returns the card's converted mana cost parsed from ManaCost
+// (e.g. "{3}{G}{R}" -> 5). Generic numbers contribute their value, every other
+// pip (colored, hybrid, phyrexian) contributes 1, and {X} contributes 0.
+func (c *Card) ManaValue() int {
+	total := 0
+	for _, m := range manaCostToken.FindAllStringSubmatch(c.ManaCost, -1) {
+		tok := strings.ToUpper(m[1])
+		if tok == "X" || tok == "Y" || tok == "Z" {
+			continue
+		}
+		if n, err := strconv.Atoi(tok); err == nil {
+			total += n
+			continue
+		}
+		total++
+	}
+	return total
+}
+
+// IsLand reports whether the card is a land.
+func (c *Card) IsLand() bool {
+	return c.CardType == CardTypeLand
 }
 
 // MarshalJSON serializes a Card as just its CardID. The full card data lives

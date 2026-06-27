@@ -25,7 +25,7 @@ type Player struct {
 	Amulets         map[ColorMask]int
 	WorldMagics     []*WorldMagic
 	ActiveDeck      int
-	ActiveQuest     *Quest
+	ActiveQuests    []*Quest // active quests (legacy delivery/defeat + deck-changing), up to MaxActiveQuests
 	Days            int
 	TimeAccumulator float64
 	IsMale          bool
@@ -157,9 +157,10 @@ func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
 		if p.TimeAccumulator >= TicksPerDay {
 			p.TimeAccumulator -= TicksPerDay
 			p.Days++
-			if p.ActiveQuest != nil {
-				p.ActiveQuest.DaysRemaining--
+			for _, q := range p.ActiveQuests {
+				q.DaysRemaining--
 			}
+			p.ExpireQuests()
 		}
 	}
 
@@ -282,6 +283,82 @@ func (p *Player) ExitDungeon() {
 
 func (p *Player) AddAmulet(amulet Amulet) {
 	p.Amulets[amulet.Color]++
+}
+
+// CanAcceptQuest reports whether the player has a free quest slot.
+func (p *Player) CanAcceptQuest() bool {
+	return len(p.ActiveQuests) < MaxActiveQuests
+}
+
+// AddQuest accepts a quest if there is a free slot.
+func (p *Player) AddQuest(q *Quest) bool {
+	if !p.CanAcceptQuest() {
+		return false
+	}
+	p.ActiveQuests = append(p.ActiveQuests, q)
+	return true
+}
+
+// HasQuest reports whether the player already holds a quest with the given
+// template id (so the Wiseman avoids offering duplicates).
+func (p *Player) HasQuest(id string) bool {
+	for _, q := range p.ActiveQuests {
+		if q.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveQuest removes the given quest from the active quests.
+func (p *Player) RemoveQuest(quest *Quest) {
+	kept := p.ActiveQuests[:0]
+	for _, q := range p.ActiveQuests {
+		if q != quest {
+			kept = append(kept, q)
+		}
+	}
+	p.ActiveQuests = kept
+}
+
+// RedeemFulfilledQuests grants the reward for every fulfilled quest, removes
+// them, and returns what was paid out. Called on entering any town — walking in
+// is enough to claim a completed quest. Arriving at a delivery quest's target
+// city fulfills it here, so it pays out in the same visit.
+func (p *Player) RedeemFulfilledQuests(city *City) []DeckQuestReward {
+	var rewards []DeckQuestReward
+	kept := p.ActiveQuests[:0]
+	for _, q := range p.ActiveQuests {
+		if q.Type == QuestTypeDelivery && city != nil &&
+			q.TargetCity != nil && q.TargetCity.Name == city.Name {
+			q.IsCompleted = true
+		}
+		if q.IsFulfilled() {
+			cards := GrantQuestReward(p, q.Reward)
+			rewards = append(rewards, DeckQuestReward{Quest: q, Reward: q.Reward, Cards: cards})
+			continue
+		}
+		kept = append(kept, q)
+	}
+	p.ActiveQuests = kept
+	return rewards
+}
+
+// ExpireQuests drops any quest whose deadline has passed without being
+// fulfilled and returns the number removed. A fulfilled-but-unredeemed quest
+// survives so it can still be claimed at the next town.
+func (p *Player) ExpireQuests() int {
+	kept := p.ActiveQuests[:0]
+	removed := 0
+	for _, q := range p.ActiveQuests {
+		if q.DaysRemaining <= 0 && !q.IsFulfilled() {
+			removed++
+			continue
+		}
+		kept = append(kept, q)
+	}
+	p.ActiveQuests = kept
+	return removed
 }
 
 func (p *Player) HasAmulet(color ColorMask) bool {

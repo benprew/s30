@@ -93,6 +93,9 @@ var (
 	//go:embed art/screens/world/Worlds.spr.png
 	WorldSpr_png []byte
 
+	//go:embed art/screens/world/Questnew.spr.png
+	QuestScroll_png []byte
+
 	//go:embed art/screens/world/land/Roads.spr.png
 	Roads_png []byte
 
@@ -149,6 +152,9 @@ var (
 
 	//go:embed configs/card_tiers.toml
 	CardTiers_toml []byte
+
+	//go:embed configs/quests/*.toml
+	QuestCfgFS embed.FS
 
 	////////////////////////
 	// Duel screen sprites
