@@ -16,6 +16,7 @@ import (
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai"
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai/heuristic"
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai/search"
+	"github.com/benprew/mage-go/pkg/mage/core"
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
@@ -1057,10 +1058,17 @@ func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPl
 	totalH := 3*fieldCardH + 2*rowGap
 	var baseY int
 	if dp == s.opponent {
-		// Opponent half: 0 to duelMsgY (370px)
-		// Lands at top (back), other middle, creatures at bottom (front, near center)
+		// Opponent half: 0 to duelMsgY (370px). Mirror of the player's board:
+		// lands at top (back), other middle, creatures at bottom (front, near center).
 		topPad := (duelMsgY - totalH) / 2
-		baseY = duelOpponentBoardY + topPad + int(row)*rowH
+		switch row {
+		case permRowLand:
+			baseY = duelOpponentBoardY + topPad
+		case permRowOther:
+			baseY = duelOpponentBoardY + topPad + rowH
+		case permRowCreature:
+			baseY = duelOpponentBoardY + topPad + 2*rowH
+		}
 	} else {
 		// Player half: duelPlayerBoardY to 768 (384px)
 		// Creatures at top (front, near center), other middle, lands at bottom (back)
@@ -1100,7 +1108,102 @@ func (s *DuelScreen) fieldPerms(ps interactive.PlayerState, row permRow) []inter
 			perms = append(perms, perm)
 		}
 	}
+	switch row {
+	case permRowLand:
+		sort.SliceStable(perms, func(i, j int) bool {
+			if perms[i].Name != perms[j].Name {
+				return perms[i].Name < perms[j].Name
+			}
+			return !perms[i].Tapped && perms[j].Tapped
+		})
+	case permRowCreature:
+		sort.SliceStable(perms, func(i, j int) bool {
+			if perms[i].Power != perms[j].Power {
+				return perms[i].Power > perms[j].Power
+			}
+			if perms[i].Toughness != perms[j].Toughness {
+				return perms[i].Toughness > perms[j].Toughness
+			}
+			return perms[i].Name < perms[j].Name
+		})
+	}
 	return perms
+}
+
+// cardSortKey captures the fields used to order cards for display: lands first
+// (by name), then spells by color and mana value. It is shared by the duel hand
+// and the mulligan screen so both present cards in the same order.
+type cardSortKey struct {
+	isLand    bool
+	name      string
+	colorRank int
+	cmc       int
+}
+
+// lessCardSortKey reports whether a should sort before b: lands grouped first
+// (sorted by name), then spells by color (WUBRG, then multicolor, then
+// colorless) and by mana value within a color, breaking ties by name.
+func lessCardSortKey(a, b cardSortKey) bool {
+	if a.isLand != b.isLand {
+		return a.isLand
+	}
+	if a.isLand {
+		return a.name < b.name
+	}
+	if a.colorRank != b.colorRank {
+		return a.colorRank < b.colorRank
+	}
+	if a.cmc != b.cmc {
+		return a.cmc < b.cmc
+	}
+	return a.name < b.name
+}
+
+// manaCostColorRank orders spells by color: monocolor in WUBRG order, then
+// multicolor, then colorless.
+func manaCostColorRank(mc core.ManaCost) int {
+	colors := mc.Colors()
+	switch {
+	case len(colors) == 1:
+		return int(colors[0])
+	case len(colors) > 1:
+		return int(core.Green) + 1
+	default:
+		return int(core.Green) + 2
+	}
+}
+
+// handDisplayOrder returns a sorted copy of the hand for display. The same order
+// is used for drawing and hit-testing so card indices stay consistent.
+func handDisplayOrder(hand []interactive.CardState) []interactive.CardState {
+	sorted := make([]interactive.CardState, len(hand))
+	copy(sorted, hand)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return lessCardSortKey(cardStateSortKey(sorted[i]), cardStateSortKey(sorted[j]))
+	})
+	return sorted
+}
+
+func cardStateSortKey(c interactive.CardState) cardSortKey {
+	mc := core.ParseManaCost(c.ManaCost)
+	return cardSortKey{isLand: c.IsLand, name: c.Name, colorRank: manaCostColorRank(mc), cmc: mc.CMC()}
+}
+
+// mulliganDisplayOrder returns a sorted copy of the mulligan hand using the same
+// ordering as the duel hand. Every mulligan UI site that maps a card index back
+// to a card must use this so positions, selection, and preview stay consistent.
+func mulliganDisplayOrder(hand []mage.Card) []mage.Card {
+	sorted := make([]mage.Card, len(hand))
+	copy(sorted, hand)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return lessCardSortKey(mageCardSortKey(sorted[i]), mageCardSortKey(sorted[j]))
+	})
+	return sorted
+}
+
+func mageCardSortKey(c mage.Card) cardSortKey {
+	mc := c.ManaCost()
+	return cardSortKey{isLand: c.HasType(core.TypeLand), name: c.Name(), colorRank: manaCostColorRank(mc), cmc: mc.CMC()}
 }
 
 func (s *DuelScreen) attachedPerms(hostID uuid.UUID) []interactive.PermanentState {
@@ -1327,7 +1430,7 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 		s.toggleHand()
 		return
 	}
-	hand := s.lastMsg.State.You.Hand
+	hand := handDisplayOrder(s.lastMsg.State.You.Hand)
 	if idx := s.handCardIdxAtPoint(mx, my, s.self.handX, s.self.handY, len(hand), s.self); idx >= 0 {
 		logging.Printf(logging.Duel, "HAND CLICK: idx: %d\n", idx)
 		s.selectedCardIdx = idx
@@ -1426,7 +1529,7 @@ func (s *DuelScreen) handleRightClick(mx, my int) {
 	if s.lastMsg == nil {
 		return
 	}
-	hand := s.lastMsg.State.You.Hand
+	hand := handDisplayOrder(s.lastMsg.State.You.Hand)
 	if idx := s.handCardIdxAtPoint(mx, my, s.self.handX, s.self.handY, len(hand), s.self); idx >= 0 {
 		s.loadCardPreviewByName(hand[idx].Name)
 		return
@@ -1447,7 +1550,7 @@ func (s *DuelScreen) updateHoverPreview(mx, my int) {
 	if s.lastMsg == nil {
 		return
 	}
-	hand := s.lastMsg.State.You.Hand
+	hand := handDisplayOrder(s.lastMsg.State.You.Hand)
 	if idx := s.handCardIdxAtPoint(mx, my, s.self.handX, s.self.handY, len(hand), s.self); idx >= 0 {
 		s.loadCardPreviewByName(hand[idx].Name)
 		return
@@ -2719,7 +2822,8 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps inte
 		return
 	}
 
-	for i, card := range ps.Hand {
+	handCards := handDisplayOrder(ps.Hand)
+	for i, card := range handCards {
 		y := dp.handY + handBgH + i*handCardOverlap
 		cardImg := s.getCardArtImg(card.Name, handBgW)
 		if cardImg != nil {
@@ -2739,13 +2843,13 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps inte
 		return
 	}
 
-	for i, card := range ps.Hand {
+	for i, card := range handCards {
 		if _, hasAction := s.cardActions[card.ID]; !hasAction {
 			continue
 		}
 		y := dp.handY + handBgH + i*handCardOverlap
 		cardH := handCardOverlap
-		if i == len(ps.Hand)-1 {
+		if i == len(handCards)-1 {
 			if cardImg := s.getCardArtImg(card.Name, handBgW); cardImg != nil {
 				cardH = cardImg.Bounds().Dy()
 			}
@@ -3168,7 +3272,7 @@ func (s *DuelScreen) mulliganCardRects(W, H int) []image.Rectangle {
 
 func (s *DuelScreen) updateMulliganUI(W, H int) {
 	cardRects := s.mulliganCardRects(W, H)
-	hand := s.human.Hand()
+	hand := mulliganDisplayOrder(s.human.Hand())
 	mx, my := ebiten.CursorPosition()
 	s.updateMulliganPreview(cardRects, mx, my)
 
@@ -3230,7 +3334,7 @@ func (s *DuelScreen) updateMulliganPreview(rects []image.Rectangle, mx, my int) 
 		return
 	}
 
-	card := s.human.Hand()[idx]
+	card := mulliganDisplayOrder(s.human.Hand())[idx]
 	if s.mulliganPreviewImg != nil && s.mulliganPreviewName == card.Name() {
 		s.mulliganPreviewIdx = idx
 		return
@@ -3287,7 +3391,7 @@ func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 	hint.Color = color.RGBA{190, 190, 205, 255}
 	hint.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	hand := s.human.Hand()
+	hand := mulliganDisplayOrder(s.human.Hand())
 	rects := s.mulliganCardRects(W, H)
 	for i, c := range hand {
 		r := rects[i]
