@@ -103,6 +103,8 @@ func (c *CityScreen) IsFramed() bool {
 	return true
 }
 
+func (c *CityScreen) IsOverlay() bool { return false }
+
 func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	cityOpts := &ebiten.DrawImageOptions{}
 	cityOpts.GeoM.Scale(scale, scale)

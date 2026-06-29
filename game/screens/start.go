@@ -47,6 +47,8 @@ type StartScreen struct {
 
 func (s *StartScreen) IsFramed() bool { return false }
 
+func (s *StartScreen) IsOverlay() bool { return false }
+
 // virtScreenW/H mirror Game.Layout — the logical canvas size all screens use.
 const virtScreenW = 1024
 const virtScreenH = 768

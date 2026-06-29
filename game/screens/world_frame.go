@@ -41,8 +41,8 @@ const (
 	FrameHeight  = 425
 )
 
-// Quest scroll placement (in 1024x768 design coords) and the click-to-open
-// quest overlay panel.
+// Quest scroll placement (in 1024x768 design coords) for the lower-right
+// indicator that opens the quest overlay.
 const (
 	questScrollX        = 815
 	questScrollY        = 538
@@ -54,10 +54,6 @@ const (
 	// Downward nudge (design px) so the title centers on the flat parchment
 	// rather than the full sprite, whose bottom roll is thicker than the top.
 	questScrollTextDY = 4
-	questPanelX      = 150
-	questPanelY      = 110
-	questPanelW      = 724
-	questPanelH      = 500
 )
 
 type WorldFrame struct {
@@ -69,8 +65,6 @@ type WorldFrame struct {
 
 	questScrollEmpty  *ebiten.Image
 	questScrollActive *ebiten.Image
-	questPanelBg      *ebiten.Image
-	questPanelOpen    bool
 }
 
 func NewWorldFrame(p *domain.Player) (*WorldFrame, error) {
@@ -93,9 +87,6 @@ func NewWorldFrame(p *domain.Player) (*WorldFrame, error) {
 		return nil, err
 	}
 
-	panelBg := ebiten.NewImage(questPanelW, questPanelH)
-	panelBg.Fill(color.RGBA{20, 12, 4, 220})
-
 	return &WorldFrame{
 		img:               img,
 		Buttons:           mkWfButtons(worldSprs),
@@ -103,7 +94,6 @@ func NewWorldFrame(p *domain.Player) (*WorldFrame, error) {
 		amuletSprites:     amuletSprs[0],
 		questScrollEmpty:  questSprs[0][0],
 		questScrollActive: questSprs[0][1],
-		questPanelBg:      panelBg,
 	}, nil
 }
 
@@ -134,40 +124,24 @@ func (f *WorldFrame) Draw(screen *ebiten.Image, scale float64) {
 	f.drawQuestScroll(screen, scale)
 }
 
-// drawQuestScroll draws the lower-right quest scroll (open when the player has
-// active quests) and, if toggled open, the quest overlay panel.
+// drawQuestScroll draws the lower-right quest scroll indicator, which opens the
+// quest overlay when clicked.
 func (f *WorldFrame) drawQuestScroll(screen *ebiten.Image, scale float64) {
 	frame := f.questScrollEmpty
 	if len(f.player.ActiveQuests) > 0 {
 		frame = f.questScrollActive
 	}
-	if frame != nil {
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Scale(questScrollScale, questScrollScale)
-		opts.GeoM.Scale(scale, scale)
-		opts.GeoM.Translate(float64(questScrollX)*scale, float64(questScrollY)*scale)
-		screen.DrawImage(frame, opts)
-
-		if len(f.player.ActiveQuests) > 0 {
-			f.drawQuestScrollTitle(screen, frame, scale)
-		}
-	}
-
-	if !f.questPanelOpen {
+	if frame == nil {
 		return
 	}
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Scale(questScrollScale, questScrollScale)
+	opts.GeoM.Scale(scale, scale)
+	opts.GeoM.Translate(float64(questScrollX)*scale, float64(questScrollY)*scale)
+	screen.DrawImage(frame, opts)
 
-	panelOpts := &ebiten.DrawImageOptions{}
-	panelOpts.GeoM.Scale(scale, scale)
-	panelOpts.GeoM.Translate(float64(questPanelX)*scale, float64(questPanelY)*scale)
-	screen.DrawImage(f.questPanelBg, panelOpts)
-
-	y := questPanelY + 16
-	for _, line := range f.questPanelLines() {
-		txt := elements.NewText(20, line, questPanelX+20, y)
-		txt.Color = color.White
-		txt.Draw(screen, &ebiten.DrawImageOptions{}, scale)
-		y += 26
+	if len(f.player.ActiveQuests) > 0 {
+		f.drawQuestScrollTitle(screen, frame, scale)
 	}
 }
 
@@ -204,28 +178,6 @@ func fitQuestTitle(title string, maxW float64) string {
 	}
 }
 
-func (f *WorldFrame) questPanelLines() []string {
-	lines := []string{"Active Quests", ""}
-	if len(f.player.ActiveQuests) == 0 {
-		return append(lines, "No active quests.", "", "Visit a Wiseman to take one.")
-	}
-	for _, q := range f.player.ActiveQuests {
-		lines = append(lines, q.Title, "  "+q.Description)
-		switch q.Type {
-		case domain.QuestTypeActionTracker:
-			lines = append(lines, fmt.Sprintf("  Progress: %d / %d", q.Progress, q.Target))
-		case domain.QuestTypeDeckConstraint:
-			if q.IsCompleted {
-				lines = append(lines, "  Complete - redeem in any town")
-			} else {
-				lines = append(lines, "  Win a duel under this rule")
-			}
-		}
-		lines = append(lines, fmt.Sprintf("  %d days left", q.DaysRemaining), "")
-	}
-	return lines
-}
-
 func (f *WorldFrame) questScrollBounds(scale float64) image.Rectangle {
 	if f.questScrollEmpty == nil {
 		return image.Rectangle{}
@@ -252,31 +204,29 @@ func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 	}
 
-	f.updateQuestScroll(scale)
+	if f.questScrollClicked(scale) {
+		if am := gameaudio.Get(); am != nil {
+			am.PlaySFX(gameaudio.SFXClick)
+		}
+		return screenui.QuestScrollScr, nil, nil
+	}
 
 	f.Text = mkWfText(f.player)
 
-	return -1, nil, nil
+	return screenui.NoScr, nil, nil
 }
 
-// updateQuestScroll toggles the quest overlay when the scroll is clicked, and
-// closes it on a click elsewhere.
-func (f *WorldFrame) updateQuestScroll(scale float64) {
+// questScrollClicked reports whether the lower-right quest scroll indicator was
+// just clicked, which opens the quest overlay.
+func (f *WorldFrame) questScrollClicked(scale float64) bool {
 	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		return
+		return false
 	}
 	mx, my := ui.TouchPosition()
 	if mx == 0 {
 		mx, my = ebiten.CursorPosition()
 	}
-	if (image.Point{X: mx, Y: my}).In(f.questScrollBounds(scale)) {
-		f.questPanelOpen = !f.questPanelOpen
-		if am := gameaudio.Get(); am != nil {
-			am.PlaySFX(gameaudio.SFXClick)
-		}
-		return
-	}
-	f.questPanelOpen = false
+	return (image.Point{X: mx, Y: my}).In(f.questScrollBounds(scale))
 }
 
 func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {

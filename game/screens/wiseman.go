@@ -43,6 +43,8 @@ func (s *WisemanScreen) IsFramed() bool {
 	return false
 }
 
+func (s *WisemanScreen) IsOverlay() bool { return false }
+
 // ==============================================================================
 // 1.13 What do these Wise Men do?
 // ==============================================================================

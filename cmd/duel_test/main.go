@@ -70,7 +70,7 @@ func (g *testGame) Update() error {
 		return ebiten.Termination
 	}
 
-	name, screen, err := g.duelScreen.Update(1024, 768, 1.0)
+	name, _, err := g.duelScreen.Update(1024, 768, 1.0)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,6 @@ func (g *testGame) Update() error {
 		}
 		return ebiten.Termination
 	}
-	_ = screen
 	return nil
 }
 

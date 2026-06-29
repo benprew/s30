@@ -112,6 +112,8 @@ func (m *MiniMap) IsFramed() bool {
 	return false
 }
 
+func (m *MiniMap) IsOverlay() bool { return true }
+
 func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
@@ -233,12 +235,12 @@ func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui
 		b := m.buttons[i]
 		b.Update(options, scale, W, H)
 		if b.ID == doneButtonID && b.IsClicked() {
-			return screenui.WorldScr, nil, nil
+			return screenui.PopScr, nil, nil
 		}
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		return screenui.WorldScr, nil, nil
+		return screenui.PopScr, nil, nil
 	}
 	return screenui.MiniMapScr, nil, nil
 }

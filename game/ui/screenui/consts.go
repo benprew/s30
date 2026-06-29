@@ -5,6 +5,8 @@ import "github.com/hajimehoshi/ebiten/v2"
 type ScreenName int
 
 const (
+	NoScr               = -2 // means "No naviagation"
+	PopScr              = -1 // used by transparent overlays
 	StartScr ScreenName = iota
 	WorldScr
 	MiniMapScr
@@ -20,12 +22,14 @@ const (
 	DungeonEntryScr
 	DungeonScr
 	QuestRewardScr
+	QuestScrollScr
 )
 
 type Screen interface {
 	Update(W, H int, scale float64) (ScreenName, Screen, error)
 	Draw(screen *ebiten.Image, W, H int, scale float64)
-	IsFramed() bool // True if we should draw the world frame
+	IsFramed() bool  // True if we should draw the world frame
+	IsOverlay() bool // True if transparent: the previous screen is drawn underneath
 }
 
 // screenNameToString converts a ScreenName to its string representation for debugging.
@@ -61,6 +65,8 @@ func ScreenNameToString(sn ScreenName) string {
 		return "Dungeon"
 	case QuestRewardScr:
 		return "QuestReward"
+	case QuestScrollScr:
+		return "QuestScroll"
 	default:
 		return "Unknown"
 	}

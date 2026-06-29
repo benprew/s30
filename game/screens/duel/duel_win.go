@@ -54,6 +54,8 @@ type DuelWinScreen struct {
 
 func (s *DuelWinScreen) IsFramed() bool { return false }
 
+func (s *DuelWinScreen) IsOverlay() bool { return false }
+
 func NewWinDuelScreen(player *domain.Player, choices []*domain.Card, bonusCards []*domain.Card) *DuelWinScreen {
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,

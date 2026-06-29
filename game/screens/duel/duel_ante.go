@@ -38,6 +38,8 @@ type DuelAnteScreen struct {
 
 func (s *DuelAnteScreen) IsFramed() bool { return false }
 
+func (s *DuelAnteScreen) IsOverlay() bool { return false }
+
 func NewDuelAnteScreen() *DuelAnteScreen {
 	return &DuelAnteScreen{}
 }

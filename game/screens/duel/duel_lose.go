@@ -27,6 +27,8 @@ type DuelLoseScreen struct {
 
 func (s *DuelLoseScreen) IsFramed() bool { return false }
 
+func (s *DuelLoseScreen) IsOverlay() bool { return false }
+
 func NewDuelLoseScreen(cards []*domain.Card) *DuelLoseScreen {
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,

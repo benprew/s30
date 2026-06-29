@@ -183,3 +183,5 @@ func (s *RandomEncounterScreen) Draw(screen *ebiten.Image, W, H int, scale float
 func (s *RandomEncounterScreen) IsFramed() bool {
 	return false
 }
+
+func (s *RandomEncounterScreen) IsOverlay() bool { return false }

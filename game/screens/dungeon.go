@@ -161,6 +161,8 @@ func scaleSheet(sheet [][]*ebiten.Image, scale float64) [][]*ebiten.Image {
 
 func (s *DungeonScreen) IsFramed() bool { return false }
 
+func (s *DungeonScreen) IsOverlay() bool { return false }
+
 func (s *DungeonScreen) dungeonState() *domain.DungeonState {
 	return s.Player.DungeonState
 }

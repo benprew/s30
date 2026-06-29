@@ -39,6 +39,8 @@ func (s *BuyCardsScreen) IsFramed() bool {
 	return true
 }
 
+func (s *BuyCardsScreen) IsOverlay() bool { return false }
+
 func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyCardsScreen {
 	bgImg, err := imageutil.LoadImage(assets.BuyCards_png)
 	if err != nil {

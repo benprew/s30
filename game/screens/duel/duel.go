@@ -218,6 +218,8 @@ type cardImgEntry struct {
 
 func (s *DuelScreen) IsFramed() bool { return false }
 
+func (s *DuelScreen) IsOverlay() bool { return false }
+
 func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level, idx int, anteCard *domain.Card, enemyAnteCard *domain.Card) *DuelScreen {
 	s := &DuelScreen{
 		player:           player,

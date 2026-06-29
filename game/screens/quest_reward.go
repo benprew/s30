@@ -48,6 +48,8 @@ type QuestRewardScreen struct {
 
 func (s *QuestRewardScreen) IsFramed() bool { return false }
 
+func (s *QuestRewardScreen) IsOverlay() bool { return false }
+
 func NewQuestRewardScreen(rewards []domain.DeckQuestReward, city *domain.City, player *domain.Player, level *world.Level) *QuestRewardScreen {
 	bg := loadQuestRewardBg()
 	panelW, panelH := qrPanelW, qrPanelW/2

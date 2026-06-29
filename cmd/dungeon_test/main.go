@@ -27,12 +27,16 @@ type testGame struct {
 }
 
 func (g *testGame) Update() error {
-	name, screen, err := g.screens[g.current].Update(1024, 768, 1.0)
+	next, screen, err := g.screens[g.current].Update(1024, 768, 1.0)
 	if err != nil {
 		return err
 	}
-	if screen != nil {
-		g.screens[name] = screen
+	name := g.current
+	if next != screenui.PopScr && next != screenui.NoScr {
+		name = next
+		if screen != nil {
+			g.screens[next] = screen
+		}
 	}
 	if name != g.current {
 		switch name {

@@ -65,6 +65,8 @@ func (s *EditDeckScreen) IsFramed() bool {
 	return false
 }
 
+func (s *EditDeckScreen) IsOverlay() bool { return false }
+
 // NewEditDeckScreen creates a new edit deck screen
 func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*EditDeckScreen, error) {
 	// Load the collection background

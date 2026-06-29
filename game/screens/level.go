@@ -28,6 +28,8 @@ func (s *LevelScreen) IsFramed() bool {
 	return true
 }
 
+func (s *LevelScreen) IsOverlay() bool { return false }
+
 func (s *LevelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.Level.Draw(screen, W, H, scale)
 }

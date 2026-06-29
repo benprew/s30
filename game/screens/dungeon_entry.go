@@ -34,6 +34,8 @@ func NewDungeonEntryScreen(dungeon *domain.Dungeon, player *domain.Player, level
 
 func (s *DungeonEntryScreen) IsFramed() bool { return false }
 
+func (s *DungeonEntryScreen) IsOverlay() bool { return false }
+
 func (s *DungeonEntryScreen) setupButtons() {
 	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
 	if err != nil {

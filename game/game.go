@@ -24,7 +24,8 @@ type Game struct {
 	camScaleTo           float64
 	mousePanX, mousePanY int
 	worldFrame           *screens.WorldFrame
-	currentScreenName    screenui.ScreenName
+	currentScreen        screenui.ScreenName
+	prevScreen           screenui.ScreenName
 	screenMap            map[screenui.ScreenName]screenui.Screen
 	player               *domain.Player
 	Difficulty           domain.Difficulty
@@ -32,7 +33,22 @@ type Game struct {
 }
 
 func (g *Game) CurrentScreen() screenui.Screen {
-	return g.screenMap[g.currentScreenName]
+	return g.screenMap[g.currentScreen]
+}
+
+// navigate switches the active screen. PopScr returns to the previous screen;
+// NoScr and the current name are no-ops. Any other name is remembered as the
+// screen to pop back to.
+func (g *Game) navigate(name screenui.ScreenName) {
+	switch name {
+	case screenui.NoScr, g.currentScreen:
+		// no-op
+	case screenui.PopScr:
+		g.currentScreen = g.prevScreen
+	default:
+		g.prevScreen = g.currentScreen
+		g.currentScreen = name
+	}
 }
 
 func (g *Game) Level() *world.Level {
@@ -62,7 +78,8 @@ func NewGame() (*Game, error) {
 		camScaleTo:        1,
 		mousePanX:         math.MinInt32,
 		mousePanY:         math.MinInt32,
-		currentScreenName: screenui.StartScr,
+		currentScreen: screenui.StartScr,
+		prevScreen:    screenui.StartScr,
 		screenMap: map[screenui.ScreenName]screenui.Screen{
 			screenui.StartScr: screens.NewStartScreen(),
 		},
@@ -87,6 +104,7 @@ func (g *Game) initWorld(level *world.Level) error {
 	g.player = level.Player
 	g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(level)
 	g.screenMap[screenui.MiniMapScr] = m
+	g.screenMap[screenui.QuestScrollScr] = screens.NewQuestScrollScreen(level.Player)
 	g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreen()
 
 	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
@@ -160,34 +178,36 @@ func (g *Game) Update() error {
 		}
 	}
 
+	prevScreen := g.currentScreen
 	name, screen, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
 	if err != nil {
-		return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err)
+		return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(prevScreen), err)
 	}
 
-	if g.currentScreenName == screenui.StartScr && name == screenui.WorldScr {
+	// Entering the world from the start screen builds the world first.
+	if prevScreen == screenui.StartScr && name == screenui.WorldScr {
 		if transitionErr := g.handleStartTransition(); transitionErr != nil {
 			return transitionErr
 		}
 	}
 
-	// If the screen returned a new screen instance, use it
-	if screen != nil {
+	// If the screen returned a new instance, register it.
+	if screen != nil && name != screenui.PopScr && name != screenui.NoScr {
 		g.screenMap[name] = screen
 	}
 
-	// If the world level signaled a duel ante, construct the duel screen with the encountered enemy
-	if name == screenui.DuelAnteScr && g.currentScreenName != screenui.DuelAnteScr && screen == nil {
+	// If the world level signaled a duel ante, construct the duel screen with the encountered enemy.
+	if name == screenui.DuelAnteScr && prevScreen != screenui.DuelAnteScr && screen == nil {
 		lvl := g.Level()
 		if lvl.EncounterPending() {
 			if e, idx, ok := lvl.TakeEncounter(); ok {
-				g.screenMap[name] = screens.NewDuelAnteScreenWithEnemy(lvl, idx)
+				g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreenWithEnemy(lvl, idx)
 				e.SetEngaged(true)
 			}
 		}
 	}
 
-	// Check for Random Encounter
+	// Check for a random encounter while remaining on the world screen.
 	if name == screenui.WorldScr {
 		lvl := g.Level()
 		if lvl.RandomEncounterPending() {
@@ -199,33 +219,38 @@ func (g *Game) Update() error {
 		}
 	}
 
-	prevScreen := g.currentScreenName
-	g.currentScreenName = name
-
-	if name != prevScreen {
-		g.updateBGM(name)
+	g.navigate(name)
+	screenChanged := g.currentScreen != prevScreen
+	if screenChanged {
+		g.updateBGM(g.currentScreen)
 	}
 
-	if g.CurrentScreen().IsFramed() {
-		var wfScreen screenui.Screen
-		name, wfScreen, err = g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
-		if err != nil {
-			return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(name), err)
+	// Skip the world frame on the tick the active screen changed so a click that
+	// dismissed an overlay (e.g. the quest scroll popping back to the world) is
+	// not re-processed by the frame and used to reopen it.
+	if !screenChanged && g.CurrentScreen().IsFramed() {
+		wfName, wfScreen, wfErr := g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
+		if wfErr != nil {
+			return fmt.Errorf("err updating world frame: %s", wfErr)
 		}
-		if wfScreen != nil {
-			g.screenMap[name] = wfScreen
+		if wfScreen != nil && wfName != screenui.PopScr && wfName != screenui.NoScr {
+			g.screenMap[wfName] = wfScreen
 		}
-		if name != -1 {
-			g.currentScreenName = name
-		}
+		g.navigate(wfName)
 	}
 
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.CurrentScreen().Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
-	if g.CurrentScreen().IsFramed() {
+	cur := g.CurrentScreen()
+	if cur.IsOverlay() {
+		if below := g.screenMap[g.prevScreen]; below != nil {
+			below.Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
+		}
+	}
+	cur.Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
+	if cur.IsFramed() {
 		g.worldFrame.Draw(screen, g.camScale)
 	}
 
@@ -238,7 +263,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		debugText := fmt.Sprintf(
 			"Screen: %s\nKEYS WASD N R\nFPS  %0.0f\nTPS  %0.0f\nPOS  %d,%d\nTILE  %d,%d\nMOUSE %d,%d",
-			screenui.ScreenNameToString(g.currentScreenName), ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
+			screenui.ScreenNameToString(g.currentScreen), ebiten.ActualFPS(), ebiten.ActualTPS(), charP.X, charP.Y, charT.X, charT.Y, mouseX, mouseY,
 		)
 
 		if closestCityTile.X != -1 && closestCityTile.Y != -1 {
@@ -324,7 +349,8 @@ func LoadSavedGame(savePath string) (*Game, error) {
 		return nil, err
 	}
 
-	g.currentScreenName = screenui.WorldScr
+	g.currentScreen = screenui.WorldScr
+	g.prevScreen = screenui.WorldScr
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
 
 	return g, nil
