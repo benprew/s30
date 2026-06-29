@@ -813,9 +813,9 @@ func (s *EditDeckScreen) getVisibleCollectionItems(collectionY int) []Collection
 	// Calculate end index for visible items
 	endIdx := min(currentOffset+visibleCount, len(items))
 
-	// The items are positioned horizontally starting after left nav buttons
-	leftNavWidth := 128 // ffBackBtn + fwdBackBtn width
-	currentX := leftNavWidth
+	// The items are positioned horizontally starting at the carousel's left
+	// edge margin (must match horizontalEdgeMargin in ScrollableList)
+	currentX := 10
 
 	// Only process visible items
 	for i := currentOffset; i < endIdx; i++ {
@@ -826,7 +826,7 @@ func (s *EditDeckScreen) getVisibleCollectionItems(collectionY int) []Collection
 		visibleItems = append(visibleItems, CollectionItemDisplay{
 			ButtonID: item.ID,
 			X:        currentX,
-			Y:        collectionY,
+			Y:        collectionY + 10, // match horizontalTopMargin in ScrollableList
 			Width:    buttonWidth,
 			Height:   buttonHeight,
 		})

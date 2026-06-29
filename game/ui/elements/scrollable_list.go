@@ -15,6 +15,15 @@ const (
 	OrientationVertical   = 1
 )
 
+// horizontalEdgeMargin is the gap between the carousel edge and the first/last
+// card. In horizontal orientation the nav buttons sit in the bottom corners, so
+// cards don't need horizontal space reserved for them.
+const horizontalEdgeMargin = 12
+
+// horizontalTopMargin is the vertical gap between the carousel top and the cards
+// in horizontal orientation.
+const horizontalTopMargin = 10
+
 // ScrollableList is used to display a list of buttons.
 // Buttons were used so that you can handle click events and also buttons contain text + and image.
 //
@@ -235,7 +244,6 @@ func NewScrollableList(
 
 	// Calculate how many items can be visible at once
 	sl.visibleCount = sl.calculateVisibleCount()
-	fmt.Println("visibleCount:", sl.visibleCount)
 
 	return sl, nil
 }
@@ -260,11 +268,10 @@ func (sl *ScrollableList) calculateVisibleCount() int {
 		availableHeight := sl.height - (2 * btnHeight)
 		return availableHeight / itemHeight
 	} else {
-		// Calculate based on width
+		// Calculate based on width. Nav buttons live in the bottom corners,
+		// so only the edge margins reduce the usable width.
 		itemWidth := itemBounds.Dx() + sl.itemPadding
-		// Reserve space for navigation buttons
-		btnWidth := sl.fwdBtn.Bounds.Dx()
-		availableWidth := sl.width - (2 * btnWidth)
+		availableWidth := sl.width - (2 * horizontalEdgeMargin)
 		return availableWidth / itemWidth
 	}
 }
@@ -342,11 +349,11 @@ func (sl *ScrollableList) Update(opts *ebiten.DrawImageOptions, scale float64, s
 			currentY += sl.items[i].Bounds.Dy() + sl.itemPadding
 		}
 	} else {
-		// Horizontal: Stack items starting after left buttons
-		currentX := sl.ffBackBtn.Bounds.Dx() + sl.fwdBackBtn.Bounds.Dx()
+		// Horizontal: Stack items starting at the left edge margin
+		currentX := horizontalEdgeMargin
 
 		for i := sl.currentOffset; i < endIdx; i++ {
-			sl.items[i].MoveTo(offsetX+currentX, offsetY)
+			sl.items[i].MoveTo(offsetX+currentX, offsetY+horizontalTopMargin)
 			sl.items[i].Update(opts, scale, screenW, screenH)
 			currentX += sl.items[i].Bounds.Dx() + sl.itemPadding
 		}
