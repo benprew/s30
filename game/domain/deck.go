@@ -5,7 +5,7 @@ type Deck map[*Card]int
 type AnteExclusion int
 
 const (
-	ExcludeBasicLand       AnteExclusion = iota
+	ExcludeBasicLand AnteExclusion = iota
 	ExcludeVintageRestricted
 )
 
@@ -24,7 +24,7 @@ func (d Deck) NonLandCards() []*Card {
 }
 
 func (d Deck) ValidAnteCards(exclusions ...AnteExclusion) []*Card {
-	excludeBasicLand := false
+	excludeBasicLand := true
 	excludeVintage := false
 	for _, e := range exclusions {
 		switch e {

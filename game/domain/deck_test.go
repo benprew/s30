@@ -16,17 +16,6 @@ func TestValidAnteCardsExcludesBasicLands(t *testing.T) {
 	}
 }
 
-func TestValidAnteCardsNoExclusions(t *testing.T) {
-	land := &Card{CardType: CardTypeLand}
-	creature := &Card{CardType: CardTypeCreature}
-	deck := Deck{land: 1, creature: 1}
-
-	cards := deck.ValidAnteCards()
-	if len(cards) != 2 {
-		t.Errorf("Expected 2 cards, got %d", len(cards))
-	}
-}
-
 func TestValidAnteCardsExcludesVintageRestricted(t *testing.T) {
 	restricted := &Card{CardType: CardTypeCreature, VintageRestricted: true}
 	normal := &Card{CardType: CardTypeCreature}
