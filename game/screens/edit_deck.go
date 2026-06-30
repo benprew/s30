@@ -51,6 +51,8 @@ type EditDeckScreen struct {
 	collectionGroups     map[string]*cardGroup    // Map card name to group
 	hoveredCollectionIdx int                      // Index of hovered collection card (-1 if none)
 	hoveredDeckIdx       int                      // Index of hovered deck card (-1 if none)
+	filter               collectionFilter         // Active color/type filters for the collection
+	filterButtons        []*filterButton          // Sprite-sheet toggle buttons for the filter
 }
 
 type DeckCardDisplay struct {
@@ -97,7 +99,14 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 		collectionGroups:     make(map[string]*cardGroup),
 		hoveredCollectionIdx: -1,
 		hoveredDeckIdx:       -1,
+		filter:               newCollectionFilter(),
 	}
+
+	filterButtons, err := createFilterButtons()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create filter buttons: %w", err)
+	}
+	screen.filterButtons = filterButtons
 
 	// Create the scrollable list for the card collection
 	collectionButtons, err := screen.createCollectionButtons()
@@ -165,7 +174,7 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 
 	// Group cards by name and calculate available count
 	for card, item := range s.Player.CardCollection {
-		if item.Count > 0 {
+		if item.Count > 0 && s.filter.matches(card) {
 			cardName := card.Name()
 			deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
 			availableCount := item.Count - deckCount
@@ -270,6 +279,9 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	// Draw deck stats header
 	s.drawDeckStats(screen, scale)
 
+	// Draw collection filter toggle buttons
+	s.drawFilterButtons(screen, scale)
+
 	// Draw the magnifier image if it exists
 	if s.MagnifierImage != nil {
 		magOpts := &ebiten.DrawImageOptions{}
@@ -313,7 +325,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	// Draw helper text above collection area
 	helpText := "[A] Add to Deck\n[D] Remove from Deck\n[S] Sell Card"
-	helpY := float64(collectionY) - 90
+	helpY := float64(collectionY) - 130
 	helpOpts := &ebiten.DrawImageOptions{}
 	elements.NewText(14, helpText, int(10*scale), int(helpY*scale)).Draw(screen, helpOpts, 1.0)
 
@@ -355,6 +367,15 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 
 	// Update the scrollable list
 	s.CollectionList.Update(opts, scale, W, H)
+
+	// Update collection filter toggles. A change rebuilds the list and resets scroll.
+	filterOpts := &ebiten.DrawImageOptions{}
+	if s.updateFilterButtons(filterOpts, scale, W, H) {
+		if err := s.reloadCollectionList(); err != nil {
+			fmt.Printf("Error reloading collection list after filter: %v\n", err)
+		}
+		s.CollectionList.ResetScroll()
+	}
 
 	// Update drag and drop system
 	mx, my := ebiten.CursorPosition()

@@ -400,6 +400,11 @@ func (sl *ScrollableList) SetItems(items []*Button) {
 	}
 }
 
+// ResetScroll moves the list back to the first item.
+func (sl *ScrollableList) ResetScroll() {
+	sl.currentOffset = 0
+}
+
 // GetCurrentOffset returns the current scroll offset
 func (sl *ScrollableList) GetCurrentOffset() int {
 	return sl.currentOffset

@@ -198,6 +198,13 @@ var (
 	//go:embed art/screens/edit_deck/Dektile4.pic.png
 	EditDeckTile_png []byte
 
+	//go:embed art/screens/edit_deck/sprite_sheet.png
+	EditDeckFilterSheet_png []byte
+	//go:embed art/screens/edit_deck/sprite_sheet_hover.png
+	EditDeckFilterSheetHover_png []byte
+	//go:embed art/screens/edit_deck/sprite_sheet_pressed.png
+	EditDeckFilterSheetPressed_png []byte
+
 	//go:embed art/ui/MapBttns.png
 	InfoBar_png []byte
 	//go:embed art/ui/MapBttns_map.json
