@@ -95,7 +95,7 @@ func rebuildTileSprites(tile *Tile, sa *spriteAssets) {
 		tile.AddFoliageSprite(sa.foliage[folIdx][3])
 	}
 
-	if tile.IsCity {
+	if tile.IsCity() {
 		cityIdx := rand.Intn(12)
 		cityX := cityIdx % 6
 		cityY := 0
@@ -220,7 +220,7 @@ func (l *Level) rebuildRoads() {
 	var cityLocations []image.Point
 	for y := 0; y < l.H; y++ {
 		for x := 0; x < l.W; x++ {
-			if tile := l.Tiles[y][x]; tile != nil && tile.IsCity {
+			if tile := l.Tiles[y][x]; tile != nil && tile.IsCity() {
 				cityLocations = append(cityLocations, image.Point{x, y})
 			}
 		}

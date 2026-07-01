@@ -453,8 +453,8 @@ func (s *WisemanScreen) findRandomCity() *domain.City {
 	for y := range h {
 		for x := range w {
 			tile := s.Level.Tile(image.Point{X: x, Y: y})
-			if tile != nil && tile.IsCity && tile.City.Name != s.City.Name {
-				cities = append(cities, &tile.City)
+			if tile != nil && tile.IsCity() && tile.City.Name != s.City.Name {
+				cities = append(cities, tile.City)
 			}
 		}
 	}
@@ -644,8 +644,8 @@ func (s *WisemanScreen) findWorldMagicCity() *domain.City {
 	for y := range h {
 		for x := range w {
 			tile := s.Level.Tile(image.Point{X: x, Y: y})
-			if tile != nil && tile.IsCity && tile.City.HasWorldMagic() {
-				cities = append(cities, &tile.City)
+			if tile != nil && tile.IsCity() && tile.City.HasWorldMagic() {
+				cities = append(cities, tile.City)
 			}
 		}
 	}

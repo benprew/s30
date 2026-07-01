@@ -48,7 +48,7 @@ func serializeSave(level *world.Level) ([]byte, error) {
 		World:   level,
 	}
 
-	return json.MarshalIndent(saveData, "", "  ")
+	return json.Marshal(saveData)
 }
 
 func deserializeSave(jsonData []byte) (*SaveData, error) {

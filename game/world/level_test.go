@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -48,7 +49,7 @@ func TestConnectCityBFS(t *testing.T) {
 		{
 			name: "Simple direct path to city",
 			levelSetup: func(l *Level) {
-				l.Tile(image.Point{1, 3}).IsCity = true // Target city
+				l.Tile(image.Point{1, 3}).City = &domain.City{} // Target city
 			},
 			start:        image.Point{X: 1, Y: 1},
 			expectedPath: []image.Point{{X: 1, Y: 1}, {X: 1, Y: 3}}, // go south 1
@@ -98,7 +99,7 @@ func TestConnectCityBFS(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create a fresh level for each test case
 			level := createTestLevel(5, 5) // Use a 5x5 grid for these tests
-			level.Tile(image.Point{1, 1}).IsCity = true
+			level.Tile(image.Point{1, 1}).City = &domain.City{}
 
 			roads, _ := imageutil.LoadSpriteSheet(6, 2, assets.Roads_png)
 			// Store roads and info in the level struct
@@ -148,7 +149,7 @@ func TestConnectCityBFS(t *testing.T) {
 			if len(actualPath) > 0 {
 				endPoint := actualPath[0]
 				endTile := level.Tile(endPoint)
-				if endTile == nil || endPoint == tc.start || (!endTile.IsCity && !endTile.IsRoad()) {
+				if endTile == nil || endPoint == tc.start || (!endTile.IsCity() && !endTile.IsRoad()) {
 					t.Errorf("connectCityBFS path endpoint %v is not a valid target (city or road) %v", endPoint, endTile)
 				}
 			}

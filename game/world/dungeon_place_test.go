@@ -17,7 +17,7 @@ func TestPlaceDungeonsRespectsCount(t *testing.T) {
 
 func TestPlaceDungeonsAvoidsCitiesAndWater(t *testing.T) {
 	l := createTestLevel(20, 20)
-	l.Tile(image.Point{5, 5}).IsCity = true
+	l.Tile(image.Point{5, 5}).City = &domain.City{}
 	l.Tile(image.Point{6, 5}).TerrainType = TerrainWater
 	l.Tile(image.Point{7, 5}).TerrainType = TerrainWater
 
@@ -25,7 +25,7 @@ func TestPlaceDungeonsAvoidsCitiesAndWater(t *testing.T) {
 
 	for _, d := range l.Dungeons {
 		tile := l.Tile(d.MapTile)
-		if tile.IsCity {
+		if tile.IsCity() {
 			t.Errorf("dungeon placed on city at %v", d.MapTile)
 		}
 		if tile.TerrainType == TerrainWater {

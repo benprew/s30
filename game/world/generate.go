@@ -256,13 +256,12 @@ func (l *Level) placeCities(validLocations []image.Point, citySprites [][]*ebite
 
 			tier := domain.TierCapital
 
-			tile.IsCity = true
 			tile.AddCitySprite(citySprites[cityY][cityX])
 			tile.AddCitySprite(citySprites[cityY+1][cityX])
 			amuletColor := assignAmuletColor(len(placedCities))
 
 			// Create city
-			city := domain.City{
+			city := &domain.City{
 				Tier:            tier,
 				Name:            genCityName(),
 				X:               loc.X,
@@ -305,7 +304,7 @@ func (l *Level) placeCities(validLocations []image.Point, citySprites [][]*ebite
 		numToAssign := min(len(availableWorldMagics), len(shuffledCities))
 		for i := range numToAssign {
 			tile := l.Tile(shuffledCities[i])
-			if tile != nil && tile.IsCity {
+			if tile != nil && tile.IsCity() {
 				tile.City.AssignedWorldMagic = availableWorldMagics[i]
 			}
 		}
@@ -328,7 +327,7 @@ func (l *Level) connectCityBFS(start image.Point) []image.Point {
 		// Check if the current tile is a target (existing road or another city)
 		// Don't target the start city itself if it's the first city placed and roadTiles is empty.
 		tile := l.Tile(current)
-		if current != start && (tile.IsCity || tile.IsRoad()) {
+		if current != start && (tile.IsCity() || tile.IsRoad()) {
 			// Target found, reconstruct path
 			path := []image.Point{}
 			temp := current

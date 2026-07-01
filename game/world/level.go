@@ -606,7 +606,7 @@ func (l *Level) FindClosestCity() (image.Point, float64) {
 	for y := 0; y < l.H; y++ {
 		for x := 0; x < l.W; x++ {
 			tile := l.Tile(image.Point{x, y})
-			if tile != nil && tile.IsCity {
+			if tile != nil && tile.IsCity() {
 				// Calculate pixel position of this tile
 				pixel := l.TileToPixel(image.Point{x, y})
 
@@ -636,7 +636,7 @@ func PrintLevel(l *Level) {
 			if col.IsRoad() {
 				t = "R"
 			}
-			if col.IsCity {
+			if col.IsCity() {
 				t = "C"
 			}
 			if col.TerrainType == TerrainWater {

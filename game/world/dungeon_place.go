@@ -108,7 +108,7 @@ func (l *Level) dungeonCandidateTiles() []image.Point {
 			if t == nil {
 				continue
 			}
-			if t.IsCity || t.IsRoad() {
+			if t.IsCity() || t.IsRoad() {
 				continue
 			}
 			switch t.TerrainType {
@@ -124,7 +124,7 @@ func (l *Level) cityTileLocations() []image.Point {
 	var out []image.Point
 	for y := 0; y < l.H; y++ {
 		for x := 0; x < l.W; x++ {
-			if l.Tiles[y][x] != nil && l.Tiles[y][x].IsCity {
+			if l.Tiles[y][x] != nil && l.Tiles[y][x].IsCity() {
 				out = append(out, image.Point{X: x, Y: y})
 			}
 		}

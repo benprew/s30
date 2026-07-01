@@ -70,7 +70,7 @@ func (l *Level) SpawnEncounters(count int) {
 			// }
 
 			// Avoid Cities
-			if t.IsCity {
+			if t.IsCity() {
 				continue
 			}
 

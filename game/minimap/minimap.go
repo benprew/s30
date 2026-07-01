@@ -155,7 +155,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 			opts.GeoM.Translate(float64(width), 0)
 			screen.DrawImage(sprite, opts)
 
-			if col.IsCity {
+			if col.IsCity() {
 				cOpts := &ebiten.DrawImageOptions{}
 				cOpts.GeoM.Concat(opts.GeoM)
 				cOpts.GeoM.Translate(0, -13)
@@ -193,7 +193,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		for _, col := range row {
 			opts.GeoM.Translate(float64(width), 0)
 
-			if col.IsCity && col.City.Name != "" {
+			if col.IsCity() && col.City.Name != "" {
 				cityNameLines := strings.ReplaceAll(col.City.Name, " ", "\n")
 				cityText := elements.NewText(14, cityNameLines, 0, 8)
 				cityText.LineSpacing = float64(m.fontFace.Size)

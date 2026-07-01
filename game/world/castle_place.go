@@ -251,7 +251,7 @@ func (l *Level) castleCandidateTiles() []image.Point {
 			if t == nil {
 				continue
 			}
-			if t.IsCity || t.IsRoad() || t.IsCastle {
+			if t.IsCity() || t.IsRoad() || t.IsCastle {
 				continue
 			}
 			if t.TerrainType == TerrainWater {

@@ -1,6 +1,7 @@
 package world
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 
@@ -22,13 +23,40 @@ type Tile struct {
 	positionedSprites []*PositionedSprite
 	roadSprites       []*ebiten.Image     // Added for roads
 	encounterSprites  []*PositionedSprite // Random encounters
-	IsCity            bool                // Indicates if this tile represents a city
-	City              domain.City
-	IsDungeon         bool            // Indicates if this tile holds a dungeon entrance
-	Dungeon           *domain.Dungeon // Non-nil when IsDungeon is true
-	IsCastle          bool            // Indicates if this tile holds a wizard's castle
-	Castle            *domain.Castle  // Non-nil when IsCastle is true
-	TerrainType       int             // Added terrain type
+	City              *domain.City        `json:"City,omitempty"`
+	IsDungeon         bool                // Indicates if this tile holds a dungeon entrance
+	Dungeon           *domain.Dungeon     // Non-nil when IsDungeon is true
+	IsCastle          bool                // Indicates if this tile holds a wizard's castle
+	Castle            *domain.Castle      // Non-nil when IsCastle is true
+	TerrainType       int                 // Added terrain type
+}
+
+func (t *Tile) UnmarshalJSON(data []byte) error {
+	type tileJSON struct {
+		City        *domain.City    `json:"City,omitempty"`
+		LegacyCity  *bool           `json:"IsCity,omitempty"`
+		IsDungeon   bool            `json:"IsDungeon"`
+		Dungeon     *domain.Dungeon `json:"Dungeon"`
+		IsCastle    bool            `json:"IsCastle"`
+		Castle      *domain.Castle  `json:"Castle"`
+		TerrainType int             `json:"TerrainType"`
+	}
+
+	var decoded tileJSON
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	t.City = decoded.City
+	if decoded.LegacyCity != nil && !*decoded.LegacyCity {
+		t.City = nil
+	}
+	t.IsDungeon = decoded.IsDungeon
+	t.Dungeon = decoded.Dungeon
+	t.IsCastle = decoded.IsCastle
+	t.Castle = decoded.Castle
+	t.TerrainType = decoded.TerrainType
+	return nil
 }
 
 // AddSprite adds a sprite to the Tile.
@@ -38,6 +66,10 @@ func (t *Tile) AddSprite(s *ebiten.Image) {
 
 func (t *Tile) IsRoad() bool {
 	return len(t.roadSprites) > 0
+}
+
+func (t *Tile) IsCity() bool {
+	return t.City != nil
 }
 
 // AddFoliageSprite adds a foliage sprite to the Tile with proper positioning.

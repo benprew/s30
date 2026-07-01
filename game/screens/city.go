@@ -91,7 +91,7 @@ func hasWorldMagicCities(city *domain.City, level *world.Level) bool {
 	for y := range h {
 		for x := range w {
 			tile := level.Tile(image.Point{X: x, Y: y})
-			if tile != nil && tile.IsCity && tile.City.Name != city.Name && tile.City.HasWorldMagic() {
+			if tile != nil && tile.IsCity() && tile.City.Name != city.Name && tile.City.HasWorldMagic() {
 				return true
 			}
 		}
