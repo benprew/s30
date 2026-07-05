@@ -26,8 +26,7 @@ func xTestDeck() domain.Deck {
 	add := func(name string, count int) {
 		card := domain.FindCardByName(name)
 		if card == nil {
-			fmt.Printf("WARNING: card %q not found, skipping\n", name)
-			return
+			panic(fmt.Sprintf("card %q not found\n", name))
 		}
 		deck[card] = count
 	}
@@ -99,6 +98,7 @@ func main() {
 	profileFrames := flag.Int("profileframes", 0, "terminate after this many update frames")
 	rogue := flag.String("rogue", "", "fight this rogue instead of picking randomly")
 	showOpponentHand := flag.Bool("show-opponent-hand", false, "reveal the opponent's hand (debug)")
+	aiTestDeck := flag.Bool("ai-test-deck", false, "AI opponent plays xTestDeck() instead of its rogue deck")
 	flag.Parse()
 
 	interactive.RevealOpponentHand = *showOpponentHand
@@ -130,6 +130,16 @@ func main() {
 	enemy, err := domain.NewEnemy(rogueName)
 	if err != nil {
 		log.Fatalf("Failed to create enemy %s: %v", rogueName, err)
+	}
+
+	if *aiTestDeck {
+		// Copy the Character so we don't mutate the shared Rogues registry entry.
+		enemyCharacter := *enemy.Character
+		enemyCharacter.CardCollection = domain.NewCardCollection()
+		for card, count := range xTestDeck() {
+			enemyCharacter.CardCollection.AddCardToDeck(card, 0, count)
+		}
+		enemy.Character = &enemyCharacter
 	}
 
 	player, err := domain.NewPlayer("Test", nil, false, domain.DifficultyEasy, domain.ColorColorless)
