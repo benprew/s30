@@ -19,6 +19,20 @@ func TestSuggestedDamageAssignmentKillsMostBlockers(t *testing.T) {
 	}
 }
 
+func TestSuggestedDamageAssignmentIncludesZeroDamageBlockers(t *testing.T) {
+	pumped := interactive.PermanentState{ID: uuid.New(), Toughness: 3}
+	unpumped := interactive.PermanentState{ID: uuid.New(), Toughness: 1}
+
+	got := suggestedDamageAssignment([]interactive.PermanentState{pumped, unpumped}, 2)
+
+	if _, ok := got[unpumped.ID]; !ok {
+		t.Fatalf("assignment = %v, want unpumped blocker present so it has damage controls", got)
+	}
+	if got[pumped.ID] != 2 || got[unpumped.ID] != 0 {
+		t.Fatalf("assignment = %v, want pumped=2 unpumped=0", got)
+	}
+}
+
 func TestDamageAssignmentControlsMoveDamageBetweenBlockers(t *testing.T) {
 	blockerA := uuid.New()
 	blockerB := uuid.New()

@@ -742,7 +742,8 @@ func suggestedDamageAssignment(blockers []interactive.PermanentState, total int)
 	remaining := total
 	for i, blocker := range blockers {
 		if remaining <= 0 {
-			break
+			assignment[blocker.ID] = 0
+			continue
 		}
 		lethal := max(blocker.Toughness-blocker.Damage, 0)
 		amount := min(lethal, remaining)
