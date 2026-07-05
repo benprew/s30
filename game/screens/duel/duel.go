@@ -1593,6 +1593,18 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 	}
 
 	if actions[0].NeedsTarget {
+		if tid, ok := s.autoCounterTarget(actions[0]); ok {
+			pa := actionOptionToPriorityAction(actions[0])
+			pa.Targets = []uuid.UUID{tid}
+			select {
+			case s.human.FromTUI() <- pa:
+				if am := gameaudio.Get(); am != nil {
+					am.PlaySFX(gameaudio.SFXCast)
+				}
+			default:
+			}
+			return
+		}
 		s.enterTargetingMode(id, name, actions)
 		return
 	}
@@ -1617,6 +1629,43 @@ func actionOptionToPriorityAction(opt interactive.ActionOption) interactive.Prio
 		PermanentID:  opt.PermanentID,
 		AbilityIndex: opt.AbilityIndex,
 	}
+}
+
+// autoCounterTarget returns the single valid target for a spell that targets a
+// spell on the stack (e.g. Counterspell) when the opponent has exactly one such
+// spell there. This spares the player from manually picking the only sensible
+// target when countering a lone opposing spell.
+func (s *DuelScreen) autoCounterTarget(opt interactive.ActionOption) (uuid.UUID, bool) {
+	if _, ok := opt.TargetType.(*mage.SpellOnStackTarget); !ok {
+		return uuid.Nil, false
+	}
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return uuid.Nil, false
+	}
+
+	valid := make(map[uuid.UUID]bool, len(opt.ValidTargets))
+	for _, tid := range opt.ValidTargets {
+		valid[tid] = true
+	}
+
+	oppName := s.lastMsg.State.Opponent.Name
+	var found uuid.UUID
+	count := 0
+	for _, item := range s.lastMsg.State.StackItems {
+		if item.Controller != oppName {
+			continue
+		}
+		id, err := uuid.Parse(item.ID)
+		if err != nil || !valid[id] {
+			continue
+		}
+		found = id
+		count++
+	}
+	if count != 1 {
+		return uuid.Nil, false
+	}
+	return found, true
 }
 
 func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []interactive.ActionOption) {
