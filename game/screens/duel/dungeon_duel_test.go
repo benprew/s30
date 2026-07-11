@@ -27,8 +27,8 @@ func TestPutBonusPermanentsInPlayAddsToBattlefield(t *testing.T) {
 	if bf[0].Name() != "Orcish Oriflamme" {
 		t.Errorf("expected Orcish Oriflamme on the battlefield, got %q", bf[0].Name())
 	}
-	if bf[0].Controller != human.PlayerID() {
-		t.Errorf("expected bonus permanent controlled by the human player, got %s want %s", bf[0].Controller, human.PlayerID())
+	if bf[0].ControllerID() != human.PlayerID() {
+		t.Errorf("expected bonus permanent controlled by the human player, got %s want %s", bf[0].ControllerID(), human.PlayerID())
 	}
 }
 
