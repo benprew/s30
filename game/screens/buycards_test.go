@@ -6,6 +6,19 @@ import (
 	"github.com/benprew/s30/game/domain"
 )
 
+func TestPurchaseButtonsProvideTouchConfirmation(t *testing.T) {
+	buttons := mkPurchaseButtons()
+	if len(buttons) != 2 {
+		t.Fatalf("Expected two purchase buttons, got %d", len(buttons))
+	}
+	if buttons[0].ID != "buy_yes" || buttons[0].ButtonText.Text != "Yes" {
+		t.Errorf("Expected first button to confirm purchase, got ID %q and text %q", buttons[0].ID, buttons[0].ButtonText.Text)
+	}
+	if buttons[1].ID != "buy_no" || buttons[1].ButtonText.Text != "No" {
+		t.Errorf("Expected second button to cancel purchase, got ID %q and text %q", buttons[1].ID, buttons[1].ButtonText.Text)
+	}
+}
+
 func TestBuyCard_PurchaseLogic(t *testing.T) {
 	card := domain.FindCardByName("Mountain")
 	card.Price = 5

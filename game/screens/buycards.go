@@ -25,14 +25,15 @@ import (
 // 5. Clicking on a card and choosing to buy it
 
 type BuyCardsScreen struct {
-	Buttons     []*elements.Button
-	City        *domain.City
-	Player      *domain.Player
-	BgImage     *ebiten.Image
-	ScreenTitle *ebiten.Image
-	CardFrame   *ebiten.Image
-	PreviewIdx  int    // -1 if not previewing, else index into CardsForSale
-	ErrorMsg    string // error message to display (e.g. not enough money)
+	Buttons         []*elements.Button
+	PurchaseButtons []*elements.Button
+	City            *domain.City
+	Player          *domain.Player
+	BgImage         *ebiten.Image
+	ScreenTitle     *ebiten.Image
+	CardFrame       *ebiten.Image
+	PreviewIdx      int    // -1 if not previewing, else index into CardsForSale
+	ErrorMsg        string // error message to display (e.g. not enough money)
 }
 
 func (s *BuyCardsScreen) IsFramed() bool {
@@ -70,6 +71,7 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 		ErrorMsg:    "",
 	}
 	screen.Buttons = mkCardButtons(SCALE, city, W, H)
+	screen.PurchaseButtons = mkPurchaseButtons()
 	return screen
 }
 
@@ -122,11 +124,15 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		cardOpts.GeoM.Translate(float64(centerX+(fw-cw)/2), float64(80))
 		screen.DrawImage(cardImg, cardOpts)
 		// Draw prompt using Text element
-		prompt := "Buy Card Y/N?"
+		s.layoutPurchaseButtons(W, H)
+		prompt := "Buy this card?"
 		promptX := int(centerX + (fw / 2) - (len(prompt) * 8))
-		promptY := int(centerY + fh - 40)
+		promptY := int(centerY + fh - 110)
 		promptText := elements.NewText(32, prompt, promptX, promptY)
 		promptText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		for _, b := range s.PurchaseButtons {
+			b.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+		}
 		// Draw error message if present using Text element
 		if s.ErrorMsg != "" {
 			errX := int(centerX + (fw / 2) - (len(s.ErrorMsg) * 7))
@@ -140,15 +146,30 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	options := &ebiten.DrawImageOptions{}
 
-	// If previewing, handle Y/N
+	// If previewing, handle keyboard and touch confirmation.
 	if s.PreviewIdx >= 0 {
 		if inpututil.IsKeyJustPressed(ebiten.KeyY) && s.Player != nil && s.PreviewIdx < len(s.City.CardsForSale) {
 			s.buyCard()
 			return screenui.BuyCardsScr, nil, nil
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyN) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-			s.ErrorMsg = ""
-			s.PreviewIdx = -1
+			s.dismissPreview()
+			return screenui.BuyCardsScr, nil, nil
+		}
+		s.layoutPurchaseButtons(W, H)
+		for _, b := range s.PurchaseButtons {
+			b.Update(options, 1.0, W, H)
+			if !b.IsClicked() {
+				continue
+			}
+			switch b.ID {
+			case "buy_yes":
+				if s.Player != nil && s.PreviewIdx < len(s.City.CardsForSale) {
+					s.buyCard()
+				}
+			case "buy_no":
+				s.dismissPreview()
+			}
 			return screenui.BuyCardsScr, nil, nil
 		}
 		return screenui.BuyCardsScr, nil, nil
@@ -181,6 +202,25 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		return screenui.CityScr, nil, nil
 	}
 	return screenui.BuyCardsScr, nil, nil
+}
+
+func (s *BuyCardsScreen) dismissPreview() {
+	s.ErrorMsg = ""
+	s.PreviewIdx = -1
+}
+
+func (s *BuyCardsScreen) layoutPurchaseButtons(W, H int) {
+	if len(s.PurchaseButtons) != 2 || s.CardFrame == nil {
+		return
+	}
+	fw, fh := s.CardFrame.Bounds().Dx(), s.CardFrame.Bounds().Dy()
+	startX := (W - fw) / 2
+	buttonY := (H-fh)/2 + fh - 78
+	gap := 16
+	totalW := s.PurchaseButtons[0].Bounds.Dx() + gap + s.PurchaseButtons[1].Bounds.Dx()
+	buttonX := startX + (fw-totalW)/2
+	s.PurchaseButtons[0].MoveTo(buttonX, buttonY)
+	s.PurchaseButtons[1].MoveTo(buttonX+s.PurchaseButtons[0].Bounds.Dx()+gap, buttonY)
 }
 
 func (s *BuyCardsScreen) buyCard() {
@@ -256,4 +296,22 @@ func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Butto
 	fmt.Println("Buttons:", len(buttons))
 
 	return buttons
+}
+
+func mkPurchaseButtons() []*elements.Button {
+	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
+	if err != nil {
+		panic(fmt.Sprintf("Unable to load purchase buttons: %s", err))
+	}
+	fontFace := &text.GoTextFace{Source: fonts.MtgFont, Size: 20}
+	return []*elements.Button{
+		elements.NewButtonFromConfig(elements.ButtonConfig{
+			Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
+			Text: "Yes", Font: fontFace, ID: "buy_yes",
+		}),
+		elements.NewButtonFromConfig(elements.ButtonConfig{
+			Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
+			Text: "No", Font: fontFace, ID: "buy_no",
+		}),
+	}
 }
