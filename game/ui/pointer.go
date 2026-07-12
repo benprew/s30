@@ -53,9 +53,9 @@ func Position() image.Point {
 	return pointer.position
 }
 
-// Click returns the position of a click completed during this tick.
-func Click() (image.Point, bool) {
-	return pointer.position, pointer.clicked
+// Click reports whether a click started and ended within bounds this tick.
+func Click(bounds image.Rectangle) bool {
+	return pointer.click(bounds)
 }
 
 // DragStart returns the drag that crossed the movement threshold this tick.
@@ -77,8 +77,8 @@ func (p *pointerManager) update() {
 	p.advance(p.sample())
 }
 
-func (p *pointerManager) Click() (image.Point, bool) {
-	return p.position, p.clicked
+func (p *pointerManager) Click(bounds image.Rectangle) bool {
+	return p.click(bounds)
 }
 
 // DragStart returns the drag that crossed the movement threshold this tick.
@@ -132,6 +132,10 @@ func (p *pointerManager) drag() Drag {
 		Position: p.position,
 		Delta:    p.position.Sub(p.previous),
 	}
+}
+
+func (p *pointerManager) click(bounds image.Rectangle) bool {
+	return p.clicked && p.dragStart.In(bounds) && p.position.In(bounds)
 }
 
 func (p *pointerManager) sample() pointerSample {

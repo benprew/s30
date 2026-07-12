@@ -166,35 +166,27 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale
 }
 
 func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, screenH int) {
-	mx, my := ui.TouchPosition()
-	isTouch := mx > 0
-	if mx == 0 {
-		mx, my = ebiten.CursorPosition()
-	}
-
 	// TODO button position should be set by layout when created and stored in Bounds
 	bounds := b.getPositionWithDims(screenW, screenH, scale)
-	mp := image.Point{mx, my}
-
-	combinedGeoM := ebiten.GeoM{}
-	combinedGeoM.Concat(opts.GeoM)
-
-	if mp.In(bounds) {
-		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			fmt.Println("Pressed")
-			b.State = StatePressed
-		} else if (b.State == StatePressed && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)) || isTouch {
-			fmt.Printf("Button Clicked: %s\n", b.ID)
-			b.State = StateClicked
-			if am := audio.Get(); am != nil {
-				am.PlaySFX(audio.SFXClick)
-			}
-		} else {
-			b.State = StateHover
+	if b.updatePointer(bounds, ui.Position(), ui.Click(bounds)) {
+		fmt.Printf("Button Clicked: %s\n", b.ID)
+		if am := audio.Get(); am != nil {
+			am.PlaySFX(audio.SFXClick)
 		}
+	}
+}
+
+func (b *Button) updatePointer(bounds image.Rectangle, position image.Point, clicked bool) bool {
+	if clicked {
+		b.State = StateClicked
+		return true
+	}
+	if position.In(bounds) {
+		b.State = StateHover
 	} else {
 		b.State = StateNormal
 	}
+	return false
 }
 
 func (b *Button) IsClicked() bool {
