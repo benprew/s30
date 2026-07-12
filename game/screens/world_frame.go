@@ -14,7 +14,6 @@ import (
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 // This is the frame that you see when you're walking around the world and in cities
@@ -204,7 +203,7 @@ func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 	}
 
-	if f.questScrollClicked(scale) {
+	if f.questScrollClicked(scale, ui.Click) {
 		if am := gameaudio.Get(); am != nil {
 			am.PlaySFX(gameaudio.SFXClick)
 		}
@@ -218,15 +217,8 @@ func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, scree
 
 // questScrollClicked reports whether the lower-right quest scroll indicator was
 // just clicked, which opens the quest overlay.
-func (f *WorldFrame) questScrollClicked(scale float64) bool {
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		return false
-	}
-	mx, my := ui.TouchPosition()
-	if mx == 0 {
-		mx, my = ebiten.CursorPosition()
-	}
-	return (image.Point{X: mx, Y: my}).In(f.questScrollBounds(scale))
+func (f *WorldFrame) questScrollClicked(scale float64, click func(image.Rectangle) bool) bool {
+	return click(f.questScrollBounds(scale))
 }
 
 func mkWfButtons(worldSprs [][]*ebiten.Image) []*elements.Button {

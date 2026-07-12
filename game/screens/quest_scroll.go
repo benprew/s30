@@ -2,9 +2,11 @@ package screens
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -41,11 +43,14 @@ func (s *QuestScrollScreen) IsFramed() bool { return true }
 func (s *QuestScrollScreen) IsOverlay() bool { return true }
 
 func (s *QuestScrollScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) ||
-		inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if questScrollDismissed(ui.Click(image.Rect(0, 0, W, H)), inpututil.IsKeyJustPressed(ebiten.KeyEscape)) {
 		return screenui.PopScr, nil, nil
 	}
 	return screenui.QuestScrollScr, nil, nil
+}
+
+func questScrollDismissed(clicked, escape bool) bool {
+	return clicked || escape
 }
 
 func (s *QuestScrollScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {

@@ -10,6 +10,7 @@ import (
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -510,12 +511,16 @@ func (s *WisemanScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 	case WisemanStateOffer:
 		return s.updateOffer(W, H, scale)
 	default:
-		if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		if inpututil.IsKeyJustPressed(ebiten.KeySpace) || s.storyClicked(W, H, ui.Click) {
 			return screenui.CityScr, nil, nil
 		}
 	}
 
 	return screenui.WisemanScr, nil, nil
+}
+
+func (s *WisemanScreen) storyClicked(W, H int, clicked func(image.Rectangle) bool) bool {
+	return clicked(image.Rect(0, 0, W, H))
 }
 
 func (s *WisemanScreen) updateOffer(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {

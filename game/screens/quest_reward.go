@@ -2,10 +2,12 @@ package screens
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
@@ -153,10 +155,16 @@ func (s *QuestRewardScreen) Draw(screen *ebiten.Image, W, H int, scale float64) 
 }
 
 func (s *QuestRewardScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyEscape) ||
-		inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if questRewardContinues(
+		ui.Click(image.Rect(0, 0, W, H)),
+		inpututil.IsKeyJustPressed(ebiten.KeySpace),
+		inpututil.IsKeyJustPressed(ebiten.KeyEscape),
+	) {
 		return screenui.CityScr, NewCityScreen(s.city, s.player, s.level), nil
 	}
 	return screenui.QuestRewardScr, nil, nil
+}
+
+func questRewardContinues(clicked, space, escape bool) bool {
+	return clicked || space || escape
 }

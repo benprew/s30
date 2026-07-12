@@ -1,11 +1,29 @@
 package screens
 
 import (
+	"image"
 	"strings"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
 )
+
+func TestWisemanStoryClickUsesViewport(t *testing.T) {
+	s := &WisemanScreen{State: WisemanStateStory}
+	var got image.Rectangle
+
+	clicked := s.storyClicked(1280, 720, func(bounds image.Rectangle) bool {
+		got = bounds
+		return true
+	})
+
+	if !clicked {
+		t.Fatal("expected story click to be handled")
+	}
+	if want := image.Rect(0, 0, 1280, 720); got != want {
+		t.Fatalf("story click bounds = %v, want %v", got, want)
+	}
+}
 
 // disableDeckQuestOffers makes the Wiseman never offer a deck-changing quest for
 // the duration of a test, isolating the legacy boon/quest determineState paths

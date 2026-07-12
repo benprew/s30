@@ -41,3 +41,15 @@ func TestQuestPanelLinesActionTracker(t *testing.T) {
 		}
 	}
 }
+
+func TestQuestScrollDismissesForPointerClick(t *testing.T) {
+	if !questScrollDismissed(false, true) {
+		t.Fatal("escape should dismiss the quest scroll")
+	}
+	if !questScrollDismissed(true, false) {
+		t.Fatal("a pointer click should dismiss the quest scroll")
+	}
+	if questScrollDismissed(false, false) {
+		t.Fatal("quest scroll should remain without input")
+	}
+}
