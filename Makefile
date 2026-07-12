@@ -52,7 +52,7 @@ fedorabuilddeps:
 	sudo dnf install -y libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel android-tools alsa-lib-devel java-21-openjdk-devel xorg-x11-server-Xvfb
 
 lint:
-	go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -fix ./...
+	modernize -fix ./...
 	golangci-lint run --fix
 	.venv/bin/ruff check --fix .
 	.venv/bin/ruff format .
