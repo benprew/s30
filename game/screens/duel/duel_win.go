@@ -6,6 +6,7 @@ import (
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -149,8 +150,7 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	s.textbox.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
-	mx, my := ebiten.CursorPosition()
-	mp := image.Pt(mx, my)
+	mp := ui.Position()
 
 	for i, c := range s.choices {
 		img, err := c.card.CardImage(domain.CardViewFull)
@@ -211,7 +211,7 @@ func (s *DuelWinScreen) drawBonus(screen *ebiten.Image) {
 
 func (s *DuelWinScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	if len(s.choices) == 0 {
-		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || ui.Click(image.Rect(0, 0, W, H)) {
 			return s.ReturnScr, nil, nil
 		}
 		return screenui.DuelWinScr, nil, nil
@@ -225,9 +225,11 @@ func (s *DuelWinScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 		}
 	}
 
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		mx, my := ebiten.CursorPosition()
-		s.selectCardAt(image.Pt(mx, my))
+	for _, choice := range s.choices {
+		if ui.Click(choice.rect) {
+			s.selectCardAt(ui.Position())
+			break
+		}
 	}
 
 	return screenui.DuelWinScr, nil, nil

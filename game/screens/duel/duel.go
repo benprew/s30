@@ -12,14 +12,15 @@ import (
 
 	_ "github.com/benprew/mage-go/cards"
 	mage "github.com/benprew/mage-go/pkg/mage"
+	"github.com/benprew/mage-go/pkg/mage/core"
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai"
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai/heuristic"
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai/search"
-	"github.com/benprew/mage-go/pkg/mage/core"
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -966,17 +967,20 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 	}
 
-	mx, my := ebiten.CursorPosition()
+	pointerPosition := ui.Position()
+	mx, my := pointerPosition.X, pointerPosition.Y
+	clicked := ui.Click(image.Rect(0, 0, W, H))
 
 	if s.targetingCardID != uuid.Nil {
-		s.updateTargetingMouse(mx, my)
+		s.updateTargetingMouse(mx, my, clicked)
 	} else {
-		s.updateMouse(mx, my)
+		s.updateMouse(mx, my, clicked)
 		s.updateHoverPreview(mx, my)
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-		s.handleRightClick(mx, my)
+		rightX, rightY := ebiten.CursorPosition()
+		s.handleRightClick(rightX, rightY)
 	}
 
 	if s.lastMsg.GameOver {
@@ -1690,8 +1694,8 @@ func (s *DuelScreen) exitTargetingMode() {
 	s.selectedTargetID = uuid.Nil
 }
 
-func (s *DuelScreen) updateTargetingMouse(mx, my int) {
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+func (s *DuelScreen) updateTargetingMouse(mx, my int, clicked bool) {
+	if !clicked {
 		return
 	}
 
@@ -1786,8 +1790,8 @@ func (s *DuelScreen) getCardArtImg(name string, targetW int) *ebiten.Image {
 	return scaled
 }
 
-func (s *DuelScreen) updateMouse(mx, my int) {
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+func (s *DuelScreen) updateMouse(mx, my int, clicked bool) {
+	if !clicked {
 		return
 	}
 	s.handleClick(mx, my)
@@ -3325,17 +3329,22 @@ func (s *DuelScreen) mulliganCardRects(W, H int) []image.Rectangle {
 func (s *DuelScreen) updateMulliganUI(W, H int) {
 	cardRects := s.mulliganCardRects(W, H)
 	hand := mulliganDisplayOrder(s.human.Hand())
-	mx, my := ebiten.CursorPosition()
+	pointerPosition := ui.Position()
+	mx, my := pointerPosition.X, pointerPosition.Y
 	s.updateMulliganPreview(cardRects, mx, my)
 
-	if s.mulliganBottoming && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		if i := rectIndexAtPoint(cardRects, mx, my); i >= 0 {
+	if s.mulliganBottoming {
+		for i, rect := range cardRects {
+			if !ui.Click(rect) {
+				continue
+			}
 			id := hand[i].ID()
 			if s.mulliganSelected[id] {
 				delete(s.mulliganSelected, id)
 			} else if len(s.mulliganSelected) < s.mulliganCount {
 				s.mulliganSelected[id] = true
 			}
+			break
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/dragdrop"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -377,11 +378,6 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		s.CollectionList.ResetScroll()
 	}
 
-	// Update drag and drop system
-	mx, my := ebiten.CursorPosition()
-	leftPressed := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
-	leftJustReleased := inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft)
-
 	// Combine collection and deck draggable items
 	allDraggables := make([]dragdrop.Draggable, 0, len(s.draggableItems)+len(s.deckDraggableItems))
 	for _, item := range s.draggableItems {
@@ -391,7 +387,15 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		allDraggables = append(allDraggables, item)
 	}
 
-	s.dragManager.Update(mx, my, leftPressed, leftJustReleased, allDraggables)
+	if drag, started := ui.DragStart(); started {
+		s.dragManager.Start(drag, allDraggables)
+	}
+	if drag, dragging := ui.Dragging(); dragging {
+		s.dragManager.Move(drag)
+	}
+	if drag, ended := ui.DragEnd(); ended {
+		s.dragManager.End(drag)
+	}
 
 	// Reset hover states
 	s.hoveredCollectionIdx = -1
@@ -417,8 +421,9 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	}
 
 	// Check for hover on deck cards
-	scaledMX := int(float64(mx) / scale)
-	scaledMY := int(float64(my) / scale)
+	pointerPosition := ui.Position()
+	scaledMX := int(float64(pointerPosition.X) / scale)
+	scaledMY := int(float64(pointerPosition.Y) / scale)
 	for i, display := range s.deckCardDisplays {
 		if display.Image == nil {
 			continue

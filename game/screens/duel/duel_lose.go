@@ -2,10 +2,12 @@ package duel
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -93,7 +95,7 @@ func (s *DuelLoseScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 }
 
 func (s *DuelLoseScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || ui.Click(image.Rect(0, 0, W, H)) {
 		return screenui.WorldScr, nil, nil
 	}
 	return screenui.DuelLoseScr, nil, nil

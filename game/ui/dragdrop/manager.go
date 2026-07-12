@@ -3,6 +3,7 @@ package dragdrop
 import (
 	"image"
 
+	"github.com/benprew/s30/game/ui"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -46,31 +47,40 @@ func (dm *DragManager) UnregisterDroppable(droppable Droppable) {
 	}
 }
 
-func (dm *DragManager) Update(mouseX, mouseY int, leftPressed, leftJustReleased bool, draggables []Draggable) {
-	dm.mouseX = mouseX
-	dm.mouseY = mouseY
-
-	switch dm.state {
-	case StateIdle:
-		if leftPressed {
-			for _, draggable := range draggables {
-				if draggable.IsDraggable() {
-					bounds := draggable.GetBounds()
-					mousePoint := image.Point{mouseX, mouseY}
-					if mousePoint.In(bounds) {
-						dm.startDrag(draggable, mouseX, mouseY)
-						break
-					}
-				}
-			}
-		}
-	case StateDragging:
-		if leftJustReleased {
-			dm.endDrag()
-		} else {
+func (dm *DragManager) Start(drag ui.Drag, draggables []Draggable) {
+	if dm.state != StateIdle {
+		return
+	}
+	dm.setPosition(drag.Position)
+	for _, draggable := range draggables {
+		if draggable.IsDraggable() && drag.Start.In(draggable.GetBounds()) {
+			dm.startDrag(draggable, drag.Start.X, drag.Start.Y)
 			dm.updateDragHover()
+			return
 		}
 	}
+}
+
+func (dm *DragManager) Move(drag ui.Drag) {
+	if dm.state != StateDragging {
+		return
+	}
+	dm.setPosition(drag.Position)
+	dm.updateDragHover()
+}
+
+func (dm *DragManager) End(drag ui.Drag) {
+	if dm.state != StateDragging {
+		return
+	}
+	dm.setPosition(drag.Position)
+	dm.updateDragHover()
+	dm.endDrag()
+}
+
+func (dm *DragManager) setPosition(position image.Point) {
+	dm.mouseX = position.X
+	dm.mouseY = position.Y
 }
 
 func (dm *DragManager) startDrag(draggable Draggable, x, y int) {
