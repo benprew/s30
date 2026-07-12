@@ -10,6 +10,7 @@ import (
 	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/save"
 	"github.com/benprew/s30/game/screens"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/benprew/s30/logging"
@@ -72,12 +73,12 @@ func NewGame() (*Game, error) {
 	am := gameaudio.NewAudioManager()
 
 	g := &Game{
-		ScreenW:           screenW,
-		ScreenH:           screenH,
-		camScale:          scale,
-		camScaleTo:        1,
-		mousePanX:         math.MinInt32,
-		mousePanY:         math.MinInt32,
+		ScreenW:       screenW,
+		ScreenH:       screenH,
+		camScale:      scale,
+		camScaleTo:    1,
+		mousePanX:     math.MinInt32,
+		mousePanY:     math.MinInt32,
 		currentScreen: screenui.StartScr,
 		prevScreen:    screenui.StartScr,
 		screenMap: map[screenui.ScreenName]screenui.Screen{
@@ -153,6 +154,8 @@ func (g *Game) Update() error {
 		}
 		return ebiten.Termination
 	}
+
+	ui.UpdatePointer()
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
 		g.audio.ToggleMute()
