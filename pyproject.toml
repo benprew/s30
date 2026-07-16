@@ -12,7 +12,10 @@ dev = [
     "numpy>=2.4.4",
     "pillow>=12.2.0",
     "ruff>=0.15.17",
+    "scikit-learn",
     "scipy>=1.17.1",
+    "torch",
+    "transformers",
     "ty>=0.0.49",
     "zstandard>=0.25.0",
 ]
