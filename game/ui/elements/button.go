@@ -168,7 +168,7 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale
 func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, screenH int) {
 	// TODO button position should be set by layout when created and stored in Bounds
 	bounds := b.getPositionWithDims(screenW, screenH, scale)
-	if b.updatePointer(bounds, ui.Position(), ui.Click(bounds)) {
+	if b.updatePointer(bounds, ui.Position(), ui.Pressed(), ui.Click(bounds)) {
 		fmt.Printf("Button Clicked: %s\n", b.ID)
 		if am := audio.Get(); am != nil {
 			am.PlaySFX(audio.SFXClick)
@@ -176,13 +176,17 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, s
 	}
 }
 
-func (b *Button) updatePointer(bounds image.Rectangle, position image.Point, clicked bool) bool {
+func (b *Button) updatePointer(bounds image.Rectangle, position image.Point, pressed, clicked bool) bool {
 	if clicked {
 		b.State = StateClicked
 		return true
 	}
 	if position.In(bounds) {
-		b.State = StateHover
+		if pressed {
+			b.State = StatePressed
+		} else {
+			b.State = StateHover
+		}
 	} else {
 		b.State = StateNormal
 	}
