@@ -937,6 +937,10 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		s.handleEscape()
 	}
+	if s.canCancel() && ui.Click(duelCancelBounds(W)) {
+		s.handleEscape()
+		return screenui.DuelScr, nil, nil
+	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
 		s.toggleHand()
@@ -982,6 +986,9 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		rightX, rightY := ebiten.CursorPosition()
 		s.handleRightClick(rightX, rightY)
 	}
+	if ui.LongPress(image.Rect(0, 0, W, H)) {
+		s.handleRightClick(mx, my)
+	}
 
 	if s.lastMsg.GameOver {
 		if !s.questProgressApplied {
@@ -1026,6 +1033,12 @@ func (s *DuelScreen) handleEscape() {
 	}
 	s.exitTargetingMode()
 }
+
+func (s *DuelScreen) canCancel() bool {
+	return s.viewingGraveyard != nil || s.isChoosingAbility() || s.isChoosingX() || s.targetingCardID != uuid.Nil
+}
+
+func duelCancelBounds(W int) image.Rectangle { return image.Rect(W-116, 12, W-12, 54) }
 
 const (
 	handCardOverlap              = 20
@@ -2242,6 +2255,18 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
 	s.drawAbilityChoosingUI(screen, W, H)
+	if s.canCancel() {
+		s.drawCancelButton(screen, W)
+	}
+}
+
+func (s *DuelScreen) drawCancelButton(screen *ebiten.Image, W int) {
+	b := duelCancelBounds(W)
+	vector.FillRect(screen, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), color.RGBA{40, 30, 30, 240}, false)
+	vector.StrokeRect(screen, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), 1, color.RGBA{210, 190, 170, 255}, false)
+	txt := elements.NewText(16, "Cancel", b.Min.X+24, b.Min.Y+10)
+	txt.Color = color.White
+	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1)
 }
 
 // drawDiceNotice renders the dungeon dice banner across the top of the screen.

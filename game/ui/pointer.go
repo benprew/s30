@@ -7,7 +7,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
-const dragDistance = 8
+const (
+	dragDistance   = 8
+	longPressTicks = 30
+)
 
 // Drag describes the movement of a click-and-drag gesture.
 type Drag struct {
@@ -32,6 +35,9 @@ type pointerManager struct {
 	clicked     bool
 	dragStarted bool
 	dragEnded   bool
+	longPressed bool
+	holdTicks   int
+	consumed    bool
 	activeTouch ebiten.TouchID
 	hasTouch    bool
 }
@@ -51,6 +57,17 @@ func UpdatePointer() {
 // Position returns the pointer's current position.
 func Position() image.Point {
 	return pointer.position
+}
+
+// Pressed reports whether the primary pointer is currently held down.
+func Pressed() bool {
+	return pointer.Pressed()
+}
+
+// LongPress reports whether a stationary press in bounds reached the hold
+// threshold this tick.
+func LongPress(bounds image.Rectangle) bool {
+	return pointer.LongPress(bounds)
 }
 
 // Click reports whether a click started and ended within bounds this tick.
@@ -81,6 +98,14 @@ func (p *pointerManager) Click(bounds image.Rectangle) bool {
 	return p.click(bounds)
 }
 
+func (p *pointerManager) Pressed() bool {
+	return p.down
+}
+
+func (p *pointerManager) LongPress(bounds image.Rectangle) bool {
+	return p.longPressed && p.dragStart.In(bounds) && p.position.In(bounds)
+}
+
 // DragStart returns the drag that crossed the movement threshold this tick.
 func (p *pointerManager) DragStart() (Drag, bool) {
 	return p.drag(), p.dragStarted
@@ -100,6 +125,7 @@ func (p *pointerManager) advance(sample pointerSample) {
 	p.clicked = false
 	p.dragStarted = false
 	p.dragEnded = false
+	p.longPressed = false
 	p.previous = p.position
 	p.position = sample.position
 
@@ -108,20 +134,30 @@ func (p *pointerManager) advance(sample pointerSample) {
 	if pressed {
 		p.previous = sample.position
 		p.dragStart = sample.position
+		p.holdTicks = 1
+		p.consumed = false
+	}
+	if sample.down && !pressed {
+		p.holdTicks++
 	}
 
 	if sample.down && !p.dragging && distanceSquared(sample.position, p.dragStart) >= dragDistance*dragDistance {
 		p.dragging = true
 		p.dragStarted = true
 	}
+	if sample.down && !p.dragging && !p.consumed && p.holdTicks >= longPressTicks {
+		p.longPressed = true
+		p.consumed = true
+	}
 
 	if released {
 		if p.dragging {
 			p.dragEnded = true
 			p.dragging = false
-		} else {
+		} else if !p.consumed {
 			p.clicked = true
 		}
+		p.holdTicks = 0
 	}
 	p.down = sample.down
 }

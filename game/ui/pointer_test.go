@@ -84,3 +84,34 @@ func TestPointerGesturesLastOneTick(t *testing.T) {
 		t.Fatal("click remained set after the following update")
 	}
 }
+
+func TestPointerHeldAndLongPress(t *testing.T) {
+	pointer := newPointer()
+	bounds := image.Rect(0, 0, 100, 100)
+	pointer.advance(pointerSample{position: image.Pt(20, 20), down: true})
+	if !pointer.Pressed() {
+		t.Fatal("Pressed() = false while pointer is down")
+	}
+	for range longPressTicks - 1 {
+		pointer.advance(pointerSample{position: image.Pt(20, 20), down: true})
+	}
+	if !pointer.LongPress(bounds) {
+		t.Fatal("LongPress() = false after hold threshold")
+	}
+	pointer.advance(pointerSample{position: image.Pt(20, 20)})
+	if pointer.Click(bounds) {
+		t.Fatal("release after long press must not produce a click")
+	}
+}
+
+func TestPointerMovementCancelsLongPress(t *testing.T) {
+	pointer := newPointer()
+	pointer.advance(pointerSample{position: image.Pt(10, 10), down: true})
+	pointer.advance(pointerSample{position: image.Pt(30, 10), down: true})
+	for range longPressTicks {
+		pointer.advance(pointerSample{position: image.Pt(30, 10), down: true})
+	}
+	if pointer.LongPress(image.Rect(0, 0, 100, 100)) {
+		t.Fatal("drag produced a long press")
+	}
+}

@@ -12,7 +12,6 @@ import (
 	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Player struct {
@@ -29,7 +28,6 @@ type Player struct {
 	Days            int
 	TimeAccumulator float64
 	IsMale          bool
-	mouseMoving     bool
 	BonusDuelLife   int
 	BonusDuelCards  []*Card // One-time bonus cards that start in play in the next duel
 	DungeonState    *DungeonState
@@ -198,42 +196,30 @@ func (p *Player) Move(screenW, screenH int) (dirBits int) {
 		dirBits |= DirUp
 	}
 
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		p.mouseMoving = true
-	}
-	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		p.mouseMoving = false
-	}
-
-	var cursorX, cursorY = ui.TouchPosition()
-	if p.mouseMoving {
-		cursorX, cursorY = ebiten.CursorPosition()
-	}
-
-	if cursorX > 0 && cursorY > 0 {
-		playerScreenX := screenW / 2
-		playerScreenY := screenH / 2
-
-		deltaX := cursorX - playerScreenX
-		deltaY := cursorY - playerScreenY
-
-		const moveThreshold = 50
-
-		if deltaX > moveThreshold {
-			dirBits |= DirRight
-		}
-		if deltaX < -moveThreshold {
-			dirBits |= DirLeft
-		}
-		if deltaY > moveThreshold {
-			dirBits |= DirDown
-		}
-		if deltaY < -moveThreshold {
-			dirBits |= DirUp
-		}
+	if ui.Pressed() {
+		dirBits |= pointerMoveDirection(ui.Position(), screenW, screenH)
 	}
 
 	return dirBits
+}
+
+func pointerMoveDirection(position image.Point, screenW, screenH int) int {
+	delta := position.Sub(image.Pt(screenW/2, screenH/2))
+	const moveThreshold = 50
+	direction := 0
+	if delta.X > moveThreshold {
+		direction |= DirRight
+	}
+	if delta.X < -moveThreshold {
+		direction |= DirLeft
+	}
+	if delta.Y > moveThreshold {
+		direction |= DirDown
+	}
+	if delta.Y < -moveThreshold {
+		direction |= DirUp
+	}
+	return direction
 }
 
 // Pixel X,Y location of player (not tile)

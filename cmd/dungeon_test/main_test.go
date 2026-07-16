@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 func TestSelectRestrictedCardsChoosesOneToFourUniqueRestrictedCards(t *testing.T) {
@@ -44,5 +46,37 @@ func TestSelectRestrictedCardsReturnsEmptyWhenPoolHasNoRestrictedCards(t *testin
 
 	if len(selected) != 0 {
 		t.Fatalf("selected %d cards, want none", len(selected))
+	}
+}
+
+type pointerAwareScreen struct {
+	t              *testing.T
+	pointerUpdated *bool
+}
+
+func (s *pointerAwareScreen) Update(_, _ int, _ float64) (screenui.ScreenName, screenui.Screen, error) {
+	s.t.Helper()
+	if !*s.pointerUpdated {
+		s.t.Fatal("screen updated before pointer input was sampled")
+	}
+	return screenui.DungeonScr, nil, nil
+}
+
+func (s *pointerAwareScreen) Draw(*ebiten.Image, int, int, float64) {}
+func (s *pointerAwareScreen) IsFramed() bool                        { return false }
+func (s *pointerAwareScreen) IsOverlay() bool                       { return false }
+
+func TestGameUpdatesPointerBeforeCurrentScreen(t *testing.T) {
+	pointerUpdated := false
+	g := &testGame{
+		screens: map[screenui.ScreenName]screenui.Screen{
+			screenui.DungeonScr: &pointerAwareScreen{t: t, pointerUpdated: &pointerUpdated},
+		},
+		current:       screenui.DungeonScr,
+		updatePointer: func() { pointerUpdated = true },
+	}
+
+	if err := g.Update(); err != nil {
+		t.Fatalf("Update() error = %v", err)
 	}
 }

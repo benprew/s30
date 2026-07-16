@@ -13,6 +13,7 @@ import (
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/screens"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/benprew/s30/logging"
@@ -64,6 +65,7 @@ type testGame struct {
 }
 
 func (g *testGame) Update() error {
+	ui.UpdatePointer()
 	g.frames++
 	if g.maxFrames > 0 && g.frames > g.maxFrames {
 		return ebiten.Termination

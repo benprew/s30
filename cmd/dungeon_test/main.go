@@ -11,6 +11,7 @@ import (
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/screens"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/benprew/s30/logging"
@@ -22,11 +23,13 @@ import (
 // duel before returning to the dungeon. It terminates once the player leaves
 // the dungeon — either by pressing ESC or by losing a duel and being expelled.
 type testGame struct {
-	screens map[screenui.ScreenName]screenui.Screen
-	current screenui.ScreenName
+	screens       map[screenui.ScreenName]screenui.Screen
+	current       screenui.ScreenName
+	updatePointer func()
 }
 
 func (g *testGame) Update() error {
+	g.updatePointer()
 	next, screen, err := g.screens[g.current].Update(1024, 768, 1.0)
 	if err != nil {
 		return err
@@ -157,7 +160,8 @@ func main() {
 		screens: map[screenui.ScreenName]screenui.Screen{
 			screenui.DungeonScr: screens.NewDungeonScreen(player, lvl),
 		},
-		current: screenui.DungeonScr,
+		current:       screenui.DungeonScr,
+		updatePointer: ui.UpdatePointer,
 	}
 
 	ebiten.SetWindowSize(1024, 768)

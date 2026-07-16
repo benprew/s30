@@ -8,6 +8,7 @@ import (
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -16,6 +17,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // Dungeon sprite-sheet layout. Sheets are 12 columns × N rows (N >= 2) of
@@ -177,7 +179,7 @@ func (s *DungeonScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 		return s.updateOverlay(W, H, scale)
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || ui.Click(dungeonExitBounds(W)) {
 		return s.exitDungeon(), nil, nil
 	}
 
@@ -195,6 +197,12 @@ func (s *DungeonScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 	case inpututil.IsKeyJustPressed(ebiten.KeyRight), inpututil.IsKeyJustPressed(ebiten.KeyD):
 		dx = 1
 		s.Player.Direction = domain.DirectionDownRight
+	}
+	if dx == 0 && dy == 0 {
+		sx, sy := s.tileScreenPos(st.Position.X, st.Position.Y)
+		origin := image.Pt(sx+dungeonCellPixels/2, sy+40)
+		dx, dy = dungeonPointerDirection(ui.Position(), origin, ui.Click(image.Rect(0, 0, W, H)))
+		s.Player.Direction = dungeonFacing(dx, dy, s.Player.Direction)
 	}
 
 	if dx == 0 && dy == 0 {
@@ -328,7 +336,7 @@ func (s *DungeonScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		}
 	}
 
-	s.drawHUD(screen, dungeon, scale)
+	s.drawHUD(screen, dungeon, W, scale)
 
 	if s.overlayActive {
 		s.drawOverlay(screen, scale)
@@ -453,7 +461,7 @@ func (s *DungeonScreen) drawEnemy(screen *ebiten.Image, p image.Point, enemy *do
 	screen.DrawImage(s.enemyFallback, opts)
 }
 
-func (s *DungeonScreen) drawHUD(screen *ebiten.Image, dungeon *domain.Dungeon, scale float64) {
+func (s *DungeonScreen) drawHUD(screen *ebiten.Image, dungeon *domain.Dungeon, W int, scale float64) {
 	name := elements.NewText(22, dungeon.Name, 30, 30)
 	name.Color = color.White
 	name.Draw(screen, &ebiten.DrawImageOptions{}, scale)
@@ -470,9 +478,65 @@ func (s *DungeonScreen) drawHUD(screen *ebiten.Image, dungeon *domain.Dungeon, s
 	stats.Color = color.RGBA{R: 220, G: 220, B: 240, A: 255}
 	stats.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
-	hint := elements.NewText(16, "Arrow keys / WASD to move    ESC to leave", 30, 728)
+	hint := elements.NewText(16, "Arrow keys / WASD or tap around your character to move", 30, 728)
 	hint.Color = color.RGBA{R: 160, G: 160, B: 180, A: 255}
 	hint.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+	s.drawExitControl(screen, W)
+}
+
+func dungeonExitBounds(W int) image.Rectangle { return image.Rect(W-110, 20, W-20, 64) }
+
+func dungeonPointerDirection(p, origin image.Point, clicked bool) (int, int) {
+	if !clicked {
+		return 0, 0
+	}
+	delta := p.Sub(origin)
+	const deadZone = 20
+	if abs(delta.X) < deadZone && abs(delta.Y) < deadZone {
+		return 0, 0
+	}
+
+	dxScore := delta.X + 2*delta.Y
+	dyScore := 2*delta.Y - delta.X
+	if abs(dxScore) > abs(dyScore) || abs(dxScore) == abs(dyScore) && abs(delta.X) > abs(delta.Y) {
+		if dxScore < 0 {
+			return -1, 0
+		}
+		return 1, 0
+	}
+	if dyScore < 0 {
+		return 0, -1
+	}
+	return 0, 1
+}
+
+func dungeonFacing(dx, dy, fallback int) int {
+	switch {
+	case dy < 0:
+		return domain.DirectionUpRight
+	case dy > 0:
+		return domain.DirectionDownLeft
+	case dx < 0:
+		return domain.DirectionUpLeft
+	case dx > 0:
+		return domain.DirectionDownRight
+	default:
+		return fallback
+	}
+}
+
+func (s *DungeonScreen) drawExitControl(screen *ebiten.Image, W int) {
+	exit := dungeonExitBounds(W)
+	vector.FillRect(screen, float32(exit.Min.X), float32(exit.Min.Y), float32(exit.Dx()), float32(exit.Dy()), color.RGBA{30, 25, 50, 220}, false)
+	button := elements.NewText(18, "Leave", exit.Min.X+18, exit.Min.Y+11)
+	button.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+}
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 func (s *DungeonScreen) drawOverlay(screen *ebiten.Image, scale float64) {
