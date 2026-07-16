@@ -46,10 +46,11 @@ webdeploy: webbuild
 
 builddeps:
 	sudo apt-get install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libxxf86vm-dev xvfb
-	pip3 install torch transformers scikit-learn scipy numpy
+	uv sync
 
 fedorabuilddeps:
-	sudo dnf install -y libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel android-tools alsa-lib-devel java-21-openjdk-devel xorg-x11-server-Xvfb
+	sudo dnf install -y libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel alsa-lib-devel xorg-x11-server-Xvfb
+	uv sync
 
 lint:
 	modernize -fix ./...
