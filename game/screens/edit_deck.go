@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -20,8 +21,9 @@ import (
 )
 
 const (
-	COLLECTION_WIDTH  = 1024
-	COLLECTION_HEIGHT = 180
+	COLLECTION_WIDTH     = 1024
+	COLLECTION_HEIGHT    = 180
+	deckCardDragIDPrefix = "deck:"
 )
 
 type cardGroup struct {
@@ -45,6 +47,7 @@ type EditDeckScreen struct {
 	dragManager          *dragdrop.DragManager
 	deckDropArea         *dragdrop.DropArea
 	collectionDropArea   *dragdrop.DropArea
+	sellDropArea         *dragdrop.DropArea
 	draggableItems       []*dragdrop.DraggableButton
 	deckDraggableItems   []*dragdrop.DraggableButton
 	deckCardDisplays     []DeckCardDisplay        // Cards currently in the deck with counts
@@ -136,6 +139,12 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 	}
 
 	screen.CollectionList = scrollList
+	screen.sellDropArea = dragdrop.NewDropArea(
+		editDeckSellBounds(),
+		[]string{"*"},
+		screen.handleCardDropToSell,
+	)
+	screen.dragManager.RegisterDroppable(screen.sellDropArea)
 
 	// Create deck area with fixed bounds
 	deckAreaBounds := image.Rect(300, 0, 1024, 588)
@@ -273,6 +282,8 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	// Draw the deck drop area highlight if hovering
 	s.deckDropArea.Draw(screen)
+	drawDeckSellTarget(screen, editDeckSellBounds())
+	s.sellDropArea.Draw(screen)
 
 	// Draw deck cards
 	s.drawDeckCards(screen, scale)
@@ -329,6 +340,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	helpY := float64(collectionY) - 130
 	helpOpts := &ebiten.DrawImageOptions{}
 	elements.NewText(14, helpText, int(10*scale), int(helpY*scale)).Draw(screen, helpOpts, 1.0)
+	drawDeckActionButton(screen, editDeckBackBounds(W), "Back")
 
 	// Draw drag image if dragging
 	s.dragManager.Draw(screen)
@@ -397,15 +409,11 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		s.dragManager.End(drag)
 	}
 
-	// Reset hover states
-	s.hoveredCollectionIdx = -1
-	s.hoveredDeckIdx = -1
-	s.MagnifiedCard = nil
-
 	// Check for hover on collection cards
 	for i, btn := range s.CollectionList.GetItems() {
 		if btn.State == elements.StateHover {
 			s.hoveredCollectionIdx = i
+			s.hoveredDeckIdx = -1
 			card := domain.FindCardByName(btn.ID)
 			if card == nil {
 				fmt.Println("Error finding card for Button:", btn.ID)
@@ -433,6 +441,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		if scaledMX >= display.X && scaledMX < display.X+cardWidth &&
 			scaledMY >= display.Y && scaledMY < display.Y+cardHeight {
 			s.hoveredDeckIdx = i
+			s.hoveredCollectionIdx = -1
 			img, err := display.Card.CardImage(domain.CardViewFull)
 			if err == nil {
 				s.MagnifierImage = img
@@ -450,19 +459,43 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		s.handleDeckCardRemove(s.hoveredDeckIdx)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyS) {
-		if s.hoveredCollectionIdx >= 0 {
-			s.handleSellCard(s.hoveredCollectionIdx, true)
-		} else if s.hoveredDeckIdx >= 0 {
-			s.handleSellCard(s.hoveredDeckIdx, false)
-		}
+		s.sellHoveredCard()
 	}
-
-	// Handle escape key to return to previous screen
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || ui.Click(editDeckBackBounds(W)) {
 		return screenui.CityScr, nil, nil
 	}
 
 	return screenui.EditDeckScr, nil, nil
+}
+
+func (s *EditDeckScreen) sellHoveredCard() {
+	if s.hoveredCollectionIdx >= 0 {
+		s.handleSellCard(s.hoveredCollectionIdx, true)
+	} else if s.hoveredDeckIdx >= 0 {
+		s.handleSellCard(s.hoveredDeckIdx, false)
+	}
+}
+
+func editDeckBackBounds(W int) image.Rectangle { return image.Rect(W-110, 12, W-12, 56) }
+
+func editDeckSellBounds() image.Rectangle { return image.Rect(10, 12, 150, 68) }
+
+func drawDeckSellTarget(screen *ebiten.Image, bounds image.Rectangle) {
+	target := ebiten.NewImage(bounds.Dx(), bounds.Dy())
+	target.Fill(color.RGBA{R: 75, G: 35, B: 30, A: 240})
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
+	screen.DrawImage(target, opts)
+	elements.NewText(18, "Drop to Sell", bounds.Min.X+18, bounds.Min.Y+16).Draw(screen, &ebiten.DrawImageOptions{}, 1)
+}
+
+func drawDeckActionButton(screen *ebiten.Image, bounds image.Rectangle, label string) {
+	button := ebiten.NewImage(bounds.Dx(), bounds.Dy())
+	button.Fill(color.RGBA{R: 55, G: 45, B: 35, A: 240})
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
+	screen.DrawImage(button, opts)
+	elements.NewText(18, label, bounds.Min.X+22, bounds.Min.Y+10).Draw(screen, &ebiten.DrawImageOptions{}, 1)
 }
 
 // Reload deck display and collection list
@@ -564,25 +597,55 @@ func (s *EditDeckScreen) handleSellCard(cardIdx int, isFromCollection bool) {
 		}
 		display := s.deckCardDisplays[cardIdx]
 		cardToSell = display.Card
-		deckCount := s.Player.CardCollection.GetDeckCount(cardToSell, s.Player.ActiveDeck)
-		if deckCount > 0 {
-			err := s.Player.CardCollection.MoveCardFromDeck(cardToSell, s.Player.ActiveDeck, 1)
-			if err != nil {
-				fmt.Printf("Error moving card from deck before selling: %v\n", err)
-				return
-			}
-		}
 	}
 
-	salePrice := cardToSell.SalePrice(s.City)
-	s.Player.Gold += salePrice
-	err := s.Player.CardCollection.DecrementCardCount(cardToSell)
-	if err != nil {
-		fmt.Printf("Error selling card: %v\n", err)
-		return
+	if s.sellCard(cardToSell, !isFromCollection) {
+		s.updateState()
 	}
-	fmt.Printf("Sold %s for %d gold\n", cardToSell.Name(), salePrice)
+}
+
+func (s *EditDeckScreen) handleCardDropToSell(data dragdrop.DragData) bool {
+	if !s.sellDroppedCard(data) {
+		return false
+	}
 	s.updateState()
+	return true
+}
+
+func (s *EditDeckScreen) sellDroppedCard(data dragdrop.DragData) bool {
+	cardData, ok := data.(*dragdrop.CardDragData)
+	if !ok {
+		return false
+	}
+	card, ok := cardData.Card.(*domain.Card)
+	if !ok {
+		return false
+	}
+	return s.sellCard(card, strings.HasPrefix(cardData.ID, deckCardDragIDPrefix))
+}
+
+func (s *EditDeckScreen) sellCard(card *domain.Card, fromDeck bool) bool {
+	deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
+	if fromDeck {
+		if deckCount == 0 {
+			return false
+		}
+		if err := s.Player.CardCollection.MoveCardFromDeck(card, s.Player.ActiveDeck, 1); err != nil {
+			fmt.Printf("Error moving card from deck before selling: %v\n", err)
+			return false
+		}
+	} else if s.Player.CardCollection.GetTotalCount(card) <= deckCount {
+		return false
+	}
+
+	salePrice := card.SalePrice(s.City)
+	if err := s.Player.CardCollection.DecrementCardCount(card); err != nil {
+		fmt.Printf("Error selling card: %v\n", err)
+		return false
+	}
+	s.Player.Gold += salePrice
+	fmt.Printf("Sold %s for %d gold\n", card.Name(), salePrice)
+	return true
 }
 
 // loadDeckCards loads the player's deck cards for display
@@ -702,7 +765,7 @@ func (s *EditDeckScreen) createDeckDraggableItems() {
 		}
 
 		btn := elements.NewButton(display.Image, display.Image, display.Image, display.X, display.Y, 1.0)
-		btn.ID = display.Card.Name()
+		btn.ID = deckCardDragIDPrefix + display.Card.Name()
 
 		draggableBtn := dragdrop.NewDraggableButton(btn, display.Card)
 		s.deckDraggableItems = append(s.deckDraggableItems, draggableBtn)

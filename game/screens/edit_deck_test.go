@@ -1,10 +1,66 @@
 package screens
 
 import (
+	"image"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui/dragdrop"
 )
+
+func TestEditDeckSellBoundsAtTopOfScreen(t *testing.T) {
+	want := image.Rect(10, 12, 150, 68)
+
+	if got := editDeckSellBounds(); got != want {
+		t.Fatalf("editDeckSellBounds() = %v, want %v", got, want)
+	}
+}
+
+func TestSellDroppedCardFromCollection(t *testing.T) {
+	mountain := domain.FindCardByName("Mountain")
+	collection := domain.NewCardCollection()
+	collection.AddCard(mountain, 2)
+	player := &domain.Player{
+		Character:  domain.Character{CardCollection: collection},
+		ActiveDeck: 0,
+	}
+	screen := &EditDeckScreen{Player: player, City: &domain.City{Tier: domain.TierHamlet}}
+
+	dropped := screen.sellDroppedCard(&dragdrop.CardDragData{ID: mountain.Name(), Card: mountain})
+
+	if !dropped {
+		t.Fatal("sellDroppedCard() = false, want true")
+	}
+	if got := collection.GetTotalCount(mountain); got != 1 {
+		t.Fatalf("collection count = %d, want 1", got)
+	}
+}
+
+func TestSellDroppedCardFromDeck(t *testing.T) {
+	mountain := domain.FindCardByName("Mountain")
+	collection := domain.NewCardCollection()
+	collection.AddCard(mountain, 2)
+	if err := collection.MoveCardToDeck(mountain, 0, 1); err != nil {
+		t.Fatalf("MoveCardToDeck() error = %v", err)
+	}
+	player := &domain.Player{
+		Character:  domain.Character{CardCollection: collection},
+		ActiveDeck: 0,
+	}
+	screen := &EditDeckScreen{Player: player, City: &domain.City{Tier: domain.TierHamlet}}
+
+	dropped := screen.sellDroppedCard(&dragdrop.CardDragData{ID: deckCardDragIDPrefix + mountain.Name(), Card: mountain})
+
+	if !dropped {
+		t.Fatal("sellDroppedCard() = false, want true")
+	}
+	if got := collection.GetTotalCount(mountain); got != 1 {
+		t.Fatalf("collection count = %d, want 1", got)
+	}
+	if got := collection.GetDeckCount(mountain, 0); got != 0 {
+		t.Fatalf("deck count = %d, want 0", got)
+	}
+}
 
 func TestCreateCollectionButtons_ExcludesDeckCards(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
