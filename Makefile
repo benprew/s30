@@ -2,6 +2,7 @@ CARD_IMAGES := assets/art/cardimages.zip
 CARD_DATA := assets/card_info/scryfall_cards.json.zst
 DIST_DIR := dist
 EMBEDDED_TAG := embedded_card_images
+export GOCACHE := $(CURDIR)/.cache/go-build
 
 .PHONY: default run pprof dungeon test embeddedbuild cardimages winbuild macbuild webbuild builddeps fedorabuilddeps lint
 
@@ -17,7 +18,11 @@ dungeon:
 	go run ./cmd/dungeon_test
 
 test:
+ifeq ($(shell uname -s),Linux)
 	xvfb-run -a go test -count=10 ./...
+else
+	go test -count=10 ./...
+endif
 
 cardimages:
 	uv run python utils/download_card_images.py $(CARD_DATA)
