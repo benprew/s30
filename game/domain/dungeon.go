@@ -17,11 +17,39 @@ const (
 	DungeonTileEntrance
 )
 
-type CreatureSize int
+func (d DungeonDifficulty) String() string {
+	switch d {
+	case DungeonDifficultyMedium:
+		return "Medium"
+	case DungeonDifficultyHard:
+		return "Hard"
+	default:
+		return "Easy"
+	}
+}
+
+func (d DungeonDifficulty) normalized() DungeonDifficulty {
+	if d < DungeonDifficultyEasy || d > DungeonDifficultyHard {
+		return DungeonDifficultyEasy
+	}
+	return d
+}
+
+type DungeonDifficulty int
 
 const (
-	CreatureSizeSmall CreatureSize = iota
-	CreatureSizeLarge
+	DungeonDifficultyEasy DungeonDifficulty = iota
+	DungeonDifficultyMedium
+	DungeonDifficultyHard
+)
+
+type DungeonTheme int
+
+const (
+	DungeonThemeOne DungeonTheme = iota
+	DungeonThemeTwo
+	DungeonThemeThree
+	DungeonThemeCastle
 )
 
 type DungeonRewardType int
@@ -84,6 +112,7 @@ type DungeonTile struct {
 	Dice    *DiceEffect
 	Visited bool
 	Seen    bool
+	Boss    bool
 }
 
 func (t *DungeonTile) IsWalkable() bool {
@@ -102,17 +131,21 @@ func (t *DungeonTile) BlocksSight() bool {
 
 type Dungeon struct {
 	Name            string
-	Level           int
+	Difficulty      DungeonDifficulty
 	Color           ColorMask
+	Theme           DungeonTheme
 	Grid            [][]DungeonTile
 	Entrance        image.Point
 	Enchantment     *Card
 	CardRestriction *CardRestriction
-	CreatureSize    CreatureSize
 	RestrictedCards []*Card
 	MapTile         image.Point
 	Cleared         bool
 	Clues           [3]DungeonClue
+}
+
+func (d *Dungeon) IsCastle() bool {
+	return d != nil && d.Theme == DungeonThemeCastle
 }
 
 func (d *Dungeon) Width() int {

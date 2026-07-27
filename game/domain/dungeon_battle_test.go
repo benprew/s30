@@ -13,8 +13,8 @@ func TestNewEnemyFromCharacterWrapsCharacter(t *testing.T) {
 	}
 }
 
-func TestDungeonEnemyPoolIsNonEmptyDeterministicAndColorMatched(t *testing.T) {
-	pool := DungeonEnemyPool(ColorRed)
+func TestDungeonEnemyPoolIsNonEmptyDeterministicColorAndDifficultyMatched(t *testing.T) {
+	pool := DungeonEnemyPool(ColorRed, DungeonDifficultyMedium)
 	if len(pool) == 0 {
 		t.Fatal("expected a non-empty enemy pool")
 	}
@@ -25,16 +25,41 @@ func TestDungeonEnemyPoolIsNonEmptyDeterministicAndColorMatched(t *testing.T) {
 		if c.PrimaryColor != colorNameRed {
 			t.Errorf("expected only Red rogues, got %q (%s)", c.PrimaryColor, c.Name)
 		}
+		if c.Level < 4 || c.Level > 7 {
+			t.Errorf("expected medium rogue tier 4-7, got %d (%s)", c.Level, c.Name)
+		}
 	}
 
 	// Deterministic ordering so seeded dungeon generation is reproducible.
-	again := DungeonEnemyPool(ColorRed)
+	again := DungeonEnemyPool(ColorRed, DungeonDifficultyMedium)
 	if len(again) != len(pool) {
 		t.Fatalf("pool size changed between calls: %d vs %d", len(pool), len(again))
 	}
 	for i := range pool {
 		if pool[i].Name != again[i].Name {
 			t.Errorf("pool order not deterministic at %d: %q vs %q", i, pool[i].Name, again[i].Name)
+		}
+	}
+}
+
+func TestDungeonEnemyPoolUsesDifficultyTierBands(t *testing.T) {
+	tests := []struct {
+		difficulty DungeonDifficulty
+		min, max   int
+	}{
+		{DungeonDifficultyEasy, 1, 3},
+		{DungeonDifficultyMedium, 4, 7},
+		{DungeonDifficultyHard, 8, 10},
+	}
+	for _, test := range tests {
+		pool := DungeonEnemyPool(ColorRed, test.difficulty)
+		if len(pool) == 0 {
+			t.Fatalf("difficulty %d returned no enemies", test.difficulty)
+		}
+		for _, enemy := range pool {
+			if enemy.Level < test.min || enemy.Level > test.max {
+				t.Errorf("difficulty %d included tier %d enemy %s", test.difficulty, enemy.Level, enemy.Name)
+			}
 		}
 	}
 }

@@ -1,11 +1,48 @@
 package duel
 
 import (
+	"image"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/world"
 )
+
+func TestHandleWinRegularEnemyDoesNotResolvePendingCastle(t *testing.T) {
+	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}}
+	castle := &domain.Castle{Name: "Castle", Color: domain.ColorRed, MapTile: image.Point{}}
+	lvl := &world.Level{
+		W: 1, H: 1, Player: player,
+		Tiles: [][]*world.Tile{{{IsCastle: true, Castle: castle}}},
+		Enemies: []domain.Enemy{{Character: &domain.Character{
+			Name: "Regular Enemy", CardCollection: domain.NewCardCollection(),
+		}}},
+	}
+	lvl.SetPendingCastle(castle, castle.MapTile)
+	s := &DuelScreen{player: player, enemy: lvl.GetEnemyAt(0), lvl: lvl, idx: 0}
+
+	if _, _, err := s.handleWin(); err != nil {
+		t.Fatal(err)
+	}
+	if castle.Defeated {
+		t.Fatal("regular overworld win defeated the pending castle")
+	}
+}
+
+func TestHandleLossDoesNotRecordCombatWin(t *testing.T) {
+	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}}
+	lvl := &world.Level{Enemies: []domain.Enemy{{Character: &domain.Character{
+		Name: "Regular Enemy", CardCollection: domain.NewCardCollection(),
+	}}}}
+	s := &DuelScreen{player: player, enemy: lvl.GetEnemyAt(0), lvl: lvl, idx: 0}
+
+	if _, _, err := s.handleLoss(); err != nil {
+		t.Fatal(err)
+	}
+	if lvl.CombatsWon != 0 {
+		t.Fatalf("loss recorded %d combat wins", lvl.CombatsWon)
+	}
+}
 
 func TestDuelWin_RequiresConfirmation(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")

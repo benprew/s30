@@ -54,17 +54,17 @@ func (c *Character) LoadImages() error {
 	return nil
 }
 
-// DungeonEnemyPool returns the rogue characters used to populate the enemy
-// tiles of a dungeon of the given color. Rogues whose primary color matches the
-// dungeon are returned; if the color has no matching rogues the full roster is
-// used so a dungeon always has opponents. The result is sorted by name so
-// seeded dungeon generation stays reproducible (map iteration order is not).
-func DungeonEnemyPool(color ColorMask) []*Character {
+// DungeonEnemyPool returns color-matched rogues from the difficulty's tier band.
+func DungeonEnemyPool(color ColorMask, difficulty DungeonDifficulty) []*Character {
+	difficulty = difficulty.normalized()
 	target := ColorMaskToString(color)
 	var matched, all []*Character
 	for _, c := range Rogues {
+		if !difficulty.includesEnemyTier(c.Level) {
+			continue
+		}
 		all = append(all, c)
-		if c.PrimaryColor == target && c.Level < MaxRandomEnemyLevel {
+		if c.PrimaryColor == target {
 			matched = append(matched, c)
 		}
 	}
@@ -74,6 +74,17 @@ func DungeonEnemyPool(color ColorMask) []*Character {
 	}
 	sort.Slice(pool, func(i, j int) bool { return pool[i].Name < pool[j].Name })
 	return pool
+}
+
+func (d DungeonDifficulty) includesEnemyTier(tier int) bool {
+	switch d {
+	case DungeonDifficultyMedium:
+		return tier >= 4 && tier <= 7
+	case DungeonDifficultyHard:
+		return tier >= 8 && tier <= 10
+	default:
+		return tier >= 1 && tier <= 3
+	}
 }
 
 func analyzeColors(collection CardCollection) (string, []string) {

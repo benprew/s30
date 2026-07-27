@@ -49,6 +49,41 @@ func TestSelectRestrictedCardsReturnsEmptyWhenPoolHasNoRestrictedCards(t *testin
 	}
 }
 
+func TestDungeonOptionsWizardModeUsesCastleBossAndNoRestrictedCards(t *testing.T) {
+	for _, color := range []domain.ColorMask{
+		domain.ColorWhite, domain.ColorBlue, domain.ColorBlack, domain.ColorRed, domain.ColorGreen,
+	} {
+		restricted := []*domain.Card{{CardName: "Black Lotus", VintageRestricted: true}}
+		opts, err := dungeonOptions(color, domain.DungeonDifficultyEasy, true, restricted, nil, 1)
+		if err != nil {
+			t.Fatalf("%s: %v", domain.ColorMaskToString(color), err)
+		}
+		if opts.FinalEnemy == nil {
+			t.Errorf("%s: missing wizard", domain.ColorMaskToString(color))
+		}
+		if opts.Difficulty != domain.DungeonDifficultyHard {
+			t.Errorf("%s: difficulty = %d, want hard", domain.ColorMaskToString(color), opts.Difficulty)
+		}
+		if len(opts.RestrictedCards) != 0 {
+			t.Errorf("%s: wizard dungeon has restricted cards", domain.ColorMaskToString(color))
+		}
+		if opts.NumGoldChests != 2 {
+			t.Errorf("%s: wizard dungeon does not use castle contents", domain.ColorMaskToString(color))
+		}
+	}
+}
+
+func TestDungeonOptionsNormalModePreservesRestrictedCards(t *testing.T) {
+	restricted := []*domain.Card{{CardName: "Black Lotus", VintageRestricted: true}}
+	opts, err := dungeonOptions(domain.ColorRed, domain.DungeonDifficultyMedium, false, restricted, nil, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.FinalEnemy != nil || len(opts.RestrictedCards) != 1 || opts.Difficulty != domain.DungeonDifficultyMedium {
+		t.Fatal("normal dungeon options changed")
+	}
+}
+
 type pointerAwareScreen struct {
 	t              *testing.T
 	pointerUpdated *bool

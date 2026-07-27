@@ -63,17 +63,14 @@ func (l *Level) placeDungeons(numDungeons, minDistance int, seed int64, dungeonS
 
 		idx := len(placed)
 		color := dungeonColors[idx%len(dungeonColors)]
+		difficulty := randomDungeonDifficulty(rng)
 		dungeon := domain.GenerateDungeon(domain.DungeonGenOptions{
 			Name:          dungeonName(idx),
-			Level:         1,
+			Difficulty:    difficulty,
 			Color:         color,
-			CreatureSize:  domain.CreatureSizeSmall,
-			GridSize:      11,
-			NumEnemies:    3,
-			NumDice:       2,
-			NumScrolls:    1,
+			Theme:         domain.DungeonTheme(idx % 3),
 			NumGoldChests: 2,
-			EnemyPool:     domain.DungeonEnemyPool(color),
+			EnemyPool:     domain.DungeonEnemyPool(color, difficulty),
 			DiceCardPool:  diceCardPool,
 			Seed:          seed + int64(idx),
 		})
@@ -88,6 +85,18 @@ func (l *Level) placeDungeons(numDungeons, minDistance int, seed int64, dungeonS
 
 		l.Dungeons = append(l.Dungeons, dungeon)
 		placed = append(placed, loc)
+	}
+}
+
+func randomDungeonDifficulty(rng *rand.Rand) domain.DungeonDifficulty {
+	roll := rng.Intn(100)
+	switch {
+	case roll < 45:
+		return domain.DungeonDifficultyEasy
+	case roll < 80:
+		return domain.DungeonDifficultyMedium
+	default:
+		return domain.DungeonDifficultyHard
 	}
 }
 

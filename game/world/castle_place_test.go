@@ -238,3 +238,52 @@ func TestHandleCastleDuelOutcomeKeepsCastleOnLoss(t *testing.T) {
 		t.Errorf("pendingCastle not cleared after outcome")
 	}
 }
+
+func TestNewCastleDungeonCreatesFreshStandardAttemptWithoutWorldEnemy(t *testing.T) {
+	for color, rogueName := range castleRogues {
+		castle := &domain.Castle{Name: "Test Castle", Color: color, RogueName: rogueName, MapTile: image.Pt(1, 1)}
+		level := &Level{}
+		first, err := level.NewCastleDungeon(castle)
+		if err != nil {
+			t.Fatalf("%s: %v", domain.ColorMaskToString(color), err)
+		}
+		second, err := level.NewCastleDungeon(castle)
+		if err != nil {
+			t.Fatalf("%s second attempt: %v", domain.ColorMaskToString(color), err)
+		}
+		if first == second || &first.Grid[0][0] == &second.Grid[0][0] {
+			t.Errorf("%s: re-entry reused dungeon state", domain.ColorMaskToString(color))
+		}
+		if len(level.Enemies) != 0 {
+			t.Errorf("%s: castle entry spawned %d overworld enemies", domain.ColorMaskToString(color), len(level.Enemies))
+		}
+		if first.Difficulty != domain.DungeonDifficultyHard {
+			t.Errorf("%s: castle difficulty = %d, want hard", domain.ColorMaskToString(color), first.Difficulty)
+		}
+		counts := map[domain.DungeonTileType]int{}
+		bosses, restricted := 0, 0
+		for y := range first.Grid {
+			for x := range first.Grid[y] {
+				tile := &first.Grid[y][x]
+				counts[tile.Type]++
+				if tile.Boss {
+					bosses++
+				}
+				if tile.Reward != nil && tile.Reward.Type == domain.DungeonRewardRestrictedCard {
+					restricted++
+				}
+			}
+		}
+		if counts[domain.DungeonTileEnemy] < 12 || counts[domain.DungeonTileEnemy] > 16 || counts[domain.DungeonTileTreasure] != 2 ||
+			counts[domain.DungeonTileDice] < 1 || counts[domain.DungeonTileDice] > 3 ||
+			counts[domain.DungeonTileScroll] < 1 || counts[domain.DungeonTileScroll] > 3 || bosses != 1 || restricted != 0 {
+			t.Errorf("%s: enemies=%d treasure=%d dice=%d scroll=%d bosses=%d restricted=%d",
+				domain.ColorMaskToString(color), counts[domain.DungeonTileEnemy], counts[domain.DungeonTileTreasure],
+				counts[domain.DungeonTileDice], counts[domain.DungeonTileScroll], bosses, restricted)
+		}
+		level.ClearPendingCastle()
+		if level.pendingCastle != nil || castle.Defeated {
+			t.Errorf("%s: abandoning attempt changed castle state", domain.ColorMaskToString(color))
+		}
+	}
+}
