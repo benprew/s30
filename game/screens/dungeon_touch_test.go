@@ -29,6 +29,13 @@ func TestDungeonSheetSelectionUsesOrdinaryThemes(t *testing.T) {
 	}
 }
 
+func TestDungeonBackgroundUsesLogicalScreenSize(t *testing.T) {
+	background := loadDungeonBackground()
+	if background.Bounds().Dx() != 1024 || background.Bounds().Dy() != 768 {
+		t.Fatalf("background size = %dx%d, want 1024x768", background.Bounds().Dx(), background.Bounds().Dy())
+	}
+}
+
 func TestDungeonSheetSelectionUsesColorOnlyForCastles(t *testing.T) {
 	dungeon := &domain.Dungeon{Color: domain.ColorBlue, Theme: domain.DungeonThemeCastle}
 	if got := dungeonSheetBytesFor(dungeon); !bytes.Equal(got, assets.DungeonU_png) {

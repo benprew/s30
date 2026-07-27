@@ -65,6 +65,7 @@ type characterFrames struct {
 type DungeonScreen struct {
 	Player        *domain.Player
 	Level         *world.Level
+	background    *ebiten.Image
 	sheet         [][]*ebiten.Image
 	playerFrames  characterFrames
 	enemyFrames   map[*domain.Character]characterFrames
@@ -80,8 +81,9 @@ type DungeonScreen struct {
 
 func NewDungeonScreen(player *domain.Player, level *world.Level) *DungeonScreen {
 	s := &DungeonScreen{
-		Player: player,
-		Level:  level,
+		Player:     player,
+		Level:      level,
+		background: loadDungeonBackground(),
 	}
 
 	s.enemyFrames = make(map[*domain.Character]characterFrames)
@@ -317,7 +319,7 @@ func (s *DungeonScreen) closeOverlay() {
 }
 
 func (s *DungeonScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
-	screen.Fill(color.RGBA{R: 8, G: 6, B: 14, A: 255})
+	screen.DrawImage(s.background, &ebiten.DrawImageOptions{})
 
 	st := s.dungeonState()
 	if st == nil || st.CurrentDungeon == nil {
@@ -346,6 +348,14 @@ func (s *DungeonScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	if s.overlayActive {
 		s.drawOverlay(screen, scale)
 	}
+}
+
+func loadDungeonBackground() *ebiten.Image {
+	background, err := imageutil.LoadImage(assets.DungeonBackground_png)
+	if err != nil {
+		panic(fmt.Sprintf("dungeon background load: %v", err))
+	}
+	return imageutil.ScaleImage(background, 1.6)
 }
 
 func (s *DungeonScreen) drawTile(screen *ebiten.Image, x, y int, tile *domain.DungeonTile) {
