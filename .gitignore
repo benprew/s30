@@ -16,3 +16,4 @@ go.work
 go.work.sum
 .orchestrate/
 tasks.org
+.cache/
