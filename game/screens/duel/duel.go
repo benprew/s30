@@ -141,9 +141,10 @@ type DuelScreen struct {
 	damageAttackerID uuid.UUID
 	damageTotal      int
 
-	targetingCardID  uuid.UUID
-	targetingActions map[uuid.UUID]interactive.ActionOption
-	selectedTargetID uuid.UUID
+	targetingCardID   uuid.UUID
+	targetingAction   interactive.ActionOption
+	targetingActions  map[uuid.UUID]interactive.ActionOption
+	selectedTargetIDs []uuid.UUID
 
 	xChoosingActions []interactive.ActionOption
 	xButtons         []*elements.Button
@@ -1027,8 +1028,8 @@ func (s *DuelScreen) handleEscape() {
 	if s.targetingCardID == uuid.Nil {
 		return
 	}
-	if s.selectedTargetID != uuid.Nil {
-		s.selectedTargetID = uuid.Nil
+	if len(s.selectedTargetIDs) > 0 {
+		s.selectedTargetIDs = nil
 		return
 	}
 	s.exitTargetingMode()
@@ -1687,24 +1688,111 @@ func (s *DuelScreen) autoCounterTarget(opt interactive.ActionOption) (uuid.UUID,
 
 func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []interactive.ActionOption) {
 	s.targetingCardID = id
+	s.targetingAction = interactive.ActionOption{}
 	s.targetingActions = make(map[uuid.UUID]interactive.ActionOption)
+	targetingActionSet := false
 
 	for _, a := range actions {
 		if !a.NeedsTarget {
 			continue
 		}
+		if !targetingActionSet {
+			s.targetingAction = a
+			targetingActionSet = true
+		}
 		for _, tid := range a.ValidTargets {
 			s.targetingActions[tid] = a
 		}
 	}
-	s.selectedTargetID = uuid.Nil
+	s.selectedTargetIDs = nil
 	s.loadCardPreviewByName(name)
 }
 
 func (s *DuelScreen) exitTargetingMode() {
 	s.targetingCardID = uuid.Nil
+	s.targetingAction = interactive.ActionOption{}
 	s.targetingActions = nil
-	s.selectedTargetID = uuid.Nil
+	s.selectedTargetIDs = nil
+}
+
+type variableTargetBounds interface {
+	BoundsForX(x int) (minTargets, maxTargets int)
+}
+
+func (s *DuelScreen) targetBounds() (int, int) {
+	target := s.targetingAction.TargetType
+	if target == nil {
+		return 1, 1
+	}
+	if variable, ok := target.(variableTargetBounds); ok {
+		return variable.BoundsForX(s.xChosenValue)
+	}
+	return target.Min(), target.Max()
+}
+
+func (s *DuelScreen) targetSelectionComplete() bool {
+	minTargets, maxTargets := s.targetBounds()
+	return len(s.selectedTargetIDs) >= minTargets && len(s.selectedTargetIDs) <= maxTargets
+}
+
+func (s *DuelScreen) targetingPrompt(cardName string) string {
+	minTargets, maxTargets := s.targetBounds()
+	switch {
+	case minTargets == 1 && maxTargets == 1:
+		return fmt.Sprintf("Choose a target for %s", cardName)
+	case minTargets == maxTargets:
+		return fmt.Sprintf("Choose %d targets for %s", minTargets, cardName)
+	case minTargets == 0:
+		return fmt.Sprintf("Choose up to %d targets for %s", maxTargets, cardName)
+	default:
+		return fmt.Sprintf("Choose %d-%d targets for %s", minTargets, maxTargets, cardName)
+	}
+}
+
+func (s *DuelScreen) targetSelected(id uuid.UUID) bool {
+	return slices.Contains(s.selectedTargetIDs, id)
+}
+
+func (s *DuelScreen) selectTarget(id uuid.UUID) {
+	if index := slices.Index(s.selectedTargetIDs, id); index >= 0 {
+		s.selectedTargetIDs = slices.Delete(s.selectedTargetIDs, index, index+1)
+		return
+	}
+
+	_, maxTargets := s.targetBounds()
+	if maxTargets == 1 {
+		s.selectedTargetIDs = []uuid.UUID{id}
+		return
+	}
+	if len(s.selectedTargetIDs) < maxTargets {
+		s.selectedTargetIDs = append(s.selectedTargetIDs, id)
+	}
+}
+
+func (s *DuelScreen) submitTargetingAction() bool {
+	if !s.targetSelectionComplete() {
+		return false
+	}
+
+	action := s.targetingAction
+	if len(s.selectedTargetIDs) > 0 {
+		var ok bool
+		action, ok = s.targetingActions[s.selectedTargetIDs[0]]
+		if !ok {
+			return false
+		}
+	}
+	pa := actionOptionToPriorityAction(action)
+	pa.Targets = slices.Clone(s.selectedTargetIDs)
+	pa.XValue = s.xValueForAction()
+	select {
+	case s.human.FromTUI() <- pa:
+		if am := gameaudio.Get(); am != nil {
+			am.PlaySFX(gameaudio.SFXCast)
+		}
+	default:
+	}
+	return true
 }
 
 func (s *DuelScreen) updateTargetingMouse(mx, my int, clicked bool) {
@@ -1716,21 +1804,7 @@ func (s *DuelScreen) updateTargetingMouse(mx, my int, clicked bool) {
 	doneX := duelBoardX + 2
 	doneY := duelMsgY
 	if mx >= doneX && mx < doneX+doneBounds.Dx() && my >= doneY && my < doneY+doneBounds.Dy() {
-		if s.selectedTargetID != uuid.Nil {
-			if action, ok := s.targetingActions[s.selectedTargetID]; ok {
-				pa := actionOptionToPriorityAction(action)
-				pa.Targets = []uuid.UUID{s.selectedTargetID}
-				pa.XValue = s.xValueForAction()
-				select {
-				case s.human.FromTUI() <- pa:
-					if am := gameaudio.Get(); am != nil {
-						am.PlaySFX(gameaudio.SFXCast)
-					}
-				default:
-				}
-			}
-			s.exitTargetingMode()
-		} else {
+		if s.submitTargetingAction() || len(s.selectedTargetIDs) == 0 {
 			s.exitTargetingMode()
 		}
 		return
@@ -1738,8 +1812,8 @@ func (s *DuelScreen) updateTargetingMouse(mx, my int, clicked bool) {
 
 	msgBarTop := duelMsgY + 6
 	msgBarLeft := duelBoardX + 52
-	if s.selectedTargetID != uuid.Nil && mx >= msgBarLeft && my >= msgBarTop && my < msgBarTop+20 {
-		s.selectedTargetID = uuid.Nil
+	if len(s.selectedTargetIDs) > 0 && mx >= msgBarLeft && my >= msgBarTop && my < msgBarTop+20 {
+		s.selectedTargetIDs = nil
 		return
 	}
 
@@ -1750,7 +1824,7 @@ func (s *DuelScreen) handleTargetClick(mx, my int) {
 	for _, dp := range []*duelPlayer{s.opponent, s.self} {
 		if perm := s.fieldPermAtPoint(mx, my, dp); perm != nil {
 			if _, ok := s.targetingActions[perm.ID]; ok {
-				s.selectedTargetID = perm.ID
+				s.selectTarget(perm.ID)
 				s.loadCardPreview(perm.Name, perm)
 				return
 			}
@@ -1761,7 +1835,7 @@ func (s *DuelScreen) handleTargetClick(mx, my int) {
 		ps := s.playerState(dp)
 		if ps != nil && s.isPlayerBoardClick(mx, my, dp) {
 			if _, ok := s.targetingActions[ps.ID]; ok {
-				s.selectedTargetID = ps.ID
+				s.selectTarget(ps.ID)
 				return
 			}
 		}
@@ -2452,7 +2526,7 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, ps *interac
 		if _, isTarget := s.targetingActions[ps.ID]; isTarget {
 			borderColor := color.RGBA{255, 255, 0, 255}
 			strokeW := float32(2)
-			if s.selectedTargetID == ps.ID {
+			if s.targetSelected(ps.ID) {
 				borderColor = color.RGBA{0, 255, 0, 255}
 				strokeW = 3
 			}
@@ -2492,13 +2566,17 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 	if s.warningMsg != "" {
 		msg = s.warningMsg
 		msgColor = color.RGBA{255, 100, 100, 255}
-	} else if s.targetingCardID != uuid.Nil && s.selectedTargetID != uuid.Nil {
-		targetName := s.targetNameByID(s.selectedTargetID)
-		msg = fmt.Sprintf("targeting %s (Cancel)", targetName)
+	} else if s.targetingCardID != uuid.Nil && len(s.selectedTargetIDs) > 0 {
+		_, maxTargets := s.targetBounds()
+		if maxTargets == 1 {
+			msg = fmt.Sprintf("targeting %s (Cancel)", s.targetNameByID(s.selectedTargetIDs[0]))
+		} else {
+			msg = fmt.Sprintf("Selected %d of %d targets (Cancel)", len(s.selectedTargetIDs), maxTargets)
+		}
 		msgColor = color.RGBA{255, 255, 255, 255}
 	} else if s.targetingCardID != uuid.Nil {
 		cardName := s.cardNameByID(s.targetingCardID)
-		msg = fmt.Sprintf("Choose a target for %s", cardName)
+		msg = s.targetingPrompt(cardName)
 		msgColor = color.RGBA{255, 255, 255, 255}
 	} else {
 		msg = s.statusMessage()
@@ -2684,7 +2762,7 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 		if _, isTarget := s.targetingActions[perm.ID]; isTarget {
 			borderColor := color.RGBA{255, 255, 0, 255}
 			strokeW := float32(2)
-			if s.selectedTargetID == perm.ID {
+			if s.targetSelected(perm.ID) {
 				borderColor = color.RGBA{0, 255, 0, 255}
 				strokeW = 3
 			}

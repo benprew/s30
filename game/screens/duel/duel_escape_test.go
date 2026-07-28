@@ -54,15 +54,15 @@ func TestDuelEscapeClosesActiveOverlay(t *testing.T) {
 	t.Run("selected target", func(t *testing.T) {
 		targetingID := uuid.New()
 		s := &DuelScreen{
-			targetingCardID:  targetingID,
-			targetingActions: map[uuid.UUID]interactive.ActionOption{uuid.New(): {}},
-			selectedTargetID: uuid.New(),
+			targetingCardID:   targetingID,
+			targetingActions:  map[uuid.UUID]interactive.ActionOption{uuid.New(): {}},
+			selectedTargetIDs: []uuid.UUID{uuid.New()},
 		}
 		s.handleEscape()
 		if s.targetingCardID != targetingID {
 			t.Fatal("escape should keep targeting mode when only clearing the selected target")
 		}
-		if s.selectedTargetID != uuid.Nil {
+		if len(s.selectedTargetIDs) != 0 {
 			t.Fatal("escape should clear selected target")
 		}
 	})
