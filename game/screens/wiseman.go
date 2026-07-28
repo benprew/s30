@@ -706,7 +706,7 @@ func loadStories() []string {
 		before, _, ok := strings.Cut(part, "ENDBLOCK")
 		if ok {
 			story := strings.TrimSpace(before)
-			if story != "" {
+			if story != "" && !strings.Contains(story, "%") {
 				stories = append(stories, story)
 			}
 		}

@@ -50,6 +50,9 @@ func TestLoadStories(t *testing.T) {
 		if strings.Contains(story, "STARTBLOCK") || strings.Contains(story, "ENDBLOCK") {
 			t.Errorf("Story %d contains delimiters", i)
 		}
+		if strings.Contains(story, "%") {
+			t.Errorf("Story %d contains an unimplemented placeholder", i)
+		}
 	}
 }
 
