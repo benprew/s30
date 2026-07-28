@@ -40,6 +40,7 @@ const (
 	dungeonCellWall     = 8
 	dungeonFloorRow     = 1
 	dungeonFloorCol     = 0
+	dungeonBossRow      = 4
 )
 
 // dungeonCharScale shrinks the 248×174 walking-sprite cells down to fit on a
@@ -64,6 +65,7 @@ type characterFrames struct {
 type DungeonScreen struct {
 	Player        *domain.Player
 	Level         *world.Level
+	background    *ebiten.Image
 	sheet         [][]*ebiten.Image
 	playerFrames  characterFrames
 	enemyFrames   map[*domain.Character]characterFrames
@@ -79,15 +81,16 @@ type DungeonScreen struct {
 
 func NewDungeonScreen(player *domain.Player, level *world.Level) *DungeonScreen {
 	s := &DungeonScreen{
-		Player: player,
-		Level:  level,
+		Player:     player,
+		Level:      level,
+		background: loadDungeonBackground(),
 	}
 
 	s.enemyFrames = make(map[*domain.Character]characterFrames)
 	s.enemyFallback = makeColorTile(color.RGBA{R: 200, G: 60, B: 60, A: 255}, dungeonCellPixels-24)
 
 	if st := player.DungeonState; st != nil && st.CurrentDungeon != nil {
-		s.sheet = loadDungeonSheet(st.CurrentDungeon.Color)
+		s.sheet = loadDungeonSheet(st.CurrentDungeon)
 		W := st.CurrentDungeon.Width()
 		H := st.CurrentDungeon.Height()
 		// Iso bounding box of the full sprite footprint (cells overlap).
@@ -242,12 +245,16 @@ func (s *DungeonScreen) startDungeonDuel(tile *domain.DungeonTile) (screenui.Scr
 		am.PlaySFX(gameaudio.EnemySFXForName(tile.Enemy.Name))
 	}
 	enemy := domain.NewEnemyFromCharacter(tile.Enemy)
-	duel := NewDungeonDuelScreen(s.Player, &enemy, s.dungeonState(), tile)
+	duel := NewDungeonDuelScreen(s.Player, &enemy, s.Level, s.dungeonState(), tile)
 	return screenui.DuelScr, duel, nil
 }
 
 func (s *DungeonScreen) exitDungeon() screenui.ScreenName {
+	dungeon := s.Player.DungeonState.CurrentDungeon
 	s.Player.ExitDungeon()
+	if dungeon.IsCastle() {
+		s.Level.ClearPendingCastle()
+	}
 	return screenui.WorldScr
 }
 
@@ -312,7 +319,7 @@ func (s *DungeonScreen) closeOverlay() {
 }
 
 func (s *DungeonScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
-	screen.Fill(color.RGBA{R: 8, G: 6, B: 14, A: 255})
+	screen.DrawImage(s.background, &ebiten.DrawImageOptions{})
 
 	st := s.dungeonState()
 	if st == nil || st.CurrentDungeon == nil {
@@ -343,6 +350,14 @@ func (s *DungeonScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 }
 
+func loadDungeonBackground() *ebiten.Image {
+	background, err := imageutil.LoadImage(assets.DungeonBackground_png)
+	if err != nil {
+		panic(fmt.Sprintf("dungeon background load: %v", err))
+	}
+	return imageutil.ScaleImage(background, 1.6)
+}
+
 func (s *DungeonScreen) drawTile(screen *ebiten.Image, x, y int, tile *domain.DungeonTile) {
 	if !tile.Seen {
 		return
@@ -361,8 +376,49 @@ func (s *DungeonScreen) drawTile(screen *ebiten.Image, x, y int, tile *domain.Du
 	}
 
 	if tile.Type == domain.DungeonTileEnemy {
-		s.drawEnemy(screen, image.Point{X: x, Y: y}, tile.Enemy)
+		p := image.Point{X: x, Y: y}
+		if tile.Boss {
+			s.drawBoss(screen, p)
+		} else {
+			s.drawEnemy(screen, p, tile.Enemy)
+		}
 	}
+}
+
+func (s *DungeonScreen) drawBoss(screen *ebiten.Image, p image.Point) {
+	st := s.dungeonState()
+	if st == nil || st.CurrentDungeon == nil {
+		return
+	}
+	sprite := s.cell(dungeonBossRow, bossSpriteColumn(st.CurrentDungeon, p))
+	if sprite == nil {
+		return
+	}
+	sx, sy := s.tileScreenPos(p.X, p.Y)
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(sx), float64(sy))
+	screen.DrawImage(sprite, opts)
+}
+
+// bossSpriteColumn maps the sole corridor adjoining a boss dead end to the
+// wizard sprite that faces that corridor: down, left, right, then up.
+func bossSpriteColumn(d *domain.Dungeon, p image.Point) int {
+	directions := []struct {
+		delta image.Point
+		col   int
+	}{
+		{image.Pt(0, 1), 1},
+		{image.Pt(-1, 0), 2},
+		{image.Pt(1, 0), 3},
+		{image.Pt(0, -1), 4},
+	}
+	for _, direction := range directions {
+		tile := d.Tile(p.Add(direction.delta))
+		if tile != nil && tile.Type != domain.DungeonTileWall {
+			return direction.col
+		}
+	}
+	return 1
 }
 
 // tileScreenPos returns the on-screen top-left of the 64×64 sprite cell that
@@ -582,11 +638,10 @@ func rewardDescriptionText(r *domain.DungeonReward) string {
 	return "Something glints in the chest."
 }
 
-// loadDungeonSheet returns the 12-column sprite sheet for the dungeon's color.
-// Falls back to white if the color does not have a dedicated sheet.
-func loadDungeonSheet(c domain.ColorMask) [][]*ebiten.Image {
-	bytes := dungeonSheetBytesFor(c)
-	rows := dungeonSheetRowsFor(c)
+// loadDungeonSheet returns the dungeon's 12-column interior sprite sheet.
+func loadDungeonSheet(d *domain.Dungeon) [][]*ebiten.Image {
+	bytes := dungeonSheetBytesFor(d)
+	rows := dungeonSheetRowsFor(d)
 	sheet, err := imageutil.LoadSpriteSheet(dungeonSheetCols, rows, bytes)
 	if err != nil {
 		panic(fmt.Sprintf("dungeon sheet load: %v", err))
@@ -594,7 +649,20 @@ func loadDungeonSheet(c domain.ColorMask) [][]*ebiten.Image {
 	return sheet
 }
 
-func dungeonSheetBytesFor(c domain.ColorMask) []byte {
+func dungeonSheetBytesFor(d *domain.Dungeon) []byte {
+	switch d.Theme {
+	case domain.DungeonThemeTwo:
+		return assets.Dungeon2_png
+	case domain.DungeonThemeThree:
+		return assets.Dungeon3_png
+	case domain.DungeonThemeCastle:
+		return castleDungeonSheetBytesFor(d.Color)
+	default:
+		return assets.Dungeon1_png
+	}
+}
+
+func castleDungeonSheetBytesFor(c domain.ColorMask) []byte {
 	switch c {
 	case domain.ColorWhite:
 		return assets.DungeonW_png
@@ -611,11 +679,11 @@ func dungeonSheetBytesFor(c domain.ColorMask) []byte {
 	}
 }
 
-// dungeonSheetRowsFor reports the number of 64-px rows in the sprite sheet
-// for color c. The colored sheets are 320 px tall (5 rows); colorless / fallback
-// uses the same.
-func dungeonSheetRowsFor(_ domain.ColorMask) int {
-	return 5
+func dungeonSheetRowsFor(d *domain.Dungeon) int {
+	if d.Theme == domain.DungeonThemeCastle {
+		return 5
+	}
+	return 4
 }
 
 func makeColorTile(c color.Color, size int) *ebiten.Image {

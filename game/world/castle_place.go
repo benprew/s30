@@ -20,6 +20,16 @@ var castleRogues = map[domain.ColorMask]string{
 	domain.ColorGreen: "Great Druid",
 }
 
+// CastleWizard returns the configured wizard for a colored castle.
+func CastleWizard(color domain.ColorMask) (*domain.Character, bool) {
+	name, ok := castleRogues[color]
+	if !ok {
+		return nil, false
+	}
+	wizard, ok := domain.Rogues[name]
+	return wizard, ok
+}
+
 // castleSpec records the (row, col) of each of the four sprites a colored
 // castle needs across its sheet: intact castle + shadow, and the destroyed
 // pair. Most colors put intact/destroyed on neighboring columns and the

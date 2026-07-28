@@ -15,8 +15,8 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 	return duelscreen.NewDuelScreen(player, enemy, lvl, idx, anteCard, enemyAnteCard)
 }
 
-func NewDungeonDuelScreen(player *domain.Player, enemy *domain.Enemy, state *domain.DungeonState, tile *domain.DungeonTile) *DuelScreen {
-	return duelscreen.NewDungeonDuelScreen(player, enemy, state, tile)
+func NewDungeonDuelScreen(player *domain.Player, enemy *domain.Enemy, level *world.Level, state *domain.DungeonState, tile *domain.DungeonTile) *DuelScreen {
+	return duelscreen.NewDungeonDuelScreen(player, enemy, level, state, tile)
 }
 
 func NewDuelAnteScreen() *DuelAnteScreen {

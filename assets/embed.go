@@ -71,6 +71,14 @@ var (
 	// row 0 col 9    = scroll/trivia
 	// row 0 col 10   = dice
 	// row 1 col 8    = wall / unpathed
+	//go:embed art/screens/dungeons/Cavebkgd.pic.png
+	DungeonBackground_png []byte
+	//go:embed art/screens/dungeons/Dungeon1.spr.png
+	Dungeon1_png []byte
+	//go:embed art/screens/dungeons/Dungeon2.spr.png
+	Dungeon2_png []byte
+	//go:embed art/screens/dungeons/Dungeon3.spr.png
+	Dungeon3_png []byte
 	//go:embed art/screens/dungeons/Dungeonw.spr.png
 	DungeonW_png []byte
 	//go:embed art/screens/dungeons/Dungeonu.spr.png

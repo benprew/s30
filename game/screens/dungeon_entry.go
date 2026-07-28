@@ -78,6 +78,9 @@ func (s *DungeonEntryScreen) Update(W, H int, scale float64) (screenui.ScreenNam
 			s.Dungeon.RevealFrom(s.Dungeon.Entrance)
 			return screenui.DungeonScr, NewDungeonScreen(s.Player, s.Level), nil
 		case buttonIDLeave:
+			if s.Dungeon.IsCastle() {
+				s.Level.ClearPendingCastle()
+			}
 			return screenui.WorldScr, nil, nil
 		}
 	}
@@ -91,7 +94,7 @@ func (s *DungeonEntryScreen) Draw(screen *ebiten.Image, W, H int, scale float64)
 	title.Color = color.White
 	title.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
-	subtitle := elements.NewText(20, fmt.Sprintf("A %s dungeon", domain.ColorMaskToString(s.Dungeon.Color)), 50, 130)
+	subtitle := elements.NewText(20, fmt.Sprintf("A %s %s dungeon", s.Dungeon.Difficulty, domain.ColorMaskToString(s.Dungeon.Color)), 50, 130)
 	subtitle.Color = color.RGBA{R: 200, G: 200, B: 220, A: 255}
 	subtitle.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 

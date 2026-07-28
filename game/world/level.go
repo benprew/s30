@@ -301,6 +301,33 @@ func (l *Level) SetPendingCastle(c *domain.Castle, tile image.Point) {
 	l.pendingCastleTile = tile
 }
 
+// ClearPendingCastle abandons the current castle attempt without defeating it.
+func (l *Level) ClearPendingCastle() {
+	l.pendingCastle = nil
+	l.pendingCastleTile = image.Point{}
+}
+
+// NewCastleDungeon creates a fresh attempt for an undefeated castle.
+func (l *Level) NewCastleDungeon(c *domain.Castle) (*domain.Dungeon, error) {
+	if c == nil || c.Defeated {
+		return nil, fmt.Errorf("castle is unavailable")
+	}
+	wizard, ok := CastleWizard(c.Color)
+	if !ok || wizard.Name != c.RogueName {
+		return nil, fmt.Errorf("castle wizard %q not found", c.RogueName)
+	}
+	var diceCardPool []*domain.Card
+	if l.Player != nil {
+		diceCardPool = l.Player.GetDuelDeck().NonLandCards()
+	}
+	dungeon := domain.GenerateDungeon(domain.CastleDungeonGenOptions(
+		c.Name, c.Color, wizard, diceCardPool, time.Now().UnixNano(),
+	))
+	dungeon.MapTile = c.MapTile
+	l.SetPendingCastle(c, c.MapTile)
+	return dungeon, nil
+}
+
 // HandleCastleDuelOutcome is called from the duel screen once the duel ends.
 // On a win, the castle is marked defeated, its sprite swaps to the destroyed
 // variant, and the defeated *Castle is returned so the caller can grant a
@@ -308,10 +335,7 @@ func (l *Level) SetPendingCastle(c *domain.Castle, tile image.Point) {
 // re-attempt it. In either case the pending state is cleared.
 func (l *Level) HandleCastleDuelOutcome(won bool) *domain.Castle {
 	castle := l.pendingCastle
-	defer func() {
-		l.pendingCastle = nil
-		l.pendingCastleTile = image.Point{}
-	}()
+	defer l.ClearPendingCastle()
 	if !won || castle == nil {
 		return nil
 	}

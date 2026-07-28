@@ -9,18 +9,15 @@ import (
 
 type DungeonGenOptions struct {
 	Name            string
-	Level           int
+	Difficulty      DungeonDifficulty
 	Color           ColorMask
-	CreatureSize    CreatureSize
+	Theme           DungeonTheme
 	Enchantment     *Card
 	CardRestriction *CardRestriction
 	RestrictedCards []*Card
 	EnemyPool       []*Character
+	FinalEnemy      *Character
 	DiceCardPool    []*Card
-	GridSize        int
-	NumEnemies      int
-	NumDice         int
-	NumScrolls      int
 	NumGoldChests   int
 	Seed            int64
 }
@@ -30,21 +27,16 @@ type DungeonGenOptions struct {
 // left at the zero value; callers are expected to assign it during world
 // placement.
 func GenerateDungeon(opts DungeonGenOptions) *Dungeon {
-	size := opts.GridSize
-	if size <= 0 {
-		size = 11
-	}
-	if size%2 == 0 {
-		size++
-	}
-
+	const size = 17
+	opts.Difficulty = opts.Difficulty.normalized()
 	rng := rand.New(rand.NewSource(opts.Seed))
+	difficulty := rollDungeonDifficulty(opts.Difficulty, rng)
 
 	d := &Dungeon{
 		Name:            opts.Name,
-		Level:           opts.Level,
+		Difficulty:      opts.Difficulty,
 		Color:           opts.Color,
-		CreatureSize:    opts.CreatureSize,
+		Theme:           opts.Theme,
 		Enchantment:     opts.Enchantment,
 		CardRestriction: opts.CardRestriction,
 		RestrictedCards: opts.RestrictedCards,
@@ -71,9 +63,21 @@ func GenerateDungeon(opts DungeonGenOptions) *Dungeon {
 		return !used[p] && p != entrance
 	}
 
+	// The final enemy owns the most remote dead end and cannot be displaced by
+	// any subsequently placed event.
+	sortDeadEndsByDistance(d.Grid, entrance, deadEnds)
+	if opts.FinalEnemy != nil {
+		if p, ok := takeFirst(deadEnds, available); ok {
+			t := d.Tile(p)
+			t.Type = DungeonTileEnemy
+			t.Enemy = opts.FinalEnemy
+			t.Boss = true
+			used[p] = true
+		}
+	}
+
 	// Restricted-card chests get the dead-ends farthest from the entrance
 	// so the player has to traverse the dungeon to claim them.
-	sortDeadEndsByDistance(d.Grid, entrance, deadEnds)
 	for _, card := range opts.RestrictedCards {
 		p, ok := takeFirst(deadEnds, available)
 		if !ok {
@@ -87,6 +91,9 @@ func GenerateDungeon(opts DungeonGenOptions) *Dungeon {
 
 	for range opts.NumGoldChests {
 		p, ok := takeFirst(deadEnds, available)
+		if !ok {
+			p, ok = takeFirst(emptyTiles, available)
+		}
 		if !ok {
 			break
 		}
@@ -110,24 +117,53 @@ func GenerateDungeon(opts DungeonGenOptions) *Dungeon {
 		}
 	}
 
-	placeOnEmpty(opts.NumEnemies, func(t *DungeonTile, r *rand.Rand) {
+	placeOnEmpty(difficulty.enemies, func(t *DungeonTile, r *rand.Rand) {
 		t.Type = DungeonTileEnemy
 		if len(opts.EnemyPool) > 0 {
 			t.Enemy = opts.EnemyPool[r.Intn(len(opts.EnemyPool))]
 		}
 	})
 
-	placeOnEmpty(opts.NumDice, func(t *DungeonTile, r *rand.Rand) {
+	placeOnEmpty(difficulty.dice, func(t *DungeonTile, r *rand.Rand) {
 		t.Type = DungeonTileDice
-		t.Dice = rollDiceEffect(opts.Level, r, opts.DiceCardPool)
+		t.Dice = rollDiceEffect(int(opts.Difficulty)+1, r, opts.DiceCardPool)
 	})
 
-	placeOnEmpty(opts.NumScrolls, func(t *DungeonTile, r *rand.Rand) {
+	placeOnEmpty(difficulty.scrolls, func(t *DungeonTile, r *rand.Rand) {
 		t.Type = DungeonTileScroll
 		t.Scroll = &ScrollQuestion{}
 	})
 
 	return d
+}
+
+type dungeonDifficulty struct {
+	enemies int
+	dice    int
+	scrolls int
+}
+
+func rollDungeonDifficulty(difficulty DungeonDifficulty, rng *rand.Rand) dungeonDifficulty {
+	switch difficulty {
+	case DungeonDifficultyMedium:
+		return dungeonDifficulty{enemies: randomIntInclusive(rng, 7, 10), dice: randomIntInclusive(rng, 3, 5), scrolls: randomIntInclusive(rng, 2, 4)}
+	case DungeonDifficultyHard:
+		return dungeonDifficulty{enemies: randomIntInclusive(rng, 11, 15), dice: randomIntInclusive(rng, 1, 3), scrolls: randomIntInclusive(rng, 1, 3)}
+	default:
+		return dungeonDifficulty{enemies: randomIntInclusive(rng, 4, 6), dice: randomIntInclusive(rng, 5, 7), scrolls: randomIntInclusive(rng, 3, 5)}
+	}
+}
+
+func randomIntInclusive(rng *rand.Rand, minValue, maxValue int) int {
+	return minValue + rng.Intn(maxValue-minValue+1)
+}
+
+func CastleDungeonGenOptions(name string, color ColorMask, finalEnemy *Character, diceCardPool []*Card, seed int64) DungeonGenOptions {
+	return DungeonGenOptions{
+		Name: name, Difficulty: DungeonDifficultyHard, Color: color, Theme: DungeonThemeCastle,
+		NumGoldChests: 2, EnemyPool: DungeonEnemyPool(color, DungeonDifficultyHard), FinalEnemy: finalEnemy,
+		DiceCardPool: diceCardPool, Seed: seed,
+	}
 }
 
 func makeWalls(w, h int) [][]DungeonTile {

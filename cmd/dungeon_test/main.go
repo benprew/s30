@@ -108,10 +108,47 @@ func selectRestrictedCards(cards []*domain.Card, rng *rand.Rand) []*domain.Card 
 	return pool[:count]
 }
 
+func dungeonOptions(color domain.ColorMask, difficulty domain.DungeonDifficulty, wizardMode bool, restrictedCards []*domain.Card, diceCardPool []*domain.Card, seed int64) (domain.DungeonGenOptions, error) {
+	opts := domain.DungeonGenOptions{
+		Name:            "Test Dungeon",
+		Difficulty:      difficulty,
+		Color:           color,
+		Theme:           domain.DungeonThemeOne,
+		NumGoldChests:   2,
+		RestrictedCards: restrictedCards,
+		EnemyPool:       domain.DungeonEnemyPool(color, difficulty),
+		DiceCardPool:    diceCardPool,
+		Seed:            seed,
+	}
+	if !wizardMode {
+		return opts, nil
+	}
+	wizard, ok := world.CastleWizard(color)
+	if !ok {
+		return domain.DungeonGenOptions{}, fmt.Errorf("no castle wizard configured for %s", domain.ColorMaskToString(color))
+	}
+	opts = domain.CastleDungeonGenOptions(
+		fmt.Sprintf("Test %s Castle", domain.ColorMaskToString(color)), color, wizard, diceCardPool, seed,
+	)
+	return opts, nil
+}
+
+func difficultyFromName(name string) domain.DungeonDifficulty {
+	switch name {
+	case "medium":
+		return domain.DungeonDifficultyMedium
+	case "hard":
+		return domain.DungeonDifficultyHard
+	default:
+		return domain.DungeonDifficultyEasy
+	}
+}
+
 func main() {
 	showOpponentHand := flag.Bool("show-opponent-hand", false, "reveal the opponent's hand in dungeon duels (debug)")
 	colorName := flag.String("color", "red", "dungeon color (white/blue/black/red/green)")
-	enemies := flag.Int("enemies", 3, "number of enemies to place in the dungeon")
+	difficultyName := flag.String("difficulty", "easy", "dungeon difficulty (easy/medium/hard)")
+	wizardMode := flag.Bool("wizard", false, "generate a castle dungeon with the color's wizard boss")
 	flag.Parse()
 
 	interactive.RevealOpponentHand = *showOpponentHand
@@ -128,21 +165,11 @@ func main() {
 	seed := time.Now().UnixNano()
 	restrictedCards := selectRestrictedCards(domain.CARDS, rand.New(rand.NewSource(seed)))
 
-	dungeon := domain.GenerateDungeon(domain.DungeonGenOptions{
-		Name:            "Test Dungeon",
-		Level:           1,
-		Color:           color,
-		CreatureSize:    domain.CreatureSizeSmall,
-		GridSize:        11,
-		NumEnemies:      *enemies,
-		NumDice:         10,
-		NumScrolls:      1,
-		NumGoldChests:   2,
-		RestrictedCards: restrictedCards,
-		EnemyPool:       domain.DungeonEnemyPool(color),
-		DiceCardPool:    player.GetDuelDeck().NonLandCards(),
-		Seed:            seed,
-	})
+	opts, err := dungeonOptions(color, difficultyFromName(*difficultyName), *wizardMode, restrictedCards, player.GetDuelDeck().NonLandCards(), seed)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dungeon := domain.GenerateDungeon(opts)
 
 	player.DungeonState = &domain.DungeonState{
 		CurrentDungeon: dungeon,

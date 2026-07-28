@@ -94,3 +94,37 @@ func TestPlaceDungeonsAssignsDistinctColorsRoundRobin(t *testing.T) {
 		t.Fatalf("expected 5 distinct dungeon colors, got %d (%v)", len(seen), seen)
 	}
 }
+
+func TestPlaceDungeonsAssignsValidRandomDifficulties(t *testing.T) {
+	l := createTestLevel(30, 30)
+	l.placeDungeons(12, 1, 17, nil)
+
+	seen := map[domain.DungeonDifficulty]bool{}
+	for _, dungeon := range l.Dungeons {
+		if dungeon.Difficulty < domain.DungeonDifficultyEasy || dungeon.Difficulty > domain.DungeonDifficultyHard {
+			t.Fatalf("invalid dungeon difficulty %d", dungeon.Difficulty)
+		}
+		seen[dungeon.Difficulty] = true
+	}
+	if len(seen) < 2 {
+		t.Fatalf("expected random placement to produce multiple difficulties, got %v", seen)
+	}
+}
+
+func TestPlaceDungeonsCyclesOrdinarySpriteThemes(t *testing.T) {
+	l := createTestLevel(20, 20)
+	l.placeDungeons(5, 2, 1, nil)
+
+	want := []domain.DungeonTheme{
+		domain.DungeonThemeOne,
+		domain.DungeonThemeTwo,
+		domain.DungeonThemeThree,
+		domain.DungeonThemeOne,
+		domain.DungeonThemeTwo,
+	}
+	for i, dungeon := range l.Dungeons {
+		if dungeon.Theme != want[i] {
+			t.Errorf("dungeon %d theme = %d, want %d", i, dungeon.Theme, want[i])
+		}
+	}
+}

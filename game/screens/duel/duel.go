@@ -254,12 +254,11 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 
 // NewDungeonDuelScreen starts a duel against a dungeon enemy. There is no ante
 // screen or bribe option inside a dungeon: the duel begins immediately when the
-// player lands on the enemy's tile. Ante cards are still wagered, mirroring an
-// overworld duel.
-func NewDungeonDuelScreen(player *domain.Player, enemy *domain.Enemy, state *domain.DungeonState, tile *domain.DungeonTile) *DuelScreen {
+// player lands on the enemy's tile. Dungeon duels do not wager ante cards.
+func NewDungeonDuelScreen(player *domain.Player, enemy *domain.Enemy, level *world.Level, state *domain.DungeonState, tile *domain.DungeonTile) *DuelScreen {
 	var anteCard *domain.Card
 	var enemyAnteCard *domain.Card
-	s := NewDuelScreen(player, enemy, nil, -1, anteCard, enemyAnteCard)
+	s := NewDuelScreen(player, enemy, level, -1, anteCard, enemyAnteCard)
 	s.dungeon = &dungeonDuelContext{state: state, tile: tile}
 	s.diceNotice = diceNotice(player.BonusDuelLife, player.BonusDuelCards)
 	return s
@@ -319,7 +318,6 @@ func (s *DuelScreen) initGameState() {
 	}
 	bonusPermanents := s.player.BonusDuelCards
 	s.player.BonusDuelLife = 0
-	s.player.BonusDuelCards = nil
 	s.player.BonusDuelCards = nil
 	for card, count := range s.enemy.Character.GetActiveDeck() {
 		for range count {
@@ -2257,25 +2255,34 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())
 
 	if s.dungeon != nil {
+		if s.dungeon.tile.Boss {
+			choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
+			s.lvl.RecordCombatWin()
+			bonusCards := s.completeCastleVictory()
+			s.player.ExitDungeon()
+			return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, bonusCards), nil
+		}
 		s.dungeon.state.DefeatEnemy(s.dungeon.tile)
 		return screenui.DungeonScr, nil, nil
 	}
 
 	choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
 
-	s.lvl.RecordCombatWin()
 	s.lvl.RemoveEnemyAt(s.idx)
 
-	bonusCards := []*domain.Card{}
-	if defeatedCastle := s.lvl.HandleCastleDuelOutcome(true); defeatedCastle != nil {
-		bonus := domain.RandomPowerfulCardsForColor(defeatedCastle.Color, 5)
-		for _, c := range bonus {
-			s.player.CardCollection.AddCard(c, 1)
-			bonusCards = append(bonusCards, c)
-		}
-	}
+	return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, nil), nil
+}
 
-	return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, bonusCards), nil
+func (s *DuelScreen) completeCastleVictory() []*domain.Card {
+	castle := s.lvl.HandleCastleDuelOutcome(true)
+	if castle == nil {
+		return nil
+	}
+	bonusCards := domain.RandomPowerfulCardsForColor(castle.Color, 5)
+	for _, card := range bonusCards {
+		s.player.CardCollection.AddCard(card, 1)
+	}
+	return bonusCards
 }
 
 func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) {
@@ -2290,12 +2297,14 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 	if s.dungeon != nil {
 		// Losing a duel inside a dungeon expels the player back to the overworld.
 		s.player.ExitDungeon()
+		if s.lvl != nil {
+			s.lvl.HandleCastleDuelOutcome(false)
+		}
 		return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
 	}
 
 	s.lvl.RecordCombatWin()
 	s.lvl.RemoveEnemyAt(s.idx)
-	s.lvl.HandleCastleDuelOutcome(false)
 
 	return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
 }
