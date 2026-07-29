@@ -3,12 +3,12 @@ import os
 import re
 
 import numpy as np
-import torch  # ty:ignore[unresolved-import]
-import torch.nn as nn  # ty:ignore[unresolved-import]
+import torch
+import torch.nn as nn
 from scipy.stats import spearmanr
-from sklearn.model_selection import train_test_split  # ty:ignore[unresolved-import]
-from torch.utils.data import DataLoader, Dataset  # ty:ignore[unresolved-import]
-from transformers import AutoModel, AutoTokenizer  # ty:ignore[unresolved-import]
+from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, Dataset
+from transformers import AutoModel, AutoTokenizer
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -183,8 +183,8 @@ class MTGDataset(Dataset):
     def __len__(self):
         return len(self.records)
 
-    def __getitem__(self, idx):
-        rec = self.records[idx]
+    def __getitem__(self, index):
+        rec = self.records[index]
         enc = self.tokenizer(
             rec["text"],
             truncation=True,
@@ -252,6 +252,7 @@ def train():
     )
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    assert tokenizer is not None
 
     model = CardRanker(MODEL_NAME).to(device)
 
