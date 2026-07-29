@@ -27,6 +27,9 @@ func TestHandleWinRegularEnemyDoesNotResolvePendingCastle(t *testing.T) {
 	if castle.Defeated {
 		t.Fatal("regular overworld win defeated the pending castle")
 	}
+	if lvl.CombatsWon != 1 {
+		t.Fatalf("overworld win recorded %d combat wins, want 1", lvl.CombatsWon)
+	}
 }
 
 func TestHandleLossDoesNotRecordCombatWin(t *testing.T) {
@@ -41,6 +44,43 @@ func TestHandleLossDoesNotRecordCombatWin(t *testing.T) {
 	}
 	if lvl.CombatsWon != 0 {
 		t.Fatalf("loss recorded %d combat wins", lvl.CombatsWon)
+	}
+}
+
+func TestHandleDungeonWinRecordsOnlyBossWin(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		boss bool
+		want int
+	}{
+		{name: "random monster", want: 0},
+		{name: "boss", boss: true, want: 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}}
+			enemy := &domain.Enemy{Character: &domain.Character{
+				Name: "Dungeon Enemy", CardCollection: domain.NewCardCollection(),
+			}}
+			lvl := &world.Level{}
+			tile := &domain.DungeonTile{Type: domain.DungeonTileEnemy, Enemy: enemy.Character, Boss: test.boss}
+			state := &domain.DungeonState{}
+			s := &DuelScreen{
+				player: player,
+				enemy:  enemy,
+				lvl:    lvl,
+				dungeon: &dungeonDuelContext{
+					state: state,
+					tile:  tile,
+				},
+			}
+
+			if _, _, err := s.handleWin(); err != nil {
+				t.Fatal(err)
+			}
+			if lvl.CombatsWon != test.want {
+				t.Fatalf("dungeon win recorded %d combat wins, want %d", lvl.CombatsWon, test.want)
+			}
+		})
 	}
 }
 
