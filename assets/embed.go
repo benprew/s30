@@ -205,6 +205,8 @@ var (
 
 	//go:embed art/screens/edit_deck/Dektile4.pic.png
 	EditDeckTile_png []byte
+	//go:embed art/screens/duel/Terr_Bluemana.pic.png
+	EditDeckTerrain_png []byte
 
 	//go:embed art/screens/edit_deck/sprite_sheet.png
 	EditDeckFilterSheet_png []byte
