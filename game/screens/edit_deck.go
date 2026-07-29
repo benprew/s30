@@ -39,6 +39,7 @@ type EditDeckScreen struct {
 	CollectionList       *elements.ScrollableList
 	Background           *ebiten.Image
 	TiledBackground      *ebiten.Image
+	DeckBackground       *ebiten.Image
 	DeckButtons          []*elements.Button // Buttons for cards currently in the deck
 	lastClickTime        map[int]int        // Track click times for collection card double-click detection
 	clickFrame           int                // Current frame counter for double-click timing
@@ -81,10 +82,17 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 		return nil, fmt.Errorf("failed to load edit deck background: %w", err)
 	}
 
-	// Load and tile the background
 	tileImg, err := imageutil.LoadImage(assets.EditDeckTile_png)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load edit deck tile: %w", err)
+	}
+
+	// Create deck area with fixed bounds
+	deckAreaBounds := image.Rect(300, 0, 1024, 540)
+
+	deckBackground, err := loadEditDeckBackground(deckAreaBounds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load edit deck terrain: %w", err)
 	}
 
 	screen := &EditDeckScreen{
@@ -92,6 +100,7 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 		City:                 city,
 		Background:           collectionBg,
 		TiledBackground:      imageutil.TileImage(tileImg, 1024, 768),
+		DeckBackground:       deckBackground,
 		DeckButtons:          make([]*elements.Button, 0),
 		lastClickTime:        make(map[int]int),
 		clickFrame:           0,
@@ -146,8 +155,6 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 	)
 	screen.dragManager.RegisterDroppable(screen.sellDropArea)
 
-	// Create deck area with fixed bounds
-	deckAreaBounds := image.Rect(300, 0, 1024, 588)
 	screen.deckDropArea = dragdrop.NewDropArea(
 		deckAreaBounds,
 		[]string{"*"}, // Accept any card
@@ -175,6 +182,15 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 	}
 
 	return screen, nil
+}
+
+func loadEditDeckBackground(deckAreaBounds image.Rectangle) (*ebiten.Image, error) {
+	terrain, err := imageutil.LoadImage(assets.EditDeckTerrain_png)
+	if err != nil {
+		return nil, err
+	}
+
+	return imageutil.TileImage(terrain, deckAreaBounds.Dx(), deckAreaBounds.Dy()), nil
 }
 
 // createCollectionButtons creates buttons from the player's card collection
@@ -262,36 +278,31 @@ func (s *EditDeckScreen) reloadCollectionList() error {
 
 // Draw renders the edit deck screen
 func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
-	// Draw tiled background
-	bgOpts := &ebiten.DrawImageOptions{}
-	bgOpts.GeoM.Scale(scale, scale)
-	screen.DrawImage(s.TiledBackground, bgOpts)
+	baseOpts := ebiten.DrawImageOptions{}
+	baseOpts.GeoM.Scale(scale, scale)
+
+	dckOpts := baseOpts
+	b := s.deckDropArea.GetDropBounds()
+	dckOpts.GeoM.Translate(float64(b.Min.X), float64(b.Min.Y))
+
+	screen.DrawImage(s.TiledBackground, &baseOpts)
+
+	screen.DrawImage(s.DeckBackground, &dckOpts)
+	s.deckDropArea.Draw(screen)
 
 	// Calculate position for collection list at bottom of screen
 	collectionY := H - COLLECTION_HEIGHT
 
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Scale(scale, scale)
+	opts := baseOpts
 	opts.GeoM.Translate(0, float64(collectionY))
-
-	// Draw the scrollable collection list
-	s.CollectionList.Draw(screen, opts, scale)
-
-	// Draw count overlays on collection cards
+	s.CollectionList.Draw(screen, &opts, scale)
 	s.drawCollectionCounts(screen, scale, collectionY)
 
-	// Draw the deck drop area highlight if hovering
-	s.deckDropArea.Draw(screen)
 	drawDeckSellTarget(screen, editDeckSellBounds())
 	s.sellDropArea.Draw(screen)
 
-	// Draw deck cards
 	s.drawDeckCards(screen, scale)
-
-	// Draw deck stats header
 	s.drawDeckStats(screen, scale)
-
-	// Draw collection filter toggle buttons
 	s.drawFilterButtons(screen, scale)
 
 	// Draw the magnifier image if it exists
@@ -730,8 +741,8 @@ func (s *EditDeckScreen) calculateDeckCardPositions() {
 	bounds := s.deckDropArea.GetDropBounds()
 
 	// Card dimensions (scaled)
-	cardWidth := 100  // Approximate width after 0.4 scale
-	cardHeight := 120 // Approximate height after 0.4 scale
+	cardWidth := 90  // Approximate width after 0.4 scale
+	cardHeight := 90 // Approximate height after 0.4 scale
 	padding := 10
 
 	// Calculate grid dimensions

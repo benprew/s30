@@ -1,12 +1,33 @@
 package screens
 
 import (
+	"bytes"
 	"image"
 	"testing"
 
+	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/dragdrop"
 )
+
+func TestLoadEditDeckBackgroundUsesBlueManaTerrain(t *testing.T) {
+	background, err := loadEditDeckBackground(image.Rect(0, 0, 1024, 768))
+	if err != nil {
+		t.Fatalf("loadEditDeckBackground() error = %v", err)
+	}
+
+	if got, want := background.Bounds(), image.Rect(0, 0, 1024, 768); got != want {
+		t.Fatalf("background bounds = %v, want %v", got, want)
+	}
+
+	source, _, err := image.Decode(bytes.NewReader(assets.EditDeckTerrain_png))
+	if err != nil {
+		t.Fatalf("decode blue mana terrain: %v", err)
+	}
+	if got, want := source.Bounds(), image.Rect(0, 0, 721, 381); got != want {
+		t.Fatalf("blue mana terrain bounds = %v, want %v", got, want)
+	}
+}
 
 func TestEditDeckSellBoundsAtTopOfScreen(t *testing.T) {
 	want := image.Rect(10, 12, 150, 68)
