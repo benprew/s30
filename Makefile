@@ -4,7 +4,7 @@ DIST_DIR := dist
 EMBEDDED_TAG := embedded_card_images
 export GOCACHE := $(CURDIR)/.cache/go-build
 
-.PHONY: default run pprof dungeon test embeddedbuild cardimages winbuild macbuild webbuild builddeps fedorabuilddeps lint
+.PHONY: default run pprof test embeddedbuild cardimages winbuild macbuild webbuild builddeps fedorabuilddeps lint
 
 default: build
 
@@ -13,9 +13,6 @@ run: cardimages
 
 pprof: cardimages
 	go run -tags $(EMBEDDED_TAG) . -pprof 127.0.0.1:6060 -v mtg,duel
-
-dungeon:
-	go run ./cmd/dungeon_test
 
 test:
 ifeq ($(shell uname -s),Linux)
