@@ -3,6 +3,7 @@ package duel
 import (
 	"image"
 	"testing"
+	"time"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/google/uuid"
@@ -103,6 +104,35 @@ func TestPendingBlockers_SelectBlocker(t *testing.T) {
 	}
 }
 
+func TestSelectingBlockerLiftsItForward(t *testing.T) {
+	s, blocker, _ := setupBlockerTest()
+	pos := s.getFieldCardPos(blocker, s.self, 0, 1, permRowCreature)
+
+	s.handleBlockerClick(pos.X+fieldCardW/2, pos.Y+fieldCardH/2)
+
+	if got := s.attackerLifts[blocker.ID].to; got != -attackerLiftOffset {
+		t.Fatalf("expected selected blocker lift target -%f, got %f", attackerLiftOffset, got)
+	}
+}
+
+func TestClickingLiftedSelectedBlockerLowersIt(t *testing.T) {
+	s, blocker, _ := setupBlockerTest()
+	base := time.Now()
+	pos := s.getFieldCardPos(blocker, s.self, 0, 1, permRowCreature)
+	liftedPos := image.Pt(pos.X, pos.Y-int(attackerLiftOffset))
+	s.selectedBlocker = blocker.ID
+	s.startAttackerLift(blocker.ID, -attackerLiftOffset, base.Add(-time.Hour))
+
+	s.handleBlockerClick(liftedPos.X+fieldCardW/2, liftedPos.Y+fieldCardH-2)
+
+	if s.selectedBlocker != uuid.Nil {
+		t.Fatal("expected lifted selected blocker to be deselected")
+	}
+	if got := s.attackerLifts[blocker.ID].to; got != 0 {
+		t.Fatalf("expected deselected blocker to lower, got lift target %f", got)
+	}
+}
+
 func TestPendingBlockers_AssignBlocker(t *testing.T) {
 	s, blocker, attacker := setupBlockerTest()
 
@@ -124,6 +154,9 @@ func TestPendingBlockers_AssignBlocker(t *testing.T) {
 	if s.selectedBlocker != uuid.Nil {
 		t.Error("expected selectedBlocker to be cleared after assignment")
 	}
+	if got := s.attackerLifts[blocker.ID].to; got != -attackerLiftOffset {
+		t.Fatalf("expected assigned blocker to stay lifted at -%f, got %f", attackerLiftOffset, got)
+	}
 }
 
 func TestPendingBlockers_RemoveBlocker(t *testing.T) {
@@ -139,6 +172,32 @@ func TestPendingBlockers_RemoveBlocker(t *testing.T) {
 
 	if _, ok := s.pendingBlockers[blocker.ID]; ok {
 		t.Error("expected blocker to be removed from pendingBlockers after clicking it again")
+	}
+	if got := s.attackerLifts[blocker.ID].to; got != 0 {
+		t.Fatalf("expected unassigned blocker to lower, got lift target %f", got)
+	}
+}
+
+func TestAssignedBlockerStaysLiftedUntilCombatEnds(t *testing.T) {
+	s, blocker, attacker := setupBlockerTest()
+	base := time.Now()
+	s.lastMsg.Prompt = interactive.PromptNone
+	s.lastMsg.State.Step = stepCombatDamage
+	s.lastMsg.State.You.Battlefield[0].Blocking = attacker.ID
+	s.startAttackerLift(blocker.ID, -attackerLiftOffset, base.Add(-time.Hour))
+
+	s.refreshCardActions()
+
+	if got := s.attackerLifts[blocker.ID].to; got != -attackerLiftOffset {
+		t.Fatalf("expected blocker to stay lifted during combat at -%f, got %f", attackerLiftOffset, got)
+	}
+
+	s.lastMsg.State.Step = "Postcombat Main"
+	s.lastMsg.State.You.Battlefield[0].Blocking = uuid.Nil
+	s.refreshCardActions()
+
+	if got := s.attackerLifts[blocker.ID].to; got != 0 {
+		t.Fatalf("expected blocker to lower after combat, got %f", got)
 	}
 }
 
