@@ -628,14 +628,20 @@ func (s *DuelScreen) attackerLiftTargets() map[uuid.UUID]float64 {
 		return targets
 	}
 	for _, perm := range state.You.Battlefield {
-		if perm.Attacking {
+		if perm.Attacking || perm.Blocking != uuid.Nil {
 			targets[perm.ID] = -attackerLiftOffset
 		}
 	}
 	for _, perm := range state.Opponent.Battlefield {
-		if perm.Attacking {
+		if perm.Attacking || perm.Blocking != uuid.Nil {
 			targets[perm.ID] = attackerLiftOffset
 		}
+	}
+	for blockerID := range s.pendingBlockers {
+		targets[blockerID] = -attackerLiftOffset
+	}
+	if s.isInDeclareBlockers() && s.selectedBlocker != uuid.Nil {
+		targets[s.selectedBlocker] = -attackerLiftOffset
 	}
 	if state.Step == stepEndOfCombat {
 		for id, anim := range s.attackerLifts {
@@ -1294,7 +1300,7 @@ func (s *DuelScreen) refreshCardActions() {
 	}
 	if !s.isInDeclareBlockers() && (len(s.pendingBlockers) > 0 || s.selectedBlocker != uuid.Nil) {
 		s.pendingBlockers = make(map[uuid.UUID]uuid.UUID)
-		s.selectedBlocker = uuid.Nil
+		s.setSelectedBlocker(uuid.Nil)
 	}
 	s.cardActions = make(map[uuid.UUID][]interactive.ActionOption)
 	for _, opt := range s.lastMsg.Options {
@@ -1415,14 +1421,15 @@ func (s *DuelScreen) handleBlockerClick(mx, my int) {
 		s.loadCardPreview(perm.Name, perm)
 		if _, assigned := s.pendingBlockers[perm.ID]; assigned {
 			delete(s.pendingBlockers, perm.ID)
+			s.startAttackerLift(perm.ID, 0, time.Now())
 			return
 		}
 		if s.selectedBlocker == perm.ID {
-			s.selectedBlocker = uuid.Nil
+			s.setSelectedBlocker(uuid.Nil)
 			return
 		}
 		if s.canBlockAnything(perm.ID) {
-			s.selectedBlocker = perm.ID
+			s.setSelectedBlocker(perm.ID)
 		}
 		return
 	}
@@ -1431,9 +1438,24 @@ func (s *DuelScreen) handleBlockerClick(mx, my int) {
 		s.loadCardPreview(perm.Name, perm)
 		if s.selectedBlocker != uuid.Nil && perm.Attacking && s.isValidBlock(s.selectedBlocker, perm.ID) {
 			s.pendingBlockers[s.selectedBlocker] = perm.ID
-			s.selectedBlocker = uuid.Nil
+			s.setSelectedBlocker(uuid.Nil)
 		}
 		return
+	}
+}
+
+func (s *DuelScreen) setSelectedBlocker(id uuid.UUID) {
+	now := time.Now()
+	if s.selectedBlocker != uuid.Nil && s.selectedBlocker != id {
+		target := 0.0
+		if _, assigned := s.pendingBlockers[s.selectedBlocker]; assigned {
+			target = -attackerLiftOffset
+		}
+		s.startAttackerLift(s.selectedBlocker, target, now)
+	}
+	s.selectedBlocker = id
+	if id != uuid.Nil {
+		s.startAttackerLift(id, -attackerLiftOffset, now)
 	}
 }
 
@@ -1976,8 +1998,8 @@ func (s *DuelScreen) submitPendingAndPass() {
 				AttackerID: attackerID,
 			})
 		}
+		s.setSelectedBlocker(uuid.Nil)
 		s.pendingBlockers = make(map[uuid.UUID]uuid.UUID)
-		s.selectedBlocker = uuid.Nil
 		select {
 		case s.human.FromTUI() <- interactive.PriorityAction{
 			Type:     interactive.ActionSelectBlockers,
