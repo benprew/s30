@@ -2296,6 +2296,7 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 
 	choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
 
+	s.lvl.RecordCombatWin()
 	s.lvl.RemoveEnemyAt(s.idx)
 
 	return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, nil), nil
