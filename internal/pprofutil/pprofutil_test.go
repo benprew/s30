@@ -21,8 +21,6 @@ func TestStartDisabled(t *testing.T) {
 }
 
 func TestStartStartsServerAndLogsAddress(t *testing.T) {
-	t.Parallel()
-
 	prevListen := listen
 	prevServe := serve
 	t.Cleanup(func() {
@@ -75,8 +73,6 @@ func TestStartStartsServerAndLogsAddress(t *testing.T) {
 }
 
 func TestStartReturnsListenError(t *testing.T) {
-	t.Parallel()
-
 	prevListen := listen
 	t.Cleanup(func() {
 		listen = prevListen
