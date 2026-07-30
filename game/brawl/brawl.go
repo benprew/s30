@@ -9,7 +9,10 @@ type Brawl struct {
 }
 
 func NewBrawl(playerA, playerB mage.Player) *Brawl {
-	g := mage.NewGame(playerA, playerB)
+	g, err := mage.NewGameWithAnte(playerA, playerB, nil, nil)
+	if err != nil {
+		panic(err)
+	}
 	return &Brawl{game: g}
 }
 

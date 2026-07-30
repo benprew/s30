@@ -37,7 +37,7 @@ func TestMageIntegration_PlayLandShowsOnBattlefield(t *testing.T) {
 	human.ShuffleLibrary()
 	ai.ShuffleLibrary()
 
-	g := mage.NewGame(human, ai)
+	g := newTestAnteGame(t, human, ai)
 
 	// Draw opening hands
 	for range 4 {
@@ -182,7 +182,7 @@ func TestMageIntegration_CastArtifactAfterPlayingLands(t *testing.T) {
 		ai.AddToHand(c)
 	}
 
-	g := mage.NewGame(human, ai)
+	g := newTestAnteGame(t, human, ai)
 
 	t.Logf("Human hand: %d cards", len(human.Hand()))
 	for _, c := range human.Hand() {

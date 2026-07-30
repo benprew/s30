@@ -96,7 +96,7 @@ func TestDrainChoiceRequests_SyncsLiveStepBeforeShowingChoice(t *testing.T) {
 	choiceResps := make(chan interactive.ChoiceResponse, 1)
 	human := interactive.NewHumanPlayerWithChannels("You", toTUI, fromTUI, choiceReqs, choiceResps)
 	opponent := mage.NewBasePlayer("Opponent")
-	game := mage.NewGame(human, opponent)
+	game := newTestAnteGame(t, human, opponent)
 	game.SetStep(core.Upkeep)
 
 	s := &DuelScreen{
