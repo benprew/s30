@@ -1,11 +1,11 @@
-package com.benprew.s30;
+package com.throwingbones.s30;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 
 import go.Seq;
-import com.benprew.s30.mobile.EbitenView;
+import com.throwingbones.s30.mobile.EbitenView;
 
 public class MainActivity extends AppCompatActivity {
 

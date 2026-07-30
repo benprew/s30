@@ -341,10 +341,10 @@ Embedded binary (self-contained when the archive is complete)
 ebitenmobile bind → s30.aar (Go library)
          │
          ▼
-  Gradle build (SDK 34, min SDK 23)
+  Gradle build (SDK 36, min SDK 23)
          │
          ▼
-  APK (com.benprew.s30)
+  APK (com.throwingbones.s30)
   ├── MainActivity (lifecycle management)
   ├── Requires OpenGL ES 3.2
   └── Landscape-only orientation

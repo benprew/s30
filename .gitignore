@@ -17,3 +17,6 @@ go.work.sum
 .orchestrate/
 tasks.org
 .cache/
+*.jks
+*.keystore
+key.properties
