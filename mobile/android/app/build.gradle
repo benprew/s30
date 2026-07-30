@@ -1,15 +1,29 @@
 apply plugin: 'com.android.application'
 
+def releaseKeystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
+def releaseKeystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
+def releaseKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('ANDROID_KEY_PASSWORD')
+def releaseSigningValues = [releaseKeystorePath, releaseKeystorePassword, releaseKeyAlias, releaseKeyPassword]
+def releaseSigningConfigured = releaseSigningValues.every { it != null && !it.isEmpty() }
+def releaseSigningPartiallyConfigured = releaseSigningValues.any { it != null && !it.isEmpty() } && !releaseSigningConfigured
+def androidVersionCode = Integer.parseInt(System.getenv('ANDROID_VERSION_CODE') ?: '1')
+def androidVersionName = System.getenv('ANDROID_VERSION_NAME') ?: '1.0.0'
+
+if (releaseSigningPartiallyConfigured) {
+    throw new GradleException('Android release signing environment is incomplete')
+}
+
 android {
-    namespace 'com.benprew.s30'
-    compileSdk 34
+    namespace 'com.throwingbones.s30'
+    compileSdk 36
 
     defaultConfig {
-        applicationId "com.benprew.s30"
+        applicationId "com.throwingbones.s30"
         minSdk 23
-        targetSdk 34
-        versionCode 1
-        versionName "1.0.0"
+        targetSdk 36
+        versionCode androidVersionCode
+        versionName androidVersionName
     }
 
     compileOptions {
@@ -17,8 +31,22 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    signingConfigs {
+        release {
+            if (releaseSigningConfigured) {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

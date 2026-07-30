@@ -90,6 +90,9 @@ jobs:
 
   android:
     uses: ./.github/workflows/android.yml
+    with:
+      version_name: ${{ inputs.version || github.ref_name }}
+    secrets: inherit
 
   release:
     needs: [build, android]
@@ -114,4 +117,5 @@ jobs:
             artifacts/s30_mac-apple-silicon/s30_mac-apple-silicon \
             artifacts/s30_windows.exe/s30_windows.exe \
             artifacts/s30_windows-arm.exe/s30_windows-arm.exe \
-            artifacts/s30_android.apk/s30_android.apk
+            artifacts/s30_android.apk/s30_android.apk \
+            artifacts/s30_android.aab/s30_android.aab

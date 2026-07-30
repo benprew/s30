@@ -4,11 +4,32 @@ on:
   push:
     branches: [android]
   workflow_call:
+    inputs:
+      version_name:
+        required: false
+        type: string
+    secrets:
+      ANDROID_UPLOAD_KEYSTORE_BASE64:
+        required: true
+      ANDROID_UPLOAD_KEYSTORE_PASSWORD:
+        required: true
+      ANDROID_UPLOAD_KEY_ALIAS:
+        required: true
+      ANDROID_UPLOAD_KEY_PASSWORD:
+        required: true
   workflow_dispatch:
+    inputs:
+      version_name:
+        description: Android release version name
+        required: false
+        type: string
 
 jobs:
   android:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_VERSION_CODE: ${{ github.run_number }}
+      ANDROID_VERSION_NAME: ${{ inputs.version_name || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +50,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
         with:
@@ -46,34 +70,56 @@ jobs:
           go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind \
             -target android \
             -tags embedded_card_images \
-            -javapkg com.benprew.s30 \
+            -javapkg com.throwingbones.s30 \
             -o ./mobile/android/s30/s30.aar \
             ./mobile
 
-      - name: Build APK with Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 8.2
+          gradle-version: 8.11.1
 
-      - name: Assemble release APK
-        working-directory: ./mobile/android
-        run: gradle assembleRelease
-
-      - name: Sign APK with debug key
+      - name: Restore upload keystore
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
         run: |
-          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android \
-            -dname "CN=Debug, OU=Debug, O=Debug, L=Debug, ST=Debug, C=US"
-          ${ANDROID_HOME}/build-tools/$(ls ${ANDROID_HOME}/build-tools/ | tail -1)/apksigner sign \
-            --ks debug.keystore --ks-pass pass:android \
-            mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          umask 077
+          keystore_path="${RUNNER_TEMP}/s30-upload.jks"
+          printf '%s' "${ANDROID_UPLOAD_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
+          echo "ANDROID_KEYSTORE_PATH=${keystore_path}" >> "${GITHUB_ENV}"
 
-      - name: Rename APK
-        run: cp mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk s30_android.apk
+      - name: Build signed Android releases
+        working-directory: ./mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: gradle bundleRelease assembleRelease
+
+      - name: Verify signatures
+        run: |
+          set -o pipefail
+          apksigner_path="${ANDROID_HOME}/build-tools/$(ls -1 "${ANDROID_HOME}/build-tools" | sort -V | tail -1)/apksigner"
+          "${apksigner_path}" verify --verbose --print-certs \
+            mobile/android/app/build/outputs/apk/release/app-release.apk
+          jarsigner -verify -verbose -certs \
+            mobile/android/app/build/outputs/bundle/release/app-release.aab \
+            | tee "${RUNNER_TEMP}/aab-signature.txt"
+          grep -Fq "jar verified." "${RUNNER_TEMP}/aab-signature.txt"
+
+      - name: Prepare artifacts
+        run: |
+          cp mobile/android/app/build/outputs/apk/release/app-release.apk s30_android.apk
+          cp mobile/android/app/build/outputs/bundle/release/app-release.aab s30_android.aab
 
       - uses: actions/upload-artifact@v4
         with:
           name: s30_android.apk
           path: s30_android.apk
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s30_android.aab
+          path: s30_android.aab
           retention-days: 30

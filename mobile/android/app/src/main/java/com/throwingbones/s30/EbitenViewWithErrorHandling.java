@@ -1,10 +1,10 @@
-package com.benprew.s30;
+package com.throwingbones.s30;
 
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 
-import com.benprew.s30.mobile.EbitenView;
+import com.throwingbones.s30.mobile.EbitenView;
 
 class EbitenViewWithErrorHandling extends EbitenView {
 
