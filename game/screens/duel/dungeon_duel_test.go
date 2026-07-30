@@ -15,7 +15,7 @@ import (
 func TestPutBonusPermanentsInPlayAddsToBattlefield(t *testing.T) {
 	human := interactive.NewHumanPlayer("You")
 	opp := ai.NewAIPlayer("Opp", heuristic.New(ai.MidrangeWeighted))
-	g := mage.NewGame(human, opp)
+	g := newTestAnteGame(t, human, opp)
 
 	s := &DuelScreen{human: human, game: g}
 	s.putBonusPermanentsInPlay([]*domain.Card{{CardName: "Orcish Oriflamme"}})
@@ -35,7 +35,7 @@ func TestPutBonusPermanentsInPlayAddsToBattlefield(t *testing.T) {
 func TestPutBonusPermanentsInPlayProcessesStaticAbilities(t *testing.T) {
 	human := interactive.NewHumanPlayer("You")
 	opp := ai.NewAIPlayer("Opp", heuristic.New(ai.MidrangeWeighted))
-	g := mage.NewGame(human, opp)
+	g := newTestAnteGame(t, human, opp)
 	bear, err := mage.CreateCard("Mesa Pegasus")
 	if err != nil {
 		t.Fatalf("CreateCard Mesa Pegasus: %v", err)
@@ -71,4 +71,71 @@ func TestDiceNotice(t *testing.T) {
 	if got := diceNotice(-2, nil); !strings.Contains(got, "-2") {
 		t.Errorf("disadvantage notice %q should mention -2", got)
 	}
+}
+
+func TestInitGameStateUsesAnteGameWithoutInitialAnteCards(t *testing.T) {
+	player, enemy := duelTestPlayers(t, nil, nil)
+	s := &DuelScreen{player: player, enemy: enemy}
+
+	s.initGameState()
+
+	if !s.game.AnteEnabled() {
+		t.Fatal("duel game does not have ante enabled")
+	}
+	cards, err := s.game.AnteCards()
+	if err != nil {
+		t.Fatalf("AnteCards: %v", err)
+	}
+	if len(cards) != 0 {
+		t.Fatalf("initial ante contains %d cards, want 0", len(cards))
+	}
+}
+
+func TestInitGameStateMovesSelectedCardsToAnte(t *testing.T) {
+	playerAnte := domain.FindCardByName("Lightning Bolt")
+	enemyAnte := domain.FindCardByName("Giant Growth")
+	player, enemy := duelTestPlayers(t, playerAnte, enemyAnte)
+	s := &DuelScreen{
+		player:        player,
+		enemy:         enemy,
+		anteCard:      playerAnte,
+		enemyAnteCard: enemyAnte,
+	}
+
+	s.initGameState()
+
+	if !s.game.AnteEnabled() {
+		t.Fatal("duel game does not have ante enabled")
+	}
+	cards, err := s.game.AnteCards()
+	if err != nil {
+		t.Fatalf("AnteCards: %v", err)
+	}
+	if len(cards) != 2 {
+		t.Fatalf("initial ante contains %d cards, want 2", len(cards))
+	}
+	got := map[string]bool{}
+	for _, card := range cards {
+		got[card.Name()] = true
+	}
+	if !got[playerAnte.Name()] || !got[enemyAnte.Name()] {
+		t.Fatalf("initial ante cards = %v, want %q and %q", got, playerAnte.Name(), enemyAnte.Name())
+	}
+}
+
+func duelTestPlayers(t *testing.T, playerAnte, enemyAnte *domain.Card) (*domain.Player, *domain.Enemy) {
+	t.Helper()
+	playerCards := domain.NewCardCollection()
+	enemyCards := domain.NewCardCollection()
+	playerCards.AddCardToDeck(domain.FindCardByName("Mountain"), 0, 8)
+	enemyCards.AddCardToDeck(domain.FindCardByName("Forest"), 0, 8)
+	if playerAnte != nil {
+		playerCards.AddCardToDeck(playerAnte, 0, 1)
+	}
+	if enemyAnte != nil {
+		enemyCards.AddCardToDeck(enemyAnte, 0, 1)
+	}
+	player := &domain.Player{Character: domain.Character{Life: 10, CardCollection: playerCards}}
+	enemy := &domain.Enemy{Character: &domain.Character{Name: "Opponent", Life: 10, CardCollection: enemyCards}}
+	return player, enemy
 }

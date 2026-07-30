@@ -298,16 +298,7 @@ func (s *DuelScreen) initGameState() {
 	s.aiPlayer = ai.NewAIPlayer(s.enemy.Name(), heuristic.NewAdaptive())
 	s.aiPlayer.SetLife(s.enemy.Character.Life)
 
-	for card, count := range s.player.GetDuelDeck() {
-		for range count {
-			c, err := mage.CreateCard(card.CardName)
-			if err != nil {
-				logging.Printf(logging.Duel, "Failed to create card %s: %v\n", card.CardName, err)
-				continue
-			}
-			s.human.AddToLibrary(c)
-		}
-	}
+	playerAnte := addDeckToLibrary(s.human, s.player.GetDuelDeck(), s.anteCard)
 	for _, card := range s.player.BonusDuelCards {
 		c, err := mage.CreateCard(card.CardName)
 		if err != nil {
@@ -319,20 +310,15 @@ func (s *DuelScreen) initGameState() {
 	bonusPermanents := s.player.BonusDuelCards
 	s.player.BonusDuelLife = 0
 	s.player.BonusDuelCards = nil
-	for card, count := range s.enemy.Character.GetActiveDeck() {
-		for range count {
-			c, err := mage.CreateCard(card.CardName)
-			if err != nil {
-				logging.Printf(logging.Duel, "Failed to create card %s: %v\n", card.CardName, err)
-				continue
-			}
-			s.aiPlayer.AddToLibrary(c)
-		}
+	enemyAnte := addDeckToLibrary(s.aiPlayer, s.enemy.Character.GetActiveDeck(), s.enemyAnteCard)
+
+	var err error
+	s.game, err = mage.NewGameWithAnte(s.human, s.aiPlayer, playerAnte, enemyAnte)
+	if err != nil {
+		panic(fmt.Sprintf("create ante duel: %v", err))
 	}
 	s.human.ShuffleLibrary()
 	s.aiPlayer.ShuffleLibrary()
-
-	s.game = mage.NewGame(s.human, s.aiPlayer)
 	mage.DebugPriority = logging.Enabled(logging.Duel)
 	search.DebugStats = logging.Enabled(logging.Duel)
 
@@ -360,6 +346,24 @@ func (s *DuelScreen) initGameState() {
 		len(s.aiPlayer.Library()), len(s.aiPlayer.Hand()),
 		s.human.Life(), s.aiPlayer.Life())
 	logging.Printf(logging.Duel, "Game init: IsGameOver=%v Winner=%q\n", s.game.IsGameOver(), s.game.Winner())
+}
+
+func addDeckToLibrary(player mage.Player, deck domain.Deck, anteCard *domain.Card) []mage.Card {
+	var ante []mage.Card
+	for card, count := range deck {
+		for range count {
+			c, err := mage.CreateCard(card.CardName)
+			if err != nil {
+				logging.Printf(logging.Duel, "Failed to create card %s: %v\n", card.CardName, err)
+				continue
+			}
+			player.AddToLibrary(c)
+			if anteCard != nil && len(ante) == 0 && card.CardName == anteCard.CardName {
+				ante = []mage.Card{c}
+			}
+		}
+	}
+	return ante
 }
 
 // putBonusPermanentsInPlay drops each bonus card directly onto the human
