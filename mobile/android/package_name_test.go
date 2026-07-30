@@ -70,6 +70,8 @@ func TestAndroidReleaseSigning(t *testing.T) {
 		"../../.github/workflows/android.yml": {
 			"ANDROID_UPLOAD_KEYSTORE_BASE64",
 			"ANDROID_VERSION_CODE: ${{ github.run_number }}",
+			"name: Validate release signing secrets",
+			"Missing required Android release signing secret",
 			"base64 --decode",
 			"gradle bundleRelease assembleRelease",
 			"verify --verbose --print-certs",
@@ -101,9 +103,50 @@ func TestAndroidReleaseSigning(t *testing.T) {
 		t.Fatalf("read Android workflow: %v", err)
 	}
 
+	workflowContents := string(workflow)
+	validateSigning := strings.Index(workflowContents, "name: Validate release signing secrets")
+	restoreKeystore := strings.Index(workflowContents, "name: Restore upload keystore")
+	if validateSigning < 0 || restoreKeystore < 0 || validateSigning > restoreKeystore {
+		t.Error("Android workflow must validate signing secrets before restoring the keystore")
+	}
+
 	for _, forbidden := range []string{"debug.keystore", "/secure/path", "keytool -genkey"} {
-		if strings.Contains(string(workflow), forbidden) {
+		if strings.Contains(workflowContents, forbidden) {
 			t.Errorf("Android workflow contains obsolete signing configuration %q", forbidden)
+		}
+	}
+}
+
+func TestGitHubActionsUseNode24Runtimes(t *testing.T) {
+	t.Parallel()
+
+	files := map[string][]string{
+		"../../.github/workflows/android.yml": {
+			"actions/checkout@v5",
+			"actions/setup-go@v6",
+			"actions/setup-java@v5",
+			"android-actions/setup-android@v4",
+			"astral-sh/setup-uv@v7",
+			"gradle/actions/setup-gradle@v5",
+		},
+		"../../.github/workflows/release.yml": {
+			"actions/checkout@v5",
+			"actions/setup-go@v6",
+			"astral-sh/setup-uv@v7",
+		},
+	}
+
+	for path, expectedValues := range files {
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			t.Errorf("read %s: %v", path, err)
+			continue
+		}
+
+		for _, expected := range expectedValues {
+			if !strings.Contains(string(contents), expected) {
+				t.Errorf("%s does not contain %q", path, expected)
+			}
 		}
 	}
 }

@@ -4,15 +4,17 @@ def releaseKeystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
 def releaseKeystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 def releaseKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
 def releaseKeyPassword = System.getenv('ANDROID_KEY_PASSWORD')
-def releaseSigningValues = [releaseKeystorePath, releaseKeystorePassword, releaseKeyAlias, releaseKeyPassword]
+def releaseSigningEnvironment = [
+    ANDROID_KEYSTORE_PATH: releaseKeystorePath,
+    ANDROID_KEYSTORE_PASSWORD: releaseKeystorePassword,
+    ANDROID_KEY_ALIAS: releaseKeyAlias,
+    ANDROID_KEY_PASSWORD: releaseKeyPassword,
+]
+def releaseSigningValues = releaseSigningEnvironment.values()
 def releaseSigningConfigured = releaseSigningValues.every { it != null && !it.isEmpty() }
 def releaseSigningPartiallyConfigured = releaseSigningValues.any { it != null && !it.isEmpty() } && !releaseSigningConfigured
 def androidVersionCode = Integer.parseInt(System.getenv('ANDROID_VERSION_CODE') ?: '1')
 def androidVersionName = System.getenv('ANDROID_VERSION_NAME') ?: '1.0.0'
-
-if (releaseSigningPartiallyConfigured) {
-    throw new GradleException('Android release signing environment is incomplete')
-}
 
 android {
     namespace 'com.throwingbones.s30'
@@ -51,6 +53,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+if (releaseSigningPartiallyConfigured) {
+    def missingReleaseSigningValues = releaseSigningEnvironment.findAll { key, value -> value == null || value.isEmpty() }.keySet()
+    throw new GradleException("Android release signing environment is incomplete; missing: ${missingReleaseSigningValues.join(', ')}")
 }
 
 dependencies {
