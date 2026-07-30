@@ -890,13 +890,15 @@ func (s *DuelScreen) getKeywordIcons(perm interactive.PermanentState) []*ebiten.
 		}
 	}
 
-	if p := s.game.FindPermanent(perm.ID); p != nil {
-		for _, ability := range p.Card.Abilities() {
-			if pa, ok := ability.(*mage.ProtectionAbility); ok {
-				for _, c := range pa.FromColors {
-					if idx, ok := protectionColors[strings.ToLower(c.String())]; ok && !seen[idx] {
-						seen[idx] = true
-						icons = append(icons, s.abilityIcons[idx])
+	if s.game != nil {
+		if p := s.game.FindPermanent(perm.ID); p != nil {
+			for _, ability := range p.Card.Abilities() {
+				if pa, ok := ability.(*mage.ProtectionAbility); ok {
+					for _, c := range pa.FromColors {
+						if idx, ok := protectionColors[strings.ToLower(c.String())]; ok && !seen[idx] {
+							seen[idx] = true
+							icons = append(icons, s.abilityIcons[idx])
+						}
 					}
 				}
 			}
@@ -2708,22 +2710,40 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 				s.drawCreatureStats(screen, perm, pos)
 			}
 
-			if !perm.Tapped {
-				icons := s.getKeywordIcons(perm)
-				for idx, icon := range icons {
-					iconX := pos.X + idx*22
-					if iconX+22 > pos.X+fieldCardW {
-						break
-					}
-					iconOpts := &ebiten.DrawImageOptions{}
-					iconOpts.GeoM.Translate(float64(iconX), float64(pos.Y+fieldCardH-22))
-					screen.DrawImage(icon, iconOpts)
-				}
-			}
+			s.drawAbilityIcons(screen, perm, pos)
 
 			s.drawPermanentBorders(screen, dp, perm, pos)
 		}
 	}
+}
+
+func (s *DuelScreen) drawAbilityIcons(screen *ebiten.Image, perm interactive.PermanentState, pos image.Point) {
+	for _, placement := range s.abilityIconPlacements(perm, pos) {
+		iconOpts := &ebiten.DrawImageOptions{}
+		iconOpts.GeoM.Translate(float64(placement.pos.X), float64(placement.pos.Y))
+		screen.DrawImage(placement.icon, iconOpts)
+	}
+}
+
+type abilityIconPlacement struct {
+	icon *ebiten.Image
+	pos  image.Point
+}
+
+func (s *DuelScreen) abilityIconPlacements(perm interactive.PermanentState, pos image.Point) []abilityIconPlacement {
+	icons := s.getKeywordIcons(perm)
+	placements := make([]abilityIconPlacement, 0, len(icons))
+	for idx, icon := range icons {
+		iconX := pos.X + idx*22
+		if iconX+22 > pos.X+fieldCardW {
+			break
+		}
+		placements = append(placements, abilityIconPlacement{
+			icon: icon,
+			pos:  image.Pt(iconX, pos.Y+fieldCardH-22),
+		})
+	}
+	return placements
 }
 
 func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, perm interactive.PermanentState, pos image.Point) {
