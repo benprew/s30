@@ -27,6 +27,9 @@ func TestHandleWinRegularEnemyDoesNotResolvePendingCastle(t *testing.T) {
 	if castle.Defeated {
 		t.Fatal("regular overworld win defeated the pending castle")
 	}
+	if lvl.CombatsWon != 1 {
+		t.Fatalf("win recorded %d combat wins", lvl.CombatsWon)
+	}
 }
 
 func TestHandleLossDoesNotRecordCombatWin(t *testing.T) {

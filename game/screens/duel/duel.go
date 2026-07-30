@@ -2259,11 +2259,11 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	}
 
 	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())
+	s.lvl.RecordCombatWin()
 
 	if s.dungeon != nil {
 		if s.dungeon.tile.Boss {
 			choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
-			s.lvl.RecordCombatWin()
 			bonusCards := s.completeCastleVictory()
 			s.player.ExitDungeon()
 			return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, bonusCards), nil
@@ -2309,7 +2309,6 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 		return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
 	}
 
-	s.lvl.RecordCombatWin()
 	s.lvl.RemoveEnemyAt(s.idx)
 
 	return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
