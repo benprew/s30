@@ -23,7 +23,7 @@ jobs:
       - name: Download and process card images
         run: uv run python utils/download_card_images.py assets/card_info/scryfall_cards.json.zst
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: card-images
           path: assets/art/cardimages.zip
@@ -83,7 +83,7 @@ jobs:
       - name: Build
         run: MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -tags embedded_card_images -o ${{ matrix.artifact }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
