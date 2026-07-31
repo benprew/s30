@@ -135,13 +135,13 @@ jobs:
           cp mobile/android/app/build/outputs/apk/release/app-release.apk s30_android.apk
           cp mobile/android/app/build/outputs/bundle/release/app-release.aab s30_android.aab
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: s30_android.apk
           path: s30_android.apk
           retention-days: 30
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: s30_android.aab
           path: s30_android.aab
