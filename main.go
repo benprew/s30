@@ -14,6 +14,8 @@ import (
 func main() {
 	verbose := flag.String("v", "", "enable verbose logging for subsystems (comma-separated: mtg,world,duel)")
 	pprofAddr := flag.String("pprof", "", "enable pprof HTTP server at the given listen address, e.g. 127.0.0.1:6060")
+	debug := flag.Bool("debug", false, "use the debug burn deck and start enemies at 1 life")
+	showOpponentHand := flag.Bool("show-opponent-hand", false, "reveal the opponent's hand")
 	flag.Parse()
 
 	if *verbose != "" {
@@ -36,7 +38,10 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFullscreen(true)
 
-	g, err := game.NewGame()
+	g, err := game.NewGameWithOptions(game.Options{
+		Debug:            *debug,
+		ShowOpponentHand: *showOpponentHand,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}

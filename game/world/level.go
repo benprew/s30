@@ -18,9 +18,10 @@ type Level struct {
 	// GameID uniquely identifies this playthrough across saves so that only
 	// the latest save of a given game is kept. Difficulty and PlayerColor are
 	// the choices made when the game started; together they form SaveName.
-	GameID      string
-	Difficulty  domain.Difficulty
-	PlayerColor domain.ColorMask
+	GameID            string
+	Difficulty        domain.Difficulty
+	PlayerColor       domain.ColorMask
+	EnemyStartingLife int `json:"-"`
 
 	W, H       int
 	Tiles      [][]*Tile // (Y,X) array of tiles

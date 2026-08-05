@@ -31,6 +31,13 @@ type Game struct {
 	player               *domain.Player
 	Difficulty           domain.Difficulty
 	audio                *gameaudio.AudioManager
+	options              Options
+}
+
+// Options controls optional runtime behavior for a game.
+type Options struct {
+	Debug            bool
+	ShowOpponentHand bool
 }
 
 func (g *Game) CurrentScreen() screenui.Screen {
@@ -58,6 +65,12 @@ func (g *Game) Level() *world.Level {
 }
 
 func NewGame() (*Game, error) {
+	return NewGameWithOptions(Options{})
+}
+
+// NewGameWithOptions creates a game with the requested runtime options.
+func NewGameWithOptions(options Options) (*Game, error) {
+	applyRuntimeOptions(options)
 	loadedCardImages, err := domain.LoadEmbeddedCardImages()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded card images: %w", err)
@@ -86,6 +99,7 @@ func NewGame() (*Game, error) {
 		},
 		Difficulty: domain.DifficultyEasy,
 		audio:      am,
+		options:    options,
 	}
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
@@ -94,6 +108,9 @@ func NewGame() (*Game, error) {
 }
 
 func (g *Game) initWorld(level *world.Level) error {
+	if err := applyDebugOptions(level, g.options); err != nil {
+		return fmt.Errorf("failed to apply debug options: %w", err)
+	}
 	m := minimap.NewMiniMap(level)
 
 	wf, err := screens.NewWorldFrame(level.Player)
@@ -177,6 +194,9 @@ func (g *Game) Update() error {
 				return fmt.Errorf("failed to create new level: %s", err)
 			}
 			l.SetIdentity(cur.GameID, cur.Difficulty, cur.PlayerColor)
+			if err := applyDebugOptions(l, g.options); err != nil {
+				return fmt.Errorf("failed to apply debug options: %w", err)
+			}
 			g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(l)
 		}
 	}
