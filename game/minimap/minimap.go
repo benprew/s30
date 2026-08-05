@@ -27,14 +27,15 @@ type MiniMap struct {
 }
 
 const (
-	SCALE        = 1.6
-	doneButtonID = "Done"
+	SCALE           = 1.6
+	miniMapFontSize = 14 * SCALE
+	doneButtonID    = "Done"
 )
 
 func NewMiniMap(l *world.Level) *MiniMap {
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
-		Size:   14,
+		Size:   miniMapFontSize,
 	}
 
 	rowSpecs := []imageutil.RowSpec{
@@ -45,9 +46,16 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		{Count: 10, Width: 23, Height: 23}, // Row 4: mana symbols
 	}
 
-	s, err := imageutil.LoadVariableRowSpriteSheet(rowSpecs, assets.MiniMapTerrSpr_png)
+	terrain, err := imageutil.LoadVariableRowSpriteSheet(rowSpecs, assets.MiniMapTerrSpr_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load terrain sprite sheet: %w", err))
+	}
+	scaledTerrain := make([][]*ebiten.Image, len(terrain))
+	for row := range terrain {
+		scaledTerrain[row] = make([]*ebiten.Image, len(terrain[row]))
+		for column := range terrain[row] {
+			scaledTerrain[row][column] = imageutil.ScaleImage(terrain[row][column], SCALE)
+		}
 	}
 
 	frameImg, err := imageutil.LoadImage(assets.MiniMapFrame_png)
@@ -60,19 +68,18 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		panic(err)
 	}
 
-	scale := 1.0
 	buttons := []*elements.Button{
-		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 85, 7, scale),
-		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 85+160, 7, scale),
-		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 635, 7, scale),
-		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 635+160, 7, scale),
+		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 85, 7, SCALE),
+		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 85+160, 7, SCALE),
+		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 635, 7, SCALE),
+		elements.NewButton(buttonsMap["btn1_norm"], buttonsMap["btn1_hover"], buttonsMap["btn1_press"], 635+160, 7, SCALE),
 	}
 
 	buttons[0].ButtonText = elements.ButtonText{
 		Text:      "World Map",
 		Font:      fontFace,
 		TextColor: color.White,
-		VAlign:    elements.AlignBottom,
+		VAlign:    elements.AlignMiddle,
 	}
 	buttons[0].ID = "World Map"
 
@@ -80,7 +87,7 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		Text:      "Info Map",
 		Font:      fontFace,
 		TextColor: color.White,
-		VAlign:    elements.AlignBottom,
+		VAlign:    elements.AlignMiddle,
 	}
 	buttons[1].ID = "Info Map"
 
@@ -88,7 +95,7 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		Text:      "City Map",
 		Font:      fontFace,
 		TextColor: color.White,
-		VAlign:    elements.AlignBottom,
+		VAlign:    elements.AlignMiddle,
 	}
 	buttons[2].ID = "City Map"
 
@@ -96,12 +103,12 @@ func NewMiniMap(l *world.Level) *MiniMap {
 		Text:      doneButtonID,
 		Font:      fontFace,
 		TextColor: color.White,
-		VAlign:    elements.AlignBottom,
+		VAlign:    elements.AlignMiddle,
 	}
 	buttons[3].ID = doneButtonID
 	return &MiniMap{
-		terrainSprite: s,
-		frame:         frameImg,
+		terrainSprite: scaledTerrain,
+		frame:         imageutil.ScaleImage(frameImg, SCALE),
 		buttons:       buttons,
 		level:         l,
 		fontFace:      fontFace,
@@ -115,13 +122,10 @@ func (m *MiniMap) IsFramed() bool {
 func (m *MiniMap) IsOverlay() bool { return true }
 
 func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
-	options := &ebiten.DrawImageOptions{}
-	options.GeoM.Scale(scale, scale)
-	options.GeoM.Scale(SCALE, SCALE)   // scale up from 640x480
-	screen.DrawImage(m.frame, options) // draw background frame
+	screen.DrawImage(m.frame, &ebiten.DrawImageOptions{})
 
 	for _, b := range m.buttons {
-		b.Draw(screen, options, scale)
+		b.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	}
 
 	xref := map[int][2]int{
@@ -132,12 +136,13 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		world.TerrainSand:      {0, 6},
 		world.TerrainPlains:    {0, 18},
 	}
+	options := &ebiten.DrawImageOptions{}
 	city := m.terrainSprite[1][1]
 	castle := m.terrainSprite[1][2]
 	pLoc := m.level.CharacterTile()
 	player := m.terrainSprite[3][0]
-	width := int(float64(m.terrainSprite[0][0].Bounds().Dx())*SCALE) - 1
-	height := int(float64(m.terrainSprite[0][0].Bounds().Dy())*SCALE) - 1
+	width := m.terrainSprite[0][0].Bounds().Dx() - 1
+	height := m.terrainSprite[0][0].Bounds().Dy() - 1
 	//Draw level from T
 	for i, row := range m.level.Tiles {
 		offset := 0
@@ -180,6 +185,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		}
 	}
 
+	// draw minimap image overlays (castles & cities)
 	for i, row := range m.level.Tiles {
 		offset := 0
 		if i%2 == 1 {
@@ -195,7 +201,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 			if col.IsCity() && col.City.Name != "" {
 				cityNameLines := strings.ReplaceAll(col.City.Name, " ", "\n")
-				cityText := elements.NewText(14, cityNameLines, 0, 8)
+				cityText := elements.NewText(miniMapFontSize, cityNameLines, 0, 8)
 				cityText.LineSpacing = float64(m.fontFace.Size)
 				textWidth, _ := cityText.Measure()
 				cityText.X = -int(textWidth / 2)
@@ -206,7 +212,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 			}
 			if col.IsCastle && col.Castle != nil {
 				label := domain.ColorMaskToString(col.Castle.Color) + "\nCastle"
-				castleText := elements.NewText(14, label, 0, 8)
+				castleText := elements.NewText(miniMapFontSize, label, 0, 8)
 				castleText.LineSpacing = float64(m.fontFace.Size)
 				textWidth, _ := castleText.Measure()
 				castleText.X = -int(textWidth / 2)
@@ -229,7 +235,6 @@ func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui
 	m.blinkCounter++
 
 	options := &ebiten.DrawImageOptions{}
-	options.GeoM.Scale(SCALE, SCALE) // scale up from 640x480
 
 	for i := range m.buttons {
 		b := m.buttons[i]
