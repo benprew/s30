@@ -44,6 +44,8 @@ const (
 	stepFirstStrikeDamage = "First Strike Damage"
 )
 
+const FinalBossName = "Arzakon"
+
 // Minimum time each game message stays on screen before the next one is shown,
 // so phases don't flash past faster than the player can follow. Enemy actions
 // and life-total changes linger longer because those are the moments the player
@@ -96,11 +98,12 @@ type dungeonDuelContext struct {
 }
 
 type DuelScreen struct {
-	player  *domain.Player
-	enemy   *domain.Enemy
-	lvl     *world.Level
-	idx     int
-	dungeon *dungeonDuelContext
+	player    *domain.Player
+	enemy     *domain.Enemy
+	lvl       *world.Level
+	idx       int
+	dungeon   *dungeonDuelContext
+	finalBoss bool
 
 	game     *mage.Game
 	human    *interactive.HumanPlayer
@@ -264,6 +267,18 @@ func NewDungeonDuelScreen(player *domain.Player, enemy *domain.Enemy, level *wor
 	return s
 }
 
+// NewFinalBossDuelScreen starts the immediate, no-ante duel with Arzakon.
+func NewFinalBossDuelScreen(player *domain.Player, level *world.Level) *DuelScreen {
+	arzakon := domain.Rogues[FinalBossName]
+	if arzakon == nil {
+		panic("Arzakon rogue is not configured")
+	}
+	enemy := domain.NewEnemyFromCharacter(arzakon)
+	s := NewDuelScreen(player, &enemy, level, -1, nil, nil)
+	s.finalBoss = true
+	return s
+}
+
 // diceNotice builds the banner text summarizing the dice effects in force for a
 // dungeon duel. Returns "" when there are no effects.
 func diceNotice(lifeBonus int, cards []*domain.Card) string {
@@ -296,7 +311,11 @@ func (s *DuelScreen) initGameState() {
 	s.human = interactive.NewHumanPlayer("You")
 	s.human.SetLife(s.player.Life + s.player.BonusDuelLife)
 	s.aiPlayer = ai.NewAIPlayer(s.enemy.Name(), heuristic.NewAdaptive())
-	s.aiPlayer.SetLife(s.enemy.Character.Life)
+	enemyLife := s.enemy.Character.Life
+	if s.lvl != nil && s.lvl.EnemyStartingLife > 0 {
+		enemyLife = s.lvl.EnemyStartingLife
+	}
+	s.aiPlayer.SetLife(enemyLife)
 
 	playerAnte := addDeckToLibrary(s.human, s.player.GetDuelDeck(), s.anteCard)
 	for _, card := range s.player.BonusDuelCards {
@@ -2274,6 +2293,10 @@ func (s *DuelScreen) loadCardPreview(name string, perm *interactive.PermanentSta
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
+	if s.finalBoss {
+		return screenui.GameWinScr, NewGameResultScreen(true), nil
+	}
+
 	for _, q := range s.player.ActiveQuests {
 		if q.Type == domain.QuestTypeDefeatEnemy && q.EnemyName == s.enemy.Character.Name {
 			q.IsCompleted = true
@@ -2281,14 +2304,19 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	}
 
 	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())
-	s.lvl.RecordCombatWin()
 
 	if s.dungeon != nil {
 		if s.dungeon.tile.Boss {
+			s.lvl.RecordCombatWin()
 			choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
 			bonusCards := s.completeCastleVictory()
 			s.player.ExitDungeon()
-			return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, bonusCards), nil
+			winScreen := NewWinDuelScreen(s.player, choices, bonusCards)
+			if s.lvl.AllCastlesDefeated() {
+				winScreen.ReturnScr = screenui.DuelScr
+				winScreen.ReturnScreen = NewFinalBossDuelScreen(s.player, s.lvl)
+			}
+			return screenui.DuelWinScr, winScreen, nil
 		}
 		s.dungeon.state.DefeatEnemy(s.dungeon.tile)
 		return screenui.DungeonScr, nil, nil
@@ -2315,6 +2343,10 @@ func (s *DuelScreen) completeCastleVictory() []*domain.Card {
 }
 
 func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) {
+	if s.finalBoss {
+		return screenui.GameLoseScr, NewGameResultScreen(false), nil
+	}
+
 	if s.anteCard != nil {
 		_ = s.player.RemoveCard(s.anteCard)
 	}

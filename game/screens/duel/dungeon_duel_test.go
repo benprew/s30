@@ -10,6 +10,7 @@ import (
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai"
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai/heuristic"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/world"
 )
 
 func TestPutBonusPermanentsInPlayAddsToBattlefield(t *testing.T) {
@@ -88,6 +89,21 @@ func TestInitGameStateUsesAnteGameWithoutInitialAnteCards(t *testing.T) {
 	}
 	if len(cards) != 0 {
 		t.Fatalf("initial ante contains %d cards, want 0", len(cards))
+	}
+}
+
+func TestInitGameStateUsesLevelEnemyStartingLife(t *testing.T) {
+	player, enemy := duelTestPlayers(t, nil, nil)
+	s := &DuelScreen{
+		player: player,
+		enemy:  enemy,
+		lvl:    &world.Level{EnemyStartingLife: 1},
+	}
+
+	s.initGameState()
+
+	if got := s.aiPlayer.Life(); got != 1 {
+		t.Fatalf("enemy life = %d, want 1", got)
 	}
 }
 

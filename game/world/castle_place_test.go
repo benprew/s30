@@ -239,6 +239,26 @@ func TestHandleCastleDuelOutcomeKeepsCastleOnLoss(t *testing.T) {
 	}
 }
 
+func TestAllCastlesDefeated(t *testing.T) {
+	l := &Level{Castles: []*domain.Castle{
+		{Defeated: true},
+		{Defeated: true},
+	}}
+	if !l.AllCastlesDefeated() {
+		t.Fatal("expected all castles to be defeated")
+	}
+
+	l.Castles[1].Defeated = false
+	if l.AllCastlesDefeated() {
+		t.Fatal("reported victory while a castle remains")
+	}
+
+	l.Castles = nil
+	if l.AllCastlesDefeated() {
+		t.Fatal("an empty castle list must not complete the game")
+	}
+}
+
 func TestNewCastleDungeonCreatesFreshStandardAttemptWithoutWorldEnemy(t *testing.T) {
 	for color, rogueName := range castleRogues {
 		castle := &domain.Castle{Name: "Test Castle", Color: color, RogueName: rogueName, MapTile: image.Pt(1, 1)}

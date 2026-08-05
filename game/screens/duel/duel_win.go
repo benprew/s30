@@ -50,7 +50,8 @@ type DuelWinScreen struct {
 	// ReturnScr is the screen to return to once the player dismisses the win
 	// screen. Defaults to the overworld; dungeon duels override it so the player
 	// resumes exploring the dungeon.
-	ReturnScr screenui.ScreenName
+	ReturnScr    screenui.ScreenName
+	ReturnScreen screenui.Screen
 }
 
 func (s *DuelWinScreen) IsFramed() bool { return false }
@@ -212,7 +213,7 @@ func (s *DuelWinScreen) drawBonus(screen *ebiten.Image) {
 func (s *DuelWinScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	if len(s.choices) == 0 {
 		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || ui.Click(image.Rect(0, 0, W, H)) {
-			return s.ReturnScr, nil, nil
+			return s.ReturnScr, s.ReturnScreen, nil
 		}
 		return screenui.DuelWinScr, nil, nil
 	}
@@ -221,7 +222,7 @@ func (s *DuelWinScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 		s.doneBtn.Update(&ebiten.DrawImageOptions{}, scale, W, H)
 		if s.doneBtn.IsClicked() {
 			s.confirmSelection()
-			return s.ReturnScr, nil, nil
+			return s.ReturnScr, s.ReturnScreen, nil
 		}
 	}
 

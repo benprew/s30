@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 )
 
@@ -81,6 +82,102 @@ func TestHandleDungeonWinRecordsOnlyBossWin(t *testing.T) {
 				t.Fatalf("dungeon win recorded %d combat wins, want %d", lvl.CombatsWon, test.want)
 			}
 		})
+	}
+}
+
+func TestFinalBossOutcomeUsesGameResultScreens(t *testing.T) {
+	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}}
+	enemy := &domain.Enemy{Character: &domain.Character{Name: "Arzakon", CardCollection: domain.NewCardCollection()}}
+
+	winDuel := &DuelScreen{player: player, enemy: enemy, finalBoss: true}
+	name, screen, err := winDuel.handleWin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != screenui.GameWinScr {
+		t.Fatalf("final boss win returned %v, want GameWinScr", name)
+	}
+	result, ok := screen.(*GameResultScreen)
+	if !ok || !result.Won {
+		t.Fatalf("final boss win returned %#v, want winning GameResultScreen", screen)
+	}
+
+	loseDuel := &DuelScreen{player: player, enemy: enemy, finalBoss: true}
+	name, screen, err = loseDuel.handleLoss()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != screenui.GameLoseScr {
+		t.Fatalf("final boss loss returned %v, want GameLoseScr", name)
+	}
+	result, ok = screen.(*GameResultScreen)
+	if !ok || result.Won {
+		t.Fatalf("final boss loss returned %#v, want losing GameResultScreen", screen)
+	}
+}
+
+func TestArzakonIsLevelTwelveWithThreeHundredLife(t *testing.T) {
+	arzakon := domain.Rogues[FinalBossName]
+	if arzakon == nil {
+		t.Fatalf("rogue %q is not configured", FinalBossName)
+	}
+	if arzakon.Level != 12 || arzakon.Life != 300 {
+		t.Fatalf("Arzakon level/life = %d/%d, want 12/300", arzakon.Level, arzakon.Life)
+	}
+}
+
+func TestFifthWizardRewardContinuesToArzakon(t *testing.T) {
+	player := &domain.Player{
+		Character:    domain.Character{CardCollection: domain.NewCardCollection()},
+		DungeonState: &domain.DungeonState{DungeonLife: 20},
+	}
+	finalCastle := &domain.Castle{Name: "Final Castle", Color: domain.ColorRed, MapTile: image.Point{}}
+	lvl := &world.Level{
+		W:      1,
+		H:      1,
+		Player: player,
+		Tiles:  [][]*world.Tile{{{IsCastle: true, Castle: finalCastle}}},
+		Castles: []*domain.Castle{
+			{Defeated: true},
+			{Defeated: true},
+			{Defeated: true},
+			{Defeated: true},
+			finalCastle,
+		},
+	}
+	lvl.SetPendingCastle(finalCastle, finalCastle.MapTile)
+	wizard := &domain.Enemy{Character: &domain.Character{
+		Name:           "Mighty Wizard",
+		CardCollection: domain.NewCardCollection(),
+	}}
+	tile := &domain.DungeonTile{Type: domain.DungeonTileEnemy, Enemy: wizard.Character, Boss: true}
+	duel := &DuelScreen{
+		player:  player,
+		enemy:   wizard,
+		lvl:     lvl,
+		dungeon: &dungeonDuelContext{state: player.DungeonState, tile: tile},
+	}
+
+	name, screen, err := duel.handleWin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != screenui.DuelWinScr {
+		t.Fatalf("fifth wizard win returned %v, want reward screen", name)
+	}
+	reward, ok := screen.(*DuelWinScreen)
+	if !ok {
+		t.Fatalf("fifth wizard win returned %T, want DuelWinScreen", screen)
+	}
+	if len(reward.choices) == 0 {
+		t.Fatal("fifth wizard reward has no card choices")
+	}
+	if reward.ReturnScr != screenui.DuelScr {
+		t.Fatalf("reward continues to %v, want DuelScr", reward.ReturnScr)
+	}
+	finalDuel, ok := reward.ReturnScreen.(*DuelScreen)
+	if !ok || !finalDuel.finalBoss || finalDuel.enemy.Name() != FinalBossName {
+		t.Fatalf("reward continuation = %#v, want Arzakon duel", reward.ReturnScreen)
 	}
 }
 

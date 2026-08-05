@@ -306,6 +306,12 @@ func (g *Game) updateBGM(screen screenui.ScreenName) {
 	case screenui.DuelLoseScr:
 		g.audio.PlaySFX(gameaudio.SFXDefeat)
 		g.audio.StopBGM()
+	case screenui.GameWinScr:
+		g.audio.PlaySFX(gameaudio.SFXVictory)
+		g.audio.StopBGM()
+	case screenui.GameLoseScr:
+		g.audio.PlaySFX(gameaudio.SFXDefeat)
+		g.audio.StopBGM()
 	case screenui.DuelAnteScr:
 		g.audio.StopBGM()
 	}

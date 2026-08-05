@@ -360,6 +360,20 @@ func (l *Level) HandleCastleDuelOutcome(won bool) *domain.Castle {
 	return castle
 }
 
+// AllCastlesDefeated reports whether the player has defeated every color
+// wizard. A world with no castles is not considered complete.
+func (l *Level) AllCastlesDefeated() bool {
+	if len(l.Castles) == 0 {
+		return false
+	}
+	for _, castle := range l.Castles {
+		if castle == nil || !castle.Defeated {
+			return false
+		}
+	}
+	return true
+}
+
 // x,y is the pixel position of the tile, width and height are the dimensions of the tile
 // Check if the tile is visible on the screen
 // return the position of the tile in the screen
