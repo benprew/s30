@@ -2304,6 +2304,7 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	}
 
 	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())
+	s.lvl.RecordCombatWin()
 
 	if s.dungeon != nil {
 		if s.dungeon.tile.Boss {
