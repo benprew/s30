@@ -9,6 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hajimehoshi/ebiten/v2 v2.9.9
 	github.com/klauspost/compress v1.18.7
+	github.com/tanema/gween v0.0.0-20250522035225-e874ee3ae01a
 	golang.org/x/image v0.43.0
 )
 

@@ -137,6 +137,7 @@ type DuelScreen struct {
 	cardActions      map[uuid.UUID][]interactive.ActionOption
 	pendingAttackers map[uuid.UUID]bool
 	attackerLifts    map[uuid.UUID]*attackerLiftAnimation
+	spellAnimations  map[uuid.UUID]*spellCastAnimation
 	pendingBlockers  map[uuid.UUID]uuid.UUID
 	selectedBlocker  uuid.UUID
 
@@ -238,6 +239,7 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		cardPositions:    make(map[uuid.UUID]image.Point),
 		pendingAttackers: make(map[uuid.UUID]bool),
 		attackerLifts:    make(map[uuid.UUID]*attackerLiftAnimation),
+		spellAnimations:  make(map[uuid.UUID]*spellCastAnimation),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
 	}
@@ -425,9 +427,11 @@ func (s *DuelScreen) drainMessages() {
 
 func (s *DuelScreen) applyGameMsg(msg interactive.GameMsg) {
 	prev := s.lastMsg
+	now := time.Now()
+	s.syncSpellAnimations(prev, &msg, now)
 	s.lastMsg = &msg
 	s.refreshDamageAssignmentPrompt(&msg)
-	s.lastMsgTime = time.Now()
+	s.lastMsgTime = now
 	s.startLossAnimationFromMessage(prev, &msg, s.lastMsgTime)
 	s.nextMsgDelay = phaseDelay(prev, &msg)
 	s.checkSoundTriggers(&msg)
@@ -953,6 +957,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		return screenui.DuelScr, nil, nil
 	}
 
+	s.pruneSpellAnimations(time.Now())
 	s.drainMessages()
 	s.drainChoiceRequests()
 
@@ -1077,6 +1082,8 @@ const (
 	battlefieldCreatureStatsSize = 20
 	creatureStatsRightPadding    = 3
 	creatureStatsBottomInset     = 22
+	cardPreviewX                 = 0
+	cardPreviewY                 = 188
 	cardPreviewCreatureStatsSize = 24
 	cardPreviewStatsRightPadding = 6
 	cardPreviewStatsBottomInset  = 31
@@ -2395,6 +2402,7 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawHandPanel(screen, s.self, s.lastMsg.State.You)
 	s.drawCardPreview(screen, H)
 	s.drawDiceNotice(screen, W)
+	s.drawSpellAnimations(screen, W, H)
 	s.drawGraveyardView(screen, W, H)
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
@@ -2703,6 +2711,9 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps in
 			pos := s.getFieldCardPos(perm, dp, i, len(perms), row)
 			pos.Y += int(math.Round(s.attackerLiftY(perm.ID, now)))
 			s.cardPositions[perm.ID] = pos
+			if s.spellIsAnimating(perm.ID, now) {
+				continue
+			}
 
 			auras := s.attachedPerms(perm.ID)
 			// reverse order so it draws correctly on the screen
@@ -3165,7 +3176,15 @@ func (s *DuelScreen) drawGraveyard(screen *ebiten.Image, dp *duelPlayer) {
 	if ps == nil || len(ps.Graveyard) == 0 {
 		return
 	}
-	top := ps.Graveyard[len(ps.Graveyard)-1]
+	graveyardIndex := len(ps.Graveyard) - 1
+	now := time.Now()
+	for graveyardIndex >= 0 && s.spellIsAnimating(ps.Graveyard[graveyardIndex].ID, now) {
+		graveyardIndex--
+	}
+	if graveyardIndex < 0 {
+		return
+	}
+	top := ps.Graveyard[graveyardIndex]
 	art := s.getCardArtImg(top.Name, graveyardW)
 	if art == nil {
 		return
@@ -3215,10 +3234,8 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 	if s.cardPreviewImg == nil {
 		return
 	}
-	previewX := 0
-	previewY := 188
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(previewX), float64(previewY))
+	opts.GeoM.Translate(cardPreviewX, cardPreviewY)
 	screen.DrawImage(s.cardPreviewImg, opts)
 
 	if s.cardPreviewName != "" {
@@ -3234,7 +3251,7 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 			stat := elements.NewText(cardPreviewCreatureStatsSize, statText, 0, 0)
 			textW, _ := stat.Measure()
 			textPos := cardPreviewStatsTextPosition(
-				image.Point{X: previewX, Y: previewY},
+				image.Point{X: cardPreviewX, Y: cardPreviewY},
 				image.Point{X: imgW, Y: imgH},
 				textW,
 			)
