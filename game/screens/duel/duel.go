@@ -2315,7 +2315,6 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 
 	if s.dungeon != nil {
 		if s.dungeon.tile.Boss {
-			s.lvl.RecordCombatWin()
 			choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
 			bonusCards := s.completeCastleVictory()
 			s.player.ExitDungeon()
@@ -2332,7 +2331,6 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 
 	choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
 
-	s.lvl.RecordCombatWin()
 	s.lvl.RemoveEnemyAt(s.idx)
 
 	return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, nil), nil

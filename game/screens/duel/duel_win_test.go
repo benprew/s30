@@ -48,13 +48,13 @@ func TestHandleLossDoesNotRecordCombatWin(t *testing.T) {
 	}
 }
 
-func TestHandleDungeonWinRecordsOnlyBossWin(t *testing.T) {
+func TestHandleDungeonWinRecordsCombatWin(t *testing.T) {
 	for _, test := range []struct {
 		name string
 		boss bool
 		want int
 	}{
-		{name: "random monster", want: 0},
+		{name: "random monster", want: 1},
 		{name: "boss", boss: true, want: 1},
 	} {
 		t.Run(test.name, func(t *testing.T) {
