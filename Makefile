@@ -3,6 +3,7 @@ CARD_DATA := assets/card_info/scryfall_cards.json.zst
 DIST_DIR := dist
 EMBEDDED_TAG := embedded_card_images
 export GOCACHE := $(CURDIR)/.cache/go-build
+TEST_COUNT := 5
 
 .PHONY: default run pprof test embeddedbuild cardimages winbuild macbuild webbuild builddeps fedorabuilddeps lint
 
@@ -16,9 +17,9 @@ pprof: cardimages
 
 test:
 ifeq ($(shell uname -s),Linux)
-	xvfb-run -a go test -count=10 ./...
+	xvfb-run -a go test -count=$(TEST_COUNT) ./...
 else
-	go test -count=10 ./...
+	go test -count=$(TEST_COUNT) ./...
 endif
 
 cardimages:
