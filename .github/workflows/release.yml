@@ -118,4 +118,5 @@ jobs:
             artifacts/s30_windows.exe/s30_windows.exe \
             artifacts/s30_windows-arm.exe/s30_windows-arm.exe \
             artifacts/s30_android.apk/s30_android.apk \
+            artifacts/s30_android.apk/s30_android.apk.idsig \
             artifacts/s30_android.aab/s30_android.aab

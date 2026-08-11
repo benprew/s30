@@ -66,6 +66,10 @@ func TestAndroidReleaseSigning(t *testing.T) {
 			"ANDROID_VERSION_CODE",
 			"ANDROID_VERSION_NAME",
 			"signingConfig signingConfigs.release",
+			"enableV1Signing true",
+			"enableV2Signing true",
+			"enableV3Signing true",
+			"enableV4Signing true",
 		},
 		"../../.github/workflows/android.yml": {
 			"ANDROID_UPLOAD_KEYSTORE_BASE64",
@@ -75,11 +79,17 @@ func TestAndroidReleaseSigning(t *testing.T) {
 			"base64 --decode",
 			"gradle bundleRelease assembleRelease",
 			"verify --verbose --print-certs",
+			"Verified using v1 scheme (JAR signing): true",
+			"Verified using v2 scheme (APK Signature Scheme v2): true",
+			"Verified using v3 scheme (APK Signature Scheme v3): true",
+			"Verified using v4 scheme (APK Signature Scheme v4): true",
+			"s30_android.apk.idsig",
 			"jarsigner -verify",
 			"s30_android.aab",
 		},
 		"../../.github/workflows/release.yml": {
 			"secrets: inherit",
+			"artifacts/s30_android.apk/s30_android.apk.idsig",
 			"artifacts/s30_android.aab/s30_android.aab",
 		},
 	}

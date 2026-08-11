@@ -124,7 +124,12 @@ jobs:
           set -o pipefail
           apksigner_path="${ANDROID_HOME}/build-tools/$(ls -1 "${ANDROID_HOME}/build-tools" | sort -V | tail -1)/apksigner"
           "${apksigner_path}" verify --verbose --print-certs \
-            mobile/android/app/build/outputs/apk/release/app-release.apk
+            mobile/android/app/build/outputs/apk/release/app-release.apk \
+            | tee "${RUNNER_TEMP}/apk-signature.txt"
+          grep -Fq "Verified using v1 scheme (JAR signing): true" "${RUNNER_TEMP}/apk-signature.txt"
+          grep -Fq "Verified using v2 scheme (APK Signature Scheme v2): true" "${RUNNER_TEMP}/apk-signature.txt"
+          grep -Fq "Verified using v3 scheme (APK Signature Scheme v3): true" "${RUNNER_TEMP}/apk-signature.txt"
+          grep -Fq "Verified using v4 scheme (APK Signature Scheme v4): true" "${RUNNER_TEMP}/apk-signature.txt"
           jarsigner -verify -verbose -certs \
             mobile/android/app/build/outputs/bundle/release/app-release.aab \
             | tee "${RUNNER_TEMP}/aab-signature.txt"
@@ -133,12 +138,15 @@ jobs:
       - name: Prepare artifacts
         run: |
           cp mobile/android/app/build/outputs/apk/release/app-release.apk s30_android.apk
+          cp mobile/android/app/build/outputs/apk/release/app-release.apk.idsig s30_android.apk.idsig
           cp mobile/android/app/build/outputs/bundle/release/app-release.aab s30_android.aab
 
       - uses: actions/upload-artifact@v7
         with:
           name: s30_android.apk
-          path: s30_android.apk
+          path: |
+            s30_android.apk
+            s30_android.apk.idsig
           retention-days: 30
 
       - uses: actions/upload-artifact@v7

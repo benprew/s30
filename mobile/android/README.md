@@ -2,7 +2,9 @@
 
 Release APKs and Android App Bundles are signed with the same upload key. The
 GitHub Actions workflow restores that key from repository secrets and passes the
-signing configuration to Gradle.
+signing configuration to Gradle. Release APKs use v1, v2, v3, and v4 signing.
+The v4 signature is published as the separate `s30_android.apk.idsig` file that
+Android's v4 scheme requires.
 
 Configure these GitHub Actions repository secrets:
 
