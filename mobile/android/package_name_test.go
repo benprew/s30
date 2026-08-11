@@ -79,6 +79,7 @@ func TestAndroidReleaseSigning(t *testing.T) {
 			"base64 --decode",
 			"gradle bundleRelease assembleRelease",
 			"verify --verbose --print-certs",
+			"--v4-signature-file",
 			"Verified using v1 scheme (JAR signing): true",
 			"Verified using v2 scheme (APK Signature Scheme v2): true",
 			"Verified using v3 scheme (APK Signature Scheme v3): true",

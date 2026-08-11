@@ -124,6 +124,7 @@ jobs:
           set -o pipefail
           apksigner_path="${ANDROID_HOME}/build-tools/$(ls -1 "${ANDROID_HOME}/build-tools" | sort -V | tail -1)/apksigner"
           "${apksigner_path}" verify --verbose --print-certs \
+            --v4-signature-file mobile/android/app/build/outputs/apk/release/app-release.apk.idsig \
             mobile/android/app/build/outputs/apk/release/app-release.apk \
             | tee "${RUNNER_TEMP}/apk-signature.txt"
           grep -Fq "Verified using v1 scheme (JAR signing): true" "${RUNNER_TEMP}/apk-signature.txt"
