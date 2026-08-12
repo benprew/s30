@@ -278,10 +278,6 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 		}
 	}
 
-	if l.totalTicks%EncounterSpawnRate == 0 && len(l.RandomEncounters) < MaxRandomEncounters {
-		l.SpawnEncounters(1)
-	}
-
 	return nil
 }
 
