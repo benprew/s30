@@ -142,6 +142,7 @@ func (l *Level) UpdateEncounters() {
 			t := l.Tile(re.Tile)
 			t.RemoveRandomEncounter()
 			l.RandomEncounters = append(l.RandomEncounters[:i], l.RandomEncounters[i+1:]...)
+			break // only process a single encounter at a time, see random_encounters_test
 		}
 	}
 
