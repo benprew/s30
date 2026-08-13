@@ -179,3 +179,36 @@ ffmpeg -i input.wav -c:a libvorbis -q:a 4 output.ogg
 5. Add BGM for world and duel screens
 6. Add remaining Priority 1 SFX
 7. Polish with Priority 2/3 as desired
+
+## Sound Details
+
+**SFX Music:**
+
+- cast.ogg - cast a spell in duel
+- bird_<color>_ - ambient sound - played randomly when player is walking on terrain of type <color>. ex, when walking in a forest play bird_green_1/2.ogg
+- click.ogg - used when clicking on buttons in town or important buttons, is kinda long and noisy
+- click2.ogg - used for clicking on most things
+- counter.ogg - used when a spell is countered in duel
+- creature_death.ogg - used when a creatures dies in duel
+- damage.ogg - used when a player takes damage
+- defeat.ogg - used when a player loses a duel
+- dungeon_amb_ - used as ambient sounds played randomly when a player is in a dungeon
+- enemy_<type>.ogg - used when an enemy of <type> is encountered
+- land_play.ogg - used when playing a land in duel
+- land_<color>_1/2.ogg - ambient sounds when player is walking on terrain of type color
+- manaball.ogg - used when a player draws mana from lands/artifacts/etc in duel
+- manalink.ogg - quest reward sound
+- reward.ogg - quest reward sound
+- summon.ogg - used when a creature is summoned in duel, but only from .5 - 1.0 seconds
+- walk_<color>_l/r.ogg used when a player is walking on that color terrain type in the world.
+- wingame.ogg - played at the end of the game if the player has won
+- death.ogg - played at the end of the game if the player has lost
+
+
+**BGM Music:**
+
+- All bgm music should be played at a lower volume and not looped, it gets repetitive.
+- city.ogg - ambient background music
+- dungeon.ogg - ambient background music
+- title.ogg - played on the title screen/new game screens
+- world_XX.ogg - background music for cities, lower numbers are for smaller cities, larger numbers are for larger cities. Can be randomly selected

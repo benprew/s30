@@ -12,13 +12,17 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"
 )
 
-const sampleRate = 22050
+const (
+	sampleRate          = 22050
+	bytesPerSampleFrame = 4
+)
 
 // SFX identifies a sound effect.
 type SFX int
 
 const (
 	SFXClick SFX = iota
+	SFXClick2
 	SFXCast
 	SFXDamage
 	SFXDeath
@@ -78,6 +82,7 @@ const (
 
 var sfxFiles = map[SFX]string{
 	SFXClick:         "audio/sfx/click.ogg",
+	SFXClick2:        "audio/sfx/click2.ogg",
 	SFXCast:          "audio/sfx/cast.ogg",
 	SFXDamage:        "audio/sfx/damage.ogg",
 	SFXDeath:         "audio/sfx/death.ogg",
@@ -192,6 +197,22 @@ var birdFiles = map[TerrainColor][]string{
 	TerrainColorGreen: {"audio/sfx/bird_green_1.ogg"},
 }
 
+var landFiles = map[TerrainColor][]string{
+	TerrainColorWhite: {"audio/sfx/land_white_1.ogg", "audio/sfx/land_white_2.ogg"},
+	TerrainColorBlue:  {"audio/sfx/land_blue_1.ogg"},
+	TerrainColorBlack: {"audio/sfx/land_black_1.ogg", "audio/sfx/land_black_2.ogg"},
+	TerrainColorRed:   {"audio/sfx/land_red_1.ogg", "audio/sfx/land_red_2.ogg"},
+	TerrainColorGreen: {"audio/sfx/land_green_1.ogg"},
+}
+
+var dungeonFiles = []string{
+	"audio/sfx/dungeon_amb_1.ogg",
+	"audio/sfx/dungeon_amb_2.ogg",
+	"audio/sfx/dungeon_amb_3.ogg",
+	"audio/sfx/dungeon_amb_4.ogg",
+	"audio/sfx/dungeon_amb_5.ogg",
+}
+
 // BGM identifies a background music track.
 type BGM int
 
@@ -276,6 +297,8 @@ type AudioManager struct {
 	sfxBytes      map[SFX][]byte
 	footstepBytes map[TerrainColor][2][]byte // [0]=left, [1]=right
 	birdBytes     map[TerrainColor][][]byte
+	landBytes     map[TerrainColor][][]byte
+	dungeonBytes  [][]byte
 	bgmVolume     float64
 	sfxVolume     float64
 	muted         bool
@@ -296,7 +319,8 @@ func NewAudioManager() *AudioManager {
 		sfxBytes:      make(map[SFX][]byte),
 		footstepBytes: make(map[TerrainColor][2][]byte),
 		birdBytes:     make(map[TerrainColor][][]byte),
-		bgmVolume:     0.4,
+		landBytes:     make(map[TerrainColor][][]byte),
+		bgmVolume:     0.2,
 		sfxVolume:     0.7,
 	}
 
@@ -308,6 +332,8 @@ func NewAudioManager() *AudioManager {
 	am.preloadSFX()
 	am.preloadFootsteps()
 	am.preloadBirds()
+	am.preloadLandAmbience()
+	am.preloadDungeonAmbience()
 
 	instance = am
 	return am
@@ -315,8 +341,32 @@ func NewAudioManager() *AudioManager {
 
 func (am *AudioManager) preloadSFX() {
 	for sfx, path := range sfxFiles {
-		am.sfxBytes[sfx] = decodeOgg(path)
+		decoded := decodeOgg(path)
+		if sfx == SFXSummon {
+			decoded = trimPCM(decoded, 500, 1000)
+		}
+		am.sfxBytes[sfx] = decoded
 	}
+}
+
+func (am *AudioManager) preloadLandAmbience() {
+	for color, files := range landFiles {
+		am.landBytes[color] = decodeFiles(files)
+	}
+}
+
+func (am *AudioManager) preloadDungeonAmbience() {
+	am.dungeonBytes = decodeFiles(dungeonFiles)
+}
+
+func decodeFiles(files []string) [][]byte {
+	decoded := make([][]byte, 0, len(files))
+	for _, path := range files {
+		if data := decodeOgg(path); data != nil {
+			decoded = append(decoded, data)
+		}
+	}
+	return decoded
 }
 
 func (am *AudioManager) preloadFootsteps() {
@@ -360,6 +410,23 @@ func decodeOgg(path string) []byte {
 	}
 
 	return decoded
+}
+
+func trimPCM(data []byte, startMS, endMS int) []byte {
+	start := sampleRate * bytesPerSampleFrame * startMS / 1000
+	end := sampleRate * bytesPerSampleFrame * endMS / 1000
+	start -= start % bytesPerSampleFrame
+	end -= end % bytesPerSampleFrame
+	if start < 0 {
+		start = 0
+	}
+	if end > len(data) {
+		end = len(data) - len(data)%bytesPerSampleFrame
+	}
+	if start >= end {
+		return nil
+	}
+	return data[start:end]
 }
 
 // PlaySFX plays a sound effect. Fire-and-forget.
@@ -426,17 +493,52 @@ func (am *AudioManager) PlayBird(color TerrainColor) {
 	player.Play()
 }
 
-// RandomWorldBGM returns a random world exploration BGM track.
+// PlayLandAmbience plays a random terrain-colored ambient sound.
+func (am *AudioManager) PlayLandAmbience(color TerrainColor) {
+	am.playRandom(am.landBytes[color], 0.3)
+}
+
+// PlayDungeonAmbience plays a random dungeon ambient sound.
+func (am *AudioManager) PlayDungeonAmbience() {
+	am.playRandom(am.dungeonBytes, 0.3)
+}
+
+func (am *AudioManager) playRandom(sounds [][]byte, volumeScale float64) {
+	if am.muted || am.context == nil || len(sounds) == 0 {
+		return
+	}
+	data := sounds[rand.Intn(len(sounds))]
+	if data == nil {
+		return
+	}
+	player := am.context.NewPlayerFromBytes(data)
+	player.SetVolume(am.sfxVolume * volumeScale)
+	player.Play()
+}
+
+// RandomWorldBGM returns a random numbered city BGM track.
 func RandomWorldBGM() BGM {
 	return worldBGMs[rand.Intn(len(worldBGMs))]
 }
 
-// IsWorldBGM returns true if the given BGM is one of the world exploration tracks.
+// RandomCityBGM returns a numbered track appropriate for the city's size.
+func RandomCityBGM(cityTier int) BGM {
+	minTrack, trackCount := 0, 7
+	switch cityTier {
+	case 2:
+		minTrack, trackCount = 7, 7
+	case 3:
+		minTrack, trackCount = 14, 6
+	}
+	return BGM(int(BGMWorld0) + minTrack + rand.Intn(trackCount))
+}
+
+// IsWorldBGM returns true if the given BGM is one of the numbered city tracks.
 func IsWorldBGM(bgm BGM) bool {
 	return bgm >= BGMWorld0 && bgm <= BGMWorld19
 }
 
-// PlayBGM switches to a new background music track (looping).
+// PlayBGM switches to a new background music track and plays it once.
 func (am *AudioManager) PlayBGM(bgm BGM) {
 	if bgm == am.currentBGM {
 		return
@@ -470,9 +572,7 @@ func (am *AudioManager) startBGM(bgm BGM) {
 		return
 	}
 
-	loop := audio.NewInfiniteLoop(stream, stream.Length())
-
-	player, err := am.context.NewPlayer(loop)
+	player, err := am.context.NewPlayer(stream)
 	if err != nil {
 		fmt.Printf("audio: failed to create BGM player: %v\n", err)
 		return

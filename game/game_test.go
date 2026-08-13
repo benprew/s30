@@ -3,12 +3,63 @@ package game
 import (
 	"testing"
 
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type stubScreen struct {
 	overlay bool
+}
+
+func TestEndScreenSFX(t *testing.T) {
+	tests := []struct {
+		screen screenui.ScreenName
+		want   gameaudio.SFX
+	}{
+		{screenui.DuelWinScr, gameaudio.SFXVictory},
+		{screenui.DuelLoseScr, gameaudio.SFXDefeat},
+		{screenui.GameWinScr, gameaudio.SFXWinGame},
+		{screenui.GameLoseScr, gameaudio.SFXDeath},
+	}
+	for _, test := range tests {
+		got, ok := endScreenSFX(test.screen)
+		if !ok || got != test.want {
+			t.Errorf("endScreenSFX(%v) = %v, %t; want %v, true", test.screen, got, ok, test.want)
+		}
+	}
+}
+
+func TestDuelScreenStopsBGM(t *testing.T) {
+	am := gameaudio.NewAudioManager()
+	am.Mute()
+	am.PlayBGM(gameaudio.BGMBattle)
+	g := &Game{audio: am}
+
+	g.updateBGM(screenui.DuelScr)
+
+	if got := am.CurrentBGM(); got != gameaudio.BGMNone {
+		t.Fatalf("duel BGM = %v, want BGMNone", got)
+	}
+}
+
+func TestFixedScreenBGM(t *testing.T) {
+	tests := []struct {
+		screen screenui.ScreenName
+		want   gameaudio.BGM
+	}{
+		{screenui.StartScr, gameaudio.BGMTitle},
+		{screenui.WorldScr, gameaudio.BGMCity},
+		{screenui.MiniMapScr, gameaudio.BGMCity},
+		{screenui.DungeonEntryScr, gameaudio.BGMDungeon},
+		{screenui.DungeonScr, gameaudio.BGMDungeon},
+	}
+	for _, test := range tests {
+		got, ok := fixedScreenBGM(test.screen)
+		if !ok || got != test.want {
+			t.Errorf("fixedScreenBGM(%v) = %v, %t; want %v, true", test.screen, got, ok, test.want)
+		}
+	}
 }
 
 func (s *stubScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {

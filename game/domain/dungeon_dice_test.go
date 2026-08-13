@@ -164,6 +164,7 @@ func TestRandomDiceCardOnlyGrantsCardsThatCanStartOnBattlefield(t *testing.T) {
 		card := randomDiceCard(rng, pool)
 		if card == nil {
 			t.Fatal("expected an eligible card")
+			continue
 		}
 		if !eligible[card.CardName] {
 			t.Fatalf("card %q cannot start on an empty battlefield", card.CardName)

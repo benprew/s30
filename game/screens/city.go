@@ -208,6 +208,7 @@ func mkButtons(scale float64, city *domain.City) []*elements.Button {
 	for i, config := range buttonConfigs {
 		btn := mkButton(config, fontFace, Icons, Iconb, scale)
 		btn.ID = config.ID
+		btn.Important = true
 		buttons[i] = &btn
 	}
 

@@ -3,6 +3,8 @@ package elements
 import (
 	"image"
 	"testing"
+
+	"github.com/benprew/s30/game/audio"
 )
 
 func TestButtonClicksWhenGestureStartsAndEndsInside(t *testing.T) {
@@ -37,5 +39,14 @@ func TestButtonShowsPressedStateWhilePointerIsDownInside(t *testing.T) {
 	}
 	if button.State != StatePressed {
 		t.Fatalf("button state = %v; want StatePressed", button.State)
+	}
+}
+
+func TestButtonClickSound(t *testing.T) {
+	if got := (&Button{}).clickSFX(); got != audio.SFXClick2 {
+		t.Fatalf("ordinary button sound = %v, want click2", got)
+	}
+	if got := (&Button{Important: true}).clickSFX(); got != audio.SFXClick {
+		t.Fatalf("important button sound = %v, want click", got)
 	}
 }

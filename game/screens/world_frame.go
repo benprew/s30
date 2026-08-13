@@ -205,7 +205,7 @@ func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, scree
 
 	if f.questScrollClicked(scale, ui.Click) {
 		if am := gameaudio.Get(); am != nil {
-			am.PlaySFX(gameaudio.SFXClick)
+			am.PlaySFX(gameaudio.SFXClick2)
 		}
 		return screenui.QuestScrollScr, nil, nil
 	}

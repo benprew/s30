@@ -50,10 +50,12 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 
 			if prevTile != currentTile {
 				am.PlayFootstep(terrainColor)
-			}
-
-			if s.Level.TotalTicks()%50 == 0 && rand.Intn(3) == 0 {
-				am.PlayBird(terrainColor)
+				switch rand.Intn(8) {
+				case 0:
+					am.PlayBird(terrainColor)
+				case 1:
+					am.PlayLandAmbience(terrainColor)
+				}
 			}
 		}
 	}
@@ -66,7 +68,7 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 				}
 				if rewards := s.Level.Player.RedeemFulfilledQuests(tile.City); len(rewards) > 0 {
 					if am := gameaudio.Get(); am != nil {
-						am.PlaySFX(gameaudio.SFXFindCard)
+						am.PlaySFX(questRewardSound(rewards))
 					}
 					return screenui.QuestRewardScr, NewQuestRewardScreen(rewards, tile.City, s.Level.Player, s.Level), nil
 				}

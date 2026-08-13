@@ -90,6 +90,7 @@ func TestMageIntegration_PlayLandShowsOnBattlefield(t *testing.T) {
 
 	if playLandAction == nil {
 		t.Fatal("No PlayLand action available in main phase with Mountain in hand")
+		return
 	}
 
 	t.Logf("Playing land: %s (CardID: %s)", playLandAction.CardName, playLandAction.CardID)
@@ -225,6 +226,7 @@ func TestMageIntegration_CastArtifactAfterPlayingLands(t *testing.T) {
 			t.Logf("  Available: type=%v label=%q cardName=%q", opt.Type, opt.Label, opt.CardName)
 		}
 		t.Fatal("No PlayLand action for Mountain")
+		return
 	}
 
 	t.Logf("Playing Mountain (ID: %s)", playLand.CardID)

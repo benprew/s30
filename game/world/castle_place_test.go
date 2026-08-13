@@ -38,6 +38,7 @@ func TestPlaceCastlesAttachesCastleToTile(t *testing.T) {
 		tile := l.Tile(c.MapTile)
 		if tile == nil {
 			t.Fatalf("tile missing at %v", c.MapTile)
+			continue
 		}
 		if !tile.IsCastle {
 			t.Errorf("tile at %v not marked IsCastle", c.MapTile)

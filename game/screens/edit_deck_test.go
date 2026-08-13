@@ -238,6 +238,7 @@ func TestMoveCardFromDeck(t *testing.T) {
 	mountainGroup := screen.collectionGroups["Mountain"]
 	if mountainGroup == nil {
 		t.Fatal("Mountain should appear in collection list")
+		return
 	}
 	if mountainGroup.totalCount != 7 {
 		t.Errorf("Expected 7 available (10 total - 3 in deck), got %d", mountainGroup.totalCount)

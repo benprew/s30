@@ -14,6 +14,7 @@ func TestLoadRogues(t *testing.T) {
 	for key, r := range Rogues {
 		if r == nil {
 			t.Fatalf("rogue %s is nil", key)
+			continue
 		}
 		if r.Name == "" {
 			t.Fatalf("rogue %s has empty Name field", key)

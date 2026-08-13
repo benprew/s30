@@ -101,6 +101,7 @@ func NewGameWithOptions(options Options) (*Game, error) {
 		audio:      am,
 		options:    options,
 	}
+	am.PlayBGM(gameaudio.BGMTitle)
 
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
 	ebiten.SetWindowClosingHandled(true)
@@ -126,7 +127,7 @@ func (g *Game) initWorld(level *world.Level) error {
 	g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreen()
 
 	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
-	g.audio.PlayBGM(gameaudio.RandomWorldBGM())
+	g.audio.PlayBGM(gameaudio.BGMCity)
 
 	return nil
 }
@@ -311,29 +312,61 @@ func (g *Game) Audio() *gameaudio.AudioManager {
 }
 
 func (g *Game) updateBGM(screen screenui.ScreenName) {
+	if bgm, ok := fixedScreenBGM(screen); ok {
+		g.audio.PlayBGM(bgm)
+		return
+	}
+
 	switch screen {
-	case screenui.WorldScr, screenui.MiniMapScr:
+	case screenui.CityScr, screenui.BuyCardsScr, screenui.EditDeckScr, screenui.WisemanScr:
 		if !gameaudio.IsWorldBGM(g.audio.CurrentBGM()) {
-			g.audio.PlayBGM(gameaudio.RandomWorldBGM())
+			g.audio.PlayBGM(g.randomCityBGM())
 		}
 	case screenui.DuelScr:
-		g.audio.PlayBGM(gameaudio.BGMBattle)
-	case screenui.CityScr, screenui.BuyCardsScr, screenui.EditDeckScr, screenui.WisemanScr:
-		g.audio.PlayBGM(gameaudio.BGMCity)
-	case screenui.DuelWinScr:
-		g.audio.PlaySFX(gameaudio.SFXVictory)
-		g.audio.StopBGM()
-	case screenui.DuelLoseScr:
-		g.audio.PlaySFX(gameaudio.SFXDefeat)
-		g.audio.StopBGM()
-	case screenui.GameWinScr:
-		g.audio.PlaySFX(gameaudio.SFXVictory)
-		g.audio.StopBGM()
-	case screenui.GameLoseScr:
-		g.audio.PlaySFX(gameaudio.SFXDefeat)
 		g.audio.StopBGM()
 	case screenui.DuelAnteScr:
 		g.audio.StopBGM()
+	default:
+		if sfx, ok := endScreenSFX(screen); ok {
+			g.audio.PlaySFX(sfx)
+			g.audio.StopBGM()
+		}
+	}
+}
+
+func fixedScreenBGM(screen screenui.ScreenName) (gameaudio.BGM, bool) {
+	switch screen {
+	case screenui.StartScr:
+		return gameaudio.BGMTitle, true
+	case screenui.WorldScr, screenui.MiniMapScr:
+		return gameaudio.BGMCity, true
+	case screenui.DungeonEntryScr, screenui.DungeonScr:
+		return gameaudio.BGMDungeon, true
+	default:
+		return gameaudio.BGMNone, false
+	}
+}
+
+func (g *Game) randomCityBGM() gameaudio.BGM {
+	cityScreen, ok := g.screenMap[screenui.CityScr].(*screens.CityScreen)
+	if !ok || cityScreen.City == nil {
+		return gameaudio.RandomCityBGM(int(domain.TierTown))
+	}
+	return gameaudio.RandomCityBGM(int(cityScreen.City.Tier))
+}
+
+func endScreenSFX(screen screenui.ScreenName) (gameaudio.SFX, bool) {
+	switch screen {
+	case screenui.DuelWinScr:
+		return gameaudio.SFXVictory, true
+	case screenui.DuelLoseScr:
+		return gameaudio.SFXDefeat, true
+	case screenui.GameWinScr:
+		return gameaudio.SFXWinGame, true
+	case screenui.GameLoseScr:
+		return gameaudio.SFXDeath, true
+	default:
+		return 0, false
 	}
 }
 

@@ -307,11 +307,11 @@ func mkPurchaseButtons() []*elements.Button {
 	return []*elements.Button{
 		elements.NewButtonFromConfig(elements.ButtonConfig{
 			Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
-			Text: "Yes", Font: fontFace, ID: "buy_yes",
+			Text: "Yes", Font: fontFace, ID: "buy_yes", Important: true,
 		}),
 		elements.NewButtonFromConfig(elements.ButtonConfig{
 			Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
-			Text: "No", Font: fontFace, ID: "buy_no",
+			Text: "No", Font: fontFace, ID: "buy_no", Important: true,
 		}),
 	}
 }

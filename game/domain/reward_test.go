@@ -28,6 +28,7 @@ func TestRandomBasicLand(t *testing.T) {
 	land := RandomBasicLand()
 	if land == nil {
 		t.Fatal("RandomBasicLand returned nil")
+		return
 	}
 	if _, ok := basicLands[land.CardName]; !ok {
 		t.Errorf("RandomBasicLand returned %q, which is not a basic land", land.CardName)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math/rand"
 
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
@@ -77,6 +78,7 @@ type DungeonScreen struct {
 	overlayBtns   []*elements.Button
 	overlayTitle  string
 	overlayBody   string
+	ambientTicks  int
 }
 
 func NewDungeonScreen(player *domain.Player, level *world.Level) *DungeonScreen {
@@ -176,6 +178,12 @@ func (s *DungeonScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 	st := s.dungeonState()
 	if st == nil || st.CurrentDungeon == nil {
 		return screenui.WorldScr, nil, nil
+	}
+	s.ambientTicks++
+	if s.ambientTicks%300 == 0 && rand.Intn(3) == 0 {
+		if am := gameaudio.Get(); am != nil {
+			am.PlayDungeonAmbience()
+		}
 	}
 
 	if s.overlayActive {

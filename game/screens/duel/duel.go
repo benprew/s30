@@ -177,13 +177,6 @@ type DuelScreen struct {
 	choiceCardImg  *ebiten.Image
 	choiceCardName string
 
-	prevYouLife        int
-	prevOppLife        int
-	prevYouGraveLen    int
-	prevOppGraveLen    int
-	prevYouCreatureLen int
-	prevOppCreatureLen int
-
 	selfLifeAnimation     lifeCounterAnimation
 	opponentLifeAnimation lifeCounterAnimation
 
@@ -434,7 +427,7 @@ func (s *DuelScreen) applyGameMsg(msg interactive.GameMsg) {
 	s.lastMsgTime = now
 	s.startLossAnimationFromMessage(prev, &msg, s.lastMsgTime)
 	s.nextMsgDelay = phaseDelay(prev, &msg)
-	s.checkSoundTriggers(&msg)
+	s.checkSoundTriggers(prev, &msg)
 	if logging.Enabled(logging.Duel) {
 		optNames := make([]string, len(msg.Options))
 		for i, o := range msg.Options {
@@ -789,39 +782,97 @@ func suggestedDamageAssignment(blockers []interactive.PermanentState, total int)
 	return assignment
 }
 
-func (s *DuelScreen) checkSoundTriggers(msg *interactive.GameMsg) {
+func (s *DuelScreen) checkSoundTriggers(prev, msg *interactive.GameMsg) {
 	am := gameaudio.Get()
 	if am == nil {
 		return
 	}
+	for _, sfx := range soundEffectsForDuelTransition(prev, msg) {
+		am.PlaySFX(sfx)
+	}
+}
 
-	youLife := msg.State.You.Life
-	oppLife := msg.State.Opponent.Life
-	youGraveLen := len(msg.State.You.Graveyard)
-	oppGraveLen := len(msg.State.Opponent.Graveyard)
-	youCreatureLen := len(msg.State.You.Battlefield)
-	oppCreatureLen := len(msg.State.Opponent.Battlefield)
-
-	if s.prevYouLife != 0 || s.prevOppLife != 0 {
-		if youLife < s.prevYouLife || oppLife < s.prevOppLife {
-			am.PlaySFX(gameaudio.SFXDamage)
-		}
-
-		if youGraveLen > s.prevYouGraveLen || oppGraveLen > s.prevOppGraveLen {
-			am.PlaySFX(gameaudio.SFXCreatureDeath)
-		}
-
-		if youCreatureLen > s.prevYouCreatureLen || oppCreatureLen > s.prevOppCreatureLen {
-			am.PlaySFX(gameaudio.SFXSummon)
-		}
+func soundEffectsForDuelTransition(prev, cur *interactive.GameMsg) []gameaudio.SFX {
+	if prev == nil || prev.State == nil || cur == nil || cur.State == nil {
+		return nil
 	}
 
-	s.prevYouLife = youLife
-	s.prevOppLife = oppLife
-	s.prevYouGraveLen = youGraveLen
-	s.prevOppGraveLen = oppGraveLen
-	s.prevYouCreatureLen = youCreatureLen
-	s.prevOppCreatureLen = oppCreatureLen
+	effects := make([]gameaudio.SFX, 0, 6)
+	if cur.State.You.Life < prev.State.You.Life || cur.State.Opponent.Life < prev.State.Opponent.Life {
+		effects = append(effects, gameaudio.SFXDamage)
+	}
+	if creatureMovedToGraveyard(prev.State, cur.State) {
+		effects = append(effects, gameaudio.SFXCreatureDeath)
+	}
+	if permanentEntered(prev.State, cur.State, func(perm interactive.PermanentState) bool { return perm.IsLand }) {
+		effects = append(effects, gameaudio.SFXLandPlay)
+	}
+	if permanentEntered(prev.State, cur.State, func(perm interactive.PermanentState) bool { return perm.IsCreature }) {
+		effects = append(effects, gameaudio.SFXSummon)
+	}
+	if spellEnteredStack(prev.State.StackItems, cur.State.StackItems) {
+		effects = append(effects, gameaudio.SFXCast)
+	}
+	if len(prev.State.StackItems)-len(cur.State.StackItems) >= 2 {
+		effects = append(effects, gameaudio.SFXCounter)
+	}
+	if manaPoolTotal(cur.State.You.ManaPool) > manaPoolTotal(prev.State.You.ManaPool) ||
+		manaPoolTotal(cur.State.Opponent.ManaPool) > manaPoolTotal(prev.State.Opponent.ManaPool) {
+		effects = append(effects, gameaudio.SFXManaball)
+	}
+	return effects
+}
+
+func creatureMovedToGraveyard(prev, cur *interactive.GameState) bool {
+	graveyard := make(map[uuid.UUID]bool)
+	for _, card := range cur.You.Graveyard {
+		graveyard[card.ID] = true
+	}
+	for _, card := range cur.Opponent.Graveyard {
+		graveyard[card.ID] = true
+	}
+	for _, group := range [][]interactive.PermanentState{prev.You.Battlefield, prev.Opponent.Battlefield} {
+		for _, perm := range group {
+			if perm.IsCreature && graveyard[perm.ID] {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func permanentEntered(prev, cur *interactive.GameState, matches func(interactive.PermanentState) bool) bool {
+	existing := make(map[uuid.UUID]bool)
+	for _, group := range [][]interactive.PermanentState{prev.You.Battlefield, prev.Opponent.Battlefield} {
+		for _, perm := range group {
+			existing[perm.ID] = true
+		}
+	}
+	for _, group := range [][]interactive.PermanentState{cur.You.Battlefield, cur.Opponent.Battlefield} {
+		for _, perm := range group {
+			if !existing[perm.ID] && matches(perm) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func spellEnteredStack(prev, cur []interactive.StackItemState) bool {
+	existing := make(map[string]bool, len(prev))
+	for _, item := range prev {
+		existing[item.ID] = true
+	}
+	for _, item := range cur {
+		if !item.IsAbility && !existing[item.ID] {
+			return true
+		}
+	}
+	return false
+}
+
+func manaPoolTotal(pool interactive.ManaPoolState) int {
+	return pool.White + pool.Blue + pool.Black + pool.Red + pool.Green + pool.Colorless
 }
 
 func (s *DuelScreen) getDomainCard(name string) *domain.Card {
@@ -1668,9 +1719,6 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 			pa.Targets = []uuid.UUID{tid}
 			select {
 			case s.human.FromTUI() <- pa:
-				if am := gameaudio.Get(); am != nil {
-					am.PlaySFX(gameaudio.SFXCast)
-				}
 			default:
 			}
 			return
@@ -1684,9 +1732,6 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 	pa := actionOptionToPriorityAction(action)
 	select {
 	case s.human.FromTUI() <- pa:
-		if am := gameaudio.Get(); am != nil {
-			am.PlaySFX(gameaudio.SFXCast)
-		}
 	default:
 	}
 }
@@ -1839,9 +1884,6 @@ func (s *DuelScreen) submitTargetingAction() bool {
 	pa.XValue = s.xValueForAction()
 	select {
 	case s.human.FromTUI() <- pa:
-		if am := gameaudio.Get(); am != nil {
-			am.PlaySFX(gameaudio.SFXCast)
-		}
 	default:
 	}
 	return true

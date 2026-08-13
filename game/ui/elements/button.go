@@ -62,6 +62,7 @@ type Button struct {
 	Bounds       image.Rectangle
 	Position     *layout.Position
 	ID           string
+	Important    bool
 }
 
 type ButtonConfig struct {
@@ -74,6 +75,7 @@ type ButtonConfig struct {
 	Scale     float64     // defaults to 1.0
 	X, Y      int
 	ID        string
+	Important bool
 }
 
 func NewButtonFromConfig(cfg ButtonConfig) *Button {
@@ -92,6 +94,7 @@ func NewButtonFromConfig(cfg ButtonConfig) *Button {
 
 	btn := NewButton(cfg.Normal, cfg.Hover, cfg.Pressed, cfg.X, cfg.Y, cfg.Scale)
 	btn.ID = cfg.ID
+	btn.Important = cfg.Important
 
 	if cfg.Text != "" && cfg.Font != nil {
 		btn.ButtonText = ButtonText{
@@ -175,9 +178,16 @@ func (b *Button) Update(opts *ebiten.DrawImageOptions, scale float64, screenW, s
 	if b.updatePointer(bounds, ui.Position(), ui.Pressed(), ui.Click(bounds)) {
 		fmt.Printf("Button Clicked: %s\n", b.ID)
 		if am := audio.Get(); am != nil {
-			am.PlaySFX(audio.SFXClick)
+			am.PlaySFX(b.clickSFX())
 		}
 	}
+}
+
+func (b *Button) clickSFX() audio.SFX {
+	if b.Important {
+		return audio.SFXClick
+	}
+	return audio.SFXClick2
 }
 
 func (b *Button) updatePointer(bounds image.Rectangle, position image.Point, pressed, clicked bool) bool {

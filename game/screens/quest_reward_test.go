@@ -1,6 +1,11 @@
 package screens
 
-import "testing"
+import (
+	"testing"
+
+	gameaudio "github.com/benprew/s30/game/audio"
+	"github.com/benprew/s30/game/domain"
+)
 
 func TestQuestRewardContinuesForPointerClickOrKeyboard(t *testing.T) {
 	tests := []struct {
@@ -22,5 +27,14 @@ func TestQuestRewardContinuesForPointerClickOrKeyboard(t *testing.T) {
 				t.Fatalf("questRewardContinues() = %t, want %t", got, test.want)
 			}
 		})
+	}
+}
+
+func TestQuestRewardSound(t *testing.T) {
+	if got := questRewardSound([]domain.DeckQuestReward{{Reward: domain.QuestReward{Gold: 100}}}); got != gameaudio.SFXReward {
+		t.Fatalf("gold reward sound = %v, want reward", got)
+	}
+	if got := questRewardSound([]domain.DeckQuestReward{{Reward: domain.QuestReward{ManaLinks: 1}}}); got != gameaudio.SFXManalink {
+		t.Fatalf("mana-link reward sound = %v, want manalink", got)
 	}
 }

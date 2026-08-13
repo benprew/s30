@@ -120,6 +120,7 @@ func TestArzakonIsLevelTwelveWithThreeHundredLife(t *testing.T) {
 	arzakon := domain.Rogues[FinalBossName]
 	if arzakon == nil {
 		t.Fatalf("rogue %q is not configured", FinalBossName)
+		return
 	}
 	if arzakon.Level != 12 || arzakon.Life != 300 {
 		t.Fatalf("Arzakon level/life = %d/%d, want 12/300", arzakon.Level, arzakon.Life)

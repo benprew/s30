@@ -480,25 +480,27 @@ func (s *WisemanScreen) setupButtons() {
 	startX := 512 - totalW/2
 
 	yesBtn := elements.NewButtonFromConfig(elements.ButtonConfig{
-		Normal:  btnSprites[0][0],
-		Hover:   btnSprites[0][1],
-		Pressed: btnSprites[0][2],
-		Text:    "Accept",
-		Font:    fontFace,
-		ID:      "yes",
-		X:       startX,
-		Y:       618,
+		Normal:    btnSprites[0][0],
+		Hover:     btnSprites[0][1],
+		Pressed:   btnSprites[0][2],
+		Text:      "Accept",
+		Font:      fontFace,
+		ID:        "yes",
+		Important: true,
+		X:         startX,
+		Y:         618,
 	})
 
 	noBtn := elements.NewButtonFromConfig(elements.ButtonConfig{
-		Normal:  btnSprites[0][0],
-		Hover:   btnSprites[0][1],
-		Pressed: btnSprites[0][2],
-		Text:    "Refuse",
-		Font:    fontFace,
-		ID:      "no",
-		X:       startX + acceptW + 10,
-		Y:       618,
+		Normal:    btnSprites[0][0],
+		Hover:     btnSprites[0][1],
+		Pressed:   btnSprites[0][2],
+		Text:      "Refuse",
+		Font:      fontFace,
+		ID:        "no",
+		Important: true,
+		X:         startX + acceptW + 10,
+		Y:         618,
 	})
 
 	s.Buttons = []*elements.Button{yesBtn, noBtn}

@@ -15,6 +15,7 @@ func TestGenerateDungeonProducesWalkableEntrance(t *testing.T) {
 	entrance := d.Tile(d.Entrance)
 	if entrance == nil {
 		t.Fatalf("entrance tile out of bounds: %v", d.Entrance)
+		return
 	}
 	if entrance.Type != DungeonTileEntrance {
 		t.Fatalf("expected entrance tile type, got %v", entrance.Type)

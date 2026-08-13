@@ -6,6 +6,7 @@ import (
 	"image/color"
 
 	"github.com/benprew/s30/assets"
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
@@ -167,4 +168,13 @@ func (s *QuestRewardScreen) Update(W, H int, scale float64) (screenui.ScreenName
 
 func questRewardContinues(clicked, space, escape bool) bool {
 	return clicked || space || escape
+}
+
+func questRewardSound(rewards []domain.DeckQuestReward) gameaudio.SFX {
+	for _, reward := range rewards {
+		if reward.Reward.ManaLinks > 0 {
+			return gameaudio.SFXManalink
+		}
+	}
+	return gameaudio.SFXReward
 }

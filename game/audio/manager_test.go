@@ -1,6 +1,7 @@
 package audio
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -11,20 +12,72 @@ func newTestAudioManager() *AudioManager {
 		sfxBytes:      make(map[SFX][]byte),
 		footstepBytes: make(map[TerrainColor][2][]byte),
 		birdBytes:     make(map[TerrainColor][][]byte),
-		bgmVolume:     0.4,
+		landBytes:     make(map[TerrainColor][][]byte),
+		dungeonBytes:  make([][]byte, 0),
+		bgmVolume:     0.2,
 		sfxVolume:     0.7,
 	}
 	instance = am
 	return am
 }
 
+func TestRequestedSoundAssetsAreMapped(t *testing.T) {
+	wantSFX := map[SFX]string{
+		SFXClick:         "audio/sfx/click.ogg",
+		SFXClick2:        "audio/sfx/click2.ogg",
+		SFXCast:          "audio/sfx/cast.ogg",
+		SFXCounter:       "audio/sfx/counter.ogg",
+		SFXCreatureDeath: "audio/sfx/creature_death.ogg",
+		SFXDamage:        "audio/sfx/damage.ogg",
+		SFXDefeat:        "audio/sfx/defeat.ogg",
+		SFXLandPlay:      "audio/sfx/land_play.ogg",
+		SFXManaball:      "audio/sfx/manaball.ogg",
+		SFXManalink:      "audio/sfx/manalink.ogg",
+		SFXReward:        "audio/sfx/reward.ogg",
+		SFXSummon:        "audio/sfx/summon.ogg",
+		SFXWinGame:       "audio/sfx/wingame.ogg",
+		SFXDeath:         "audio/sfx/death.ogg",
+	}
+	for sfx, want := range wantSFX {
+		if got := sfxFiles[sfx]; got != want {
+			t.Errorf("sfxFiles[%v] = %q, want %q", sfx, got, want)
+		}
+	}
+
+	for _, color := range []TerrainColor{
+		TerrainColorWhite, TerrainColorBlue, TerrainColorBlack, TerrainColorRed, TerrainColorGreen,
+	} {
+		if len(footstepFiles[color]) != 2 {
+			t.Errorf("terrain %v has no footstep pair", color)
+		}
+		if len(birdFiles[color]) == 0 {
+			t.Errorf("terrain %v has no bird ambience", color)
+		}
+		if len(landFiles[color]) == 0 {
+			t.Errorf("terrain %v has no land ambience", color)
+		}
+	}
+	if len(dungeonFiles) != 5 {
+		t.Fatalf("len(dungeonFiles) = %d, want 5", len(dungeonFiles))
+	}
+}
+
+func TestTrimPCM(t *testing.T) {
+	data := make([]byte, sampleRate*bytesPerSampleFrame*2)
+	got := trimPCM(data, 500, 1000)
+	wantLen := sampleRate * bytesPerSampleFrame / 2
+	if len(got) != wantLen {
+		t.Fatalf("len(trimPCM()) = %d, want %d", len(got), wantLen)
+	}
+	if !slices.Equal(got, data[wantLen:wantLen*2]) {
+		t.Fatal("trimPCM() returned the wrong half-second window")
+	}
+}
+
 func TestNewAudioManager(t *testing.T) {
 	am := newTestAudioManager()
-	if am == nil {
-		t.Fatal("expected non-nil AudioManager")
-	}
-	if am.bgmVolume != 0.4 {
-		t.Errorf("expected bgmVolume=0.4, got %f", am.bgmVolume)
+	if am.bgmVolume != 0.2 {
+		t.Errorf("expected bgmVolume=0.2, got %f", am.bgmVolume)
 	}
 	if am.sfxVolume != 0.7 {
 		t.Errorf("expected sfxVolume=0.7, got %f", am.sfxVolume)
@@ -107,6 +160,25 @@ func TestRandomWorldBGM(t *testing.T) {
 	bgm := RandomWorldBGM()
 	if !IsWorldBGM(bgm) {
 		t.Errorf("RandomWorldBGM returned non-world BGM: %d", bgm)
+	}
+}
+
+func TestRandomCityBGMUsesTierRanges(t *testing.T) {
+	tests := []struct {
+		tier     int
+		min, max BGM
+	}{
+		{tier: 1, min: BGMWorld0, max: BGMWorld6},
+		{tier: 2, min: BGMWorld7, max: BGMWorld13},
+		{tier: 3, min: BGMWorld14, max: BGMWorld19},
+	}
+	for _, test := range tests {
+		for range 100 {
+			got := RandomCityBGM(test.tier)
+			if got < test.min || got > test.max {
+				t.Fatalf("RandomCityBGM(%d) = %v, want range %v..%v", test.tier, got, test.min, test.max)
+			}
+		}
 	}
 }
 

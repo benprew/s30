@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -112,9 +111,6 @@ func (s *DuelScreen) selectXValue(xValue int) {
 	logging.Printf(logging.Duel, "CLICK: %s -> X=%d\n", action.CardName, xValue)
 	select {
 	case s.human.FromTUI() <- pa:
-		if am := gameaudio.Get(); am != nil {
-			am.PlaySFX(gameaudio.SFXCast)
-		}
 	default:
 	}
 }
