@@ -149,6 +149,10 @@ func (b *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale
 		imgToDraw = b.Normal
 	}
 
+	if imgToDraw == nil {
+		return
+	}
+
 	screen.DrawImage(imgToDraw, options)
 
 	if b.ButtonText.Text != "" {

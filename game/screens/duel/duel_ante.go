@@ -28,7 +28,7 @@ type DuelAnteScreen struct {
 	enemyName         string
 	lvl               *world.Level
 	idx               int
-	duelBtn           *elements.Button
+	duelBtn           elements.Button
 	bribeBtn          *elements.Button
 	visageBorder      []*ebiten.Image
 	playerStatsUI     []*ebiten.Image
@@ -65,7 +65,7 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	bribeW, _ := elements.TextButtonSize(bribeText, fontFace)
 
 	btnY := 500
-	s.duelBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
+	s.duelBtn = *elements.NewButtonFromConfig(elements.ButtonConfig{
 		Normal:  btnSprites[0][0],
 		Hover:   btnSprites[0][1],
 		Pressed: btnSprites[0][2],
@@ -76,16 +76,18 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 		Y:       btnY,
 	})
 
-	s.bribeBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
-		Normal:  btnSprites[0][0],
-		Hover:   btnSprites[0][1],
-		Pressed: btnSprites[0][2],
-		Text:    bribeText,
-		Font:    fontFace,
-		ID:      "bribe",
-		X:       512 - bribeW/2,
-		Y:       btnY + duelH + 10,
-	})
+	if canBribe(s) {
+		s.bribeBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
+			Normal:  btnSprites[0][0],
+			Hover:   btnSprites[0][1],
+			Pressed: btnSprites[0][2],
+			Text:    bribeText,
+			Font:    fontFace,
+			ID:      "bribe",
+			X:       512 - bribeW/2,
+			Y:       btnY + duelH + 10,
+		})
+	}
 
 	s.background = loadBackgroundForEnemy(enemy)
 
@@ -129,18 +131,20 @@ func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		return s.startDuel()
 	}
 
-	if ebiten.IsKeyPressed(ebiten.Key2) {
+	if ebiten.IsKeyPressed(ebiten.Key2) && canBribe(s) {
 		return s.bribe()
 	}
 
 	opts := &ebiten.DrawImageOptions{}
 	s.duelBtn.Update(opts, scale, W, H)
-	s.bribeBtn.Update(opts, scale, W, H)
+	if s.bribeBtn != nil {
+		s.bribeBtn.Update(opts, scale, W, H)
+	}
 
 	if s.duelBtn.IsClicked() {
 		return s.startDuel()
 	}
-	if s.bribeBtn.IsClicked() {
+	if s.bribeBtn != nil && s.bribeBtn.IsClicked() {
 		return s.bribe()
 	}
 
@@ -195,7 +199,9 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	btnOpts := &ebiten.DrawImageOptions{}
 	s.duelBtn.Draw(screen, btnOpts, scale)
-	s.bribeBtn.Draw(screen, btnOpts, scale)
+	if s.bribeBtn != nil {
+		s.bribeBtn.Draw(screen, btnOpts, scale)
+	}
 
 	// Player stats UI background in lower-left
 	if len(s.playerStatsUI) > 0 && s.playerStatsUI[0] != nil {
@@ -313,4 +319,9 @@ func (s *DuelAnteScreen) WonCards() []*domain.Card {
 
 func (s *DuelAnteScreen) LostCards() []*domain.Card {
 	return []*domain.Card{s.playerAnteCard}
+}
+
+func canBribe(s *DuelAnteScreen) bool {
+	bribeAmount := s.enemy.BribeAmount()
+	return bribeAmount != 0 && s.player.Gold >= bribeAmount // 0 means cannot be bribed
 }
