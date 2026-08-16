@@ -6,6 +6,7 @@ MTG card game clone using Go and Ebiten. Roguelike deck-building adventure with 
 
 ```bash
 make test         # Run tests (go test -count=10 ./...)
+make lint         # Run linters (golangci-lint, etc)
 make              # Download card art and build dist/s30
 make run          # Download card art and run game
 make winbuild     # Windows executable
