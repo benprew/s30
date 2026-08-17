@@ -1,2 +1,34 @@
-<!DOCTYPE html>
-<iframe src="main.html" width="1024" height="768"></iframe>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shandalar 30</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: #111;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    iframe {
+      display: block;
+      width: min(100vw, calc(100vh * 4 / 3));
+      height: min(100vh, calc(100vw * 3 / 4));
+      border: 0;
+      background: #111;
+    }
+  </style>
+</head>
+<body>
+  <iframe src="main.html" title="Shandalar 30"></iframe>
+</body>
+</html>
