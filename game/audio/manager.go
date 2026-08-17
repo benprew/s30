@@ -289,20 +289,28 @@ func (b BGM) String() string {
 	return fmt.Sprintf("bgm_%d", b)
 }
 
+type ambientPlayer interface {
+	IsPlaying() bool
+	Play()
+	SetVolume(float64)
+}
+
 // AudioManager handles all game audio playback.
 type AudioManager struct {
-	context       *audio.Context
-	bgmPlayer     *audio.Player
-	currentBGM    BGM
-	sfxBytes      map[SFX][]byte
-	footstepBytes map[TerrainColor][2][]byte // [0]=left, [1]=right
-	birdBytes     map[TerrainColor][][]byte
-	landBytes     map[TerrainColor][][]byte
-	dungeonBytes  [][]byte
-	bgmVolume     float64
-	sfxVolume     float64
-	muted         bool
-	footstepLeft  bool // alternates L/R
+	context          *audio.Context
+	bgmPlayer        *audio.Player
+	currentBGM       BGM
+	sfxBytes         map[SFX][]byte
+	footstepBytes    map[TerrainColor][2][]byte // [0]=left, [1]=right
+	birdBytes        map[TerrainColor][][]byte
+	landBytes        map[TerrainColor][][]byte
+	dungeonBytes     [][]byte
+	ambientPlayer    ambientPlayer
+	newAmbientPlayer func([]byte) ambientPlayer
+	bgmVolume        float64
+	sfxVolume        float64
+	muted            bool
+	footstepLeft     bool // alternates L/R
 }
 
 var instance *AudioManager
@@ -328,6 +336,9 @@ func NewAudioManager() *AudioManager {
 		am.context = ctx
 	} else {
 		am.context = audio.NewContext(sampleRate)
+	}
+	am.newAmbientPlayer = func(data []byte) ambientPlayer {
+		return am.context.NewPlayerFromBytes(data)
 	}
 	am.preloadSFX()
 	am.preloadFootsteps()
@@ -474,45 +485,33 @@ func (am *AudioManager) PlayFootstep(color TerrainColor) {
 
 // PlayBird plays a random bird ambient sound for the given terrain color.
 func (am *AudioManager) PlayBird(color TerrainColor) {
-	if am.muted || am.context == nil {
-		return
-	}
-
-	birds, ok := am.birdBytes[color]
-	if !ok || len(birds) == 0 {
-		return
-	}
-
-	data := birds[rand.Intn(len(birds))]
-	if data == nil {
-		return
-	}
-
-	player := am.context.NewPlayerFromBytes(data)
-	player.SetVolume(am.sfxVolume * 0.3)
-	player.Play()
+	am.playAmbient(am.birdBytes[color], 0.3)
 }
 
 // PlayLandAmbience plays a random terrain-colored ambient sound.
 func (am *AudioManager) PlayLandAmbience(color TerrainColor) {
-	am.playRandom(am.landBytes[color], 0.3)
+	am.playAmbient(am.landBytes[color], 0.3)
 }
 
 // PlayDungeonAmbience plays a random dungeon ambient sound.
 func (am *AudioManager) PlayDungeonAmbience() {
-	am.playRandom(am.dungeonBytes, 0.3)
+	am.playAmbient(am.dungeonBytes, 0.3)
 }
 
-func (am *AudioManager) playRandom(sounds [][]byte, volumeScale float64) {
-	if am.muted || am.context == nil || len(sounds) == 0 {
+func (am *AudioManager) playAmbient(sounds [][]byte, volumeScale float64) {
+	if am.muted || am.newAmbientPlayer == nil || len(sounds) == 0 {
+		return
+	}
+	if am.ambientPlayer != nil && am.ambientPlayer.IsPlaying() {
 		return
 	}
 	data := sounds[rand.Intn(len(sounds))]
 	if data == nil {
 		return
 	}
-	player := am.context.NewPlayerFromBytes(data)
+	player := am.newAmbientPlayer(data)
 	player.SetVolume(am.sfxVolume * volumeScale)
+	am.ambientPlayer = player
 	player.Play()
 }
 

@@ -5,6 +5,25 @@ import (
 	"testing"
 )
 
+type fakeAmbientPlayer struct {
+	playing   bool
+	playCalls int
+	volume    float64
+}
+
+func (p *fakeAmbientPlayer) IsPlaying() bool {
+	return p.playing
+}
+
+func (p *fakeAmbientPlayer) Play() {
+	p.playCalls++
+	p.playing = true
+}
+
+func (p *fakeAmbientPlayer) SetVolume(volume float64) {
+	p.volume = volume
+}
+
 // newTestAudioManager creates an AudioManager without preloading audio files.
 func newTestAudioManager() *AudioManager {
 	am := &AudioManager{
@@ -267,6 +286,40 @@ func TestPlayBirdWhenMuted(t *testing.T) {
 	am := newTestAudioManager()
 	am.Mute()
 	am.PlayBird(TerrainColorGreen)
+}
+
+func TestAmbientSoundsDoNotOverlap(t *testing.T) {
+	am := newTestAudioManager()
+	am.birdBytes[TerrainColorGreen] = [][]byte{{1}}
+	am.landBytes[TerrainColorGreen] = [][]byte{{2}}
+	am.dungeonBytes = [][]byte{{3}}
+
+	var players []*fakeAmbientPlayer
+	am.newAmbientPlayer = func([]byte) ambientPlayer {
+		player := &fakeAmbientPlayer{}
+		players = append(players, player)
+		return player
+	}
+
+	am.PlayBird(TerrainColorGreen)
+	am.PlayLandAmbience(TerrainColorGreen)
+	am.PlayDungeonAmbience()
+
+	if len(players) != 1 {
+		t.Fatalf("created %d ambient players while the first was active, want 1", len(players))
+	}
+	if players[0].playCalls != 1 {
+		t.Fatalf("first ambient player Play calls = %d, want 1", players[0].playCalls)
+	}
+	if want := am.sfxVolume * 0.3; players[0].volume != want {
+		t.Fatalf("first ambient player volume = %f, want %f", players[0].volume, want)
+	}
+
+	players[0].playing = false
+	am.PlayDungeonAmbience()
+	if len(players) != 2 {
+		t.Fatalf("created %d ambient players after the first finished, want 2", len(players))
+	}
 }
 
 func TestGetInstance(t *testing.T) {
