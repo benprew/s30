@@ -64,7 +64,7 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 		if tile != nil {
 			if tile.IsCity() && prevTile != currentTile {
 				if am := gameaudio.Get(); am != nil {
-					am.PlaySFX(gameaudio.CastleSFXForColor(domain.ColorMaskToString(tile.City.AmuletColor)))
+					am.PlayBGM(gameaudio.CastleBGMForColor(domain.ColorMaskToString(tile.City.AmuletColor)))
 				}
 				if rewards := s.Level.Player.RedeemFulfilledQuests(tile.City); len(rewards) > 0 {
 					if am := gameaudio.Get(); am != nil {
@@ -83,7 +83,7 @@ func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 					return screenui.WorldScr, nil, err
 				}
 				if am := gameaudio.Get(); am != nil {
-					am.PlaySFX(gameaudio.CastleSFXForColor(domain.ColorMaskToString(tile.Castle.Color)))
+					am.PlayBGM(gameaudio.CastleBGMForColor(domain.ColorMaskToString(tile.Castle.Color)))
 				}
 				return screenui.DungeonEntryScr, NewDungeonEntryScreen(dungeon, s.Level.Player, s.Level), nil
 			}

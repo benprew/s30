@@ -12,20 +12,20 @@ type stubScreen struct {
 	overlay bool
 }
 
-func TestEndScreenSFX(t *testing.T) {
+func TestEndScreenBGM(t *testing.T) {
 	tests := []struct {
 		screen screenui.ScreenName
-		want   gameaudio.SFX
+		want   gameaudio.BGM
 	}{
-		{screenui.DuelWinScr, gameaudio.SFXVictory},
-		{screenui.DuelLoseScr, gameaudio.SFXDefeat},
-		{screenui.GameWinScr, gameaudio.SFXWinGame},
-		{screenui.GameLoseScr, gameaudio.SFXDeath},
+		{screenui.DuelWinScr, gameaudio.BGMVictory},
+		{screenui.DuelLoseScr, gameaudio.BGMDefeat},
+		{screenui.GameWinScr, gameaudio.BGMWinGame},
+		{screenui.GameLoseScr, gameaudio.BGMDeath},
 	}
 	for _, test := range tests {
-		got, ok := endScreenSFX(test.screen)
+		got, ok := endScreenBGM(test.screen)
 		if !ok || got != test.want {
-			t.Errorf("endScreenSFX(%v) = %v, %t; want %v, true", test.screen, got, ok, test.want)
+			t.Errorf("endScreenBGM(%v) = %v, %t; want %v, true", test.screen, got, ok, test.want)
 		}
 	}
 }
@@ -40,6 +40,19 @@ func TestDuelScreenStopsBGM(t *testing.T) {
 
 	if got := am.CurrentBGM(); got != gameaudio.BGMNone {
 		t.Fatalf("duel BGM = %v, want BGMNone", got)
+	}
+}
+
+func TestCityTransitionKeepsCastleBGM(t *testing.T) {
+	am := gameaudio.NewAudioManager()
+	am.Mute()
+	am.PlayBGM(gameaudio.BGMCastleRed)
+	g := &Game{audio: am}
+
+	g.updateBGM(screenui.CityScr)
+
+	if got := am.CurrentBGM(); got != gameaudio.BGMCastleRed {
+		t.Fatalf("city BGM = %v, want castle entry theme", got)
 	}
 }
 

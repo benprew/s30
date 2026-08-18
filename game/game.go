@@ -312,6 +312,11 @@ func (g *Game) Audio() *gameaudio.AudioManager {
 }
 
 func (g *Game) updateBGM(screen screenui.ScreenName) {
+	if (screen == screenui.CityScr || screen == screenui.DungeonEntryScr) &&
+		gameaudio.IsCastleBGM(g.audio.CurrentBGM()) {
+		return
+	}
+
 	if bgm, ok := fixedScreenBGM(screen); ok {
 		g.audio.PlayBGM(bgm)
 		return
@@ -327,9 +332,8 @@ func (g *Game) updateBGM(screen screenui.ScreenName) {
 	case screenui.DuelAnteScr:
 		g.audio.StopBGM()
 	default:
-		if sfx, ok := endScreenSFX(screen); ok {
-			g.audio.PlaySFX(sfx)
-			g.audio.StopBGM()
+		if bgm, ok := endScreenBGM(screen); ok {
+			g.audio.PlayBGM(bgm)
 		}
 	}
 }
@@ -355,18 +359,18 @@ func (g *Game) randomCityBGM() gameaudio.BGM {
 	return gameaudio.RandomCityBGM(int(cityScreen.City.Tier))
 }
 
-func endScreenSFX(screen screenui.ScreenName) (gameaudio.SFX, bool) {
+func endScreenBGM(screen screenui.ScreenName) (gameaudio.BGM, bool) {
 	switch screen {
 	case screenui.DuelWinScr:
-		return gameaudio.SFXVictory, true
+		return gameaudio.BGMVictory, true
 	case screenui.DuelLoseScr:
-		return gameaudio.SFXDefeat, true
+		return gameaudio.BGMDefeat, true
 	case screenui.GameWinScr:
-		return gameaudio.SFXWinGame, true
+		return gameaudio.BGMWinGame, true
 	case screenui.GameLoseScr:
-		return gameaudio.SFXDeath, true
+		return gameaudio.BGMDeath, true
 	default:
-		return 0, false
+		return gameaudio.BGMNone, false
 	}
 }
 

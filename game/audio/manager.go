@@ -13,9 +13,19 @@ import (
 )
 
 const (
-	sampleRate          = 22050
+	nativeSampleRate    = 22050
+	webSampleRate       = 48000
 	bytesPerSampleFrame = 4
 )
+
+var sampleRate = targetSampleRate(webAudio)
+
+func targetSampleRate(web bool) int {
+	if web {
+		return webSampleRate
+	}
+	return nativeSampleRate
+}
 
 // SFX identifies a sound effect.
 type SFX int
@@ -25,9 +35,6 @@ const (
 	SFXClick2
 	SFXCast
 	SFXDamage
-	SFXDeath
-	SFXVictory
-	SFXDefeat
 	SFXEncounter
 	SFXCardDraw
 	SFXLandPlay
@@ -61,23 +68,12 @@ const (
 	SFXDice
 	SFXSummon
 
-	// Game state
-	SFXWinGame
-	SFXStatsScreen
-
 	// World magic (color-specific)
 	SFXWorldMagicWhite
 	SFXWorldMagicBlue
 	SFXWorldMagicBlack
 	SFXWorldMagicRed
 	SFXWorldMagicGreen
-
-	// Castle entry (color-specific)
-	SFXCastleDefault
-	SFXCastleBlue
-	SFXCastleBlack
-	SFXCastleRed
-	SFXCastleGreen
 )
 
 var sfxFiles = map[SFX]string{
@@ -85,9 +81,6 @@ var sfxFiles = map[SFX]string{
 	SFXClick2:        "audio/sfx/click2.ogg",
 	SFXCast:          "audio/sfx/cast.ogg",
 	SFXDamage:        "audio/sfx/damage.ogg",
-	SFXDeath:         "audio/sfx/death.ogg",
-	SFXVictory:       "audio/sfx/victory.ogg",
-	SFXDefeat:        "audio/sfx/defeat.ogg",
 	SFXEncounter:     "audio/sfx/encounter.ogg",
 	SFXCardDraw:      "audio/sfx/card_draw.ogg",
 	SFXLandPlay:      "audio/sfx/land_play.ogg",
@@ -118,20 +111,11 @@ var sfxFiles = map[SFX]string{
 	SFXDice:      "audio/sfx/dice.ogg",
 	SFXSummon:    "audio/sfx/summon.ogg",
 
-	SFXWinGame:     "audio/sfx/wingame.ogg",
-	SFXStatsScreen: "audio/sfx/statsscreen.ogg",
-
 	SFXWorldMagicWhite: "audio/sfx/worldmagic_white.ogg",
 	SFXWorldMagicBlue:  "audio/sfx/worldmagic_blue.ogg",
 	SFXWorldMagicBlack: "audio/sfx/worldmagic_black.ogg",
 	SFXWorldMagicRed:   "audio/sfx/worldmagic_red.ogg",
 	SFXWorldMagicGreen: "audio/sfx/worldmagic_green.ogg",
-
-	SFXCastleDefault: "audio/sfx/castle_default.ogg",
-	SFXCastleBlue:    "audio/sfx/castle_blue.ogg",
-	SFXCastleBlack:   "audio/sfx/castle_black.ogg",
-	SFXCastleRed:     "audio/sfx/castle_red.ogg",
-	SFXCastleGreen:   "audio/sfx/castle_green.ogg",
 }
 
 func (s SFX) String() string {
@@ -222,6 +206,16 @@ const (
 	BGMTitle
 	BGMDungeon
 	BGMTemple
+	BGMCastleDefault
+	BGMCastleBlue
+	BGMCastleBlack
+	BGMCastleRed
+	BGMCastleGreen
+	BGMDeath
+	BGMDefeat
+	BGMStatsScreen
+	BGMVictory
+	BGMWinGame
 	// World tracks (Locmus0-19)
 	BGMWorld0
 	BGMWorld1
@@ -253,6 +247,18 @@ var bgmFiles = map[BGM]string{
 	BGMTitle:   "audio/bgm/title.ogg",
 	BGMDungeon: "audio/bgm/dungeon.ogg",
 	BGMTemple:  "audio/bgm/temple.ogg",
+
+	BGMCastleDefault: "audio/bgm/castle_default.ogg",
+	BGMCastleBlue:    "audio/bgm/castle_blue.ogg",
+	BGMCastleBlack:   "audio/bgm/castle_black.ogg",
+	BGMCastleRed:     "audio/bgm/castle_red.ogg",
+	BGMCastleGreen:   "audio/bgm/castle_green.ogg",
+	BGMDeath:         "audio/bgm/death.ogg",
+	BGMDefeat:        "audio/bgm/defeat.ogg",
+	BGMStatsScreen:   "audio/bgm/statsscreen.ogg",
+	BGMVictory:       "audio/bgm/victory.ogg",
+	BGMWinGame:       "audio/bgm/wingame.ogg",
+
 	BGMWorld0:  "audio/bgm/world_0.ogg",
 	BGMWorld1:  "audio/bgm/world_1.ogg",
 	BGMWorld2:  "audio/bgm/world_2.ogg",
@@ -537,9 +543,14 @@ func IsWorldBGM(bgm BGM) bool {
 	return bgm >= BGMWorld0 && bgm <= BGMWorld19
 }
 
+// IsCastleBGM returns true for a color-specific castle entry track.
+func IsCastleBGM(bgm BGM) bool {
+	return bgm >= BGMCastleDefault && bgm <= BGMCastleGreen
+}
+
 // PlayBGM switches to a new background music track and plays it once.
 func (am *AudioManager) PlayBGM(bgm BGM) {
-	if bgm == am.currentBGM {
+	if bgm == am.currentBGM && am.bgmPlayer != nil && am.bgmPlayer.IsPlaying() {
 		return
 	}
 
@@ -677,19 +688,19 @@ func EnemySFXForName(name string) SFX {
 	return SFXEncounter
 }
 
-// CastleSFXForColor returns the castle entry SFX for a given color string.
-func CastleSFXForColor(colorStr string) SFX {
+// CastleBGMForColor returns the castle entry BGM for a given color string.
+func CastleBGMForColor(colorStr string) BGM {
 	switch colorStr {
 	case "Blue":
-		return SFXCastleBlue
+		return BGMCastleBlue
 	case "Black":
-		return SFXCastleBlack
+		return BGMCastleBlack
 	case "Red":
-		return SFXCastleRed
+		return BGMCastleRed
 	case "Green":
-		return SFXCastleGreen
+		return BGMCastleGreen
 	default:
-		return SFXCastleDefault
+		return BGMCastleDefault
 	}
 }
 

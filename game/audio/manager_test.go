@@ -48,18 +48,33 @@ func TestRequestedSoundAssetsAreMapped(t *testing.T) {
 		SFXCounter:       "audio/sfx/counter.ogg",
 		SFXCreatureDeath: "audio/sfx/creature_death.ogg",
 		SFXDamage:        "audio/sfx/damage.ogg",
-		SFXDefeat:        "audio/sfx/defeat.ogg",
 		SFXLandPlay:      "audio/sfx/land_play.ogg",
 		SFXManaball:      "audio/sfx/manaball.ogg",
 		SFXManalink:      "audio/sfx/manalink.ogg",
 		SFXReward:        "audio/sfx/reward.ogg",
 		SFXSummon:        "audio/sfx/summon.ogg",
-		SFXWinGame:       "audio/sfx/wingame.ogg",
-		SFXDeath:         "audio/sfx/death.ogg",
 	}
 	for sfx, want := range wantSFX {
 		if got := sfxFiles[sfx]; got != want {
 			t.Errorf("sfxFiles[%v] = %q, want %q", sfx, got, want)
+		}
+	}
+
+	wantBGM := map[BGM]string{
+		BGMCastleDefault: "audio/bgm/castle_default.ogg",
+		BGMCastleBlue:    "audio/bgm/castle_blue.ogg",
+		BGMCastleBlack:   "audio/bgm/castle_black.ogg",
+		BGMCastleRed:     "audio/bgm/castle_red.ogg",
+		BGMCastleGreen:   "audio/bgm/castle_green.ogg",
+		BGMDeath:         "audio/bgm/death.ogg",
+		BGMDefeat:        "audio/bgm/defeat.ogg",
+		BGMStatsScreen:   "audio/bgm/statsscreen.ogg",
+		BGMVictory:       "audio/bgm/victory.ogg",
+		BGMWinGame:       "audio/bgm/wingame.ogg",
+	}
+	for bgm, want := range wantBGM {
+		if got := bgmFiles[bgm]; got != want {
+			t.Errorf("bgmFiles[%v] = %q, want %q", bgm, got, want)
 		}
 	}
 
@@ -90,6 +105,25 @@ func TestTrimPCM(t *testing.T) {
 	}
 	if !slices.Equal(got, data[wantLen:wantLen*2]) {
 		t.Fatal("trimPCM() returned the wrong half-second window")
+	}
+}
+
+func TestTargetSampleRate(t *testing.T) {
+	tests := []struct {
+		name string
+		web  bool
+		want int
+	}{
+		{name: "native", want: 22050},
+		{name: "web", web: true, want: 48000},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := targetSampleRate(test.web); got != test.want {
+				t.Fatalf("targetSampleRate(%t) = %d, want %d", test.web, got, test.want)
+			}
+		})
 	}
 }
 
@@ -175,6 +209,17 @@ func TestStopBGM(t *testing.T) {
 	am.StopBGM()
 }
 
+func TestPlayBGMReplacesCurrentTrack(t *testing.T) {
+	am := newTestAudioManager()
+	am.Mute()
+	am.PlayBGM(BGMVictory)
+	am.PlayBGM(BGMDefeat)
+
+	if got := am.CurrentBGM(); got != BGMDefeat {
+		t.Fatalf("current BGM = %v, want %v", got, BGMDefeat)
+	}
+}
+
 func TestRandomWorldBGM(t *testing.T) {
 	bgm := RandomWorldBGM()
 	if !IsWorldBGM(bgm) {
@@ -216,6 +261,23 @@ func TestIsWorldBGM(t *testing.T) {
 	}
 }
 
+func TestIsCastleBGM(t *testing.T) {
+	for _, bgm := range []BGM{
+		BGMCastleDefault,
+		BGMCastleBlue,
+		BGMCastleBlack,
+		BGMCastleRed,
+		BGMCastleGreen,
+	} {
+		if !IsCastleBGM(bgm) {
+			t.Errorf("%v should be a castle BGM", bgm)
+		}
+	}
+	if IsCastleBGM(BGMCity) {
+		t.Error("BGMCity should not be a castle BGM")
+	}
+}
+
 func TestEnemySFXForName(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -249,21 +311,21 @@ func TestEnemySFXForName(t *testing.T) {
 	}
 }
 
-func TestCastleSFXForColor(t *testing.T) {
-	if CastleSFXForColor("Blue") != SFXCastleBlue {
-		t.Error("expected SFXCastleBlue for Blue")
+func TestCastleBGMForColor(t *testing.T) {
+	if CastleBGMForColor("Blue") != BGMCastleBlue {
+		t.Error("expected BGMCastleBlue for Blue")
 	}
-	if CastleSFXForColor("Black") != SFXCastleBlack {
-		t.Error("expected SFXCastleBlack for Black")
+	if CastleBGMForColor("Black") != BGMCastleBlack {
+		t.Error("expected BGMCastleBlack for Black")
 	}
-	if CastleSFXForColor("Red") != SFXCastleRed {
-		t.Error("expected SFXCastleRed for Red")
+	if CastleBGMForColor("Red") != BGMCastleRed {
+		t.Error("expected BGMCastleRed for Red")
 	}
-	if CastleSFXForColor("Green") != SFXCastleGreen {
-		t.Error("expected SFXCastleGreen for Green")
+	if CastleBGMForColor("Green") != BGMCastleGreen {
+		t.Error("expected BGMCastleGreen for Green")
 	}
-	if CastleSFXForColor("White") != SFXCastleDefault {
-		t.Error("expected SFXCastleDefault for White")
+	if CastleBGMForColor("White") != BGMCastleDefault {
+		t.Error("expected BGMCastleDefault for White")
 	}
 }
 

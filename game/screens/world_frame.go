@@ -198,7 +198,7 @@ func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		}
 		if (b.ID == "character" || b.ID == "book") && b.IsClicked() {
 			if am := gameaudio.Get(); am != nil {
-				am.PlaySFX(gameaudio.SFXStatsScreen)
+				am.PlayBGM(gameaudio.BGMStatsScreen)
 			}
 		}
 	}
