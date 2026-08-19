@@ -1,7 +1,6 @@
 package elements
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 
@@ -13,7 +12,7 @@ const maxRenderedTextCacheEntries = 256
 
 type renderedTextCacheKey struct {
 	Text             string
-	SourceID         string
+	Source           *text.GoTextFaceSource
 	SizeMillis       int
 	LineSpacingMilli int
 	ColorRGBA        color.RGBA
@@ -34,6 +33,30 @@ type transformInfo struct {
 var renderedTextCache = map[renderedTextCacheKey]*renderedTextCacheEntry{}
 var renderedTextCacheOrder []renderedTextCacheKey
 
+func toRGBA(clr color.Color) color.RGBA {
+	if c, ok := clr.(color.RGBA); ok {
+		return c
+	}
+	r, g, b, a := clr.RGBA()
+	return color.RGBA{
+		R: uint8(r >> 8),
+		G: uint8(g >> 8),
+		B: uint8(b >> 8),
+		A: uint8(a >> 8),
+	}
+}
+
+// ClearRenderedTextCache frees all cached text textures and resets the cache.
+func ClearRenderedTextCache() {
+	for k, entry := range renderedTextCache {
+		if entry != nil && entry.Image != nil {
+			entry.Image.Deallocate()
+		}
+		delete(renderedTextCache, k)
+	}
+	renderedTextCacheOrder = renderedTextCacheOrder[:0]
+}
+
 func drawCachedText(screen *ebiten.Image, txt string, face text.Face, clr color.Color, lineSpacing float64, geoM ebiten.GeoM, shadow bool) bool {
 	transform, ok := geoMToTransform(geoM)
 	if !ok {
@@ -45,9 +68,9 @@ func drawCachedText(screen *ebiten.Image, txt string, face text.Face, clr color.
 		return false
 	}
 
-	opts := &ebiten.DrawImageOptions{}
+	var opts ebiten.DrawImageOptions
 	opts.GeoM.Translate(math.Round(transform.x), math.Round(transform.y))
-	screen.DrawImage(entry.Image, opts)
+	screen.DrawImage(entry.Image, &opts)
 	return true
 }
 
@@ -60,19 +83,20 @@ func getRenderedTextCacheEntry(txt string, face text.Face, clr color.Color, line
 		return nil, false
 	}
 
-	scaledFace := &text.GoTextFace{
+	scaledFace := text.GoTextFace{
 		Source:    goFace.Source,
 		Direction: goFace.Direction,
 		Language:  goFace.Language,
 		Size:      goFace.Size * scale,
 	}
 	scaledLineSpacing := lineSpacing * scale
+	rgba := toRGBA(clr)
 	key := renderedTextCacheKey{
 		Text:             txt,
-		SourceID:         fmt.Sprintf("%p", goFace.Source),
+		Source:           goFace.Source,
 		SizeMillis:       int(math.Round(scaledFace.Size * 1000)),
 		LineSpacingMilli: int(math.Round(scaledLineSpacing * 1000)),
-		ColorRGBA:        color.RGBAModel.Convert(clr).(color.RGBA),
+		ColorRGBA:        rgba,
 		ScaleMillis:      int(math.Round(scale * 1000)),
 		Shadow:           shadow,
 	}
@@ -80,7 +104,7 @@ func getRenderedTextCacheEntry(txt string, face text.Face, clr color.Color, line
 		return entry, true
 	}
 
-	textW, textH := text.Measure(txt, scaledFace, scaledLineSpacing)
+	textW, textH := text.Measure(txt, &scaledFace, scaledLineSpacing)
 	shadowX := 0
 	shadowY := 0
 	if shadow {
@@ -92,29 +116,32 @@ func getRenderedTextCacheEntry(txt string, face text.Face, clr color.Color, line
 	imgH := max(1, int(math.Ceil(textH))+shadowY)
 	img := ebiten.NewImage(imgW, imgH)
 
-	alpha := float32(key.ColorRGBA.A) / 255
+	alpha := float32(rgba.A) / 255
 	if shadow {
-		shadowOpts := &text.DrawOptions{}
+		var shadowOpts text.DrawOptions
 		shadowOpts.GeoM.Translate(float64(shadowX), float64(shadowY))
 		shadowOpts.ColorScale.Scale(0, 0, 0, alpha)
 		shadowOpts.LineSpacing = scaledLineSpacing
-		text.Draw(img, txt, scaledFace, shadowOpts)
+		text.Draw(img, txt, &scaledFace, &shadowOpts)
 	}
 
-	textOpts := &text.DrawOptions{}
+	var textOpts text.DrawOptions
 	textOpts.ColorScale.Scale(
-		float32(key.ColorRGBA.R)/255,
-		float32(key.ColorRGBA.G)/255,
-		float32(key.ColorRGBA.B)/255,
+		float32(rgba.R)/255,
+		float32(rgba.G)/255,
+		float32(rgba.B)/255,
 		alpha,
 	)
 	textOpts.LineSpacing = scaledLineSpacing
-	text.Draw(img, txt, scaledFace, textOpts)
+	text.Draw(img, txt, &scaledFace, &textOpts)
 
 	entry := &renderedTextCacheEntry{Image: img}
 	if len(renderedTextCacheOrder) >= maxRenderedTextCacheEntries {
 		oldest := renderedTextCacheOrder[0]
 		renderedTextCacheOrder = renderedTextCacheOrder[1:]
+		if oldEntry, exists := renderedTextCache[oldest]; exists && oldEntry.Image != nil {
+			oldEntry.Image.Deallocate()
+		}
 		delete(renderedTextCache, oldest)
 	}
 	renderedTextCache[key] = entry

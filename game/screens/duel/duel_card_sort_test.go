@@ -156,7 +156,7 @@ func TestFieldPerms_CreaturesSortedByPowerThenToughnessDesc(t *testing.T) {
 		},
 	}
 
-	perms := s.fieldPerms(ps, permRowCreature)
+	perms := s.fieldPerms(&ps, permRowCreature)
 	var got []string
 	for _, p := range perms {
 		got = append(got, p.Name)
@@ -190,7 +190,7 @@ func TestFieldPerms_LandsSortedByNameThenTapped(t *testing.T) {
 		},
 	}
 
-	perms := s.fieldPerms(ps, permRowLand)
+	perms := s.fieldPerms(&ps, permRowLand)
 	type kv struct {
 		name   string
 		tapped bool

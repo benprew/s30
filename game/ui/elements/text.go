@@ -50,26 +50,33 @@ func (t *Text) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions, scale f
 		lineSpacing = t.LineSpacing
 	}
 
-	geoM := opts.GeoM
+	var geoM ebiten.GeoM
+	if opts != nil {
+		geoM = opts.GeoM
+	}
 	geoM.Translate(float64(x)*scale, float64(y)*scale)
 	if drawCachedText(screen, t.Text, t.font, t.Color, lineSpacing, geoM, true) {
 		return
 	}
 
 	R, G, B, A := t.Color.RGBA()
-	shadow := &text.DrawOptions{}
-	shadow.GeoM.Concat(opts.GeoM)
+	var shadow text.DrawOptions
+	if opts != nil {
+		shadow.GeoM.Concat(opts.GeoM)
+	}
 	shadow.GeoM.Translate(float64(x)*scale+1, float64(y)*scale+2)
 	shadow.ColorScale.Scale(0, 0, 0, float32(A)/65535)
 	shadow.LineSpacing = lineSpacing
-	text.Draw(screen, t.Text, t.font, shadow)
+	text.Draw(screen, t.Text, t.font, &shadow)
 
-	options := &text.DrawOptions{}
-	options.GeoM.Concat(opts.GeoM)
+	var options text.DrawOptions
+	if opts != nil {
+		options.GeoM.Concat(opts.GeoM)
+	}
 	options.GeoM.Translate(float64(x)*scale, float64(y)*scale)
 	options.ColorScale.Scale(float32(R)/65535, float32(G)/65535, float32(B)/65535, float32(A)/65535)
 	options.LineSpacing = lineSpacing
-	text.Draw(screen, t.Text, t.font, options)
+	text.Draw(screen, t.Text, t.font, &options)
 }
 
 func (t *Text) Measure() (float64, float64) {

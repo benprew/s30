@@ -32,3 +32,21 @@ func TestDrawAbilityIconsShownForTappedAndUntappedPermanents(t *testing.T) {
 		})
 	}
 }
+func TestGetKeywordIconsDeduplication(t *testing.T) {
+	s := &DuelScreen{abilityIcons: make([]*ebiten.Image, 18)}
+	for i := range s.abilityIcons {
+		s.abilityIcons[i] = &ebiten.Image{}
+	}
+
+	perm := interactive.PermanentState{
+		Keywords: []string{"Flying", "Flying", "Trample", "First Strike"},
+	}
+
+	icons := s.getKeywordIcons(perm)
+	if len(icons) != 3 {
+		t.Fatalf("expected 3 icons, got %d", len(icons))
+	}
+	if icons[0] != s.abilityIcons[11] || icons[1] != s.abilityIcons[12] || icons[2] != s.abilityIcons[14] {
+		t.Fatal("icons did not match expected order")
+	}
+}

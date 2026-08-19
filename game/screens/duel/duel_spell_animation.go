@@ -221,10 +221,10 @@ func (s *DuelScreen) spellBattlefieldDestination(state *interactive.GameState, i
 	}
 	for _, entry := range []struct {
 		dp    *duelPlayer
-		state interactive.PlayerState
+		state *interactive.PlayerState
 	}{
-		{s.self, state.You},
-		{s.opponent, state.Opponent},
+		{s.self, &state.You},
+		{s.opponent, &state.Opponent},
 	} {
 		for _, row := range allPermRows {
 			perms := s.fieldPerms(entry.state, row)

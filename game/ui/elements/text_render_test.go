@@ -1,6 +1,7 @@
 package elements
 
 import (
+	"image/color"
 	"math"
 	"testing"
 
@@ -23,7 +24,6 @@ func TestGeoMToTransformAcceptsScaleAndTranslate(t *testing.T) {
 		t.Fatalf("origin = (%v, %v), want (12, 34)", transform.x, transform.y)
 	}
 }
-
 func TestGeoMToTransformRejectsRotation(t *testing.T) {
 	var geoM ebiten.GeoM
 	geoM.Rotate(math.Pi / 4)
@@ -39,5 +39,25 @@ func TestGeoMToTransformRejectsNonUniformScale(t *testing.T) {
 
 	if _, ok := geoMToTransform(geoM); ok {
 		t.Fatal("expected non-uniform scale to be rejected")
+	}
+}
+
+func TestToRGBA(t *testing.T) {
+	c1 := color.RGBA{R: 10, G: 20, B: 30, A: 255}
+	if got := toRGBA(c1); got != c1 {
+		t.Fatalf("toRGBA(color.RGBA) = %v, want %v", got, c1)
+	}
+
+	c2 := color.NRGBA{R: 255, G: 128, B: 64, A: 255}
+	got2 := toRGBA(c2)
+	if got2.R != 255 || got2.A != 255 {
+		t.Fatalf("toRGBA(color.NRGBA) = %v", got2)
+	}
+}
+
+func TestClearRenderedTextCache(t *testing.T) {
+	ClearRenderedTextCache()
+	if len(renderedTextCache) != 0 || len(renderedTextCacheOrder) != 0 {
+		t.Fatal("expected renderedTextCache to be empty")
 	}
 }

@@ -1,19 +1,19 @@
-CARD_IMAGES := assets/art/cardimages.zip
-CARD_DATA := assets/card_info/scryfall_cards.json.zst
 DIST_DIR := dist
-EMBEDDED_TAG := embedded_card_images
-export GOCACHE := $(CURDIR)/.cache/go-build
 TEST_COUNT := 5
 
-.PHONY: default run pprof test embeddedbuild cardimages winbuild macbuild webbuild builddeps fedorabuilddeps lint
+.PHONY: default run pprof duelprofile test embeddedbuild winbuild macbuild webbuild builddeps fedorabuilddeps lint
 
 default: build
 
-run: cardimages
-	go run -tags $(EMBEDDED_TAG) . -v mtg,duel
+run:
+	go run . -v mtg,duel
 
-pprof: cardimages
+pprof:
 	go run -tags $(EMBEDDED_TAG) . -pprof 127.0.0.1:6060 -v mtg,duel
+
+duelprofile:
+	mkdir -p $(DIST_DIR)
+	go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/duel_profile ./cmd/duel_test
 
 test:
 ifeq ($(shell uname -s),Linux)
@@ -22,24 +22,20 @@ else
 	go test -count=$(TEST_COUNT) ./...
 endif
 
-cardimages:
-	uv run python utils/download_card_images.py $(CARD_DATA)
-	test -f $(CARD_IMAGES)
-
-build: cardimages
+build:
 	mkdir -p $(DIST_DIR)
 	go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30 .
 
-winbuild: cardimages
+winbuild:
 	mkdir -p $(DIST_DIR)
 	GOOS=windows GOARCH=amd64 go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30.exe
 
-macbuild: cardimages
+macbuild:
 	mkdir -p $(DIST_DIR)
 	MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30_mac_arm
 
 # https://ebitengine.org/en/documents/webassembly.html
-webbuild: cardimages
+webbuild:
 	mkdir -p $(DIST_DIR)
 	GOOS=js GOARCH=wasm go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30.wasm github.com/benprew/s30
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" index.html main.html $(DIST_DIR)/
