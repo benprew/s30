@@ -26,10 +26,11 @@ const (
 )
 
 type CityScreen struct {
-	Buttons []*elements.Button
-	City    *domain.City
-	Player  *domain.Player
-	Level   *world.Level
+	Buttons           []*elements.Button
+	City              *domain.City
+	Player            *domain.Player
+	Level             *world.Level
+	entranceAnimation cityEntranceAnimation
 }
 
 type ButtonConfig struct {
@@ -44,10 +45,11 @@ func NewCityScreen(city *domain.City, player *domain.Player, level *world.Level)
 		city.WisemanBoon = pickBoon(city, player, level)
 	}
 	return &CityScreen{
-		Buttons: mkButtons(SCALE-0.4, city),
-		City:    city,
-		Player:  player,
-		Level:   level,
+		Buttons:           mkButtons(SCALE-0.4, city),
+		City:              city,
+		Player:            player,
+		Level:             level,
+		entranceAnimation: newCityEntranceAnimation(),
 	}
 }
 
@@ -119,9 +121,15 @@ func (c *CityScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 
 	c.drawCityName(screen)
+	c.entranceAnimation.draw(screen)
 }
 
 func (c *CityScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	if !c.entranceAnimation.complete {
+		c.entranceAnimation.update()
+		return screenui.CityScr, nil, nil
+	}
+
 	options := &ebiten.DrawImageOptions{}
 	for i := range c.Buttons {
 		b := c.Buttons[i]
