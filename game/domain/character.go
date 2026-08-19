@@ -3,8 +3,10 @@ package domain
 import (
 	"fmt"
 	_ "image/png"
+	"math"
 
 	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/timing"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -13,6 +15,9 @@ const (
 	SpriteCols   = 5
 	SpriteWidth  = 206
 	SpriteHeight = 102
+
+	updatesPerWalkingFrame = timing.UpdatesPerSecond / 10
+	diagonalMovementScale  = 1 / math.Sqrt2
 
 	// Direction bit flags
 	DirUp    = 0x8 // 1000
@@ -30,6 +35,11 @@ const (
 	DirectionRight     = 6
 	DirectionDownRight = 7
 )
+
+// MovementSpeed converts pixels per second to distance per update.
+func MovementSpeed(pixelsPerSecond float64) float64 {
+	return pixelsPerSecond / timing.UpdatesPerSecond
+}
 
 type Character struct {
 	Name                  string `toml:"name"`
@@ -57,35 +67,62 @@ type CharacterInstance struct {
 	IsMoving  bool
 	X         int
 	Y         int
-	MoveSpeed int
+	MoveSpeed float64
 	Width     int
 	Height    int
+
+	moveRemainderX float64
+	moveRemainderY float64
+	animationTicks int
 }
 
 func (c *CharacterInstance) Update(dirBits int) {
 	if dirBits == 0 {
 		c.IsMoving = false
+		c.animationTicks = 0
 		return
 	}
 	c.IsMoving = true
 	c.Direction = directionToSpriteIndex(dirBits)
+	dx, dy := 0, 0
 	if dirBits&DirLeft != 0 {
-		c.X -= c.MoveSpeed
+		dx--
 	}
 	if dirBits&DirRight != 0 {
-		c.X += c.MoveSpeed
+		dx++
 	}
 	if dirBits&DirDown != 0 {
-		c.Y += c.MoveSpeed
+		dy++
 	}
 	if dirBits&DirUp != 0 {
-		c.Y -= c.MoveSpeed
+		dy--
 	}
-	if c.IsMoving {
+	distance := c.MoveSpeed
+	if dx != 0 && dy != 0 {
+		distance *= diagonalMovementScale
+	}
+	if dx != 0 {
+		moveCoordinate(&c.X, &c.moveRemainderX, float64(dx)*distance)
+	}
+	if dy != 0 {
+		moveCoordinate(&c.Y, &c.moveRemainderY, float64(dy)*distance)
+	}
+	c.animationTicks++
+	if c.animationTicks >= updatesPerWalkingFrame {
 		c.Frame = (c.Frame + 1) % SpriteCols
-	} else {
-		c.Frame = 0
+		c.animationTicks = 0
 	}
+}
+
+func moveCoordinate(position *int, remainder *float64, distance float64) {
+	total := *remainder + distance
+	nearestInteger := math.Round(total)
+	if math.Abs(total-nearestInteger) < 1e-9 {
+		total = nearestInteger
+	}
+	whole := math.Trunc(total)
+	*position += int(whole)
+	*remainder = total - whole
 }
 
 func directionToSpriteIndex(dirBits int) int {

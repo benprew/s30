@@ -9,6 +9,7 @@ import (
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/timing"
 	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
@@ -42,6 +43,7 @@ const (
 	dungeonFloorRow     = 1
 	dungeonFloorCol     = 0
 	dungeonBossRow      = 4
+	dungeonAmbientTicks = 30 * timing.UpdatesPerSecond
 )
 
 // dungeonCharScale shrinks the 248×174 walking-sprite cells down to fit on a
@@ -180,7 +182,7 @@ func (s *DungeonScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 		return screenui.WorldScr, nil, nil
 	}
 	s.ambientTicks++
-	if s.ambientTicks%300 == 0 && rand.Intn(3) == 0 {
+	if s.ambientTicks%dungeonAmbientTicks == 0 && rand.Intn(3) == 0 {
 		if am := gameaudio.Get(); am != nil {
 			am.PlayDungeonAmbience()
 		}

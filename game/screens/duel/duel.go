@@ -160,7 +160,6 @@ type DuelScreen struct {
 
 	cardImageMap map[string]*domain.Card
 
-	frameCount   int
 	warningMsg   string
 	lastMsgTime  time.Time
 	nextMsgDelay time.Duration
@@ -1031,8 +1030,6 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
 		s.toggleHand()
 	}
-
-	s.frameCount++
 
 	if s.choiceRequest != nil {
 		s.handleChoiceRequest()

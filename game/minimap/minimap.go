@@ -8,6 +8,7 @@ import (
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/timing"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
@@ -30,6 +31,8 @@ const (
 	SCALE           = 1.6
 	miniMapFontSize = 14 * SCALE
 	doneButtonID    = "Done"
+	blinkPeriod     = timing.UpdatesPerSecond
+	blinkVisible    = 7 * timing.UpdatesPerSecond / 10
 )
 
 func NewMiniMap(l *world.Level) *MiniMap {
@@ -176,7 +179,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 				screen.DrawImage(castle, cOpts)
 			}
 			p := image.Point{X: j, Y: i}
-			if pLoc == p && m.blinkCounter%10 < 7 {
+			if pLoc == p && m.blinkCounter%blinkPeriod < blinkVisible {
 				cOpts := &ebiten.DrawImageOptions{}
 				cOpts.GeoM.Concat(opts.GeoM)
 				cOpts.GeoM.Translate(0, -13)
@@ -205,7 +208,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, W, H int, scale float64) {
 				cityText.LineSpacing = float64(m.fontFace.Size)
 				textWidth, _ := cityText.Measure()
 				cityText.X = -int(textWidth / 2)
-				if m.isQuestTarget(col.City.Name) && m.blinkCounter%10 < 7 {
+				if m.isQuestTarget(col.City.Name) && m.blinkCounter%blinkPeriod < blinkVisible {
 					cityText.Color = color.RGBA{R: 255, G: 215, B: 0, A: 255}
 				}
 				cityText.Draw(screen, opts, 1.0)
@@ -232,7 +235,7 @@ func (m *MiniMap) isQuestTarget(cityName string) bool {
 }
 
 func (m *MiniMap) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	m.blinkCounter++
+	m.blinkCounter = (m.blinkCounter + 1) % blinkPeriod
 
 	options := &ebiten.DrawImageOptions{}
 

@@ -7,14 +7,15 @@ import (
 	"math/rand"
 
 	"github.com/benprew/s30/assets"
+	"github.com/benprew/s30/game/timing"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
 	// Configuration
-	MaxRandomEncounters    = 20    // Increased from 10
-	EncounterSpawnRate     = 100   // Decreased from 200 (faster spawning)
+	MaxRandomEncounters    = 20 // Increased from 10
+	EncounterSpawnRate     = 10 * timing.UpdatesPerSecond
 	EncounterMinDistPlayer = 300.0 // Pixels
 	EncounterMaxDistPlayer = 750.0 // Pixels
 	EncounterTriggerDist   = 50.0  // Pixels (radius)

@@ -6,10 +6,13 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/benprew/s30/game/timing"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
+
+const loadingDotInterval = timing.UpdatesPerSecond
 
 // LoadingGame is a lightweight game wrapper that shows a loading screen
 // while the real game initializes in the background. This prevents the
@@ -47,7 +50,7 @@ func (lg *LoadingGame) Update() error {
 		return lg.game.Update()
 	}
 	lg.ticks++
-	if lg.ticks%10 == 0 {
+	if lg.ticks%loadingDotInterval == 0 {
 		lg.dots = (lg.dots + 1) % 4
 	}
 	return nil

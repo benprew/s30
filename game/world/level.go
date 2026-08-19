@@ -9,8 +9,14 @@ import (
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/timing"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
+)
+
+const (
+	enemySpawnCheckInterval = 2 * timing.UpdatesPerSecond
+	enemySpawnGracePeriod   = 7 * timing.UpdatesPerSecond
 )
 
 // Level represents a Game level.
@@ -242,7 +248,7 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 		// Blocked: restore and nudge perpendicular to get around the water
 		l.Enemies[i].X = ex
 		l.Enemies[i].Y = ey
-		speed := l.Enemies[i].MoveSpeed
+		speed := max(1, int(math.Round(l.Enemies[i].MoveSpeed)))
 		pLoc := l.Player.Loc()
 
 		if dx != 0 {
@@ -272,13 +278,17 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 
 	l.UpdateEncounters()
 
-	if l.totalTicks%20 == 0 && l.ticksSinceLastInteraction >= 70 {
+	if shouldSpawnEnemy(l.totalTicks, l.ticksSinceLastInteraction) {
 		if err := l.SpawnEnemies(1); err != nil {
 			fmt.Printf("Warning: failed to spawn enemy: %s\n", err)
 		}
 	}
 
 	return nil
+}
+
+func shouldSpawnEnemy(totalTicks, ticksSinceLastInteraction int) bool {
+	return totalTicks%enemySpawnCheckInterval == 0 && ticksSinceLastInteraction >= enemySpawnGracePeriod
 }
 
 func (l *Level) ClearEnemies() {
@@ -439,7 +449,7 @@ func (l *Level) SpawnEnemies(count int) error {
 		}
 
 		enemy.SetLoc(position)
-		enemy.MoveSpeed = 5 + rng.Intn(7)
+		enemy.MoveSpeed = domain.MovementSpeed(float64(50 + rng.Intn(7)*10))
 
 		l.Enemies = append(l.Enemies, enemy)
 	}
@@ -473,7 +483,7 @@ func (l *Level) SpawnEnemyNear(enemyName string, tile image.Point) error {
 	}
 
 	enemy.SetLoc(image.Point{X: x, Y: y})
-	enemy.MoveSpeed = 5 + rand.Intn(3)
+	enemy.MoveSpeed = domain.MovementSpeed(float64(50 + rand.Intn(3)*10))
 	l.Enemies = append(l.Enemies, enemy)
 	return nil
 }

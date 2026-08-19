@@ -3,13 +3,14 @@ package ui
 import (
 	"image"
 
+	"github.com/benprew/s30/game/timing"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 const (
 	dragDistance   = 8
-	longPressTicks = 30
+	longPressTicks = timing.UpdatesPerSecond / 2
 )
 
 // Drag describes the movement of a click-and-drag gesture.

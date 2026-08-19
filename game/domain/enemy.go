@@ -4,7 +4,9 @@ import (
 	"image"
 	"math"
 	"math/rand"
+	"time"
 
+	"github.com/benprew/s30/game/timing"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -12,6 +14,7 @@ const (
 	EnemyChaseDistance  = 150.0
 	EnemyRandomDistance = 200.0
 	EnemyMoveBuffer     = 10
+	enemyWaitChance     = 0.02
 )
 
 type Dimension struct {
@@ -90,10 +93,10 @@ func (e *Enemy) move(playerX, playerY int) int {
 	}
 
 	// Check if enemy should start waiting
-	if !e.isWaiting && distToPlayer > EnemyRandomDistance && rand.Float64() < 0.02 {
+	if !e.isWaiting && distToPlayer > EnemyRandomDistance && rand.Float64() < timing.ProbabilityPerUpdate(enemyWaitChance, 100*time.Millisecond) {
 		e.isWaiting = true
 		e.waitingTicks = 0
-		e.maxWaitTicks = 20 + rand.Intn(60)
+		e.maxWaitTicks = randomEnemyWaitTicks()
 		return 0
 	}
 
@@ -111,7 +114,7 @@ func (e *Enemy) move(playerX, playerY int) int {
 	e.randomDirTicks++
 	if e.randomDirTicks >= e.maxRandomDirTicks || e.maxRandomDirTicks == 0 {
 		e.randomDirTicks = 0
-		e.maxRandomDirTicks = 30 + rand.Intn(60)
+		e.maxRandomDirTicks = randomEnemyDirectionTicks()
 
 		dirbits := 0
 		buffer := 10
@@ -155,6 +158,16 @@ func (e *Enemy) move(playerX, playerY int) int {
 	}
 
 	return e.randomDirBits
+}
+
+func randomEnemyWaitTicks() int {
+	duration := 2*time.Second + time.Duration(rand.Intn(60))*100*time.Millisecond
+	return timing.Ticks(duration)
+}
+
+func randomEnemyDirectionTicks() int {
+	duration := 3*time.Second + time.Duration(rand.Intn(60))*100*time.Millisecond
+	return timing.Ticks(duration)
 }
 
 func (e *Enemy) SetLoc(loc image.Point) {

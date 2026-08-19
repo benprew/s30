@@ -33,7 +33,7 @@ type Player struct {
 	DungeonState    *DungeonState
 }
 
-const TicksPerDay = 5000.0
+const TravelDistancePerDay = 5000.0
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty, color ColorMask) (*Player, error) {
 	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
@@ -99,7 +99,7 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 	return &Player{
 		Character: c,
 		CharacterInstance: CharacterInstance{
-			MoveSpeed: 10,
+			MoveSpeed: MovementSpeed(100),
 		},
 		Name:        string(name),
 		Gold:        gold,
@@ -152,8 +152,8 @@ func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
 		// Player moved
 		dist := math.Sqrt(math.Pow(float64(p.X-oldX), 2) + math.Pow(float64(p.Y-oldY), 2))
 		p.TimeAccumulator += dist
-		if p.TimeAccumulator >= TicksPerDay {
-			p.TimeAccumulator -= TicksPerDay
+		if p.TimeAccumulator >= TravelDistancePerDay {
+			p.TimeAccumulator -= TravelDistancePerDay
 			p.Days++
 			for _, q := range p.ActiveQuests {
 				q.DaysRemaining--

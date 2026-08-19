@@ -34,7 +34,6 @@ func main() {
 
 	ebiten.SetWindowTitle("Shandalar 30")
 	// ebiten.SetWindowSize(1024, 768)
-	ebiten.SetTPS(10)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFullscreen(true)
 

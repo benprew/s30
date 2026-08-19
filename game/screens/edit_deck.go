@@ -41,8 +41,6 @@ type EditDeckScreen struct {
 	TiledBackground      *ebiten.Image
 	DeckBackground       *ebiten.Image
 	DeckButtons          []*elements.Button // Buttons for cards currently in the deck
-	lastClickTime        map[int]int        // Track click times for collection card double-click detection
-	clickFrame           int                // Current frame counter for double-click timing
 	MagnifierImage       *ebiten.Image      // Image to display in the magnifier
 	MagnifiedCard        *domain.Card       // Currently magnified card
 	dragManager          *dragdrop.DragManager
@@ -102,8 +100,6 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 		TiledBackground:      imageutil.TileImage(tileImg, 1024, 768),
 		DeckBackground:       deckBackground,
 		DeckButtons:          make([]*elements.Button, 0),
-		lastClickTime:        make(map[int]int),
-		clickFrame:           0,
 		dragManager:          dragdrop.NewDragManager(),
 		draggableItems:       make([]*dragdrop.DraggableButton, 0),
 		deckDraggableItems:   make([]*dragdrop.DraggableButton, 0),
@@ -381,8 +377,6 @@ func (s *EditDeckScreen) drawDeckCards(screen *ebiten.Image, scale float64) {
 
 // Update handles user interactions
 func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	s.clickFrame++
-
 	// Calculate position for collection list
 	collectionY := H - COLLECTION_HEIGHT
 
