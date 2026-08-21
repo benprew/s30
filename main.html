@@ -98,6 +98,7 @@
         }
 
         const go = new Go();
+        go.env.GODEBUG = "memprofilerate=0";
         const result = await WebAssembly.instantiate(wasm, go.importObject);
 
         document.getElementById("loader").remove();

@@ -9,7 +9,7 @@ run:
 	go run . -v mtg,duel
 
 pprof:
-	go run -tags $(EMBEDDED_TAG) . -pprof 127.0.0.1:6060 -v mtg,duel
+	go run -tags pprof . -pprof 127.0.0.1:6060 -v mtg,duel
 
 duelprofile:
 	mkdir -p $(DIST_DIR)
