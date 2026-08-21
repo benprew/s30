@@ -10,9 +10,12 @@ import (
 	"strings"
 
 	"github.com/benprew/s30/game"
+	"github.com/benprew/s30/game/bugreport"
+	"github.com/benprew/s30/game/world"
 	"github.com/benprew/s30/internal/pprofutil"
 	"github.com/benprew/s30/logging"
 	"github.com/hajimehoshi/ebiten/v2"
+	rdebug "runtime/debug"
 )
 
 func writeProfile(name, profileName string, gc bool) error {
@@ -88,6 +91,18 @@ func main() {
 		log.Fatal(err)
 	}
 	registerSaveLifecycle(g)
+
+	defer func() {
+		if r := recover(); r != nil {
+			var lvl *world.Level
+			defer func() { _ = recover() }()
+			if g != nil {
+				lvl = g.Level()
+			}
+			bugreport.HandleCrash(lvl, "Main", g, r, rdebug.Stack())
+			panic(r)
+		}
+	}()
 
 	if err = ebiten.RunGame(g); err != nil && err != ebiten.Termination {
 		log.Fatal(err)

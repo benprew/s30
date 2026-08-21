@@ -6,6 +6,7 @@ import (
 	"time"
 
 	gameaudio "github.com/benprew/s30/game/audio"
+	"github.com/benprew/s30/game/bugreport"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/minimap"
 	"github.com/benprew/s30/game/save"
@@ -17,6 +18,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"runtime/debug"
 )
 
 type Game struct {
@@ -74,8 +76,13 @@ func closeLifecycleScreen(screen screenui.Screen) {
 }
 
 func (g *Game) Level() *world.Level {
-	ls := g.screenMap[screenui.WorldScr].(*screens.LevelScreen)
-	return ls.Level
+	if g == nil || g.screenMap == nil {
+		return nil
+	}
+	if ls, ok := g.screenMap[screenui.WorldScr].(*screens.LevelScreen); ok && ls != nil {
+		return ls.Level
+	}
+	return nil
 }
 
 func NewGame() (*Game, error) {
@@ -178,6 +185,17 @@ func (g *Game) handleStartTransition() error {
 }
 
 func (g *Game) Update() error {
+	defer func() {
+		if r := recover(); r != nil {
+			var lvl *world.Level
+			if g.screenMap != nil && g.screenMap[screenui.WorldScr] != nil {
+				lvl = g.Level()
+			}
+			bugreport.HandleCrash(lvl, screenui.ScreenNameToString(g.currentScreen), g.CurrentScreen(), r, debug.Stack())
+			panic(r)
+		}
+	}()
+
 	if ebiten.IsWindowBeingClosed() {
 		if g.player != nil {
 			if err := g.SaveGame(); err != nil {
@@ -188,6 +206,18 @@ func (g *Game) Update() error {
 	}
 
 	ui.UpdatePointer()
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyF8) {
+		if g.currentScreen != screenui.BugReportScr {
+			var lvl *world.Level
+			if g.screenMap != nil && g.screenMap[screenui.WorldScr] != nil {
+				lvl = g.Level()
+			}
+			g.screenMap[screenui.BugReportScr] = screens.NewBugReportScreen(lvl, g.currentScreen, g.CurrentScreen())
+			g.navigate(screenui.BugReportScr)
+			return nil
+		}
+	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
 		g.audio.ToggleMute()
@@ -284,6 +314,17 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	defer func() {
+		if r := recover(); r != nil {
+			var lvl *world.Level
+			if g.screenMap != nil && g.screenMap[screenui.WorldScr] != nil {
+				lvl = g.Level()
+			}
+			bugreport.HandleCrash(lvl, screenui.ScreenNameToString(g.currentScreen), g.CurrentScreen(), r, debug.Stack())
+			panic(r)
+		}
+	}()
+
 	cur := g.CurrentScreen()
 	if cur.IsOverlay() {
 		if below := g.screenMap[g.prevScreen]; below != nil {

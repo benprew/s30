@@ -25,6 +25,7 @@ const (
 	QuestScrollScr
 	GameWinScr
 	GameLoseScr
+	BugReportScr
 )
 
 type Screen interface {
@@ -73,6 +74,8 @@ func ScreenNameToString(sn ScreenName) string {
 		return "GameWin"
 	case GameLoseScr:
 		return "GameLose"
+	case BugReportScr:
+		return "BugReport"
 	default:
 		return "Unknown"
 	}

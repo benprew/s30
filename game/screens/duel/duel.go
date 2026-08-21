@@ -21,6 +21,7 @@ import (
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai/search"
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
+	"github.com/benprew/s30/game/bugreport"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
@@ -34,6 +35,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"runtime/debug"
 )
 
 const (
@@ -111,6 +113,7 @@ type DuelScreen struct {
 	human      *interactive.HumanPlayer
 	aiPlayer   *ai.AIPlayer
 	lastMsg    *interactive.GameMsg
+	msgHistory []interactive.GameMsg
 	loopCancel context.CancelFunc
 	loopDone   chan struct{}
 
@@ -471,6 +474,12 @@ func (s *DuelScreen) startGameLoop() {
 	}
 	go func() {
 		defer close(s.loopDone)
+		defer func() {
+			if r := recover(); r != nil {
+				bugreport.HandleCrash(s.lvl, "Duel", s, r, debug.Stack())
+				panic(r)
+			}
+		}()
 		interactive.RunGameLoopContext(ctx, s.game, 0, pause)
 	}()
 }
@@ -507,6 +516,7 @@ func (s *DuelScreen) applyGameMsg(msg interactive.GameMsg) {
 	now := time.Now()
 	s.syncSpellAnimations(prev, &msg, now)
 	s.lastMsg = &msg
+	s.msgHistory = append(s.msgHistory, msg)
 	s.autoResponded = false
 	s.refreshDamageAssignmentPrompt(&msg)
 	s.lastMsgTime = now
@@ -4014,3 +4024,67 @@ func hasActionType(actions []interactive.ActionOption, actionType interactive.Ac
 	}
 	return false
 }
+
+// DuelReportState builds a complete summary of the active duel for bug and crash reporting.
+func (s *DuelScreen) DuelReportState() *bugreport.DuelReportState {
+	state := &bugreport.DuelReportState{
+		IsDungeonDuel: s.dungeon != nil,
+		DiceNotice:    s.diceNotice,
+	}
+
+	if s.enemy != nil {
+		state.OpponentName = s.enemy.Name()
+		if s.enemy.Character != nil {
+			state.OpponentRogue = s.enemy.Character.Name
+			for card, count := range s.enemy.Character.GetActiveDeck() {
+				for range count {
+					state.AIDeck = append(state.AIDeck, card.CardName)
+				}
+			}
+		}
+	}
+
+	if s.player != nil {
+		for card, count := range s.player.GetDuelDeck() {
+			for range count {
+				state.HumanDeck = append(state.HumanDeck, card.CardName)
+			}
+		}
+	}
+
+	if s.anteCard != nil {
+		state.AnteHumanCard = s.anteCard.CardName
+	}
+	if s.enemyAnteCard != nil {
+		state.AnteAICard = s.enemyAnteCard.CardName
+	}
+
+	if s.lastMsg != nil && s.lastMsg.State != nil {
+		state.Turn = s.lastMsg.State.Turn
+		state.Step = s.lastMsg.State.Step
+		state.ActivePlayer = s.lastMsg.State.ActivePlayer
+		state.GameState = s.lastMsg.State
+		state.EngineLogs = append([]string(nil), s.lastMsg.Log...)
+	} else if s.game != nil {
+		state.Turn = s.game.CurrentTurn()
+		state.Step = s.game.GetStep().String()
+		if s.game.ActivePlayerObj() != nil {
+			state.ActivePlayer = s.game.ActivePlayerObj().Name()
+		}
+		state.GameState = interactive.SnapshotGameState(s.game, 0)
+	}
+
+	for _, msg := range s.msgHistory {
+		if msg.State != nil {
+			summary := fmt.Sprintf("Turn %d (%s) - Active: %s, Prompt: %s",
+				msg.State.Turn, msg.State.Step, msg.State.ActivePlayer, msg.Prompt)
+			if len(msg.Log) > 0 {
+				summary += fmt.Sprintf(" | Log: %s", msg.Log[len(msg.Log)-1])
+			}
+			state.History = append(state.History, summary)
+		}
+	}
+
+	return state
+}
+

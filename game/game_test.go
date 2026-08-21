@@ -150,3 +150,29 @@ func TestNavigateSameScreenDoesNotClobberPrev(t *testing.T) {
 		t.Errorf("prevScreen = %v, want WorldScr (unchanged when staying)", g.prevScreen)
 	}
 }
+
+type panickingScreen struct {
+	stubScreen
+}
+
+func (s *panickingScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	panic("test screen update panic")
+}
+
+func TestGameUpdateRecoversAndReportsPanic(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.WorldScr] = &panickingScreen{}
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("Expected panic to be re-thrown after crash handling")
+		}
+		if r != "test screen update panic" {
+			t.Errorf("Recovered %v, want test screen update panic", r)
+		}
+	}()
+
+	_ = g.Update()
+}
+
