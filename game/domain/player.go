@@ -27,6 +27,7 @@ type Player struct {
 	ActiveQuests    []*Quest // active quests (legacy delivery/defeat + deck-changing), up to MaxActiveQuests
 	Days            int
 	TimeAccumulator float64
+	FoodAccumulator float64
 	IsMale          bool
 	BonusDuelLife   int
 	BonusDuelCards  []*Card // One-time bonus cards that start in play in the next duel
@@ -34,6 +35,8 @@ type Player struct {
 }
 
 const TravelDistancePerDay = 5000.0
+const TravelDistancePerFood = 150.0
+const StarvationSpeedPenalty = 0.5
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty, color ColorMask) (*Player, error) {
 	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
@@ -143,22 +146,29 @@ func (p *Player) NumCards() int {
 	return p.CardCollection.NumCards()
 }
 
-func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
+func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(image.Point) bool) error {
 	oldX, oldY := p.X, p.Y
 	dirBits := p.Move(screenW, screenH)
-	p.CharacterInstance.Update(dirBits)
+	p.updateSpeedPenalty()
+	p.CharacterInstance.UpdateWithCollision(dirBits, isBlocked)
 
 	if p.X != oldX || p.Y != oldY {
 		// Player moved
 		dist := math.Sqrt(math.Pow(float64(p.X-oldX), 2) + math.Pow(float64(p.Y-oldY), 2))
 		p.TimeAccumulator += dist
-		if p.TimeAccumulator >= TravelDistancePerDay {
+		for p.TimeAccumulator >= TravelDistancePerDay {
 			p.TimeAccumulator -= TravelDistancePerDay
 			p.Days++
 			for _, q := range p.ActiveQuests {
 				q.DaysRemaining--
 			}
 			p.ExpireQuests()
+		}
+
+		p.FoodAccumulator += dist
+		for p.FoodAccumulator >= TravelDistancePerFood && p.Food > 0 {
+			p.FoodAccumulator -= TravelDistancePerFood
+			p.Food--
 		}
 	}
 
@@ -175,6 +185,17 @@ func (p *Player) Update(screenW, screenH, levelW, levelH int) error {
 	}
 
 	return nil
+}
+
+func (p *Player) updateSpeedPenalty() {
+	p.MoveSpeedPenalty = 0.0
+	if p.isStarving() {
+		p.MoveSpeedPenalty = StarvationSpeedPenalty
+	}
+}
+
+func (p *Player) isStarving() bool {
+	return p.Food == 0
 }
 
 func (p *Player) SetLoc(loc image.Point) {

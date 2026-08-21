@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"image"
 	_ "image/png"
 	"math"
 
@@ -62,14 +63,15 @@ type Character struct {
 
 // contains the common character traits between players and enemies
 type CharacterInstance struct {
-	Direction int
-	Frame     int
-	IsMoving  bool
-	X         int
-	Y         int
-	MoveSpeed float64
-	Width     int
-	Height    int
+	Direction        int
+	Frame            int
+	IsMoving         bool
+	X                int
+	Y                int
+	MoveSpeed        float64
+	MoveSpeedPenalty float64 // 0.0 is full speed. Single multiplier for now, can make more robust with an array later.
+	Width            int
+	Height           int
 
 	moveRemainderX float64
 	moveRemainderY float64
@@ -77,14 +79,36 @@ type CharacterInstance struct {
 }
 
 func (c *CharacterInstance) Update(dirBits int) {
-	if dirBits == 0 {
+	c.UpdateWithCollision(dirBits, func(image.Point) bool {
+		return false
+	})
+}
+
+func (c *CharacterInstance) UpdateWithCollision(dirBits int, isBlocked func(image.Point) bool) {
+	if dirBits == 0 || !c.canMove(dirBits, isBlocked) {
 		c.IsMoving = false
 		c.animationTicks = 0
 		return
 	}
 	c.IsMoving = true
 	c.Direction = directionToSpriteIndex(dirBits)
+	dx, dy := c.movementDelta(dirBits)
+	if dx != 0 {
+		moveCoordinate(&c.X, &c.moveRemainderX, dx)
+	}
+	if dy != 0 {
+		moveCoordinate(&c.Y, &c.moveRemainderY, dy)
+	}
+	c.animationTicks++
+	if c.animationTicks >= updatesPerWalkingFrame {
+		c.Frame = (c.Frame + 1) % SpriteCols
+		c.animationTicks = 0
+	}
+}
+
+func (c *CharacterInstance) movementDelta(dirBits int) (float64, float64) {
 	dx, dy := 0, 0
+
 	if dirBits&DirLeft != 0 {
 		dx--
 	}
@@ -97,21 +121,22 @@ func (c *CharacterInstance) Update(dirBits int) {
 	if dirBits&DirUp != 0 {
 		dy--
 	}
-	distance := c.MoveSpeed
+
+	distance := c.activeMoveSpeed()
 	if dx != 0 && dy != 0 {
 		distance *= diagonalMovementScale
 	}
-	if dx != 0 {
-		moveCoordinate(&c.X, &c.moveRemainderX, float64(dx)*distance)
-	}
-	if dy != 0 {
-		moveCoordinate(&c.Y, &c.moveRemainderY, float64(dy)*distance)
-	}
-	c.animationTicks++
-	if c.animationTicks >= updatesPerWalkingFrame {
-		c.Frame = (c.Frame + 1) % SpriteCols
-		c.animationTicks = 0
-	}
+
+	return float64(dx) * distance, float64(dy) * distance
+}
+
+func (c *CharacterInstance) canMove(dirBits int, isBlocked func(image.Point) bool) bool {
+	dx, dy := c.movementDelta(dirBits)
+
+	newX := c.X + int(math.Trunc(c.moveRemainderX+dx))
+	newY := c.Y + int(math.Trunc(c.moveRemainderY+dy))
+
+	return !isBlocked(image.Point{X: newX, Y: newY})
 }
 
 func moveCoordinate(position *int, remainder *float64, distance float64) {
@@ -207,4 +232,9 @@ func getEmbeddedFile(filename string) []byte {
 		return nil
 	}
 	return data
+}
+
+func (c *CharacterInstance) activeMoveSpeed() float64 {
+	penalty := max(0.0, min(1.0, c.MoveSpeedPenalty))
+	return c.MoveSpeed * (1.0 - penalty)
 }
