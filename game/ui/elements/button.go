@@ -238,6 +238,20 @@ func (b *Button) ResizeToText(paddingX, paddingY float64) {
 	b.Bounds = image.Rect(b.Bounds.Min.X, b.Bounds.Min.Y, b.Bounds.Min.X+w, b.Bounds.Min.Y+h)
 }
 
+// SetImage updates the button's normal, hover, and pressed images and bounds.
+func (b *Button) SetImage(img *ebiten.Image, scale float64) {
+	scaled := img
+	if scale != 0 && scale != 1.0 {
+		scaled = imageutil.ScaleImage(img, scale)
+	}
+	b.Normal = scaled
+	b.Hover = scaled
+	b.Pressed = scaled
+	w := scaled.Bounds().Dx()
+	h := scaled.Bounds().Dy()
+	b.Bounds = image.Rect(b.Bounds.Min.X, b.Bounds.Min.Y, b.Bounds.Min.X+w, b.Bounds.Min.Y+h)
+}
+
 // CombineButton combines the 3 images into a single button image
 // Moved from game/screens/city.go
 func CombineButton(btnFrame, btnIcon, txtBox *ebiten.Image, scale float64) *ebiten.Image {

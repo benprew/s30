@@ -96,6 +96,16 @@ func cacheCardImage(id string, img image.Image) {
 	cardImages.Store(id, ebiten.NewImageFromImage(img))
 }
 
+// CacheCardImage stores a decoded image for a given card ID in the cache.
+func CacheCardImage(id string, img image.Image) {
+	cacheCardImage(id, img)
+}
+
+// ClearCardImageCache clears all cached card images.
+func ClearCardImageCache() {
+	cardImages.Clear()
+}
+
 func cardIDFromImageFilename(name string) (string, bool) {
 	name = path.Base(name)
 	ext := strings.ToLower(path.Ext(name))
@@ -211,11 +221,16 @@ func CollectPriorityCards(player *Player) []*Card {
 }
 
 func PreloadCardImages(priorityCards []*Card) {
-	const numWorkers = 6
-	ch := make(chan *Card, 64)
+	if len(priorityCards) == 0 {
+		return
+	}
+
+	const numWorkers = 4
+	ch := make(chan *Card, len(priorityCards))
 
 	var wg sync.WaitGroup
-	for range numWorkers {
+	workers := min(numWorkers, len(priorityCards))
+	for range workers {
 		wg.Go(func() {
 			for card := range ch {
 				if _, loaded := cardImages.Load(card.cardID); loaded {
@@ -226,16 +241,13 @@ func PreloadCardImages(priorityCards []*Card) {
 		})
 	}
 
-	prioritySet := make(map[string]bool, len(priorityCards))
+	seen := make(map[string]bool, len(priorityCards))
 	for _, card := range priorityCards {
-		prioritySet[card.cardID] = true
-		ch <- card
-	}
-
-	for _, card := range CARDS {
-		if !prioritySet[card.cardID] {
-			ch <- card
+		if card == nil || seen[card.cardID] {
+			continue
 		}
+		seen[card.cardID] = true
+		ch <- card
 	}
 
 	close(ch)

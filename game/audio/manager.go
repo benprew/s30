@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand"
 	"strings"
+	"sync"
 
 	"github.com/benprew/s30/assets"
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -303,6 +304,7 @@ type ambientPlayer interface {
 
 // AudioManager handles all game audio playback.
 type AudioManager struct {
+	mu               sync.Mutex
 	context          *audio.Context
 	bgmPlayer        *audio.Player
 	currentBGM       BGM
@@ -311,6 +313,7 @@ type AudioManager struct {
 	birdBytes        map[TerrainColor][][]byte
 	landBytes        map[TerrainColor][][]byte
 	dungeonBytes     [][]byte
+	ambientCache     map[string][]byte
 	ambientPlayer    ambientPlayer
 	newAmbientPlayer func([]byte) ambientPlayer
 	bgmVolume        float64
@@ -334,6 +337,7 @@ func NewAudioManager() *AudioManager {
 		footstepBytes: make(map[TerrainColor][2][]byte),
 		birdBytes:     make(map[TerrainColor][][]byte),
 		landBytes:     make(map[TerrainColor][][]byte),
+		ambientCache:  make(map[string][]byte),
 		bgmVolume:     0.2,
 		sfxVolume:     0.7,
 	}
@@ -346,65 +350,9 @@ func NewAudioManager() *AudioManager {
 	am.newAmbientPlayer = func(data []byte) ambientPlayer {
 		return am.context.NewPlayerFromBytes(data)
 	}
-	am.preloadSFX()
-	am.preloadFootsteps()
-	am.preloadBirds()
-	am.preloadLandAmbience()
-	am.preloadDungeonAmbience()
 
 	instance = am
 	return am
-}
-
-func (am *AudioManager) preloadSFX() {
-	for sfx, path := range sfxFiles {
-		decoded := decodeOgg(path)
-		if sfx == SFXSummon {
-			decoded = trimPCM(decoded, 500, 1000)
-		}
-		am.sfxBytes[sfx] = decoded
-	}
-}
-
-func (am *AudioManager) preloadLandAmbience() {
-	for color, files := range landFiles {
-		am.landBytes[color] = decodeFiles(files)
-	}
-}
-
-func (am *AudioManager) preloadDungeonAmbience() {
-	am.dungeonBytes = decodeFiles(dungeonFiles)
-}
-
-func decodeFiles(files []string) [][]byte {
-	decoded := make([][]byte, 0, len(files))
-	for _, path := range files {
-		if data := decodeOgg(path); data != nil {
-			decoded = append(decoded, data)
-		}
-	}
-	return decoded
-}
-
-func (am *AudioManager) preloadFootsteps() {
-	for color, pair := range footstepFiles {
-		am.footstepBytes[color] = [2][]byte{
-			decodeOgg(pair[0]),
-			decodeOgg(pair[1]),
-		}
-	}
-}
-
-func (am *AudioManager) preloadBirds() {
-	for color, files := range birdFiles {
-		var decoded [][]byte
-		for _, path := range files {
-			if d := decodeOgg(path); d != nil {
-				decoded = append(decoded, d)
-			}
-		}
-		am.birdBytes[color] = decoded
-	}
 }
 
 func decodeOgg(path string) []byte {
@@ -427,6 +375,61 @@ func decodeOgg(path string) []byte {
 	}
 
 	return decoded
+}
+
+func (am *AudioManager) getOrDecodeSFX(sfx SFX) []byte {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if data, ok := am.sfxBytes[sfx]; ok && data != nil {
+		return data
+	}
+	path, ok := sfxFiles[sfx]
+	if !ok {
+		return nil
+	}
+	data := decodeOgg(path)
+	if data != nil && sfx == SFXSummon {
+		data = trimPCM(data, 500, 1000)
+	}
+	if data != nil {
+		am.sfxBytes[sfx] = data
+	}
+	return data
+}
+
+func (am *AudioManager) getOrDecodeFootstep(color TerrainColor, idx int) []byte {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	pair := am.footstepBytes[color]
+	if pair[idx] != nil {
+		return pair[idx]
+	}
+	files, ok := footstepFiles[color]
+	if !ok || idx >= len(files) {
+		return nil
+	}
+	data := decodeOgg(files[idx])
+	if data != nil {
+		pair[idx] = data
+		am.footstepBytes[color] = pair
+	}
+	return data
+}
+
+func (am *AudioManager) getOrDecodeAmbient(path string) []byte {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if data, ok := am.ambientCache[path]; ok && data != nil {
+		return data
+	}
+	data := decodeOgg(path)
+	if data != nil {
+		am.ambientCache[path] = data
+	}
+	return data
 }
 
 func trimPCM(data []byte, startMS, endMS int) []byte {
@@ -452,8 +455,8 @@ func (am *AudioManager) PlaySFX(sfx SFX) {
 		return
 	}
 
-	data, ok := am.sfxBytes[sfx]
-	if !ok || data == nil {
+	data := am.getOrDecodeSFX(sfx)
+	if data == nil {
 		return
 	}
 
@@ -468,18 +471,13 @@ func (am *AudioManager) PlayFootstep(color TerrainColor) {
 		return
 	}
 
-	pair, ok := am.footstepBytes[color]
-	if !ok {
-		return
-	}
-
 	idx := 0
 	if am.footstepLeft {
 		idx = 1
 	}
 	am.footstepLeft = !am.footstepLeft
 
-	data := pair[idx]
+	data := am.getOrDecodeFootstep(color, idx)
 	if data == nil {
 		return
 	}
@@ -491,20 +489,60 @@ func (am *AudioManager) PlayFootstep(color TerrainColor) {
 
 // PlayBird plays a random bird ambient sound for the given terrain color.
 func (am *AudioManager) PlayBird(color TerrainColor) {
-	am.playAmbient(am.birdBytes[color], 0.3)
+	if sounds := am.birdBytes[color]; len(sounds) > 0 {
+		am.playAmbientSlice(sounds, 0.3)
+		return
+	}
+	files := birdFiles[color]
+	if len(files) == 0 {
+		return
+	}
+	am.playAmbientFile(files[rand.Intn(len(files))], 0.3)
 }
 
 // PlayLandAmbience plays a random terrain-colored ambient sound.
 func (am *AudioManager) PlayLandAmbience(color TerrainColor) {
-	am.playAmbient(am.landBytes[color], 0.3)
+	if sounds := am.landBytes[color]; len(sounds) > 0 {
+		am.playAmbientSlice(sounds, 0.3)
+		return
+	}
+	files := landFiles[color]
+	if len(files) == 0 {
+		return
+	}
+	am.playAmbientFile(files[rand.Intn(len(files))], 0.3)
 }
 
 // PlayDungeonAmbience plays a random dungeon ambient sound.
 func (am *AudioManager) PlayDungeonAmbience() {
-	am.playAmbient(am.dungeonBytes, 0.3)
+	if len(am.dungeonBytes) > 0 {
+		am.playAmbientSlice(am.dungeonBytes, 0.3)
+		return
+	}
+	if len(dungeonFiles) == 0 {
+		return
+	}
+	am.playAmbientFile(dungeonFiles[rand.Intn(len(dungeonFiles))], 0.3)
 }
 
-func (am *AudioManager) playAmbient(sounds [][]byte, volumeScale float64) {
+func (am *AudioManager) playAmbientFile(path string, volumeScale float64) {
+	if am.muted || am.newAmbientPlayer == nil || path == "" {
+		return
+	}
+	if am.ambientPlayer != nil && am.ambientPlayer.IsPlaying() {
+		return
+	}
+	data := am.getOrDecodeAmbient(path)
+	if data == nil {
+		return
+	}
+	player := am.newAmbientPlayer(data)
+	player.SetVolume(am.sfxVolume * volumeScale)
+	am.ambientPlayer = player
+	player.Play()
+}
+
+func (am *AudioManager) playAmbientSlice(sounds [][]byte, volumeScale float64) {
 	if am.muted || am.newAmbientPlayer == nil || len(sounds) == 0 {
 		return
 	}

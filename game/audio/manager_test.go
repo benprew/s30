@@ -33,6 +33,7 @@ func newTestAudioManager() *AudioManager {
 		birdBytes:     make(map[TerrainColor][][]byte),
 		landBytes:     make(map[TerrainColor][][]byte),
 		dungeonBytes:  make([][]byte, 0),
+		ambientCache:  make(map[string][]byte),
 		bgmVolume:     0.2,
 		sfxVolume:     0.7,
 	}
@@ -390,3 +391,47 @@ func TestGetInstance(t *testing.T) {
 		t.Error("Get() should return the instance set by NewAudioManager")
 	}
 }
+
+func TestLazySFXDecodingCachesDecodedAudio(t *testing.T) {
+	am := newTestAudioManager()
+	if len(am.sfxBytes) != 0 {
+		t.Fatalf("expected sfxBytes to start empty, got %d entries", len(am.sfxBytes))
+	}
+
+	data := am.getOrDecodeSFX(SFXClick)
+	if len(data) == 0 {
+		t.Fatal("expected decoded SFXClick audio data")
+	}
+	if cached := am.sfxBytes[SFXClick]; len(cached) == 0 {
+		t.Fatal("expected SFXClick to be cached in sfxBytes")
+	}
+
+	second := am.getOrDecodeSFX(SFXClick)
+	if &data[0] != &second[0] {
+		t.Fatal("expected subsequent getOrDecodeSFX call to return cached slice")
+	}
+}
+
+func TestLazyFootstepDecodingCachesDecodedAudio(t *testing.T) {
+	am := newTestAudioManager()
+	data := am.getOrDecodeFootstep(TerrainColorWhite, 0)
+	if len(data) == 0 {
+		t.Fatal("expected decoded footstep audio data")
+	}
+	if cached := am.footstepBytes[TerrainColorWhite][0]; len(cached) == 0 {
+		t.Fatal("expected footstep to be cached in footstepBytes")
+	}
+}
+
+func TestLazyAmbientDecodingCachesDecodedAudio(t *testing.T) {
+	am := newTestAudioManager()
+	path := dungeonFiles[0]
+	data := am.getOrDecodeAmbient(path)
+	if len(data) == 0 {
+		t.Fatal("expected decoded ambient audio data")
+	}
+	if cached := am.ambientCache[path]; len(cached) == 0 {
+		t.Fatal("expected ambient data to be cached in ambientCache")
+	}
+}
+

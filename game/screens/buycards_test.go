@@ -1,9 +1,12 @@
 package screens
 
 import (
+	"image"
+	"image/color"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui/elements"
 )
 
 func TestPurchaseButtonsProvideTouchConfirmation(t *testing.T) {
@@ -94,3 +97,57 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 		t.Errorf("Expected error message for not enough money, got empty string")
 	}
 }
+
+func TestBuyCardsScreen_ReplacesPlaceholderWhenImageLoads(t *testing.T) {
+	domain.ClearCardImageCache()
+	t.Cleanup(domain.ClearCardImageCache)
+
+	card := domain.FindCardByName("Mountain")
+	city := &domain.City{
+		CardsForSale: []*domain.Card{card},
+	}
+	player := &domain.Player{
+		Gold: 10,
+		Character: domain.Character{
+			CardCollection: domain.NewCardCollection(),
+		},
+	}
+
+	screen := NewBuyCardsScreen(city, player, 1024, 768)
+
+	var cardBtn *elements.Button
+	for _, b := range screen.Buttons {
+		if b.ID == "card_0" {
+			cardBtn = b
+			break
+		}
+	}
+	if cardBtn == nil {
+		t.Fatal("Expected card_0 button to exist")
+	}
+	initialNormalImg := cardBtn.Normal
+
+	// Now cache the real card art
+	img := image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, 342))
+	for y := range img.Bounds().Dy() {
+		for x := range img.Bounds().Dx() {
+			img.Set(x, y, color.RGBA{R: 0xff, A: 0xff})
+		}
+	}
+	domain.CacheCardImage(card.CardID(), img)
+
+	if !card.ImageLoaded() {
+		t.Fatal("Expected card image to be loaded")
+	}
+
+	// Update the screen, which should swap the button image
+	_, _, err := screen.Update(1024, 768, 1.0)
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+
+	if cardBtn.Normal == initialNormalImg {
+		t.Errorf("Expected card_0 button image to be replaced after card art loaded")
+	}
+}
+

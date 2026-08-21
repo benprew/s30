@@ -1,19 +1,22 @@
 DIST_DIR := dist
 TEST_COUNT := 5
 
-.PHONY: default run pprof duelprofile test embeddedbuild winbuild macbuild webbuild builddeps fedorabuilddeps lint
+.PHONY: default run pprof duelprofile test winbuild macbuild webbuild webdeploy builddeps fedorabuilddeps lint
 
 default: build
 
 run:
 	go run . -v mtg,duel
 
+webrun: webbuild
+	python3 -m http.server -d $(DIST_DIR) 8080
+
 pprof:
 	go run -tags pprof . -pprof 127.0.0.1:6060 -v mtg,duel
 
 duelprofile:
 	mkdir -p $(DIST_DIR)
-	go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/duel_profile ./cmd/duel_test
+	go build -trimpath -o $(DIST_DIR)/duel_profile ./cmd/duel_test
 
 test:
 ifeq ($(shell uname -s),Linux)
@@ -24,20 +27,20 @@ endif
 
 build:
 	mkdir -p $(DIST_DIR)
-	go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30 .
+	go build -trimpath -o $(DIST_DIR)/s30 .
 
 winbuild:
 	mkdir -p $(DIST_DIR)
-	GOOS=windows GOARCH=amd64 go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30.exe
+	GOOS=windows GOARCH=amd64 go build -trimpath -o $(DIST_DIR)/s30.exe .
 
 macbuild:
 	mkdir -p $(DIST_DIR)
-	MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30_mac_arm
+	MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -trimpath -o $(DIST_DIR)/s30_mac_arm .
 
 # https://ebitengine.org/en/documents/webassembly.html
 webbuild:
 	mkdir -p $(DIST_DIR)
-	GOOS=js GOARCH=wasm go build -trimpath -tags $(EMBEDDED_TAG) -o $(DIST_DIR)/s30.wasm github.com/benprew/s30
+	GOOS=js GOARCH=wasm go build -trimpath -o $(DIST_DIR)/s30.wasm .
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" index.html main.html $(DIST_DIR)/
 
 webdeploy: webbuild

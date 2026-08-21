@@ -16,24 +16,18 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
-// For buycards I need:
-// 1. cards
-// 2. done button
-// 3. prices
-// 4. player money
-// 4.1 player card collection
-// 5. Clicking on a card and choosing to buy it
-
 type BuyCardsScreen struct {
-	Buttons         []*elements.Button
-	PurchaseButtons []*elements.Button
-	City            *domain.City
-	Player          *domain.Player
-	BgImage         *ebiten.Image
-	ScreenTitle     *ebiten.Image
-	CardFrame       *ebiten.Image
-	PreviewIdx      int    // -1 if not previewing, else index into CardsForSale
-	ErrorMsg        string // error message to display (e.g. not enough money)
+	Buttons          []*elements.Button
+	PurchaseButtons  []*elements.Button
+	City             *domain.City
+	Player           *domain.Player
+	BgImage          *ebiten.Image
+	ScreenTitle      *ebiten.Image
+	CardFrame        *ebiten.Image
+	PreviewIdx       int    // -1 if not previewing, else index into CardsForSale
+	ErrorMsg         string // error message to display (e.g. not enough money)
+	cardPlaceholders map[int]bool
+	W, H             int // Screen Width/Height used for making card buttons
 }
 
 func (s *BuyCardsScreen) IsFramed() bool {
@@ -41,6 +35,8 @@ func (s *BuyCardsScreen) IsFramed() bool {
 }
 
 func (s *BuyCardsScreen) IsOverlay() bool { return false }
+
+const cardArtScale = 0.45
 
 func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyCardsScreen {
 	bgImg, err := imageutil.LoadImage(assets.BuyCards_png)
@@ -69,8 +65,10 @@ func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyC
 		CardFrame:   frameImg,
 		PreviewIdx:  -1,
 		ErrorMsg:    "",
+		W:           W,
+		H:           H,
 	}
-	screen.Buttons = mkCardButtons(SCALE, city, W, H)
+	screen.Buttons, screen.cardPlaceholders = screen.mkCardButtons()
 	screen.PurchaseButtons = mkPurchaseButtons()
 	return screen
 }
@@ -144,6 +142,8 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 }
 
 func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	s.updateCardArt()
+
 	options := &ebiten.DrawImageOptions{}
 
 	// If previewing, handle keyboard and touch confirmation.
@@ -204,6 +204,28 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	return screenui.BuyCardsScr, nil, nil
 }
 
+func (s *BuyCardsScreen) updateCardArt() {
+	if len(s.cardPlaceholders) == 0 {
+		return
+	}
+	for i, card := range s.City.CardsForSale {
+		if s.cardPlaceholders[i] && card.ImageLoaded() {
+			cardUpperImg, err := card.CardImage(domain.CardViewArtOnly)
+			if err != nil || cardUpperImg == nil {
+				continue
+			}
+			cardBtnID := fmt.Sprintf("card_%d", i)
+			for _, b := range s.Buttons {
+				if b.ID == cardBtnID {
+					b.SetImage(cardUpperImg, cardArtScale)
+					delete(s.cardPlaceholders, i)
+					break
+				}
+			}
+		}
+	}
+}
+
 func (s *BuyCardsScreen) dismissPreview() {
 	s.ErrorMsg = ""
 	s.PreviewIdx = -1
@@ -234,22 +256,27 @@ func (s *BuyCardsScreen) buyCard() {
 			am.PlaySFX(gameaudio.SFXTreasure)
 		}
 		s.City.CardsForSale = append(s.City.CardsForSale[:s.PreviewIdx], s.City.CardsForSale[s.PreviewIdx+1:]...)
-		s.Buttons = mkCardButtons(SCALE, s.City, 1024, 768) // TODO remove hardcoded W/H
+		s.Buttons, s.cardPlaceholders = s.mkCardButtons()
 		s.PreviewIdx = -1
 	} else {
 		s.ErrorMsg = "Not enough money!"
 	}
 }
 
-func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Button {
+func (s *BuyCardsScreen) mkCardButtons() ([]*elements.Button, map[int]bool) {
 	sprite := imageutil.LoadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
 		Size:   32,
 	}
 
+	placeholders := make(map[int]bool)
 	cards := make([]*elements.Button, 0)
-	for i, card := range city.CardsForSale {
+	for i, card := range s.City.CardsForSale {
+		if !card.ImageLoaded() {
+			placeholders[i] = true
+		}
+
 		cardUpperImg, err := card.CardImage(domain.CardViewArtOnly)
 		if err != nil {
 			fmt.Printf("WARN: Unable to load card image for %s: %v\n", card.Name(), err)
@@ -268,7 +295,7 @@ func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Butto
 		text.Draw(priceLabel, priceText, priceFontFace, &text.DrawOptions{DrawImageOptions: *priceOptions})
 
 		x := 120 + (i * 160)
-		cardBtn := elements.NewButton(cardUpperImg, cardUpperImg, cardUpperImg, x, 200, 0.45)
+		cardBtn := elements.NewButton(cardUpperImg, cardUpperImg, cardUpperImg, x, 200, cardArtScale)
 		cardBtn.ID = fmt.Sprintf("card_%d", i)
 		cards = append(cards, cardBtn)
 
@@ -278,7 +305,7 @@ func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Butto
 	}
 
 	btnWidth := float64(sprite[0].Bounds().Dx())
-	x := int((float64(W) - (btnWidth * SCALE)) / 2.0)
+	x := int((float64(s.W) - (btnWidth * SCALE)) / 2.0)
 
 	doneBtn := elements.NewButton(sprite[0], sprite[1], sprite[2], x, 420, SCALE)
 	doneBtn.ButtonText = elements.ButtonText{
@@ -295,7 +322,7 @@ func mkCardButtons(scale float64, city *domain.City, W, H int) []*elements.Butto
 
 	fmt.Println("Buttons:", len(buttons))
 
-	return buttons
+	return buttons, placeholders
 }
 
 func mkPurchaseButtons() []*elements.Button {

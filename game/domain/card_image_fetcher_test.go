@@ -75,6 +75,46 @@ func TestFetchAndCacheCardImageUsesURLWhenImageIsMissing(t *testing.T) {
 	}
 }
 
+func TestPreloadCardImagesOnlyFetchesPriorityCards(t *testing.T) {
+	cardImages.Clear()
+	t.Cleanup(cardImages.Clear)
+
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.Header().Set("Content-Type", "image/jpeg")
+		if err := jpeg.Encode(w, solidCardImage(color.RGBA{B: 0xff, A: 0xff}), nil); err != nil {
+			t.Errorf("encode response: %v", err)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	priority := []*Card{
+		{
+			CardName:      "Priority 1",
+			BorderCropURL: server.URL,
+			cardID:        "tst-p1",
+		},
+		{
+			CardName:      "Priority 2",
+			BorderCropURL: server.URL,
+			cardID:        "tst-p2",
+		},
+	}
+
+	PreloadCardImages(priority)
+
+	if requests.Load() != 2 {
+		t.Fatalf("HTTP requests = %d, want 2", requests.Load())
+	}
+	if _, ok := cardImages.Load("tst-p1"); !ok {
+		t.Fatal("priority card 1 was not cached")
+	}
+	if _, ok := cardImages.Load("tst-p2"); !ok {
+		t.Fatal("priority card 2 was not cached")
+	}
+}
+
 func cardImageArchive(t *testing.T, images map[string]image.Image) []byte {
 	t.Helper()
 
