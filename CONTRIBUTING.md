@@ -159,15 +159,6 @@ before starting to avoid duplicate work.
 - **AI spell telegraphing.** Pause + show targets when the AI casts a
   spell or activates an ability, even if the player has no responses.
 
-### Platforms & infra
-
-- **WASM save/load via LocalStorage.** Saves currently don't persist in the
-  browser build.
-- **Android polish.** The APK builds but the on-screen controls, scaling,
-  and input need a lot of work.
-- **CI.** A GitHub Actions workflow that runs `make test` and
-  `golangci-lint` on PRs would be great.
-
 ### Art & content
 
 - **Shandalar-accurate world.** Make the generated world look more like the

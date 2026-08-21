@@ -42,6 +42,14 @@ func NewLoadingGame() *LoadingGame {
 	return lg
 }
 
+// SaveGame persists the initialized game and is a no-op while it is loading.
+func (lg *LoadingGame) SaveGame() error {
+	if !lg.ready.Load() || lg.game == nil {
+		return nil
+	}
+	return lg.game.SaveGame()
+}
+
 func (lg *LoadingGame) Update() error {
 	if lg.ready.Load() {
 		if lg.initErr != nil {

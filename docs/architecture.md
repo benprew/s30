@@ -317,6 +317,10 @@ The physical view describes how the software maps to hardware and deployment tar
 | WebAssembly | js | wasm | `dist/s30.wasm` | No |
 | Android | android | multi-arch | `dist/s30_android.apk` | Yes (NDK) |
 
+Save persistence is platform-specific: desktop builds use `~/.s30/saves`,
+Android uses the app-private `files/saves` directory and WebAssembly stores
+compressed saves in the browser origin's `localStorage`.
+
 ### Asset Packaging
 
 Sprites, fonts, card data, and configs are compiled into the binary via Go's

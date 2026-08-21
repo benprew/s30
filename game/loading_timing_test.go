@@ -21,3 +21,10 @@ func TestLoadingDotsAdvanceOncePerSecond(t *testing.T) {
 		t.Fatalf("dots = %d after one second, want 1", loading.dots)
 	}
 }
+
+func TestLoadingGameSaveBeforeInitializationIsSafe(t *testing.T) {
+	loading := &LoadingGame{}
+	if err := loading.SaveGame(); err != nil {
+		t.Fatalf("SaveGame before initialization: %v", err)
+	}
+}

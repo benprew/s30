@@ -3,8 +3,6 @@ package save
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/benprew/s30/game/world"
@@ -27,22 +25,10 @@ func SaveGame(level *world.Level) (string, error) {
 		return "", fmt.Errorf("failed to serialize save data: %w", err)
 	}
 
-	savePath, err := getSaveFilePath(saveName)
+	savePath, err := writeSave(saveName, level.GameID, jsonData)
 	if err != nil {
-		return "", fmt.Errorf("failed to get save path: %w", err)
+		return "", fmt.Errorf("failed to persist save data: %w", err)
 	}
-
-	saveDir := filepath.Dir(savePath)
-	if err := os.MkdirAll(saveDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create save directory: %w", err)
-	}
-
-	if err := os.WriteFile(savePath, jsonData, 0644); err != nil {
-		return "", fmt.Errorf("failed to write save file: %w", err)
-	}
-
-	pruneOldSaves(saveDir, level.GameID, savePath)
-
 	return savePath, nil
 }
 
@@ -92,9 +78,9 @@ func normalizeSavedMovementSpeed(speed float64) float64 {
 }
 
 func LoadGame(savePath string) (*world.Level, error) {
-	jsonData, err := os.ReadFile(savePath)
+	jsonData, err := readSave(savePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", savePath, err)
+		return nil, fmt.Errorf("failed to read save %s: %w", savePath, err)
 	}
 
 	saveData, err := deserializeSave(jsonData)
@@ -103,18 +89,4 @@ func LoadGame(savePath string) (*world.Level, error) {
 	}
 
 	return saveData.World, nil
-}
-
-func getSaveFilePath(saveName string) (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	saveDir := filepath.Join(homeDir, ".s30", "saves")
-
-	timestamp := time.Now().Format("2006-01-02_15-04-05")
-	filename := fmt.Sprintf("%s_%s.json", saveName, timestamp)
-
-	return filepath.Join(saveDir, filename), nil
 }

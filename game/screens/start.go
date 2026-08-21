@@ -39,6 +39,7 @@ type StartScreen struct {
 	difficultyLabels   []string
 	saves              []save.SaveInfo
 	hasSaves           bool
+	savesChecked       bool
 	SelectedSave       string
 	SelectedDifficulty domain.Difficulty
 	SelectedColor      domain.ColorMask
@@ -114,14 +115,6 @@ func NewStartScreen() *StartScreen {
 	s.background = scaledFullScreen(assets.StartTitle_png)
 	s.menu2Bg = scaledFullScreen(assets.StartMenu2_png)
 	s.menu3Bg = scaledFullScreen(assets.StartMenu3_png)
-
-	hasSaves := false
-	if saveDir, err := save.SaveDir(); err == nil {
-		if saves, err := save.ListSaves(saveDir); err == nil && len(saves) > 0 {
-			hasSaves = true
-		}
-	}
-	s.hasSaves = hasSaves
 
 	s.newGameBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
 		Normal:  btnSprites[0][0],
@@ -260,6 +253,9 @@ func (s *StartScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 
 	switch s.mode {
 	case startModeMenu:
+		if !s.savesChecked {
+			s.refreshHasSaves()
+		}
 		s.newGameBtn.Update(opts, scale, W, H)
 		if s.newGameBtn.IsClicked() {
 			s.NewGame = true
@@ -316,6 +312,19 @@ func (s *StartScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 	}
 
 	return screenui.StartScr, nil, nil
+}
+
+func (s *StartScreen) refreshHasSaves() {
+	s.savesChecked = true
+	s.hasSaves = false
+	saveDir, err := save.SaveDir()
+	if err != nil {
+		return
+	}
+	saves, err := save.ListSaves(saveDir)
+	if err == nil {
+		s.hasSaves = len(saves) > 0
+	}
 }
 
 func (s *StartScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {

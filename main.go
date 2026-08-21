@@ -87,6 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	registerSaveLifecycle(g)
 
 	if err = ebiten.RunGame(g); err != nil && err != ebiten.Termination {
 		log.Fatal(err)

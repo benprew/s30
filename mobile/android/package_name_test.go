@@ -26,6 +26,9 @@ func TestAndroidPackageName(t *testing.T) {
 		"app/src/main/java/com/throwingbones/s30/MainActivity.java": {
 			"package com.throwingbones.s30;",
 			"import com.throwingbones.s30.mobile.EbitenView;",
+			"import com.throwingbones.s30.mobile.Mobile;",
+			"Mobile.setSaveDir(getFilesDir().getAbsolutePath());",
+			"Mobile.saveGame();",
 		},
 		"app/src/main/java/com/throwingbones/s30/EbitenViewWithErrorHandling.java": {
 			"package com.throwingbones.s30;",

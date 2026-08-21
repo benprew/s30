@@ -2,9 +2,6 @@ package save
 
 import (
 	"encoding/json"
-	"errors"
-	"os"
-	"path/filepath"
 	"sort"
 	"time"
 )
@@ -16,37 +13,11 @@ type SaveInfo struct {
 	Path    string
 }
 
-// ListSaves returns metadata for the save files in the given directory, keeping
-// only the latest save of each game (grouped by GameID) and sorted newest
-// first. If the directory doesn't exist, it returns an empty slice with no
-// error.
-func ListSaves(saveDir string) ([]SaveInfo, error) {
-	entries, err := os.ReadDir(saveDir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	var saves []SaveInfo
-	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
-			continue
-		}
-		path := filepath.Join(saveDir, e.Name())
-		info, err := parseSaveInfo(path)
-		if err != nil {
-			continue
-		}
-		saves = append(saves, info)
-	}
-
+func newestSaves(saves []SaveInfo) []SaveInfo {
 	sort.Slice(saves, func(i, j int) bool {
 		return saves[i].SavedAt.After(saves[j].SavedAt)
 	})
-
-	return dedupByGame(saves), nil
+	return dedupByGame(saves)
 }
 
 // dedupByGame keeps only the first (newest) save of each game. Saves predating
@@ -68,21 +39,7 @@ func dedupByGame(saves []SaveInfo) []SaveInfo {
 	return deduped
 }
 
-// SaveDir returns the default save directory path.
-func SaveDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(homeDir, ".s30", "saves"), nil
-}
-
-func parseSaveInfo(path string) (SaveInfo, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return SaveInfo{}, err
-	}
-
+func parseSaveInfoData(path string, data []byte) (SaveInfo, error) {
 	var header struct {
 		Name    string    `json:"name"`
 		GameID  string    `json:"game_id"`
@@ -98,30 +55,4 @@ func parseSaveInfo(path string) (SaveInfo, error) {
 		SavedAt: header.SavedAt,
 		Path:    path,
 	}, nil
-}
-
-// pruneOldSaves removes every save of game gameID except keepPath, enforcing
-// the "only keep the latest version" rule after a fresh save is written.
-func pruneOldSaves(saveDir, gameID, keepPath string) {
-	if gameID == "" {
-		return
-	}
-	entries, err := os.ReadDir(saveDir)
-	if err != nil {
-		return
-	}
-	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
-			continue
-		}
-		path := filepath.Join(saveDir, e.Name())
-		if path == keepPath {
-			continue
-		}
-		info, err := parseSaveInfo(path)
-		if err != nil || info.GameID != gameID {
-			continue
-		}
-		os.Remove(path)
-	}
 }

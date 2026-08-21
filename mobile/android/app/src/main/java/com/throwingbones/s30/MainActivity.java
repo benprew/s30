@@ -6,6 +6,7 @@ import android.util.Log;
 
 import go.Seq;
 import com.throwingbones.s30.mobile.EbitenView;
+import com.throwingbones.s30.mobile.Mobile;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -16,6 +17,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate: setting Seq context");
         Seq.setContext(getApplicationContext());
+        Mobile.setSaveDir(getFilesDir().getAbsolutePath());
         Log.i(TAG, "onCreate: setting content view");
         setContentView(R.layout.activity_main);
         Log.i(TAG, "onCreate: done");
@@ -29,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         this.getEbitenView().suspendGame();
+        Mobile.saveGame();
     }
 
     @Override

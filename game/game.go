@@ -375,6 +375,9 @@ func endScreenBGM(screen screenui.ScreenName) (gameaudio.BGM, bool) {
 }
 
 func (g *Game) SaveGame() error {
+	if g.player == nil {
+		return nil
+	}
 	level := g.Level()
 	savePath, err := save.SaveGame(level)
 	if err != nil {
