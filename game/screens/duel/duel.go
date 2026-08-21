@@ -316,7 +316,50 @@ func buildCardImageMap(decks ...domain.Deck) map[string]*domain.Card {
 			m[card.CardName] = card
 		}
 	}
+	for _, name := range basicLandNames {
+		if card := domain.FindCardByName(name); m[name] == nil && card != nil {
+			m[name] = card
+		}
+	}
 	return m
+}
+
+var basicLandNames = []string{"Plains", "Island", "Swamp", "Mountain", "Forest"}
+
+func permanentArtName(perm interactive.PermanentState, printedCard *domain.Card) string {
+	if !perm.IsLand || printedCard == nil {
+		return perm.Name
+	}
+
+	current := make(map[string]bool, len(basicLandNames))
+	currentOrder := make([]string, 0, len(basicLandNames))
+	for _, subtype := range strings.Fields(perm.SubTypes) {
+		if slices.Contains(basicLandNames, subtype) && !current[subtype] {
+			current[subtype] = true
+			currentOrder = append(currentOrder, subtype)
+		}
+	}
+	if len(currentOrder) == 0 {
+		return perm.Name
+	}
+
+	printed := make(map[string]bool, len(basicLandNames))
+	for _, subtype := range printedCard.Subtypes {
+		if slices.Contains(basicLandNames, subtype) {
+			printed[subtype] = true
+		}
+	}
+	for _, subtype := range basicLandNames {
+		if current[subtype] != printed[subtype] {
+			for _, currentSubtype := range currentOrder {
+				if !printed[currentSubtype] {
+					return currentSubtype
+				}
+			}
+			return currentOrder[0]
+		}
+	}
+	return perm.Name
 }
 
 func (s *DuelScreen) initGameState() {
@@ -2496,11 +2539,16 @@ func (s *DuelScreen) loadCardPreviewByName(name string) {
 }
 
 func (s *DuelScreen) loadCardPreview(name string, perm *interactive.PermanentState) {
-	if s.cardPreviewID == name {
+	artName := name
+	if perm != nil {
+		artName = permanentArtName(*perm, s.getDomainCard(name))
+	}
+	previewID := name + "\x00" + artName
+	if s.cardPreviewID == previewID {
 		s.cardPreviewPerm = perm
 		return
 	}
-	domainCard := s.getDomainCard(name)
+	domainCard := s.getDomainCard(artName)
 	if domainCard == nil {
 		s.cardPreviewImg = nil
 		s.cardPreviewID = ""
@@ -2517,7 +2565,7 @@ func (s *DuelScreen) loadCardPreview(name string, perm *interactive.PermanentSta
 		return
 	}
 	s.cardPreviewImg = img
-	s.cardPreviewID = name
+	s.cardPreviewID = previewID
 	s.cardPreviewPlaceholder = !domainCard.ImageLoaded()
 	s.cardPreviewName = name
 	s.cardPreviewPerm = perm
@@ -2958,7 +3006,8 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 				}
 			}
 
-			cardImg := s.getCardArtImg(perm.Name, fieldCardW)
+			artName := permanentArtName(perm, s.getDomainCard(perm.Name))
+			cardImg := s.getCardArtImg(artName, fieldCardW)
 			if cardImg != nil {
 				cardOpts := &ebiten.DrawImageOptions{}
 				if perm.Tapped {
