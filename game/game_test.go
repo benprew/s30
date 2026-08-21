@@ -12,6 +12,15 @@ type stubScreen struct {
 	overlay bool
 }
 
+type closableStubScreen struct {
+	stubScreen
+	closed bool
+}
+
+func (s *closableStubScreen) Close() {
+	s.closed = true
+}
+
 func TestEndScreenBGM(t *testing.T) {
 	tests := []struct {
 		screen screenui.ScreenName
@@ -101,6 +110,18 @@ func TestNavigateToNewScreen(t *testing.T) {
 	}
 	if g.prevScreen != screenui.WorldScr {
 		t.Errorf("prevScreen = %v, want WorldScr", g.prevScreen)
+	}
+}
+
+func TestNavigateClosesPreviousLifecycleScreen(t *testing.T) {
+	previous := &closableStubScreen{}
+	g := newTestGame()
+	g.screenMap[screenui.WorldScr] = previous
+
+	g.navigate(screenui.MiniMapScr)
+
+	if !previous.closed {
+		t.Fatal("navigate did not close the previous lifecycle screen")
 	}
 }
 

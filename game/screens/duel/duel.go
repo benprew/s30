@@ -2,6 +2,7 @@ package duel
 
 import (
 	"cmp"
+	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -106,10 +107,12 @@ type DuelScreen struct {
 	dungeon   *dungeonDuelContext
 	finalBoss bool
 
-	game     *mage.Game
-	human    *interactive.HumanPlayer
-	aiPlayer *ai.AIPlayer
-	lastMsg  *interactive.GameMsg
+	game       *mage.Game
+	human      *interactive.HumanPlayer
+	aiPlayer   *ai.AIPlayer
+	lastMsg    *interactive.GameMsg
+	loopCancel context.CancelFunc
+	loopDone   chan struct{}
 
 	autoPlay      bool
 	autoStrategy  ai.AIStrategy
@@ -456,11 +459,28 @@ func (s *DuelScreen) putBonusPermanentsInPlay(cards []*domain.Card) {
 }
 
 func (s *DuelScreen) startGameLoop() {
+	if s.loopCancel != nil {
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	s.loopCancel = cancel
+	s.loopDone = make(chan struct{})
 	pause := 300 * time.Millisecond
 	if s.autoPlay {
 		pause = 0
 	}
-	go interactive.RunGameLoop(s.game, 0, pause)
+	go func() {
+		defer close(s.loopDone)
+		interactive.RunGameLoopContext(ctx, s.game, 0, pause)
+	}()
+}
+
+// Close stops the game loop when this screen is no longer active.
+func (s *DuelScreen) Close() {
+	if s.loopCancel != nil {
+		s.loopCancel()
+		s.loopCancel = nil
+	}
 }
 
 func (s *DuelScreen) drainMessages() {

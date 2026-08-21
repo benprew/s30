@@ -34,6 +34,10 @@ type Game struct {
 	options              Options
 }
 
+type lifecycleScreen interface {
+	Close()
+}
+
 // Options controls optional runtime behavior for a game.
 type Options struct {
 	Debug            bool
@@ -48,6 +52,7 @@ func (g *Game) CurrentScreen() screenui.Screen {
 // NoScr and the current name are no-ops. Any other name is remembered as the
 // screen to pop back to.
 func (g *Game) navigate(name screenui.ScreenName) {
+	previous := g.CurrentScreen()
 	switch name {
 	case screenui.NoScr, g.currentScreen:
 		// no-op
@@ -56,6 +61,15 @@ func (g *Game) navigate(name screenui.ScreenName) {
 	default:
 		g.prevScreen = g.currentScreen
 		g.currentScreen = name
+	}
+	if g.CurrentScreen() != previous {
+		closeLifecycleScreen(previous)
+	}
+}
+
+func closeLifecycleScreen(screen screenui.Screen) {
+	if lifecycle, ok := screen.(lifecycleScreen); ok {
+		lifecycle.Close()
 	}
 }
 
@@ -217,6 +231,9 @@ func (g *Game) Update() error {
 
 	// If the screen returned a new instance, register it.
 	if screen != nil && name != screenui.PopScr && name != screenui.NoScr {
+		if name == g.currentScreen {
+			closeLifecycleScreen(g.screenMap[name])
+		}
 		g.screenMap[name] = screen
 	}
 
