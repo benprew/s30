@@ -1,7 +1,7 @@
 DIST_DIR := dist
 TEST_COUNT := 5
 
-.PHONY: default run pprof duelprofile test winbuild macbuild webbuild webdeploy builddeps fedorabuilddeps lint
+.PHONY: default run pprof duelprofile test winbuild macbuild webbuild webdeploy builddeps fedorabuilddeps osdeps fedoraosdeps pydeps lint
 
 default: build
 
@@ -46,13 +46,21 @@ webbuild:
 webdeploy: webbuild
 	scp $(DIST_DIR)/s30.wasm $(DIST_DIR)/wasm_exec.js $(DIST_DIR)/index.html $(DIST_DIR)/main.html throwingbones@throwingbones:/var/www/html/throwingbones/ben/s30/
 
-builddeps:
-	sudo apt-get install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libxxf86vm-dev xvfb
+APT_DEPS := libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libxxf86vm-dev xvfb
+DNF_DEPS := libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel alsa-lib-devel xorg-x11-server-Xvfb
+
+osdeps:
+	sudo apt-get install -y $(APT_DEPS)
+
+fedoraosdeps:
+	sudo dnf install -y $(DNF_DEPS)
+
+pydeps:
 	uv sync
 
-fedorabuilddeps:
-	sudo dnf install -y libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXxf86vm-devel mesa-libGL-devel alsa-lib-devel xorg-x11-server-Xvfb
-	uv sync
+builddeps: osdeps pydeps
+
+fedorabuilddeps: fedoraosdeps pydeps
 
 lint:
 	modernize -fix ./...

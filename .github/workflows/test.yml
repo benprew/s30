@@ -23,12 +23,10 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: astral-sh/setup-uv@v7
-
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo make builddeps
+          sudo make osdeps
 
       - name: Run tests
         run: make test
