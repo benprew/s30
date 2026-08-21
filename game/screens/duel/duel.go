@@ -339,7 +339,7 @@ func permanentArtName(perm interactive.PermanentState, printedCard *domain.Card)
 
 	current := make(map[string]bool, len(basicLandNames))
 	currentOrder := make([]string, 0, len(basicLandNames))
-	for _, subtype := range strings.Fields(perm.SubTypes) {
+	for subtype := range strings.FieldsSeq(perm.SubTypes) {
 		if slices.Contains(basicLandNames, subtype) && !current[subtype] {
 			current[subtype] = true
 			currentOrder = append(currentOrder, subtype)
@@ -4087,4 +4087,3 @@ func (s *DuelScreen) DuelReportState() *bugreport.DuelReportState {
 
 	return state
 }
-

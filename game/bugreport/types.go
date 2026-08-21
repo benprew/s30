@@ -76,7 +76,7 @@ func (r *BugReport) IssueTitle() string {
 		return fmt.Sprintf("[Bug] In-game report on %s screen", r.ActiveScreen)
 	}
 
-	firstLine := strings.SplitN(notes, "\n", 2)[0]
+	firstLine, _, _ := strings.Cut(notes, "\n")
 	if len(firstLine) > 60 {
 		firstLine = firstLine[:60] + "..."
 	}
