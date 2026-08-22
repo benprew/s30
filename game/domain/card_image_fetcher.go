@@ -197,23 +197,27 @@ func fetchAndCacheCardImage(card *Card) {
 	cacheCardImage(id, img)
 }
 
+// CollectPriorityCards returns all unique cards in the player's card collection
+// and bonus duel cards for upfront preloading.
 func CollectPriorityCards(player *Player) []*Card {
+	if player == nil {
+		return nil
+	}
+
 	seen := make(map[string]bool)
 	var priority []*Card
 
 	for card := range player.CardCollection {
-		if !seen[card.cardID] {
+		if card != nil && !seen[card.cardID] {
 			seen[card.cardID] = true
 			priority = append(priority, card)
 		}
 	}
 
-	for _, rogue := range Rogues {
-		for card := range rogue.CardCollection {
-			if !seen[card.cardID] {
-				seen[card.cardID] = true
-				priority = append(priority, card)
-			}
+	for _, card := range player.BonusDuelCards {
+		if card != nil && !seen[card.cardID] {
+			seen[card.cardID] = true
+			priority = append(priority, card)
 		}
 	}
 

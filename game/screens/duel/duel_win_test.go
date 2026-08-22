@@ -259,7 +259,7 @@ func TestHandleWin_HigherTierEnemyRewards(t *testing.T) {
 
 	lvl := &world.Level{Player: player}
 	lvl.Enemies = []domain.Enemy{
-		{Character: &domain.Character{Name: "Dragon Lord", Level: 11, PrimaryColor: "Red", CardCollection: enemyCollection}},
+		{Character: &domain.Character{Name: "Dragon Lord", Level: 11, PrimaryColor: "Red", ColorIdentity: []string{"Red"}, CardCollection: enemyCollection}},
 	}
 	enemy := lvl.GetEnemyAt(0)
 

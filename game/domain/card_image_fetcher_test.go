@@ -115,6 +115,46 @@ func TestPreloadCardImagesOnlyFetchesPriorityCards(t *testing.T) {
 	}
 }
 
+func TestCollectPriorityCardsOnlyIncludesPlayerCards(t *testing.T) {
+	playerCard1 := &Card{cardID: "player-card-1", CardName: "Player Card 1"}
+	playerCard2 := &Card{cardID: "player-card-2", CardName: "Player Card 2"}
+	bonusCard := &Card{cardID: "bonus-card", CardName: "Bonus Card"}
+
+	collection := NewCardCollection()
+	collection.AddCardToDeck(playerCard1, 0, 4)
+	collection.AddCardToDeck(playerCard2, 1, 2)
+
+	player := &Player{
+		Character: Character{
+			CardCollection: collection,
+		},
+		BonusDuelCards: []*Card{bonusCard},
+	}
+
+	priority := CollectPriorityCards(player)
+
+	if len(priority) != 3 {
+		t.Fatalf("CollectPriorityCards() returned %d cards, want 3", len(priority))
+	}
+
+	seen := make(map[string]bool)
+	for _, c := range priority {
+		seen[c.cardID] = true
+	}
+
+	for _, wantID := range []string{"player-card-1", "player-card-2", "bonus-card"} {
+		if !seen[wantID] {
+			t.Errorf("missing expected card ID %q in priority cards", wantID)
+		}
+	}
+}
+
+func TestCollectPriorityCardsNilPlayer(t *testing.T) {
+	if got := CollectPriorityCards(nil); got != nil {
+		t.Fatalf("CollectPriorityCards(nil) = %v, want nil", got)
+	}
+}
+
 func cardImageArchive(t *testing.T, images map[string]image.Image) []byte {
 	t.Helper()
 
