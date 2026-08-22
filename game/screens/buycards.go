@@ -36,7 +36,10 @@ func (s *BuyCardsScreen) IsFramed() bool {
 
 func (s *BuyCardsScreen) IsOverlay() bool { return false }
 
-const cardArtScale = 0.45
+const (
+	cardArtScale   = 0.45
+	ResetCardsCost = 25
+)
 
 func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyCardsScreen {
 	bgImg, err := imageutil.LoadImage(assets.BuyCards_png)
@@ -98,6 +101,13 @@ func (s *BuyCardsScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	frameOpts.GeoM.Scale(scale, scale)
 	for _, b := range s.Buttons {
 		b.Draw(screen, frameOpts, scale)
+	}
+
+	if s.PreviewIdx < 0 && s.ErrorMsg != "" {
+		errText := elements.NewText(24, s.ErrorMsg, 0, 490)
+		errText.BoundsW = float64(W)
+		errText.HAlign = elements.AlignCenter
+		errText.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	}
 
 	// Draw card preview if active
@@ -181,18 +191,24 @@ func (s *BuyCardsScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		if b.ID == "done" && b.IsClicked() {
 			return screenui.CityScr, nil, nil
 		}
+		if b.ID == "new_cards" && b.IsClicked() {
+			s.resetCards()
+			return screenui.BuyCardsScr, nil, nil
+		}
 		// Detect card or price click
 		if b.IsClicked() {
 			if len(b.ID) > 5 && b.ID[:5] == "card_" {
 				idx := -1
 				fmt.Sscanf(b.ID, "card_%d", &idx)
 				s.PreviewIdx = idx
+				s.ErrorMsg = ""
 				return screenui.BuyCardsScr, nil, nil
 			}
 			if len(b.ID) > 6 && b.ID[:6] == "price_" {
 				idx := -1
 				fmt.Sscanf(b.ID, "price_%d", &idx)
 				s.PreviewIdx = idx
+				s.ErrorMsg = ""
 				return screenui.BuyCardsScr, nil, nil
 			}
 		}
@@ -263,11 +279,26 @@ func (s *BuyCardsScreen) buyCard() {
 	}
 }
 
+func (s *BuyCardsScreen) resetCards() {
+	s.ErrorMsg = ""
+	if s.Player != nil && s.Player.Gold >= ResetCardsCost {
+		s.Player.Gold -= ResetCardsCost
+		if am := gameaudio.Get(); am != nil {
+			am.PlaySFX(gameaudio.SFXTreasure)
+		}
+		s.City.CardsForSale = domain.MkCards()
+		s.Buttons, s.cardPlaceholders = s.mkCardButtons()
+		s.PreviewIdx = -1
+	} else {
+		s.ErrorMsg = "Not enough money!"
+	}
+}
+
 func (s *BuyCardsScreen) mkCardButtons() ([]*elements.Button, map[int]bool) {
 	sprite := imageutil.LoadButtonMap(assets.BuyCardsSprite_png, assets.BuyCardsSpriteMap_json)
-	fontFace := &text.GoTextFace{
+	btnFontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
-		Size:   32,
+		Size:   24,
 	}
 
 	placeholders := make(map[int]bool)
@@ -305,22 +336,33 @@ func (s *BuyCardsScreen) mkCardButtons() ([]*elements.Button, map[int]bool) {
 	}
 
 	btnWidth := float64(sprite[0].Bounds().Dx())
-	x := int((float64(s.W) - (btnWidth * SCALE)) / 2.0)
+	btnScaledW := int(btnWidth * SCALE)
+	gap := 30
+	totalW := btnScaledW*2 + gap
+	startX := int((float64(s.W) - float64(totalW)) / 2.0)
 
-	doneBtn := elements.NewButton(sprite[0], sprite[1], sprite[2], x, 420, SCALE)
+	newCardsBtn := elements.NewButton(sprite[0], sprite[1], sprite[2], startX, 420, SCALE)
+	newCardsBtn.ButtonText = elements.ButtonText{
+		Text:      "New Cards",
+		Font:      btnFontFace,
+		TextColor: color.White,
+		HAlign:    elements.AlignCenter,
+		VAlign:    elements.AlignMiddle,
+	}
+	newCardsBtn.ID = "new_cards"
+
+	doneBtn := elements.NewButton(sprite[0], sprite[1], sprite[2], startX+btnScaledW+gap, 420, SCALE)
 	doneBtn.ButtonText = elements.ButtonText{
 		Text:      "Done",
-		Font:      fontFace,
+		Font:      btnFontFace,
 		TextColor: color.White,
 		HAlign:    elements.AlignCenter,
 		VAlign:    elements.AlignMiddle,
 	}
 	doneBtn.ID = "done"
 
-	buttons := []*elements.Button{doneBtn}
+	buttons := []*elements.Button{newCardsBtn, doneBtn}
 	buttons = append(buttons, cards...)
-
-	fmt.Println("Buttons:", len(buttons))
 
 	return buttons, placeholders
 }

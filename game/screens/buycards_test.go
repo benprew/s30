@@ -151,3 +151,111 @@ func TestBuyCardsScreen_ReplacesPlaceholderWhenImageLoads(t *testing.T) {
 	}
 }
 
+func TestResetCards_Success(t *testing.T) {
+	card := domain.FindCardByName("Mountain")
+	city := &domain.City{
+		CardsForSale: []*domain.Card{card},
+	}
+	player := &domain.Player{
+		Gold: 50,
+		Character: domain.Character{
+			CardCollection: domain.NewCardCollection(),
+		},
+	}
+
+	screen := &BuyCardsScreen{
+		City:       city,
+		Player:     player,
+		PreviewIdx: 0,
+		W:          1024,
+		H:          768,
+	}
+
+	screen.resetCards()
+
+	if player.Gold != 25 {
+		t.Errorf("Expected player gold to be 25, got %d", player.Gold)
+	}
+	if len(city.CardsForSale) != 5 {
+		t.Errorf("Expected 5 new cards for sale, got %d", len(city.CardsForSale))
+	}
+	if screen.PreviewIdx != -1 {
+		t.Errorf("Expected PreviewIdx to be -1, got %d", screen.PreviewIdx)
+	}
+	if screen.ErrorMsg != "" {
+		t.Errorf("Expected no error message, got %q", screen.ErrorMsg)
+	}
+}
+
+func TestResetCards_NotEnoughGold(t *testing.T) {
+	card := domain.FindCardByName("Mountain")
+	city := &domain.City{
+		CardsForSale: []*domain.Card{card},
+	}
+	player := &domain.Player{
+		Gold: 10,
+		Character: domain.Character{
+			CardCollection: domain.NewCardCollection(),
+		},
+	}
+
+	screen := &BuyCardsScreen{
+		City:       city,
+		Player:     player,
+		PreviewIdx: 0,
+		W:          1024,
+		H:          768,
+	}
+
+	screen.resetCards()
+
+	if player.Gold != 10 {
+		t.Errorf("Expected player gold to remain 10, got %d", player.Gold)
+	}
+	if len(city.CardsForSale) != 1 || city.CardsForSale[0] != card {
+		t.Errorf("Expected cards for sale to remain unchanged")
+	}
+	if screen.ErrorMsg != "Not enough money!" {
+		t.Errorf("Expected 'Not enough money!' error message, got %q", screen.ErrorMsg)
+	}
+}
+
+func TestBuyCardsScreen_NewCardsButtonExists(t *testing.T) {
+	card := domain.FindCardByName("Mountain")
+	city := &domain.City{
+		CardsForSale: []*domain.Card{card},
+	}
+	player := &domain.Player{
+		Gold: 50,
+		Character: domain.Character{
+			CardCollection: domain.NewCardCollection(),
+		},
+	}
+
+	screen := NewBuyCardsScreen(city, player, 1024, 768)
+
+	var newCardsBtn *elements.Button
+	var doneBtn *elements.Button
+	for _, b := range screen.Buttons {
+		if b.ID == "new_cards" {
+			newCardsBtn = b
+		}
+		if b.ID == "done" {
+			doneBtn = b
+		}
+	}
+
+	if newCardsBtn == nil {
+		t.Fatal("Expected new_cards button to exist")
+	}
+	if newCardsBtn.ButtonText.Text != "New Cards" {
+		t.Errorf("Expected button text 'New Cards', got %q", newCardsBtn.ButtonText.Text)
+	}
+	if doneBtn == nil {
+		t.Fatal("Expected done button to exist")
+	}
+	if doneBtn.ButtonText.Text != "Done" {
+		t.Errorf("Expected button text 'Done', got %q", doneBtn.ButtonText.Text)
+	}
+}
+
