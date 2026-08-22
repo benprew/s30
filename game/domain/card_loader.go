@@ -172,7 +172,7 @@ func (cj *CardJSON) ToCard() *Card {
 	// Convert string power/toughness to int, handling special cases
 	power := convertPowerToughness(cj.Power)
 	toughness := convertPowerToughness(cj.Toughness)
-	price := normalizePrice(toFloat(cj.PriceUSD))
+	price := CalculateCardPrice(cj.CardName, cj.TypeLine, toFloat(cj.PriceUSD))
 
 	return &Card{
 		CardSet: CardSet{
@@ -251,30 +251,61 @@ func convertPowerToughness(value string) int {
 	return -1
 }
 
-// normalizePrice converts a price from input range to output range using logarithmic scaling
-func normalizePrice(price float64) int {
-	const (
-		minInput  = 0.25
-		maxInput  = 20000.0
-		minOutput = 5.0
-		maxOutput = 150.0
-	)
-
-	// Clamp input to avoid log(0)
-	if price < minInput {
-		price = minInput
+// CalculateCardPrice computes the gold purchase price of a card based on its
+// power tier, card type, and real-world market value (priceUSD).
+func CalculateCardPrice(cardName string, typeLine string, priceUSD float64) int {
+	if isBasicLandNameOrType(cardName, typeLine) {
+		return 30
 	}
 
-	// Log-scale
-	logMin := math.Log(minInput)
-	logMax := math.Log(maxInput)
-	logPrice := math.Log(price)
+	tier, ok := CardTierForName(cardName)
+	if !ok {
+		tier = TierRarelyPlayed
+	}
 
-	// Normalize to [0, 1]
-	normalized := (logPrice - logMin) / (logMax - logMin)
+	basePrice := BasePriceForTier(tier)
 
-	// Scale to output range
-	scaled := minOutput + normalized*(maxOutput-minOutput)
+	const (
+		minUSD = 0.25
+		maxUSD = 10000.0
+	)
+	clampedUSD := priceUSD
+	if clampedUSD < minUSD {
+		clampedUSD = minUSD
+	} else if clampedUSD > maxUSD {
+		clampedUSD = maxUSD
+	}
 
-	return int(scaled)
+	logMin := math.Log(minUSD)
+	logMax := math.Log(maxUSD)
+	logVal := math.Log(clampedUSD)
+	norm := (logVal - logMin) / (logMax - logMin)
+
+	multiplier := 1.0 + 0.5*(norm-0.5)
+	price := int(math.Round(float64(basePrice) * multiplier))
+
+	switch tier {
+	case TierMandatory:
+		if price > 7000 {
+			price = 7000
+		}
+	case TierRarelyPlayed:
+		if price > 30 {
+			price = 30
+		}
+	}
+
+	if price < 7 {
+		price = 7
+	}
+
+	return price
+}
+
+func isBasicLandNameOrType(name string, typeLine string) bool {
+	if _, ok := basicLands[name]; ok {
+		return true
+	}
+	lower := strings.ToLower(typeLine)
+	return strings.Contains(lower, "basic") && strings.Contains(lower, "land")
 }

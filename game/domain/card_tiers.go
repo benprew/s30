@@ -40,6 +40,70 @@ type cardTiersRaw struct {
 	MemeCard                   []string `toml:"meme_card"`
 }
 
+var cardNameToTier = loadCardNameToTier()
+
+func loadCardNameToTier() map[string]CardTier {
+	var raw cardTiersRaw
+	if _, err := toml.Decode(string(assets.CardTiers_toml), &raw); err != nil {
+		panic(fmt.Errorf("error decoding card_tiers.toml: %w", err))
+	}
+
+	tiers := map[CardTier][]string{
+		TierMandatory:                  raw.MandatoryCards,
+		TierAlmostMandatory:            raw.AlmostMandatory,
+		TierStaple:                     raw.Staples,
+		TierPlayedInMostDecks:          raw.PlayedInMostDecks,
+		TierPlayedQuiteOften:           raw.PlayedQuiteOften,
+		TierPlayedFromTimeToTime:       raw.PlayedFromTimeToTime,
+		TierPlayedInSpecificArchetypes: raw.PlayedInSpecificArchetypes,
+		TierRarelyPlayed:               raw.RarelyPlayed,
+		TierAlmostNeverPlayed:          raw.AlmostNeverPlayed,
+		TierMeme:                       raw.MemeCard,
+	}
+
+	out := make(map[string]CardTier, 500)
+	for tier, names := range tiers {
+		for _, name := range names {
+			out[name] = tier
+		}
+	}
+	return out
+}
+
+// CardTierForName returns the power tier for a card name and whether it was found.
+func CardTierForName(name string) (CardTier, bool) {
+	t, ok := cardNameToTier[name]
+	return t, ok
+}
+
+// BasePriceForTier returns the baseline gold cost for cards in the given tier.
+func BasePriceForTier(tier CardTier) int {
+	switch tier {
+	case TierMandatory:
+		return 5600
+	case TierAlmostMandatory:
+		return 2000
+	case TierStaple:
+		return 500
+	case TierPlayedInMostDecks:
+		return 300
+	case TierPlayedQuiteOften:
+		return 175
+	case TierPlayedFromTimeToTime:
+		return 100
+	case TierPlayedInSpecificArchetypes:
+		return 50
+	case TierRarelyPlayed:
+		return 25
+	case TierAlmostNeverPlayed:
+		return 14
+	case TierMeme:
+		return 11
+	default:
+		return 25
+	}
+}
+
 // CardsByTier holds the cards for each power tier, resolved to *Card pointers.
 var CardsByTier = loadCardTiers()
 
@@ -117,14 +181,14 @@ const RestrictedRewardChance = 0.03
 // smaller.
 // Used for wizard castle rewards (and similar) since it includes restricted cards.
 func RandomPowerfulCardsForColor(color ColorMask, count int) []*Card {
-	return randomCardsForColorInTiersWithRestrictedChance(color, count, 1.0, TierMandatory, TierAlmostMandatory, TierStaple)
+	return randomCardsForColorInTiersWithRestrictedChance(color, count, 1.0, TierMandatory, TierAlmostMandatory, TierStaple, TierPlayedInMostDecks)
 }
 
 // RandomHighCardsForColor picks up to count unique high-tier cards whose color
 // identity matches the requested color or are colorless. Vintage-restricted cards
 // only appear very rarely.
 func RandomHighCardsForColor(color ColorMask, count int) []*Card {
-	return randomCardsForColorInTiers(color, count, TierMandatory, TierAlmostMandatory, TierStaple)
+	return randomCardsForColorInTiers(color, count, TierMandatory, TierAlmostMandatory, TierStaple, TierPlayedInMostDecks)
 }
 
 // RandomMidCardsForColor picks up to count unique medium-tier cards whose color
@@ -189,8 +253,8 @@ func randomCardsForColorInTiersWithRestrictedChance(color ColorMask, count int, 
 	rand.Shuffle(len(restricted), func(i, j int) { restricted[i], restricted[j] = restricted[j], restricted[i] })
 
 	var result []*Card
-	for len(result) < count && (len(unrestricted) > 0 || len(restricted) > 0) {
-		if len(restricted) > 0 && (len(unrestricted) == 0 || rand.Float64() < restrictedChance) {
+	for len(result) < count && (len(unrestricted) > 0 || (len(restricted) > 0 && restrictedChance > 0)) {
+		if len(restricted) > 0 && restrictedChance > 0 && (len(unrestricted) == 0 || rand.Float64() < restrictedChance) {
 			result = append(result, restricted[0])
 			restricted = restricted[1:]
 		} else if len(unrestricted) > 0 {
