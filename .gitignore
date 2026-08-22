@@ -20,3 +20,4 @@ tasks.org
 *.jks
 *.keystore
 key.properties
+game/domain/testdata/

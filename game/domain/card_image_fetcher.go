@@ -78,15 +78,19 @@ func labeledBlankCard(name string) *ebiten.Image {
 	return img
 }
 
-func resizeToWidth(src image.Image, targetWidth int) image.Image {
+func resizeToWidthWithInterpolator(src image.Image, targetWidth int, scaler draw.Interpolator) image.Image {
 	bounds := src.Bounds()
 	srcW := bounds.Dx()
 	srcH := bounds.Dy()
 	scale := float64(targetWidth) / float64(srcW)
 	targetHeight := int(float64(srcH) * scale)
 	dst := image.NewRGBA(image.Rect(0, 0, targetWidth, targetHeight))
-	draw.CatmullRom.Scale(dst, dst.Bounds(), src, bounds, draw.Over, nil)
+	scaler.Scale(dst, dst.Bounds(), src, bounds, draw.Over, nil)
 	return dst
+}
+
+func resizeToWidth(src image.Image, targetWidth int) image.Image {
+	return resizeToWidthWithInterpolator(src, targetWidth, draw.ApproxBiLinear)
 }
 
 func cacheCardImage(id string, img image.Image) {
