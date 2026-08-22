@@ -174,7 +174,7 @@ func main() {
 	profileFrames := flag.Int("profileframes", 0, "terminate after this many update frames")
 	memstatFrames := flag.Int("memstatframes", 600, "print memory and image-cache statistics every N frames (0 disables)")
 	duels := flag.Int("duels", 1, "number of automated duels to run")
-	autoplay := flag.Bool("autoplay", true, "let an AI drive the player seat")
+	autoplay := flag.Bool("autoplay", false, "let an AI drive the player seat")
 	rogue := flag.String("rogue", "", "fight this rogue instead of picking randomly")
 	showOpponentHand := flag.Bool("show-opponent-hand", false, "reveal the opponent's hand (debug)")
 	aiTestDeck := flag.Bool("ai-test-deck", false, "AI opponent plays xTestDeck() instead of its rogue deck")

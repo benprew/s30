@@ -10,6 +10,7 @@ On Linux, run it without a visible window through Xvfb:
 
 ```bash
 xvfb-run -a ./dist/duel_profile \
+  -autoplay \
   -duels 10 \
   -memprofile /tmp/duel-heap.pprof \
   -allocprofile /tmp/duel-allocs.pprof \
