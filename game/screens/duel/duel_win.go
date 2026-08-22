@@ -1,8 +1,10 @@
 package duel
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"strings"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -15,13 +17,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-// DuelWinScreen lets the player pick one reward card from a small set of
-// choices after winning a duel. The chosen card is added to the player's
-// collection here. Any bonus cards (e.g. a castle defeat) are awarded
-// automatically before this screen and shown for reference only.
+// DuelWinScreen displays the cards, gold, and amulets awarded to the player
+// after winning a duel. Any bonus cards (e.g. from castle defeat) are also shown.
 
 const (
 	winCardW      = domain.CardFullWidth
@@ -34,22 +33,21 @@ const (
 	winLogicalH   = 768
 )
 
-type winChoice struct {
-	card *domain.Card
-	rect image.Rectangle
+type winCard struct {
+	card  *domain.Card
+	rect  image.Rectangle
+	scale float64
 }
 
 type DuelWinScreen struct {
-	player     *domain.Player
-	choices    []winChoice
-	selected   int
-	bonusImgs  []*ebiten.Image
-	textbox    *elements.Button
-	doneBtn    *elements.Button
-	Background *ebiten.Image
-	// ReturnScr is the screen to return to once the player dismisses the win
-	// screen. Defaults to the overworld; dungeon duels override it so the player
-	// resumes exploring the dungeon.
+	player       *domain.Player
+	reward       domain.DuelReward
+	cards        []winCard
+	bonusImgs    []*ebiten.Image
+	textbox      *elements.Button
+	rewardText   *elements.Text
+	doneBtn      *elements.Button
+	Background   *ebiten.Image
 	ReturnScr    screenui.ScreenName
 	ReturnScreen screenui.Screen
 }
@@ -58,13 +56,13 @@ func (s *DuelWinScreen) IsFramed() bool { return false }
 
 func (s *DuelWinScreen) IsOverlay() bool { return false }
 
-func NewWinDuelScreen(player *domain.Player, choices []*domain.Card, bonusCards []*domain.Card) *DuelWinScreen {
+func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCards []*domain.Card) *DuelWinScreen {
 	fontFace := &text.GoTextFace{
 		Source: fonts.MtgFont,
 		Size:   40,
 	}
 
-	textContent := "Choose a card"
+	textContent := "Cards Won"
 
 	textWidth, textHeight := text.Measure(textContent, fontFace, 0)
 
@@ -92,7 +90,7 @@ func NewWinDuelScreen(player *domain.Player, choices []*domain.Card, bonusCards 
 	bgImg, _ := imageutil.LoadImage(assets.DuelWinBg_png)
 	bgImg = imageutil.ScaleImage(bgImg, 1.6)
 
-	winChoices := layoutChoices(choices)
+	cards := layoutCards(reward.Cards)
 
 	doneBtn := elements.NewButtonFromConfig(elements.ButtonConfig{
 		Normal: scaledBg,
@@ -102,6 +100,34 @@ func NewWinDuelScreen(player *domain.Player, choices []*domain.Card, bonusCards 
 	})
 	doneW := doneBtn.Bounds.Dx()
 	doneBtn.MoveTo((winLogicalW-doneW)/2, winChoiceY+winCardH+20)
+
+	var rewardParts []string
+	if reward.Gold > 0 {
+		rewardParts = append(rewardParts, fmt.Sprintf("+%d Gold", reward.Gold))
+	}
+	if len(reward.Amulets) > 0 {
+		counts := make(map[string]int)
+		for _, a := range reward.Amulets {
+			colorStr := domain.ColorMaskToString(a.Color)
+			counts[colorStr]++
+		}
+		for colorStr, count := range counts {
+			if count == 1 {
+				rewardParts = append(rewardParts, fmt.Sprintf("+1 %s Amulet", colorStr))
+			} else {
+				rewardParts = append(rewardParts, fmt.Sprintf("+%d %s Amulets", count, colorStr))
+			}
+		}
+	}
+
+	var rewardLabel *elements.Text
+	if len(rewardParts) > 0 {
+		rewardStr := strings.Join(rewardParts, "   ")
+		rewardLabel = elements.NewText(24, rewardStr, 0, winChoiceY-35)
+		rewardLabel.Color = color.RGBA{R: 255, G: 230, B: 150, A: 255}
+		rewardLabel.HAlign = elements.AlignCenter
+		rewardLabel.BoundsW = winLogicalW
+	}
 
 	bonusImgs := make([]*ebiten.Image, 0, len(bonusCards))
 	for _, c := range bonusCards {
@@ -113,37 +139,64 @@ func NewWinDuelScreen(player *domain.Player, choices []*domain.Card, bonusCards 
 	}
 
 	return &DuelWinScreen{
-		player:     player,
-		choices:    winChoices,
-		selected:   -1,
-		bonusImgs:  bonusImgs,
-		Background: bgImg,
-		textbox:    tb,
-		doneBtn:    doneBtn,
-		ReturnScr:  screenui.WorldScr,
+		player:       player,
+		reward:       reward,
+		cards:        cards,
+		bonusImgs:    bonusImgs,
+		Background:   bgImg,
+		textbox:      tb,
+		rewardText:   rewardLabel,
+		doneBtn:      doneBtn,
+		ReturnScr:    screenui.WorldScr,
 	}
 }
 
-// layoutChoices positions the choice cards in a centered horizontal row and
-// records each card's hit rectangle for click detection.
-func layoutChoices(cards []*domain.Card) []winChoice {
+// NewWinDuelScreenFromCards is a convenience constructor for creating a win screen
+// with a list of cards and default zero gold/amulets.
+func NewWinDuelScreenFromCards(player *domain.Player, cards []*domain.Card, bonusCards []*domain.Card) *DuelWinScreen {
+	return NewWinDuelScreen(player, domain.DuelReward{Cards: cards}, bonusCards)
+}
+
+// layoutCards positions the reward cards in a centered horizontal row and
+// scales them dynamically to fit within the logical screen width.
+func layoutCards(cards []*domain.Card) []winCard {
 	n := len(cards)
 	if n == 0 {
 		return nil
 	}
 
-	totalW := n*winCardW + (n-1)*winChoiceGap
-	startX := (winLogicalW - totalW) / 2
+	availW := float64(winLogicalW - 80)
+	cardScale := 1.0
+	gap := float64(winChoiceGap)
 
-	choices := make([]winChoice, 0, n)
+	rawTotalW := float64(n)*float64(winCardW) + float64(n-1)*gap
+	if rawTotalW > availW {
+		cardScale = availW / (float64(n)*float64(winCardW) + float64(n-1)*gap)
+		if cardScale > 1.0 {
+			cardScale = 1.0
+		}
+		gap = gap * cardScale
+	}
+
+	scaledCardW := float64(winCardW) * cardScale
+	scaledCardH := float64(winCardH) * cardScale
+	totalW := float64(n)*scaledCardW + float64(n-1)*gap
+	startX := (float64(winLogicalW) - totalW) / 2.0
+	y := float64(winChoiceY)
+	if cardScale < 1.0 {
+		y += (float64(winCardH) - scaledCardH) / 4.0
+	}
+
+	res := make([]winCard, 0, n)
 	for i, c := range cards {
-		x := startX + i*(winCardW+winChoiceGap)
-		choices = append(choices, winChoice{
-			card: c,
-			rect: image.Rect(x, winChoiceY, x+winCardW, winChoiceY+winCardH),
+		x := startX + float64(i)*(scaledCardW+gap)
+		res = append(res, winCard{
+			card:  c,
+			scale: cardScale,
+			rect:  image.Rect(int(x), int(y), int(x+scaledCardW), int(y+scaledCardH)),
 		})
 	}
-	return choices
+	return res
 }
 
 func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
@@ -151,40 +204,29 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	s.textbox.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
+	if s.rewardText != nil {
+		s.rewardText.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+	}
+
 	mp := ui.Position()
 
-	for i, c := range s.choices {
+	for _, c := range s.cards {
 		img, err := c.card.CardImage(domain.CardViewFull)
 		if err != nil {
 			continue
 		}
-		if i == s.selected {
-			drawSelectionBorder(screen, c.rect)
-		}
 		opts := &ebiten.DrawImageOptions{}
-		if i == s.selected || mp.In(c.rect) {
-			opts.ColorScale.Scale(1.2, 1.2, 1.2, 1.0)
+		opts.GeoM.Scale(c.scale, c.scale)
+		if mp.In(c.rect) {
+			opts.ColorScale.Scale(1.15, 1.15, 1.15, 1.0)
 		}
 		opts.GeoM.Translate(float64(c.rect.Min.X), float64(c.rect.Min.Y))
 		screen.DrawImage(img, opts)
 	}
 
-	if s.selected >= 0 {
-		s.doneBtn.Draw(screen, &ebiten.DrawImageOptions{}, scale)
-	}
+	s.doneBtn.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
 	s.drawBonus(screen)
-}
-
-// drawSelectionBorder draws a highlight frame around the selected choice card.
-func drawSelectionBorder(screen *ebiten.Image, rect image.Rectangle) {
-	const pad = 6
-	border := color.RGBA{R: 255, G: 215, B: 0, A: 255}
-	x := float32(rect.Min.X - pad)
-	y := float32(rect.Min.Y - pad)
-	w := float32(rect.Dx() + 2*pad)
-	h := float32(rect.Dy() + 2*pad)
-	vector.FillRect(screen, x, y, w, h, border, false)
 }
 
 func (s *DuelWinScreen) drawBonus(screen *ebiten.Image) {
@@ -211,47 +253,15 @@ func (s *DuelWinScreen) drawBonus(screen *ebiten.Image) {
 }
 
 func (s *DuelWinScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	if len(s.choices) == 0 {
-		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeySpace) || ui.Click(image.Rect(0, 0, W, H)) {
-			return s.ReturnScr, s.ReturnScreen, nil
-		}
-		return screenui.DuelWinScr, nil, nil
-	}
-
-	if s.selected >= 0 {
-		s.doneBtn.Update(&ebiten.DrawImageOptions{}, scale, W, H)
-		if s.doneBtn.IsClicked() {
-			s.confirmSelection()
-			return s.ReturnScr, s.ReturnScreen, nil
-		}
-	}
-
-	for _, choice := range s.choices {
-		if ui.Click(choice.rect) {
-			s.selectCardAt(ui.Position())
-			break
-		}
+	s.doneBtn.Update(&ebiten.DrawImageOptions{}, scale, W, H)
+	if s.doneBtn.IsClicked() ||
+		inpututil.IsKeyJustPressed(ebiten.KeyEscape) ||
+		inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
+		ui.Click(image.Rect(0, 0, W, H)) {
+		return s.ReturnScr, s.ReturnScreen, nil
 	}
 
 	return screenui.DuelWinScr, nil, nil
 }
 
-// selectCardAt marks the choice under the given point as the pending selection.
-func (s *DuelWinScreen) selectCardAt(mp image.Point) {
-	for i, c := range s.choices {
-		if mp.In(c.rect) {
-			s.selected = i
-			return
-		}
-	}
-}
-
-// confirmSelection adds the pending card choice to the player's collection.
-// It returns false when no card is selected.
-func (s *DuelWinScreen) confirmSelection() bool {
-	if s.selected < 0 || s.selected >= len(s.choices) {
-		return false
-	}
-	s.player.CardCollection.AddCard(s.choices[s.selected].card, 1)
-	return true
-}

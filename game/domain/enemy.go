@@ -67,6 +67,13 @@ func (e *Enemy) Name() string {
 	return e.Character.Name
 }
 
+func (e *Enemy) ColorMask() (c ColorMask) {
+	for _, color := range e.Character.ColorIdentity {
+		c |= ColorNameToMask(color)
+	}
+	return c
+}
+
 // move returns direction bits with random movement and wait behavior
 func (e *Enemy) move(playerX, playerY int) int {
 	dx := float64(playerX - e.X)

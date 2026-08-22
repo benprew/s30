@@ -268,6 +268,9 @@ func (p *Player) ExitDungeon() {
 }
 
 func (p *Player) AddAmulet(amulet Amulet) {
+	if p.Amulets == nil {
+		p.Amulets = make(map[ColorMask]int)
+	}
 	p.Amulets[amulet.Color]++
 }
 

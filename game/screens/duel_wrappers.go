@@ -27,8 +27,12 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	return duelscreen.NewDuelAnteScreenWithEnemy(l, idx)
 }
 
-func NewWinDuelScreen(player *domain.Player, choices []*domain.Card, bonusCards []*domain.Card) *DuelWinScreen {
-	return duelscreen.NewWinDuelScreen(player, choices, bonusCards)
+func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCards []*domain.Card) *DuelWinScreen {
+	return duelscreen.NewWinDuelScreen(player, reward, bonusCards)
+}
+
+func NewWinDuelScreenFromCards(player *domain.Player, cards []*domain.Card, bonusCards []*domain.Card) *DuelWinScreen {
+	return duelscreen.NewWinDuelScreenFromCards(player, cards, bonusCards)
 }
 
 func NewDuelLoseScreen(cards []*domain.Card) *DuelLoseScreen {

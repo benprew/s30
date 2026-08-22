@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"runtime/debug"
+
 	_ "github.com/benprew/mage-go/cards"
 	mage "github.com/benprew/mage-go/pkg/mage"
 	"github.com/benprew/mage-go/pkg/mage/core"
@@ -35,7 +37,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"runtime/debug"
 )
 
 const (
@@ -1217,11 +1218,11 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		if !s.questProgressApplied {
 			s.applyQuestProgress(s.lastMsg.Winner == "You")
 			s.questProgressApplied = true
+			logging.Printf(logging.Duel, "GameOver! Winner=%q Step=%q Turn=%d YouLife=%d OppLife=%d YouLib=%d OppLib=%d\n",
+				s.lastMsg.Winner, s.lastMsg.State.Step, s.lastMsg.State.Turn,
+				s.lastMsg.State.You.Life, s.lastMsg.State.Opponent.Life,
+				s.lastMsg.State.You.LibraryCount, s.lastMsg.State.Opponent.LibraryCount)
 		}
-		logging.Printf(logging.Duel, "GameOver! Winner=%q Step=%q Turn=%d YouLife=%d OppLife=%d YouLib=%d OppLib=%d\n",
-			s.lastMsg.Winner, s.lastMsg.State.Step, s.lastMsg.State.Turn,
-			s.lastMsg.State.You.Life, s.lastMsg.State.Opponent.Life,
-			s.lastMsg.State.You.LibraryCount, s.lastMsg.State.Opponent.LibraryCount)
 		if !s.autoPlay && !s.lossAnimationComplete(time.Now()) {
 			return screenui.DuelScr, nil, nil
 		}
@@ -2615,12 +2616,20 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	logging.Printf(logging.Duel, "you just beat: %s\n", s.enemy.Name())
 	s.lvl.RecordCombatWin()
 
+	reward := domain.GenerateDuelReward(s.player.GetActiveDeck(), s.enemyAnteCard, s.enemy.Character.Level, s.enemy.ColorMask())
+	for _, card := range reward.Cards {
+		s.player.CardCollection.AddCard(card, 1)
+	}
+	s.player.Gold += reward.Gold
+	for _, amulet := range reward.Amulets {
+		s.player.AddAmulet(amulet)
+	}
+
 	if s.dungeon != nil {
 		if s.dungeon.tile.Boss {
-			choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
 			bonusCards := s.completeCastleVictory()
 			s.player.ExitDungeon()
-			winScreen := NewWinDuelScreen(s.player, choices, bonusCards)
+			winScreen := NewWinDuelScreen(s.player, reward, bonusCards)
 			if s.lvl.AllCastlesDefeated() {
 				winScreen.ReturnScr = screenui.DuelScr
 				winScreen.ReturnScreen = NewFinalBossDuelScreen(s.player, s.lvl)
@@ -2631,11 +2640,9 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 		return screenui.DungeonScr, nil, nil
 	}
 
-	choices := domain.RewardChoices(s.player.GetActiveDeck(), s.enemyAnteCard)
-
 	s.lvl.RemoveEnemyAt(s.idx)
 
-	return screenui.DuelWinScr, NewWinDuelScreen(s.player, choices, nil), nil
+	return screenui.DuelWinScr, NewWinDuelScreen(s.player, reward, nil), nil
 }
 
 func (s *DuelScreen) completeCastleVictory() []*domain.Card {
@@ -3020,7 +3027,6 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 			auras := s.attachedPerms(perm.ID)
 			// reverse order so it draws correctly on the screen
 			for j, aura := range slices.Backward(auras) {
-
 				auraY := pos.Y - (j+1)*14
 				auraImg := s.getCardArtImg(aura.Name, fieldCardW)
 				if auraImg != nil {

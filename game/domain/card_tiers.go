@@ -28,16 +28,16 @@ const (
 
 // cardTiersRaw mirrors the TOML layout in assets/configs/card_tiers.toml.
 type cardTiersRaw struct {
-	MandatoryCards               []string `toml:"mandatory_cards"`
-	AlmostMandatory              []string `toml:"almost_mandatory"`
-	Staples                      []string `toml:"staples"`
-	PlayedInMostDecks            []string `toml:"played_in_most_decks"`
-	PlayedQuiteOften             []string `toml:"played_quite_often"`
-	PlayedFromTimeToTime         []string `toml:"played_from_time_to_time"`
-	PlayedInSpecificArchetypes   []string `toml:"played_in_specific_archetypes"`
-	RarelyPlayed                 []string `toml:"rarely_played"`
-	AlmostNeverPlayed            []string `toml:"almost_never_played"`
-	MemeCard                     []string `toml:"meme_card"`
+	MandatoryCards             []string `toml:"mandatory_cards"`
+	AlmostMandatory            []string `toml:"almost_mandatory"`
+	Staples                    []string `toml:"staples"`
+	PlayedInMostDecks          []string `toml:"played_in_most_decks"`
+	PlayedQuiteOften           []string `toml:"played_quite_often"`
+	PlayedFromTimeToTime       []string `toml:"played_from_time_to_time"`
+	PlayedInSpecificArchetypes []string `toml:"played_in_specific_archetypes"`
+	RarelyPlayed               []string `toml:"rarely_played"`
+	AlmostNeverPlayed          []string `toml:"almost_never_played"`
+	MemeCard                   []string `toml:"meme_card"`
 }
 
 // CardsByTier holds the cards for each power tier, resolved to *Card pointers.
@@ -106,13 +106,35 @@ func CardsInTiers(tiers ...CardTier) []*Card {
 	return cards
 }
 
+// RestrictedRewardChance is the probability that a duel reward card is eligible
+// to be chosen from the Vintage-restricted card list (e.g. Power 9, Sol Ring, Demonic Tutor).
+const RestrictedRewardChance = 0.03
+
 // RandomPowerfulCardsForColor picks up to count unique high-tier cards whose
 // color identity matches the requested color or are colorless (artifacts).
 // Vintage-restricted cards are eligible. Lands are excluded so the reward is
 // always a playable spell. Returns fewer than count if the eligible pool is
 // smaller.
+// Used for wizard castle rewards (and similar) since it includes restricted cards.
 func RandomPowerfulCardsForColor(color ColorMask, count int) []*Card {
+	return randomCardsForColorInTiersWithRestrictedChance(color, count, 1.0, TierMandatory, TierAlmostMandatory, TierStaple)
+}
+
+// RandomHighCardsForColor picks up to count unique high-tier cards whose color
+// identity matches the requested color or are colorless. Vintage-restricted cards
+// only appear very rarely.
+func RandomHighCardsForColor(color ColorMask, count int) []*Card {
 	return randomCardsForColorInTiers(color, count, TierMandatory, TierAlmostMandatory, TierStaple)
+}
+
+// RandomMidCardsForColor picks up to count unique medium-tier cards whose color
+// identity matches the requested color or are colorless.
+func RandomMidCardsForColor(color ColorMask, count int) []*Card {
+	return randomCardsForColorInTiers(color, count,
+		TierPlayedInMostDecks,
+		TierPlayedQuiteOften,
+		TierPlayedFromTimeToTime,
+	)
 }
 
 // RandomLowMidCardsForColor picks up to count unique cards of low-to-medium
@@ -128,30 +150,56 @@ func RandomLowMidCardsForColor(color ColorMask, count int) []*Card {
 	)
 }
 
+// RandomLowCardsForColor picks up to count unique low-power cards whose color
+// identity matches the requested color or are colorless.
+func RandomLowCardsForColor(color ColorMask, count int) []*Card {
+	return randomCardsForColorInTiers(color, count,
+		TierPlayedInSpecificArchetypes,
+		TierRarelyPlayed,
+		TierAlmostNeverPlayed,
+		TierMeme,
+	)
+}
+
 func randomCardsForColorInTiers(color ColorMask, count int, tiers ...CardTier) []*Card {
+	return randomCardsForColorInTiersWithRestrictedChance(color, count, RestrictedRewardChance, tiers...)
+}
+
+func randomCardsForColorInTiersWithRestrictedChance(color ColorMask, count int, restrictedChance float64, tiers ...CardTier) []*Card {
 	pool := CardsInTiers(tiers...)
 	seen := make(map[string]bool)
-	eligible := make([]*Card, 0, len(pool))
+	var unrestricted, restricted []*Card
+
 	for _, c := range pool {
-		if c.CardType == CardTypeLand {
-			continue
-		}
-		if seen[c.CardName] {
+		if c.CardType == CardTypeLand || seen[c.CardName] {
 			continue
 		}
 		if !cardMatchesColorOrColorless(c, color) {
 			continue
 		}
 		seen[c.CardName] = true
-		eligible = append(eligible, c)
+		if c.VintageRestricted {
+			restricted = append(restricted, c)
+		} else {
+			unrestricted = append(unrestricted, c)
+		}
 	}
-	rand.Shuffle(len(eligible), func(i, j int) {
-		eligible[i], eligible[j] = eligible[j], eligible[i]
-	})
-	if len(eligible) > count {
-		eligible = eligible[:count]
+
+	rand.Shuffle(len(unrestricted), func(i, j int) { unrestricted[i], unrestricted[j] = unrestricted[j], unrestricted[i] })
+	rand.Shuffle(len(restricted), func(i, j int) { restricted[i], restricted[j] = restricted[j], restricted[i] })
+
+	var result []*Card
+	for len(result) < count && (len(unrestricted) > 0 || len(restricted) > 0) {
+		if len(restricted) > 0 && (len(unrestricted) == 0 || rand.Float64() < restrictedChance) {
+			result = append(result, restricted[0])
+			restricted = restricted[1:]
+		} else if len(unrestricted) > 0 {
+			result = append(result, unrestricted[0])
+			unrestricted = unrestricted[1:]
+		}
 	}
-	return eligible
+
+	return result
 }
 
 func cardMatchesColorOrColorless(c *Card, color ColorMask) bool {

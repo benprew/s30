@@ -170,8 +170,8 @@ func TestFifthWizardRewardContinuesToArzakon(t *testing.T) {
 	if !ok {
 		t.Fatalf("fifth wizard win returned %T, want DuelWinScreen", screen)
 	}
-	if len(reward.choices) == 0 {
-		t.Fatal("fifth wizard reward has no card choices")
+	if len(reward.cards) == 0 {
+		t.Fatal("fifth wizard reward has no cards")
 	}
 	if reward.ReturnScr != screenui.DuelScr {
 		t.Fatalf("reward continues to %v, want DuelScr", reward.ReturnScr)
@@ -182,7 +182,7 @@ func TestFifthWizardRewardContinuesToArzakon(t *testing.T) {
 	}
 }
 
-func TestDuelWin_RequiresConfirmation(t *testing.T) {
+func TestDuelWin_AllCardsAwarded(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	bolt := domain.FindCardByName("Lightning Bolt")
 	forest := domain.FindCardByName("Forest")
@@ -193,33 +193,115 @@ func TestDuelWin_RequiresConfirmation(t *testing.T) {
 		},
 	}
 
-	s := NewWinDuelScreen(player, []*domain.Card{mountain, bolt, forest}, nil)
-
-	if s.selected != -1 {
-		t.Fatalf("expected no card selected initially, got %d", s.selected)
+	reward := domain.DuelReward{
+		Cards: []*domain.Card{mountain, bolt, forest},
+		Gold:  50,
 	}
 
-	// Selecting a card alone must not add it to the collection.
-	s.selectCardAt(s.choices[1].rect.Min)
-	if s.selected != 1 {
-		t.Fatalf("expected selected index 1, got %d", s.selected)
+	s := NewWinDuelScreen(player, reward, nil)
+
+	if len(s.cards) != 3 {
+		t.Fatalf("expected 3 cards on win screen, got %d", len(s.cards))
 	}
-	if _, exists := player.CardCollection[bolt]; exists {
-		t.Fatal("card added to collection before confirmation")
+	if s.reward.Gold != 50 {
+		t.Fatalf("expected 50 gold in reward, got %d", s.reward.Gold)
 	}
 
-	// Confirming with nothing selected is a no-op.
-	noSel := NewWinDuelScreen(player, []*domain.Card{mountain}, nil)
-	if noSel.confirmSelection() {
-		t.Fatal("confirmSelection returned true with no card selected")
+	// Done button or click dismisses screen to ReturnScr
+	nextScr, _, err := s.Update(1024, 768, 1.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nextScr != screenui.DuelWinScr {
+		t.Fatalf("expected DuelWinScr without click, got %v", nextScr)
+	}
+}
+
+func TestDuelWinScreen_DynamicLayoutScaling(t *testing.T) {
+	c1 := domain.FindCardByName("Mountain")
+	c2 := domain.FindCardByName("Island")
+	c3 := domain.FindCardByName("Plains")
+	c4 := domain.FindCardByName("Swamp")
+	c5 := domain.FindCardByName("Forest")
+	c6 := domain.FindCardByName("Badlands")
+
+	cards := []*domain.Card{c1, c2, c3, c4, c5, c6}
+	layout := layoutCards(cards)
+	if len(layout) != 6 {
+		t.Fatalf("expected 6 cards in layout, got %d", len(layout))
 	}
 
-	// Confirming adds the selected card.
-	if !s.confirmSelection() {
-		t.Fatal("confirmSelection returned false with a card selected")
+	// Ensure all cards fit within 0..1024 bounds
+	for i, wc := range layout {
+		if wc.scale >= 1.0 {
+			t.Errorf("card %d scale = %f, expected scale < 1.0 for 6 cards", i, wc.scale)
+		}
+		if wc.rect.Min.X < 0 || wc.rect.Max.X > winLogicalW {
+			t.Errorf("card %d rect %v out of screen bounds [0, %d]", i, wc.rect, winLogicalW)
+		}
 	}
-	if item := player.CardCollection[bolt]; item == nil || item.Count != 1 {
-		t.Fatal("confirmed card was not added to collection")
+}
+
+func TestHandleWin_HigherTierEnemyRewards(t *testing.T) {
+	player := &domain.Player{
+		Character: domain.Character{
+			CardCollection: domain.NewCardCollection(),
+		},
+		Amulets: make(map[domain.ColorMask]int),
+	}
+
+	bolt := domain.FindCardByName("Lightning Bolt")
+	player.CardCollection.AddCardToDeck(bolt, 0, 4)
+
+	enemyCollection := domain.NewCardCollection()
+	shivanDragon := domain.FindCardByName("Shivan Dragon")
+	enemyCollection.AddCardToDeck(shivanDragon, 0, 4)
+
+	lvl := &world.Level{Player: player}
+	lvl.Enemies = []domain.Enemy{
+		{Character: &domain.Character{Name: "Dragon Lord", Level: 11, PrimaryColor: "Red", CardCollection: enemyCollection}},
+	}
+	enemy := lvl.GetEnemyAt(0)
+
+	s := &DuelScreen{
+		player:        player,
+		enemy:         enemy,
+		lvl:           lvl,
+		idx:           0,
+		enemyAnteCard: shivanDragon,
+	}
+
+	startGold := player.Gold
+	startAmuletRed := player.Amulets[domain.ColorRed]
+
+	_, screen, err := s.handleWin()
+	if err != nil {
+		t.Fatalf("handleWin error: %v", err)
+	}
+
+	winScreen, ok := screen.(*DuelWinScreen)
+	if !ok {
+		t.Fatalf("expected DuelWinScreen, got %T", screen)
+	}
+
+	// Tier 11 enemy: ante card + 3 high cards + 2 lands = 6 cards total
+	if len(winScreen.cards) != 6 {
+		t.Errorf("expected 6 reward cards for tier 11 enemy, got %d", len(winScreen.cards))
+	}
+
+	// Player collection should have all awarded cards
+	if player.CardCollection[shivanDragon] == nil || player.CardCollection[shivanDragon].Count != 1 {
+		t.Errorf("ante card was not added to player collection")
+	}
+
+	// Gold should be increased (tier 10/11 grants 150+ gold)
+	if player.Gold < startGold+150 {
+		t.Errorf("player gold = %d, expected at least %d", player.Gold, startGold+150)
+	}
+
+	// Amulets should be increased
+	if player.Amulets[domain.ColorRed] < startAmuletRed+1 {
+		t.Errorf("player red amulets = %d, expected at least %d", player.Amulets[domain.ColorRed], startAmuletRed+1)
 	}
 }
 
@@ -272,8 +354,8 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 	}
 
 	lvl.Enemies = []domain.Enemy{
-		{Character: &domain.Character{Name: "Green Mage", Level: 1, CardCollection: enemy0Collection}},
-		{Character: &domain.Character{Name: "Blue Mage", Level: 1, CardCollection: enemy1Collection}},
+		{Character: &domain.Character{Name: "Green Mage", Level: 1, PrimaryColor: "Green", CardCollection: enemy0Collection}},
+		{Character: &domain.Character{Name: "Blue Mage", Level: 1, PrimaryColor: "Blue", CardCollection: enemy1Collection}},
 	}
 
 	enemy := lvl.GetEnemyAt(0)
@@ -297,16 +379,15 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 		t.Fatalf("expected DuelWinScreen, got %T", screen)
 	}
 
-	if len(winScreen.choices) != 3 {
-		t.Fatalf("expected 3 reward choices, got %d", len(winScreen.choices))
+	if len(winScreen.cards) != 3 {
+		t.Fatalf("expected 3 reward cards, got %d", len(winScreen.cards))
 	}
-	if winScreen.choices[0].card.Name() != giantGrowth.Name() {
-		t.Errorf("expected first choice to be enemy ante card %q, got %q", giantGrowth.Name(), winScreen.choices[0].card.Name())
+	if winScreen.cards[0].card.Name() != giantGrowth.Name() {
+		t.Errorf("expected first card to be enemy ante card %q, got %q", giantGrowth.Name(), winScreen.cards[0].card.Name())
 	}
 
-	// The reward is a choice, so nothing is added to the collection until the
-	// player picks one.
-	if _, exists := player.CardCollection[giantGrowth]; exists {
-		t.Error("enemy ante card was added to collection before the player chose it")
+	// All reward cards should be added to player's collection
+	if _, exists := player.CardCollection[giantGrowth]; !exists {
+		t.Error("enemy ante card was not added to player collection upon winning")
 	}
 }

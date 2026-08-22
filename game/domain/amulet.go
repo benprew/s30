@@ -79,3 +79,22 @@ func ColorMaskToString(color ColorMask) string {
 		return colorNameUnknown
 	}
 }
+
+// ColorNameToMask parses a color name or initial into its ColorMask.
+func ColorNameToMask(name string) ColorMask {
+	switch name {
+	case colorNameWhite, "W", "w", "white":
+		return ColorWhite
+	case colorNameBlue, "U", "u", "blue":
+		return ColorBlue
+	case colorNameBlack, "B", "b", "black":
+		return ColorBlack
+	case colorNameRed, "R", "r", "red":
+		return ColorRed
+	case colorNameGreen, "G", "g", "green":
+		return ColorGreen
+	default:
+		return ColorColorless
+	}
+}
+
