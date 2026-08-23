@@ -208,17 +208,15 @@ func (l *Level) UpdateWorld(screenW, screenH int) error {
 	l.totalTicks++
 	l.ticksSinceLastInteraction++
 
-	oldX, oldY := l.Player.X, l.Player.Y
-	oldTimeAccumulator := l.Player.TimeAccumulator
-	oldDays := l.Player.Days
-	if err := l.Player.Update(screenW, screenH, l.LevelW(), l.LevelH()); err != nil {
+	if err := l.Player.Update(
+		screenW,
+		screenH,
+		l.LevelW(),
+		l.LevelH(),
+		func(pos image.Point) bool {
+			return l.IsWaterAtPixel(pos)
+		}); err != nil {
 		return err
-	}
-	if l.IsWaterAtPixel(l.Player.Loc()) {
-		l.Player.X = oldX
-		l.Player.Y = oldY
-		l.Player.TimeAccumulator = oldTimeAccumulator
-		l.Player.Days = oldDays
 	}
 
 	for i := range l.Enemies {
