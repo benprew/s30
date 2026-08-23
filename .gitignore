@@ -21,3 +21,4 @@ tasks.org
 *.keystore
 key.properties
 game/domain/testdata/
+vendor/
