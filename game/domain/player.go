@@ -35,7 +35,7 @@ type Player struct {
 }
 
 const TravelDistancePerDay = 5000.0
-const TravelDistancePerFood = 150.0
+const TravelDistancePerFood = 450.0
 const StarvationSpeedPenalty = 0.5
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty, color ColorMask) (*Player, error) {
