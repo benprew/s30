@@ -35,6 +35,14 @@ func TestDuelEscapeClosesActiveOverlay(t *testing.T) {
 		}
 	})
 
+	t.Run("all graveyards", func(t *testing.T) {
+		s := &DuelScreen{viewingAllGraveyards: true}
+		s.handleEscape()
+		if s.isViewingGraveyard() {
+			t.Fatal("escape should close all-graveyards view")
+		}
+	})
+
 	t.Run("ability chooser", func(t *testing.T) {
 		s := &DuelScreen{abilityChoosingActions: []interactive.ActionOption{{CardName: "Test"}}}
 		s.handleEscape()

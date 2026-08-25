@@ -192,7 +192,8 @@ type DuelScreen struct {
 	selfLifeAnimation     lifeCounterAnimation
 	opponentLifeAnimation lifeCounterAnimation
 
-	viewingGraveyard *duelPlayer
+	viewingGraveyard     *duelPlayer
+	viewingAllGraveyards bool
 
 	handCollapsed bool
 
@@ -1200,7 +1201,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	clicked := ui.Click(image.Rect(0, 0, W, H))
 
 	if s.targetingCardID != uuid.Nil {
-		s.updateTargetingMouse(mx, my, clicked)
+		s.updateTargetingMouse(mx, my, clicked, W)
 	} else {
 		s.updateMouse(mx, my, clicked)
 		s.updateHoverPreview(mx, my)
@@ -1326,8 +1327,8 @@ func autoChoiceResponse(req interactive.ChoiceRequest) interactive.ChoiceRespons
 }
 
 func (s *DuelScreen) handleEscape() {
-	if s.viewingGraveyard != nil {
-		s.viewingGraveyard = nil
+	if s.isViewingGraveyard() {
+		s.closeGraveyardView()
 		return
 	}
 	if s.isChoosingAbility() {
@@ -1349,7 +1350,7 @@ func (s *DuelScreen) handleEscape() {
 }
 
 func (s *DuelScreen) canCancel() bool {
-	return s.viewingGraveyard != nil || s.isChoosingAbility() || s.isChoosingX() || s.targetingCardID != uuid.Nil
+	return s.isViewingGraveyard() || s.isChoosingAbility() || s.isChoosingX() || s.targetingCardID != uuid.Nil
 }
 
 func duelCancelBounds(W int) image.Rectangle { return image.Rect(W-116, 12, W-12, 54) }
@@ -2039,6 +2040,114 @@ func (s *DuelScreen) autoCounterTarget(opt interactive.ActionOption) (uuid.UUID,
 	return found, true
 }
 
+func (s *DuelScreen) isViewingGraveyard() bool {
+	return s.viewingGraveyard != nil || s.viewingAllGraveyards
+}
+
+func (s *DuelScreen) closeGraveyardView() {
+	s.viewingGraveyard = nil
+	s.viewingAllGraveyards = false
+}
+
+func (s *DuelScreen) displayedGraveyardPlayers() []*duelPlayer {
+	if s.viewingAllGraveyards {
+		var players []*duelPlayer
+		for _, dp := range []*duelPlayer{s.opponent, s.self} {
+			if ps := s.playerState(dp); ps != nil && len(ps.Graveyard) > 0 {
+				players = append(players, dp)
+			}
+		}
+		return players
+	}
+	if s.viewingGraveyard != nil {
+		return []*duelPlayer{s.viewingGraveyard}
+	}
+	return nil
+}
+
+type graveyardViewCard struct {
+	Player *duelPlayer
+	Card   interactive.CardState
+	Index  int
+	Rect   image.Rectangle
+}
+
+type graveyardViewSection struct {
+	Player   *duelPlayer
+	Title    string
+	TitlePos image.Point
+	Cards    []graveyardViewCard
+}
+
+func (s *DuelScreen) graveyardViewLayout(W int) []graveyardViewSection {
+	players := s.displayedGraveyardPlayers()
+	if len(players) == 0 {
+		return nil
+	}
+
+	const (
+		cardW  = 150
+		gap    = 12
+		topY   = 24
+		titleH = 36
+	)
+
+	cols := max((W-gap)/(cardW+gap), 1)
+	totalW := cols*cardW + (cols-1)*gap
+	startX := (W - totalW) / 2
+
+	currentY := topY
+	var sections []graveyardViewSection
+
+	for _, dp := range players {
+		ps := s.playerState(dp)
+		if ps == nil || len(ps.Graveyard) == 0 {
+			continue
+		}
+
+		title := fmt.Sprintf("%s's Graveyard (%d)", dp.name, len(ps.Graveyard))
+		sec := graveyardViewSection{
+			Player:   dp,
+			Title:    title,
+			TitlePos: image.Point{X: startX, Y: currentY},
+		}
+		currentY += titleH
+
+		for i, c := range ps.Graveyard {
+			col := i % cols
+			row := i / cols
+
+			cardH := 210
+			domainCard := s.getDomainCard(c.Name)
+			if domainCard != nil {
+				if img, err := domainCard.CardImage(domain.CardViewFull); err == nil && img != nil {
+					scale := float64(cardW) / float64(img.Bounds().Dx())
+					cardH = int(float64(img.Bounds().Dy()) * scale)
+				}
+			}
+
+			x := startX + col*(cardW+gap)
+			y := currentY + row*(cardH+gap)
+			rect := image.Rect(x, y, x+cardW, y+cardH)
+
+			sec.Cards = append(sec.Cards, graveyardViewCard{
+				Player: dp,
+				Card:   c,
+				Index:  i,
+				Rect:   rect,
+			})
+		}
+
+		rows := (len(ps.Graveyard) + cols - 1) / cols
+		cardH := 210
+		currentY += rows*(cardH+gap) + 16
+
+		sections = append(sections, sec)
+	}
+
+	return sections
+}
+
 func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []interactive.ActionOption) {
 	s.targetingCardID = id
 	s.targetingAction = interactive.ActionOption{}
@@ -2059,6 +2168,39 @@ func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []int
 	}
 	s.selectedTargetIDs = nil
 	s.loadCardPreviewByName(name)
+
+	if s.lastMsg != nil && s.lastMsg.State != nil {
+		hasSelfGrave := false
+		for _, c := range s.lastMsg.State.You.Graveyard {
+			if _, ok := s.targetingActions[c.ID]; ok {
+				hasSelfGrave = true
+				break
+			}
+		}
+		hasOppGrave := false
+		for _, c := range s.lastMsg.State.Opponent.Graveyard {
+			if _, ok := s.targetingActions[c.ID]; ok {
+				hasOppGrave = true
+				break
+			}
+		}
+		isAnyGraveyard := false
+		if s.targetingAction.TargetType != nil {
+			if _, ok := s.targetingAction.TargetType.(*mage.AnyGraveyardCardTarget); ok {
+				isAnyGraveyard = true
+			}
+		}
+		if (hasSelfGrave && hasOppGrave) || (isAnyGraveyard && (hasSelfGrave || hasOppGrave)) {
+			s.viewingAllGraveyards = true
+			s.viewingGraveyard = nil
+		} else if hasSelfGrave {
+			s.viewingGraveyard = s.self
+			s.viewingAllGraveyards = false
+		} else if hasOppGrave {
+			s.viewingGraveyard = s.opponent
+			s.viewingAllGraveyards = false
+		}
+	}
 }
 
 func (s *DuelScreen) exitTargetingMode() {
@@ -2066,6 +2208,7 @@ func (s *DuelScreen) exitTargetingMode() {
 	s.targetingAction = interactive.ActionOption{}
 	s.targetingActions = nil
 	s.selectedTargetIDs = nil
+	s.closeGraveyardView()
 }
 
 type variableTargetBounds interface {
@@ -2145,7 +2288,46 @@ func (s *DuelScreen) submitTargetingAction() bool {
 	return true
 }
 
-func (s *DuelScreen) updateTargetingMouse(mx, my int, clicked bool) {
+func graveyardCardBounds(i, W, cardH int) image.Rectangle {
+	const cardW = 150
+	const gap = 12
+	const startY = 60
+	cols := max((W-gap)/(cardW+gap), 1)
+	totalW := cols*cardW + (cols-1)*gap
+	startX := (W - totalW) / 2
+	col := i % cols
+	row := i / cols
+	x := startX + col*(cardW+gap)
+	y := startY + row*(cardH+gap)
+	return image.Rect(x, y, x+cardW, y+cardH)
+}
+
+func (s *DuelScreen) handleGraveyardTargetClick(mx, my, W int) bool {
+	if !s.isViewingGraveyard() {
+		return false
+	}
+	sections := s.graveyardViewLayout(W)
+	for _, sec := range sections {
+		for _, gc := range sec.Cards {
+			if image.Pt(mx, my).In(gc.Rect) {
+				if _, ok := s.targetingActions[gc.Card.ID]; ok {
+					s.selectTarget(gc.Card.ID)
+					s.loadCardPreviewByName(gc.Card.Name)
+					minTargets, maxTargets := s.targetBounds()
+					if minTargets == 1 && maxTargets == 1 && len(s.selectedTargetIDs) == 1 {
+						if s.submitTargetingAction() {
+							s.exitTargetingMode()
+						}
+					}
+				}
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s *DuelScreen) updateTargetingMouse(mx, my int, clicked bool, W int) {
 	if !clicked {
 		return
 	}
@@ -2164,6 +2346,20 @@ func (s *DuelScreen) updateTargetingMouse(mx, my int, clicked bool) {
 	msgBarLeft := duelBoardX + 52
 	if len(s.selectedTargetIDs) > 0 && mx >= msgBarLeft && my >= msgBarTop && my < msgBarTop+20 {
 		s.selectedTargetIDs = nil
+		return
+	}
+
+	if s.isViewingGraveyard() {
+		if s.handleGraveyardTargetClick(mx, my, W) {
+			return
+		}
+		if !s.handleGraveyardClick(mx, my) {
+			s.closeGraveyardView()
+		}
+		return
+	}
+
+	if s.handleGraveyardClick(mx, my) {
 		return
 	}
 
@@ -2369,9 +2565,9 @@ func (s *DuelScreen) damageAssignmentOrder() []uuid.UUID {
 }
 
 func (s *DuelScreen) handleClick(mx, my int) {
-	if s.viewingGraveyard != nil {
+	if s.isViewingGraveyard() {
 		if !s.handleGraveyardClick(mx, my) {
-			s.viewingGraveyard = nil
+			s.closeGraveyardView()
 		}
 		return
 	}
@@ -2748,53 +2944,53 @@ func (s *DuelScreen) drawDiceNotice(screen *ebiten.Image, W int) {
 }
 
 func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {
-	if s.viewingGraveyard == nil {
+	if !s.isViewingGraveyard() {
 		return
 	}
-	ps := s.playerState(s.viewingGraveyard)
-	if ps == nil {
+	sections := s.graveyardViewLayout(W)
+	if len(sections) == 0 {
 		return
 	}
 
 	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 200}, false)
 
-	title := fmt.Sprintf("%s's Graveyard (%d)", s.viewingGraveyard.name, len(ps.Graveyard))
-	titleTxt := elements.NewText(24, title, 0, 20)
-	titleTxt.HAlign = elements.AlignCenter
-	titleTxt.BoundsW = float64(W)
-	titleTxt.Color = color.White
-	titleTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+	const cardW = 150
 
-	if len(ps.Graveyard) == 0 {
-		return
-	}
+	for _, sec := range sections {
+		titleTxt := elements.NewText(22, sec.Title, 0, sec.TitlePos.Y)
+		titleTxt.HAlign = elements.AlignCenter
+		titleTxt.BoundsW = float64(W)
+		titleTxt.Color = color.White
+		titleTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	cardW := 150
-	gap := 12
-	startY := 60
-	cols := max((W-gap)/(cardW+gap), 1)
-	totalW := cols*cardW + (cols-1)*gap
-	startX := (W - totalW) / 2
+		for _, gc := range sec.Cards {
+			domainCard := s.getDomainCard(gc.Card.Name)
+			if domainCard == nil {
+				continue
+			}
+			img, err := domainCard.CardImage(domain.CardViewFull)
+			if err != nil || img == nil {
+				continue
+			}
+			scale := float64(cardW) / float64(img.Bounds().Dx())
+			opts := &ebiten.DrawImageOptions{}
+			opts.GeoM.Scale(scale, scale)
+			opts.GeoM.Translate(float64(gc.Rect.Min.X), float64(gc.Rect.Min.Y))
+			screen.DrawImage(img, opts)
 
-	for i, c := range ps.Graveyard {
-		col := i % cols
-		row := i / cols
-		domainCard := s.getDomainCard(c.Name)
-		if domainCard == nil {
-			continue
+			if s.targetingCardID != uuid.Nil {
+				if _, isTarget := s.targetingActions[gc.Card.ID]; isTarget {
+					borderColor := color.RGBA{255, 255, 0, 255}
+					strokeW := float32(2)
+					if s.targetSelected(gc.Card.ID) {
+						borderColor = color.RGBA{0, 255, 0, 255}
+						strokeW = 3
+					}
+					vector.StrokeRect(screen, float32(gc.Rect.Min.X), float32(gc.Rect.Min.Y),
+						float32(gc.Rect.Dx()), float32(gc.Rect.Dy()), strokeW, borderColor, false)
+				}
+			}
 		}
-		img, err := domainCard.CardImage(domain.CardViewFull)
-		if err != nil || img == nil {
-			continue
-		}
-		scale := float64(cardW) / float64(img.Bounds().Dx())
-		cardH := int(float64(img.Bounds().Dy()) * scale)
-		x := startX + col*(cardW+gap)
-		y := startY + row*(cardH+gap)
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Scale(scale, scale)
-		opts.GeoM.Translate(float64(x), float64(y))
-		screen.DrawImage(img, opts)
 	}
 }
 
@@ -3499,6 +3695,21 @@ func (s *DuelScreen) drawGraveyard(screen *ebiten.Image, dp *duelPlayer) {
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(bounds.Min.X), float64(offsetY))
 	screen.DrawImage(art, opts)
+
+	if s.targetingCardID != uuid.Nil {
+		hasTargetInGraveyard := false
+		for _, c := range ps.Graveyard {
+			if _, isTarget := s.targetingActions[c.ID]; isTarget {
+				hasTargetInGraveyard = true
+				break
+			}
+		}
+		if hasTargetInGraveyard {
+			borderColor := color.RGBA{255, 255, 0, 255}
+			vector.StrokeRect(screen, float32(bounds.Min.X), float32(bounds.Min.Y),
+				float32(graveyardW), float32(graveyardH), 2, borderColor, false)
+		}
+	}
 }
 
 func (s *DuelScreen) handleGraveyardClick(mx, my int) bool {
@@ -3510,10 +3721,11 @@ func (s *DuelScreen) handleGraveyardClick(mx, my int) bool {
 		if ps == nil || len(ps.Graveyard) == 0 {
 			return false
 		}
-		if s.viewingGraveyard == dp {
-			s.viewingGraveyard = nil
+		if s.viewingGraveyard == dp && !s.viewingAllGraveyards {
+			s.closeGraveyardView()
 		} else {
 			s.viewingGraveyard = dp
+			s.viewingAllGraveyards = false
 		}
 		return true
 	}
