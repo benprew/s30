@@ -13,9 +13,16 @@ func TestPlayerAmuletFunctionality(t *testing.T) {
 		t.Fatalf("Failed to create player: %v", err)
 	}
 
-	if len(player.Amulets) != 0 {
-		t.Errorf("New player should have empty amulet map, got %d entries", len(player.Amulets))
+	totalStartingAmulets := 0
+	for _, count := range player.Amulets {
+		totalStartingAmulets += count
 	}
+	if totalStartingAmulets != 4 {
+		t.Errorf("New easy player should have 4 starting amulets, got %d", totalStartingAmulets)
+	}
+
+	// Reset player amulets for clean unit testing of mutation methods
+	player.Amulets = make(map[ColorMask]int)
 
 	whiteAmulet := NewAmulet(ColorWhite)
 	player.AddAmulet(whiteAmulet)

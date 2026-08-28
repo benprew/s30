@@ -64,11 +64,14 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 		color = colors[rand.Intn(len(colors))]
 	}
 	deckGen := DeckBuilder(difficulty, color, time.Now().UnixNano())
-	deck := deckGen.CreateStartingDeck()
+	deck, extraCards := deckGen.CreateStartingResources()
 
 	cardCollection := NewCardCollection()
 	for card, count := range deck {
 		cardCollection.AddCardToDeck(card, 0, count)
+	}
+	for _, card := range extraCards {
+		cardCollection.AddCard(card, 1)
 	}
 
 	var gold, food, minDeckSize int
@@ -76,19 +79,28 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 	case DifficultyEasy:
 		gold = 250
 		food = 50
-		minDeckSize = 30
+		minDeckSize = 36
 	case DifficultyMedium:
 		gold = 200
 		food = 50
-		minDeckSize = 35
+		minDeckSize = 39
 	case DifficultyHard:
 		gold = 150
 		food = 50
-		minDeckSize = 40
+		minDeckSize = 44
 	case DifficultyExpert:
 		gold = 100
 		food = 50
-		minDeckSize = 40
+		minDeckSize = 45
+	}
+
+	amulets := make(map[ColorMask]int)
+	amulets[color] = 1
+	allColors := []ColorMask{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
+	bonusAmulets := 3 - int(difficulty)
+	for range bonusAmulets {
+		randomColor := allColors[rand.Intn(len(allColors))]
+		amulets[randomColor]++
 	}
 
 	c := Character{
@@ -109,7 +121,7 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 		Food:        food,
 		MinDeckSize: minDeckSize,
 		IsMale:      isM,
-		Amulets:     make(map[ColorMask]int),
+		Amulets:     amulets,
 		WorldMagics: make([]*WorldMagic, 0),
 		ActiveDeck:  0,
 	}, nil
@@ -150,7 +162,7 @@ func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(ima
 	oldX, oldY := p.X, p.Y
 	dirBits := p.Move(screenW, screenH)
 	p.updateSpeedPenalty()
-	p.CharacterInstance.UpdateWithCollision(dirBits, isBlocked)
+	p.UpdateWithCollision(dirBits, isBlocked)
 
 	if p.X != oldX || p.Y != oldY {
 		// Player moved

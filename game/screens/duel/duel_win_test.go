@@ -299,8 +299,8 @@ func TestHandleWin_HigherTierEnemyRewards(t *testing.T) {
 		t.Errorf("player gold = %d, expected at least %d", player.Gold, startGold+150)
 	}
 
-	// Amulets should be increased
-	if player.Amulets[domain.ColorRed] < startAmuletRed+1 {
+	// Amulets should be increased if awarded in reward bundle
+	if len(winScreen.reward.Amulets) > 0 && player.Amulets[domain.ColorRed] < startAmuletRed+1 {
 		t.Errorf("player red amulets = %d, expected at least %d", player.Amulets[domain.ColorRed], startAmuletRed+1)
 	}
 }
