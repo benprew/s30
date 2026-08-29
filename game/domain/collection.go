@@ -255,15 +255,9 @@ func (cc *CardCollection) UnmarshalJSON(data []byte) error {
 	}
 
 	for _, item := range items {
-		var card *Card
-		if item.CardID != "" {
-			card = FindCardByID(item.CardID)
-		}
+		card := FindCard(item.CardID, item.CardName)
 		if card == nil {
-			card = FindCardByName(item.CardName)
-		}
-		if card == nil {
-			return fmt.Errorf("card not found: id=%q name=%q", item.CardID, item.CardName)
+			continue
 		}
 		if existing, ok := (*cc)[card]; ok {
 			existing.Count += item.Count

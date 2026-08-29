@@ -156,3 +156,86 @@ func TestCardUnmarshalJSONLegacySaveFormat(t *testing.T) {
 		t.Errorf("legacy load should overwrite stale fields with canonical data; PngURL = %q, want %q", restored.PngURL, original.PngURL)
 	}
 }
+
+func TestCardUnmarshalJSONOldVersionMissingInCurrentDatabase(t *testing.T) {
+	card := FindCardByName("Lightning Bolt")
+	if card == nil {
+		t.Fatal("Lightning Bolt not found")
+	}
+
+	data := []byte(`{"CardID": "4ed-999-lightning-bolt"}`)
+	var restored Card
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatalf("unmarshal old card version failed: %v", err)
+	}
+	if restored.CardName != "Lightning Bolt" {
+		t.Errorf("CardName = %q, want %q", restored.CardName, "Lightning Bolt")
+	}
+	if restored.CardID() != card.CardID() {
+		t.Errorf("CardID = %q, want %q", restored.CardID(), card.CardID())
+	}
+}
+
+func TestCardUnmarshalJSONLegacySaveWithMissingSetID(t *testing.T) {
+	card := FindCardByName("Lightning Bolt")
+	if card == nil {
+		t.Fatal("Lightning Bolt not found")
+	}
+
+	data := []byte(`{"CardName": "Lightning Bolt", "SetID": "4ed", "CollectorNo": "999"}`)
+	var restored Card
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatalf("unmarshal legacy card with missing set_id failed: %v", err)
+	}
+	if restored.CardName != "Lightning Bolt" {
+		t.Errorf("CardName = %q, want %q", restored.CardName, "Lightning Bolt")
+	}
+	if restored.CardID() != card.CardID() {
+		t.Errorf("CardID = %q, want %q", restored.CardID(), card.CardID())
+	}
+}
+
+func TestFindCardBySanitizedName(t *testing.T) {
+	card := FindCardBySanitizedName("lightning-bolt")
+	if card == nil || card.CardName != "Lightning Bolt" {
+		t.Errorf("expected Lightning Bolt, got %v", card)
+	}
+}
+
+func TestFindCard(t *testing.T) {
+	bolt := FindCardByName("Lightning Bolt")
+	if bolt == nil {
+		t.Fatal("Lightning Bolt not found")
+	}
+
+	if got := FindCard(bolt.CardID(), ""); got != bolt {
+		t.Errorf("FindCard with canonical ID = %v, want %v", got, bolt)
+	}
+	if got := FindCard("4ed-999-lightning-bolt", ""); got != bolt {
+		t.Errorf("FindCard with old ID = %v, want %v", got, bolt)
+	}
+	if got := FindCard("4ed-999-lightning-bolt", "Lightning Bolt"); got != bolt {
+		t.Errorf("FindCard with old ID and name = %v, want %v", got, bolt)
+	}
+	if got := FindCard("", "Lightning Bolt"); got != bolt {
+		t.Errorf("FindCard with name alone = %v, want %v", got, bolt)
+	}
+	if got := FindCard("unknown-id-123", "nonexistent-card-name"); got != nil {
+		t.Errorf("FindCard with nonexistent card = %v, want nil", got)
+	}
+}
+
+func TestCardUnmarshalJSONRemovedCardLeavesReceiverEmpty(t *testing.T) {
+	data := []byte(`{"CardID": "2ed-136-word-of-command", "CardName": "Word of Command"}`)
+	var restored Card
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatalf("unmarshal removed card failed: %v", err)
+	}
+	if restored.CardID() != "" {
+		t.Errorf("expected empty CardID for removed card, got %q", restored.CardID())
+	}
+	if restored.CardName != "" {
+		t.Errorf("expected empty CardName for removed card, got %q", restored.CardName)
+	}
+}
+

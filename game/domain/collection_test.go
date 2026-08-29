@@ -122,3 +122,54 @@ func TestCardCollectionMarshalJSONMultipleCards(t *testing.T) {
 		t.Errorf("Expected giant deck 1 count 1, got %d", cc2.GetDeckCount(giant, 1))
 	}
 }
+
+func TestCardCollectionUnmarshalJSONMissingSetIDFallback(t *testing.T) {
+	bolt := FindCardByName("Lightning Bolt")
+	if bolt == nil {
+		t.Fatal("Could not find Lightning Bolt")
+	}
+
+	jsonData := []byte(`[
+		{"card_id": "4ed-999-lightning-bolt", "card_name": "Lightning Bolt", "count": 2, "deck_counts": [2]},
+		{"card_id": "lea-999-lightning-bolt", "card_name": "", "count": 1, "deck_counts": [1]}
+	]`)
+
+	var cc CardCollection
+	if err := json.Unmarshal(jsonData, &cc); err != nil {
+		t.Fatalf("Failed to unmarshal collection with old card IDs: %v", err)
+	}
+
+	if cc.GetTotalCount(bolt) != 3 {
+		t.Errorf("Expected total count 3, got %d", cc.GetTotalCount(bolt))
+	}
+	if cc.GetDeckCount(bolt, 0) != 3 {
+		t.Errorf("Expected deck 0 count 3, got %d", cc.GetDeckCount(bolt, 0))
+	}
+}
+
+func TestCardCollectionUnmarshalJSONSkipsRemovedCards(t *testing.T) {
+	bolt := FindCardByName("Lightning Bolt")
+	if bolt == nil {
+		t.Fatal("Could not find Lightning Bolt")
+	}
+
+	jsonData := []byte(`[
+		{"card_id": "2ed-136-word-of-command", "card_name": "Word of Command", "count": 2, "deck_counts": [2]},
+		{"card_id": "2ed-236-chaos-orb", "card_name": "Chaos Orb", "count": 1, "deck_counts": [1]},
+		{"card_id": "2ed-161-lightning-bolt", "card_name": "Lightning Bolt", "count": 4, "deck_counts": [4]}
+	]`)
+
+	var cc CardCollection
+	if err := json.Unmarshal(jsonData, &cc); err != nil {
+		t.Fatalf("Failed to unmarshal collection with removed cards: %v", err)
+	}
+
+	if len(cc) != 1 {
+		t.Errorf("Expected exactly 1 card in collection, got %d", len(cc))
+	}
+	if cc.GetTotalCount(bolt) != 4 {
+		t.Errorf("Expected bolt count 4, got %d", cc.GetTotalCount(bolt))
+	}
+}
+
+

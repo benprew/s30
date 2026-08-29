@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/world"
 )
 
@@ -54,8 +55,41 @@ func deserializeSave(jsonData []byte) (*SaveData, error) {
 		return nil, fmt.Errorf("unsupported save version: %d", saveData.Version)
 	}
 	normalizeMovementSpeed(&saveData)
+	cleanRemovedCards(&saveData)
 
 	return &saveData, nil
+}
+
+func cleanRemovedCards(saveData *SaveData) {
+	if saveData.World == nil {
+		return
+	}
+	if saveData.World.Player != nil {
+		saveData.World.Player.BonusDuelCards = filterValidCards(saveData.World.Player.BonusDuelCards)
+	}
+	for _, row := range saveData.World.Tiles {
+		for _, tile := range row {
+			if tile == nil {
+				continue
+			}
+			if tile.City != nil {
+				tile.City.CardsForSale = filterValidCards(tile.City.CardsForSale)
+			}
+		}
+	}
+}
+
+func filterValidCards(cards []*domain.Card) []*domain.Card {
+	if len(cards) == 0 {
+		return cards
+	}
+	valid := make([]*domain.Card, 0, len(cards))
+	for _, c := range cards {
+		if c != nil && c.CardID() != "" {
+			valid = append(valid, c)
+		}
+	}
+	return valid
 }
 
 func normalizeMovementSpeed(saveData *SaveData) {

@@ -184,7 +184,8 @@ func (c *Card) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON looks up the card in CARDS by ID and copies its fields onto
 // the receiver. Falls back to deriving the ID from CardName/SetID/CollectorNo
-// for save files written before Card serialized only its ID.
+// for save files written before Card serialized only its ID, and falls back to
+// looking up by name if a specific set_id/name printing is no longer in CARDS.
 func (c *Card) UnmarshalJSON(data []byte) error {
 	var aux struct {
 		CardID      string `json:"CardID"`
@@ -201,12 +202,9 @@ func (c *Card) UnmarshalJSON(data []byte) error {
 		id = fmt.Sprintf("%s-%s-%s", aux.SetID, aux.CollectorNo, sanitizeFilename(aux.CardName))
 	}
 
-	found := FindCardByID(id)
-	if found == nil && aux.CardName != "" {
-		found = FindCardByName(aux.CardName)
-	}
+	found := FindCard(id, aux.CardName)
 	if found == nil {
-		return fmt.Errorf("card not found: id=%q name=%q", id, aux.CardName)
+		return nil
 	}
 	*c = *found
 	return nil
@@ -217,8 +215,25 @@ func (c *Card) ImageLoaded() bool {
 	return ok
 }
 
-// FindCardByName searches for a card by name using binary search
-// Returns the first card found with the given name, or nil if not found
+// FindCard attempts to find a card by its ID, falling back to looking up by name
+// or extracting the sanitized card name from the ID if the specific printing/set
+// is not found in CARDS.
+func FindCard(id string, name string) *Card {
+	if card := FindCardByID(id); card != nil {
+		return card
+	}
+	if card := FindCardByName(name); card != nil {
+		return card
+	}
+	if parts := strings.SplitN(id, "-", 3); len(parts) == 3 {
+		return FindCardBySanitizedName(parts[2])
+	}
+	fmt.Println("couldn't find card from id:", id, "name:", name)
+	return nil
+}
+
+// FindCardByName searches for a card by name using binary search.
+// Returns the first card found with the given name, or nil if not found.
 func FindCardByName(name string) *Card {
 	index := sort.Search(len(CARDS), func(i int) bool {
 		return CARDS[i].CardName >= name
@@ -228,6 +243,20 @@ func FindCardByName(name string) *Card {
 		return CARDS[index]
 	}
 
+	return nil
+}
+
+// FindCardBySanitizedName searches for a card matching the sanitized name slug.
+func FindCardBySanitizedName(nameish string) *Card {
+	target := sanitizeFilename(nameish)
+	if target == "" {
+		return nil
+	}
+	for _, c := range CARDS {
+		if sanitizeFilename(c.CardName) == target {
+			return c
+		}
+	}
 	return nil
 }
 

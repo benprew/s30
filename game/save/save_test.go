@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/benprew/s30/game/domain"
 )
 
 // func TestSerializePlayer(t *testing.T) {
@@ -297,3 +299,114 @@ func TestGetSaveFilePath(t *testing.T) {
 		t.Error("Expected non-empty filename")
 	}
 }
+
+func TestDeserializeSaveWithOldCardVersions(t *testing.T) {
+	saveJSON := []byte(`{
+		"name": "test_game",
+		"game_id": "test_game_123",
+		"version": 1,
+		"world": {
+			"Player": {
+				"CardCollection": [
+					{"card_id": "4ed-999-lightning-bolt", "card_name": "Lightning Bolt", "count": 4, "deck_counts": [4]}
+				],
+				"BonusDuelCards": [
+					{"CardID": "4ed-999-lightning-bolt"}
+				]
+			},
+			"Tiles": [
+				[
+					{
+						"City": {
+							"Name": "Test City",
+							"CardsForSale": [
+								{"CardID": "4ed-999-lightning-bolt"}
+							]
+						}
+					}
+				]
+			]
+		}
+	}`)
+
+	saveData, err := deserializeSave(saveJSON)
+	if err != nil {
+		t.Fatalf("failed to deserialize save with old card IDs: %v", err)
+	}
+
+	if saveData.World == nil || saveData.World.Player == nil {
+		t.Fatal("expected non-nil world and player")
+	}
+	if len(saveData.World.Player.CardCollection) != 1 {
+		t.Fatalf("expected 1 card in collection, got %d", len(saveData.World.Player.CardCollection))
+	}
+	if len(saveData.World.Player.BonusDuelCards) != 1 || saveData.World.Player.BonusDuelCards[0].Name() != "Lightning Bolt" {
+		t.Fatalf("expected BonusDuelCards to contain Lightning Bolt, got %v", saveData.World.Player.BonusDuelCards)
+	}
+	if len(saveData.World.Tiles) != 1 || len(saveData.World.Tiles[0]) != 1 || saveData.World.Tiles[0][0].City == nil {
+		t.Fatal("expected non-nil tile city")
+	}
+	cityCards := saveData.World.Tiles[0][0].City.CardsForSale
+	if len(cityCards) != 1 || cityCards[0].Name() != "Lightning Bolt" {
+		t.Fatalf("expected CardsForSale to contain Lightning Bolt, got %v", cityCards)
+	}
+}
+
+func TestDeserializeSaveSkipsRemovedCards(t *testing.T) {
+	saveJSON := []byte(`{
+		"name": "test_game",
+		"game_id": "test_game_123",
+		"version": 1,
+		"world": {
+			"Player": {
+				"CardCollection": [
+					{"card_id": "2ed-136-word-of-command", "card_name": "Word of Command", "count": 2, "deck_counts": [2]},
+					{"card_id": "2ed-161-lightning-bolt", "card_name": "Lightning Bolt", "count": 4, "deck_counts": [4]}
+				],
+				"BonusDuelCards": [
+					{"CardID": "2ed-136-word-of-command"},
+					{"CardID": "2ed-161-lightning-bolt"}
+				]
+			},
+			"Tiles": [
+				[
+					{
+						"City": {
+							"Name": "Test City",
+							"CardsForSale": [
+								{"CardID": "2ed-136-word-of-command"},
+								{"CardID": "2ed-161-lightning-bolt"}
+							]
+						}
+					}
+				]
+			]
+		}
+	}`)
+
+	saveData, err := deserializeSave(saveJSON)
+	if err != nil {
+		t.Fatalf("failed to deserialize save with removed cards: %v", err)
+	}
+
+	if saveData.World == nil || saveData.World.Player == nil {
+		t.Fatal("expected non-nil world and player")
+	}
+	if len(saveData.World.Player.CardCollection) != 1 {
+		t.Fatalf("expected exactly 1 card in collection, got %d", len(saveData.World.Player.CardCollection))
+	}
+	bolt := domain.FindCardByName("Lightning Bolt")
+	if saveData.World.Player.CardCollection.GetTotalCount(bolt) != 4 {
+		t.Errorf("expected 4 Lightning Bolts, got %d", saveData.World.Player.CardCollection.GetTotalCount(bolt))
+	}
+	if len(saveData.World.Player.BonusDuelCards) != 1 || saveData.World.Player.BonusDuelCards[0].Name() != "Lightning Bolt" {
+		t.Fatalf("expected BonusDuelCards to only contain Lightning Bolt, got %v", saveData.World.Player.BonusDuelCards)
+	}
+	cityCards := saveData.World.Tiles[0][0].City.CardsForSale
+	if len(cityCards) != 1 || cityCards[0].Name() != "Lightning Bolt" {
+		t.Fatalf("expected CardsForSale to only contain Lightning Bolt, got %v", cityCards)
+	}
+}
+
+
+
