@@ -290,8 +290,18 @@ func TestHandleWin_HigherTierEnemyRewards(t *testing.T) {
 	}
 
 	// Player collection should have all awarded cards
-	if player.CardCollection[shivanDragon] == nil || player.CardCollection[shivanDragon].Count != 1 {
-		t.Errorf("ante card was not added to player collection")
+	rewardCardCounts := make(map[*domain.Card]int)
+	for _, card := range winScreen.reward.Cards {
+		rewardCardCounts[card]++
+	}
+	for card, count := range rewardCardCounts {
+		initialCount := 0
+		if card == bolt {
+			initialCount = 4
+		}
+		if item := player.CardCollection[card]; item == nil || item.Count != initialCount+count {
+			t.Errorf("card %s count in collection = %v, expected %d", card.Name(), item, initialCount+count)
+		}
 	}
 
 	// Gold should be increased (tier 10/11 grants 150+ gold)
