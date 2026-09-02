@@ -40,13 +40,48 @@ Install the Python dependencies for the art/asset pipeline:
 On macOS and Windows the Go toolchain + Ebiten's prebuilt dependencies are
 normally enough — no extra system packages needed.
 
-### Build & run
+### Development setup
 
-Clone and build the game:
+Because `s30` relies on the latest development branch of [`mage-go`](https://github.com/benprew/mage-go) (the MTG rules engine) while `go.mod` currently references an older release, cloning only `s30` and attempting to build will fail. A local checkout of `mage-go` linked via a Go workspace (`go.work`) is required.
+
+1. Clone both repositories side-by-side:
 
 ```sh
+git clone https://github.com/benprew/mage-go.git
 git clone https://github.com/benprew/s30.git
+```
+
+> **Note:** The default branch for `mage-go` is `awesome`. Ensure your checkout is on this branch.
+
+2. Create a `go.work` file in the `s30` directory pointing to the `mage-go` checkout:
+
+```sh
 cd s30
+go work init . ../mage-go
+```
+
+This creates a `go.work` file (which is gitignored):
+
+```go
+go 1.26
+
+use (
+	.
+	../mage-go
+)
+```
+
+If you already have an existing `go.work` file, add `mage-go` with:
+
+```sh
+go work use ../mage-go
+```
+
+### Build & run
+
+Build and run the game:
+
+```sh
 make       # downloads card art and builds self-contained dist/s30
 make run   # runs the game with embedded card art
 ```
