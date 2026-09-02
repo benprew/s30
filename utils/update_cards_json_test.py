@@ -85,17 +85,17 @@ class UpdateCardsJsonTest(unittest.TestCase):
 
     def test_process_card_records_filtering(self) -> None:
         records: list[dict[str, Any]] = [
-            # Included: Black Lotus (2ed)
+            # Included: Black Lotus (leb)
             {
                 "name": "Black Lotus",
-                "set": "2ed",
+                "set": "leb",
                 "collector_number": "233",
                 "lang": "en",
             },
             # Excluded by name: Chaos Orb
             {
                 "name": "Chaos Orb",
-                "set": "2ed",
+                "set": "leb",
                 "collector_number": "236",
                 "lang": "en",
             },
@@ -128,7 +128,7 @@ class UpdateCardsJsonTest(unittest.TestCase):
         names_and_sets = [(c["CardName"], c["SetID"]) for c in processed]
         self.assertEqual(
             names_and_sets,
-            [("Black Lotus", "2ed"), ("El-Hajjâj", "arn")],
+            [("Black Lotus", "leb"), ("El-Hajjâj", "arn")],
         )
 
     def test_iter_json_records_array_and_jsonl(self) -> None:

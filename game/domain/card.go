@@ -109,6 +109,7 @@ type Card struct {
 	CardSet
 	PngURL            string
 	BorderCropURL     string
+	ArtURL            string
 	cardID            string
 	ManaCost          string   // ex. {3}{G}{R}
 	ManaProduction    []string // This only has the possible colors of production
@@ -310,6 +311,26 @@ func (card *Card) fullCardImage() *ebiten.Image {
 	}
 
 	return fullImg
+}
+
+// ResizedImage returns a crisp resized card image rendered at targetW directly from the domain model.
+func (card *Card) ResizedImage(targetW int, view CardView) (*ebiten.Image, error) {
+	if targetW <= 0 {
+		targetW = CardFullWidth
+	}
+	if !card.ImageLoaded() {
+		if _, alreadyFetching := fetchingSet.LoadOrStore(card.cardID, true); !alreadyFetching {
+			go fetchAndCacheCardImage(card)
+		}
+	}
+	img := RenderResizedCard(card, targetW, view)
+	if img != nil {
+		return img, nil
+	}
+	if cached, ok := cardImages.Load(card.cardID); ok {
+		return cached.(*ebiten.Image), nil
+	}
+	return labeledBlankCard(card.CardName), nil
 }
 
 func (c *Card) SalePrice(city *City) int {
