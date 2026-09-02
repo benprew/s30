@@ -12,7 +12,6 @@ var (
 	//go:embed fonts/PlanewalkerDings-Pl9d.ttf
 	MagicSym_ttf []byte
 
-	// Card data
 	//go:embed card_info/scryfall_cards.json.zst
 	Cards_json []byte
 
@@ -247,6 +246,9 @@ var (
 	// Card images
 	//go:embed art/card/Cardbk_Gold.pic.png
 	CardBlank_png []byte
+
+	//go:embed art/card/*.png
+	CardFramesFS embed.FS
 
 	// Text
 	//go:embed text/Advblocks.txt

@@ -98,6 +98,7 @@ func cacheCardImage(id string, img image.Image) {
 		img = resizeToWidth(img, CardFullWidth)
 	}
 	cardImages.Store(id, ebiten.NewImageFromImage(img))
+	InvalidateResizedCardCache(id)
 }
 
 // CacheCardImage stores a decoded image for a given card ID in the cache.
@@ -108,6 +109,7 @@ func CacheCardImage(id string, img image.Image) {
 // ClearCardImageCache clears all cached card images.
 func ClearCardImageCache() {
 	cardImages.Clear()
+	ClearResizedCardCache()
 }
 
 func cardIDFromImageFilename(name string) (string, bool) {
@@ -171,13 +173,17 @@ func LoadEmbeddedCardImages() (int, error) {
 
 func fetchAndCacheCardImage(card *Card) {
 	id := card.cardID
-	if card.BorderCropURL == "" {
-		fmt.Printf("WARN: No BorderCropURL for card: %s\n", card.CardName)
+	imageURL := card.BorderCropURL
+	if imageURL == "" {
+		imageURL = card.ArtURL
+	}
+	if imageURL == "" {
+		fmt.Printf("WARN: No image URL for card: %s\n", card.CardName)
 		cardImages.Store(id, blankCard())
 		return
 	}
 
-	resp, err := http.Get(card.BorderCropURL)
+	resp, err := http.Get(imageURL)
 	if err != nil {
 		fmt.Printf("WARN: Failed to fetch card image for %s: %v\n", card.CardName, err)
 		cardImages.Store(id, blankCard())

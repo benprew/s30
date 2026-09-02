@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"image"
 	"regexp"
 	"sort"
 	"strconv"
@@ -101,6 +100,7 @@ type Card struct {
 	CardSet
 	PngURL            string
 	BorderCropURL     string
+	ArtURL            string
 	cardID            string
 	ManaCost          string   // ex. {3}{G}{R}
 	ManaProduction    []string // This only has the possible colors of production
@@ -290,25 +290,38 @@ func FindAllCardsByName(name string) []*Card {
 }
 
 func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
-	var fullImg *ebiten.Image
+	if view == CardViewArtOnly {
+		return card.ResizedImage(CardFullWidth, CardViewArtOnly)
+	}
 
 	if cached, ok := cardImages.Load(card.cardID); ok {
-		fullImg = cached.(*ebiten.Image)
-	} else {
+		return cached.(*ebiten.Image), nil
+	}
+
+	if _, alreadyFetching := fetchingSet.LoadOrStore(card.cardID, true); !alreadyFetching {
+		go fetchAndCacheCardImage(card)
+	}
+	return labeledBlankCard(card.CardName), nil
+}
+
+// ResizedImage returns a crisp resized card image rendered at targetW directly from the domain model.
+func (card *Card) ResizedImage(targetW int, view CardView) (*ebiten.Image, error) {
+	if targetW <= 0 {
+		targetW = CardFullWidth
+	}
+	if !card.ImageLoaded() {
 		if _, alreadyFetching := fetchingSet.LoadOrStore(card.cardID, true); !alreadyFetching {
 			go fetchAndCacheCardImage(card)
 		}
-		fullImg = labeledBlankCard(card.CardName)
 	}
-
-	if view == CardViewArtOnly {
-		bounds := fullImg.Bounds()
-		width := bounds.Dx()
-		artRect := image.Rect(0, 0, width, CardArtHeight)
-		return fullImg.SubImage(artRect).(*ebiten.Image), nil
+	img := RenderResizedCard(card, targetW, view)
+	if img != nil {
+		return img, nil
 	}
-
-	return fullImg, nil
+	if cached, ok := cardImages.Load(card.cardID); ok {
+		return cached.(*ebiten.Image), nil
+	}
+	return labeledBlankCard(card.CardName), nil
 }
 
 func (c *Card) SalePrice(city *City) int {

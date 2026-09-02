@@ -2411,14 +2411,12 @@ func (s *DuelScreen) getCardArtImg(name string, targetW int) *ebiten.Image {
 		return nil
 	}
 
-	artImg, err := domainCard.CardImage(domain.CardViewArtOnly)
-	if err != nil || artImg == nil {
+	scaled, err := domainCard.ResizedImage(targetW, domain.CardViewArtOnly)
+	if err != nil || scaled == nil {
 		return nil
 	}
 
 	loaded := domainCard.ImageLoaded()
-	scale := float64(targetW) / float64(artImg.Bounds().Dx())
-	scaled := imageutil.ScaleImage(artImg, scale)
 	s.cardImgCache[key] = cardImgEntry{scaled: scaled, placeholder: !loaded}
 	return scaled
 }

@@ -183,7 +183,9 @@ def process_card_records(
             set_id
         ) > allowed_sets_lower.index(results[name]["SetID"]):
             print(
-                f"skipping {name} to results (for {set_id}), new:{allowed_sets_lower.index(set_id)}, curr:{allowed_sets_lower.index(results[name]["SetID"])}"
+                f"skipping {name} to results (for {set_id}), "
+                f"new:{allowed_sets_lower.index(set_id)}, "
+                f"curr:{allowed_sets_lower.index(results[name]['SetID'])}"
             )
             continue
 
