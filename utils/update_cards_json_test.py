@@ -10,9 +10,7 @@ import zstandard
 from utils.update_cards_json import (
     DEFAULT_ALLOWED_SETS,
     DEFAULT_EXCLUDED_NAMES,
-    DEFAULT_EXCLUDED_VERSIONS,
     VersionExclusion,
-    is_version_excluded,
     iter_json_records,
     parse_version_exclusion,
     process_card_records,
@@ -40,28 +38,6 @@ class UpdateCardsJsonTest(unittest.TestCase):
         self.assertEqual(
             parse_version_exclusion("Chaos Orb"),
             VersionExclusion(name="Chaos Orb", set_id=None, collector_number=None),
-        )
-
-    def test_is_version_excluded(self) -> None:
-        exclusions = [
-            VersionExclusion(name="El-Hajjâj", set_id="4ed"),
-            VersionExclusion(
-                name="Drudge Skeletons", set_id="4ed", collector_number="107†"
-            ),
-        ]
-        # El-Hajjaj 4ed any collector number should be excluded
-        self.assertTrue(is_version_excluded("El-Hajjâj", "4ed", "134", exclusions))
-        self.assertTrue(is_version_excluded("El-Hajjâj", "4ed", "134†", exclusions))
-        # El-Hajjaj arn should NOT be excluded
-        self.assertFalse(is_version_excluded("El-Hajjâj", "arn", "24", exclusions))
-
-        # Drudge Skeletons 107† in 4ed should be excluded
-        self.assertTrue(
-            is_version_excluded("Drudge Skeletons", "4ed", "107†", exclusions)
-        )
-        # Drudge Skeletons 133 in 4ed should NOT be excluded
-        self.assertFalse(
-            is_version_excluded("Drudge Skeletons", "4ed", "133", exclusions)
         )
 
     def test_transform_raw_card(self) -> None:
@@ -147,8 +123,6 @@ class UpdateCardsJsonTest(unittest.TestCase):
             records=iter(records),
             allowed_sets=DEFAULT_ALLOWED_SETS,
             excluded_names=DEFAULT_EXCLUDED_NAMES,
-            excluded_versions=DEFAULT_EXCLUDED_VERSIONS,
-            allow_foreign=False,
         )
 
         names_and_sets = [(c["CardName"], c["SetID"]) for c in processed]

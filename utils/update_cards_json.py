@@ -179,17 +179,15 @@ def process_card_records(
         if name.lower() in excluded_names_lower:
             continue
 
-        if name in results and allowed_sets_lower.index(
-            set_id
-        ) > allowed_sets_lower.index(results[name]["SetID"]):
-            print(
-                f"skipping {name} to results (for {set_id}), new:{allowed_sets_lower.index(set_id)}, curr:{allowed_sets_lower.index(results[name]["SetID"])}"
-            )
+        results_set = results[name]["SetID"]
+        results_set_idx = allowed_sets_lower.index(results_set)
+        set_idx = allowed_sets_lower.index(set_id)
+
+        if name in results and set_idx > results_set_idx:
+            print(f"skipping {name} for {set_id}), curr{results_set}")
             continue
 
-        print(
-            f"adding {name} to results (for {set_id}), new:{allowed_sets_lower.index(set_id)}"
-        )
+        print(f"adding {name} (for {set_id}), new:{set_idx}")
         results[name] = transformed
 
     return results.values()
@@ -228,7 +226,8 @@ def main() -> None:
     parser.add_argument(
         "--sets",
         default=",".join(DEFAULT_ALLOWED_SETS),
-        help="Comma-separated list of allowed set codes (default: %(default)s), overlapping cards prefer the set given first",
+        help="Comma-separated list of allowed set codes (default: %(default)s), "
+        "overlapping cards prefer the set given first",
     )
     parser.add_argument(
         "--exclude-name",
