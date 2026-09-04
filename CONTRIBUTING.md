@@ -66,8 +66,8 @@ This creates a `go.work` file (which is gitignored):
 go 1.26
 
 use (
-	.
-	../mage-go
+    .
+    ../mage-go
 )
 ```
 
@@ -89,19 +89,30 @@ make run   # runs the game with embedded card art
 Run tests:
 
 ```sh
-make test      # go test -count=10 ./...
+make test      # go test ./...
 ```
 
 Making builds for your OS:
 
 ```sh
 make winbuild       # Windows x86_64 → dist/s30.exe
-make macbuild       # macOS → dist/s30_mac
-make build          # linux build → dist/s30
+make macbuild       # macOS ARM → dist/s30_mac_arm
+make build          # native build → dist/s30
+```
+
+Clean up build artifacts:
+
+```sh
+make clean
 ```
 
 Every Make binary target caches its generated card archive under `assets/art/`
 and embeds it in the output. Both the archive and `dist/` are ignored by Git.
+
+> **Windows note**: `make` works in **cmd.exe**, **PowerShell**, and **Git Bash /
+> MSYS2** without any extra setup. The Makefile automatically detects the shell
+> and uses the appropriate commands (`mkdir`, `copy`, etc. for `cmd.exe`; `mkdir
+> -p`, `cp`, etc. for POSIX shells).
 
 Once `make build` and `make test` both run cleanly, you're ready to hack.
 
