@@ -1,7 +1,12 @@
 DIST_DIR := dist
-TEST_COUNT := 5
 
-.PHONY: default run pprof duelprofile test winbuild macbuild webbuild webdeploy builddeps fedorabuilddeps osdeps fedoraosdeps pydeps lint
+ifeq ($(shell uname -s),Linux)
+TEST_COMMAND := xvfb-run -a go test
+else
+TEST_COMMAND := go test
+endif
+
+.PHONY: default run pprof duelprofile test test-flaky winbuild macbuild webbuild webdeploy builddeps fedorabuilddeps osdeps fedoraosdeps pydeps lint
 
 default: build
 
@@ -19,11 +24,10 @@ duelprofile:
 	go build -trimpath -o $(DIST_DIR)/duel_profile ./cmd/duel_test
 
 test:
-ifeq ($(shell uname -s),Linux)
-	xvfb-run -a go test -count=$(TEST_COUNT) ./...
-else
-	go test -count=$(TEST_COUNT) ./...
-endif
+	$(TEST_COMMAND) ./...
+
+test-flaky:
+	$(TEST_COMMAND) -count=20 -shuffle=on
 
 build:
 	mkdir -p $(DIST_DIR)
