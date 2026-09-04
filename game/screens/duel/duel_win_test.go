@@ -48,6 +48,43 @@ func TestHandleLossDoesNotRecordCombatWin(t *testing.T) {
 	}
 }
 
+func TestHandleConcedeUsesLossOutcome(t *testing.T) {
+	anteCard := domain.FindCardByName("Lightning Bolt")
+	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}}
+	player.CardCollection.AddCard(anteCard, 1)
+	lvl := &world.Level{Enemies: []domain.Enemy{{Character: &domain.Character{
+		Name: "Regular Enemy", CardCollection: domain.NewCardCollection(),
+	}}}}
+	s := &DuelScreen{
+		player:         player,
+		enemy:          lvl.GetEnemyAt(0),
+		lvl:            lvl,
+		idx:            0,
+		anteCard:       anteCard,
+		concedeConfirm: true,
+	}
+
+	name, screen, err := s.handleConcede()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != screenui.DuelLoseScr {
+		t.Fatalf("concede returned %v, want DuelLoseScr", name)
+	}
+	if _, ok := screen.(*DuelLoseScreen); !ok {
+		t.Fatalf("concede returned %T, want DuelLoseScreen", screen)
+	}
+	if s.concedeConfirm {
+		t.Fatal("concede should close its confirmation")
+	}
+	if player.CardCollection.GetTotalCount(anteCard) != 0 {
+		t.Fatal("concede should remove the ante card")
+	}
+	if len(lvl.Enemies) != 0 {
+		t.Fatal("concede should resolve the enemy encounter")
+	}
+}
+
 func TestHandleDungeonWinRecordsCombatWin(t *testing.T) {
 	for _, test := range []struct {
 		name string

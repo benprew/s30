@@ -194,6 +194,11 @@ type DuelScreen struct {
 
 	viewingGraveyard     *duelPlayer
 	viewingAllGraveyards bool
+	concedeConfirm       bool
+	cancelBtn            *elements.Button
+	concedeBtn           *elements.Button
+	concedeConfirmBtn    *elements.Button
+	concedeKeepBtn       *elements.Button
 
 	handCollapsed bool
 
@@ -1137,6 +1142,23 @@ const (
 )
 
 func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	if s.concedeConfirm {
+		return s.updateConcedeConfirmation(W, H)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) && s.canConcede() {
+		s.handleEscape()
+		return screenui.DuelScr, nil, nil
+	}
+	if s.canConcede() && !s.canCancel() && s.concedeBtn != nil {
+		s.positionTopRightButton(s.concedeBtn, W)
+		s.concedeBtn.Update(&ebiten.DrawImageOptions{}, 1, W, H)
+		if s.concedeBtn.IsClicked() {
+			s.concedeConfirm = true
+			return screenui.DuelScr, nil, nil
+		}
+	}
+
 	if s.inMulligan {
 		s.updateMulliganUI(W, H)
 		return screenui.DuelScr, nil, nil
@@ -1161,12 +1183,13 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		s.submitPendingAndPass()
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		s.handleEscape()
-	}
-	if s.canCancel() && ui.Click(duelCancelBounds(W)) {
-		s.handleEscape()
-		return screenui.DuelScr, nil, nil
+	if s.canCancel() && s.cancelBtn != nil {
+		s.positionTopRightButton(s.cancelBtn, W)
+		s.cancelBtn.Update(&ebiten.DrawImageOptions{}, 1, W, H)
+		if s.cancelBtn.IsClicked() {
+			s.handleEscape()
+			return screenui.DuelScr, nil, nil
+		}
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
@@ -1327,6 +1350,10 @@ func autoChoiceResponse(req interactive.ChoiceRequest) interactive.ChoiceRespons
 }
 
 func (s *DuelScreen) handleEscape() {
+	if s.concedeConfirm {
+		s.concedeConfirm = false
+		return
+	}
 	if s.isViewingGraveyard() {
 		s.closeGraveyardView()
 		return
@@ -1340,6 +1367,7 @@ func (s *DuelScreen) handleEscape() {
 		return
 	}
 	if s.targetingCardID == uuid.Nil {
+		s.concedeConfirm = true
 		return
 	}
 	if len(s.selectedTargetIDs) > 0 {
@@ -1353,7 +1381,41 @@ func (s *DuelScreen) canCancel() bool {
 	return s.isViewingGraveyard() || s.isChoosingAbility() || s.isChoosingX() || s.targetingCardID != uuid.Nil
 }
 
-func duelCancelBounds(W int) image.Rectangle { return image.Rect(W-116, 12, W-12, 54) }
+func (s *DuelScreen) canConcede() bool {
+	return s.lastMsg == nil || !s.lastMsg.GameOver
+}
+
+func concedeConfirmationBounds(W, H int) image.Rectangle {
+	return image.Rect((W-500)/2, (H-240)/2, (W+500)/2, (H+240)/2)
+}
+
+func (s *DuelScreen) updateConcedeConfirmation(W, H int) (screenui.ScreenName, screenui.Screen, error) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeyN) {
+		s.concedeConfirm = false
+		return screenui.DuelScr, nil, nil
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeyY) {
+		return s.handleConcede()
+	}
+	if s.concedeConfirmBtn != nil && s.concedeKeepBtn != nil {
+		s.positionConcedeConfirmationButtons(W, H)
+		s.concedeConfirmBtn.Update(&ebiten.DrawImageOptions{}, 1, W, H)
+		s.concedeKeepBtn.Update(&ebiten.DrawImageOptions{}, 1, W, H)
+		if s.concedeConfirmBtn.IsClicked() {
+			return s.handleConcede()
+		}
+		if s.concedeKeepBtn.IsClicked() {
+			s.concedeConfirm = false
+		}
+	}
+	return screenui.DuelScr, nil, nil
+}
+
+func (s *DuelScreen) handleConcede() (screenui.ScreenName, screenui.Screen, error) {
+	s.concedeConfirm = false
+	logging.Printf(logging.Duel, "Player conceded the duel against %s\n", s.enemy.Name())
+	return s.handleLoss()
+}
 
 const (
 	handCardOverlap              = 20
@@ -2885,10 +2947,12 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	if s.inMulligan {
 		s.drawMulliganUI(screen, W, H)
+		s.drawConcedeUI(screen, W, H)
 		return
 	}
 
 	if s.lastMsg == nil {
+		s.drawConcedeUI(screen, W, H)
 		return
 	}
 
@@ -2910,18 +2974,74 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
 	s.drawAbilityChoosingUI(screen, W, H)
-	if s.canCancel() {
-		s.drawCancelButton(screen, W)
-	}
+	s.drawConcedeUI(screen, W, H)
 }
 
 func (s *DuelScreen) drawCancelButton(screen *ebiten.Image, W int) {
-	b := duelCancelBounds(W)
-	vector.FillRect(screen, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), color.RGBA{40, 30, 30, 240}, false)
-	vector.StrokeRect(screen, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), 1, color.RGBA{210, 190, 170, 255}, false)
-	txt := elements.NewText(16, "Cancel", b.Min.X+24, b.Min.Y+10)
-	txt.Color = color.White
-	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+	if s.cancelBtn != nil {
+		s.positionTopRightButton(s.cancelBtn, W)
+		s.cancelBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+	}
+}
+
+func (s *DuelScreen) drawConcedeUI(screen *ebiten.Image, W, H int) {
+	if s.concedeConfirm {
+		s.drawConcedeConfirmation(screen, W, H)
+		return
+	}
+	if s.canCancel() {
+		s.drawCancelButton(screen, W)
+		return
+	}
+	if !s.canConcede() {
+		return
+	}
+	if s.concedeBtn != nil {
+		s.positionTopRightButton(s.concedeBtn, W)
+		s.concedeBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+	}
+}
+
+func (s *DuelScreen) drawConcedeConfirmation(screen *ebiten.Image, W, H int) {
+	panel := concedeConfirmationBounds(W, H)
+	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 180}, false)
+	vector.FillRect(screen, float32(panel.Min.X), float32(panel.Min.Y), float32(panel.Dx()), float32(panel.Dy()), color.RGBA{30, 25, 45, 255}, false)
+	vector.StrokeRect(screen, float32(panel.Min.X), float32(panel.Min.Y), float32(panel.Dx()), float32(panel.Dy()), 2, color.RGBA{210, 190, 170, 255}, false)
+
+	title := elements.NewText(28, "Concede the duel?", panel.Min.X, panel.Min.Y+35)
+	title.BoundsW = float64(panel.Dx())
+	title.HAlign = elements.AlignCenter
+	title.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+
+	message := "This duel will count as a loss."
+	if s.anteCard != nil {
+		message = "This duel will count as a loss, and you will lose your ante card."
+	}
+	body := elements.NewText(17, message, panel.Min.X, panel.Min.Y+92)
+	body.BoundsW = float64(panel.Dx())
+	body.HAlign = elements.AlignCenter
+	body.Color = color.RGBA{230, 225, 235, 255}
+	body.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+
+	if s.concedeConfirmBtn != nil && s.concedeKeepBtn != nil {
+		s.positionConcedeConfirmationButtons(W, H)
+		s.concedeConfirmBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+		s.concedeKeepBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+	}
+}
+
+func (s *DuelScreen) positionTopRightButton(button *elements.Button, W int) {
+	button.MoveTo(W-button.Normal.Bounds().Dx()-12, 12)
+}
+
+func (s *DuelScreen) positionConcedeConfirmationButtons(W, H int) {
+	panel := concedeConfirmationBounds(W, H)
+	const gap = 20
+	totalW := s.concedeConfirmBtn.Normal.Bounds().Dx() + gap + s.concedeKeepBtn.Normal.Bounds().Dx()
+	x := panel.Min.X + (panel.Dx()-totalW)/2
+	y := panel.Max.Y - s.concedeConfirmBtn.Normal.Bounds().Dy() - 30
+	s.concedeConfirmBtn.MoveTo(x, y)
+	s.concedeKeepBtn.MoveTo(x+s.concedeConfirmBtn.Normal.Bounds().Dx()+gap, y)
 }
 
 // drawDiceNotice renders the dungeon dice banner across the top of the screen.
@@ -3942,6 +4062,16 @@ func (s *DuelScreen) initMulligan() {
 	s.mulliganKeepBtn = mkBtn("Keep")
 	s.mulliganMullBtn = mkBtn("Mulligan")
 	s.mulliganConfirmBtn = mkBtn("Confirm")
+	s.cancelBtn = mkBtn("Cancel")
+	s.cancelBtn.ID = "cancel"
+	s.concedeBtn = mkBtn("Concede")
+	s.concedeBtn.ID = "concede"
+	s.concedeBtn.Important = true
+	s.concedeConfirmBtn = mkBtn("Concede")
+	s.concedeConfirmBtn.ID = "concede_confirm"
+	s.concedeConfirmBtn.Important = true
+	s.concedeKeepBtn = mkBtn("Keep Playing")
+	s.concedeKeepBtn.ID = "concede_keep_playing"
 }
 
 // aiMulliganDecision runs a simple heuristic mulligan for the AI (London

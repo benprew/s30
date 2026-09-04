@@ -56,3 +56,23 @@ func TestMulliganPreviewPositionStaysOnScreen(t *testing.T) {
 		t.Fatalf("preview position = %v, want (0,0)", got)
 	}
 }
+
+func TestConcedeControlsUseMulliganButtonImages(t *testing.T) {
+	s := &DuelScreen{}
+	s.initMulligan()
+
+	if s.cancelBtn == nil || s.concedeBtn == nil || s.concedeConfirmBtn == nil || s.concedeKeepBtn == nil {
+		t.Fatal("concede controls should use standard buttons")
+	}
+	if s.cancelBtn.Normal != s.mulliganKeepBtn.Normal ||
+		s.concedeBtn.Normal != s.mulliganKeepBtn.Normal ||
+		s.concedeConfirmBtn.Hover != s.mulliganKeepBtn.Hover ||
+		s.concedeKeepBtn.Pressed != s.mulliganKeepBtn.Pressed {
+		t.Fatal("concede controls should share the mulligan button images")
+	}
+	if s.concedeBtn.ButtonText.Text != "Concede" ||
+		s.concedeConfirmBtn.ButtonText.Text != "Concede" ||
+		s.concedeKeepBtn.ButtonText.Text != "Keep Playing" {
+		t.Fatal("concede controls should have the expected labels")
+	}
+}

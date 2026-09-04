@@ -7,11 +7,14 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestDuelEscapeWithoutOverlayStaysInDuel(t *testing.T) {
+func TestDuelEscapeWithoutOverlayRequestsConcede(t *testing.T) {
 	s := &DuelScreen{}
 
 	s.handleEscape()
 
+	if !s.concedeConfirm {
+		t.Fatal("escape should request confirmation before conceding")
+	}
 	if s.viewingGraveyard != nil {
 		t.Fatal("escape should not open graveyard view")
 	}
@@ -23,6 +26,24 @@ func TestDuelEscapeWithoutOverlayStaysInDuel(t *testing.T) {
 	}
 	if s.targetingCardID != uuid.Nil {
 		t.Fatal("escape should not enter targeting mode")
+	}
+}
+
+func TestDuelEscapeCancelsConcedeConfirmation(t *testing.T) {
+	s := &DuelScreen{concedeConfirm: true}
+
+	s.handleEscape()
+
+	if s.concedeConfirm {
+		t.Fatal("escape should cancel the concede confirmation")
+	}
+}
+
+func TestDuelCannotConcedeAfterGameOver(t *testing.T) {
+	s := &DuelScreen{lastMsg: &interactive.GameMsg{GameOver: true}}
+
+	if s.canConcede() {
+		t.Fatal("concede should be unavailable after the duel ends")
 	}
 }
 
