@@ -77,10 +77,11 @@ func (l *Level) placeDungeons(numDungeons, minDistance int, seed int64, dungeonS
 		dungeon.MapTile = loc
 
 		tile := l.Tile(loc)
+		tile.suppressTerrainDecorations()
 		tile.IsDungeon = true
 		tile.Dungeon = dungeon
 		if dungeonSprites != nil {
-			addDungeonSprites(tile, dungeonSprites, idx)
+			addDungeonSprites(tile, dungeonSprites, deterministicIndex(l.GenerationSeed, loc.X, loc.Y, 6))
 		}
 
 		l.Dungeons = append(l.Dungeons, dungeon)
@@ -127,6 +128,16 @@ func (l *Level) dungeonCandidateTiles() []image.Point {
 		}
 	}
 	return out
+}
+
+func (l *Level) dungeonTileLocations() []image.Point {
+	locations := make([]image.Point, 0, len(l.Dungeons))
+	for _, dungeon := range l.Dungeons {
+		if dungeon != nil {
+			locations = append(locations, dungeon.MapTile)
+		}
+	}
+	return locations
 }
 
 func (l *Level) cityTileLocations() []image.Point {

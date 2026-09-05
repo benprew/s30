@@ -57,15 +57,15 @@ var (
 	loadedVillageImage *ebiten.Image
 )
 
-func genCityName() string {
+func genCityNameWithRNG(rng *rand.Rand) string {
 	// Pick a random prefix and make it possessive
-	prefix := cityPrefixes[rand.Intn(len(cityPrefixes))]
+	prefix := cityPrefixes[rng.Intn(len(cityPrefixes))]
 	if !strings.HasSuffix(prefix, "s") {
 		prefix += "'s"
 	}
 
 	// Pick a random postfix
-	postfix := cityPostfixes[rand.Intn(len(cityPostfixes))]
+	postfix := cityPostfixes[rng.Intn(len(cityPostfixes))]
 
 	return prefix + " " + postfix
 }

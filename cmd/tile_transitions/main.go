@@ -108,7 +108,7 @@ func main() {
 	fmt.Printf("Loaded coastline map with %d sprites\n", len(game.cstMap.sprites))
 
 	// Load Assets
-	game.cstline1, err = imageutil.LoadSpriteSheet(4, 28, assets.Cstline_png)
+	game.cstline1, err = imageutil.LoadSpriteSheet(4, 21, assets.Cstline_png)
 	if err != nil {
 		fmt.Printf("Error loading Cstline1: %v\n", err)
 		return

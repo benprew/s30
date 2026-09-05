@@ -110,3 +110,23 @@ func TestIsland(t *testing.T) {
 		},
 	)
 }
+
+func TestTransitionsSupportEveryOverlayTerrain(t *testing.T) {
+	for _, source := range []TileType{TileWater, TileSand, TileMarsh, TileForest, TileIce} {
+		world := NewTileMap(3, 3)
+		for y := range 3 {
+			for x := range 3 {
+				world.Set(x, y, TilePlains)
+			}
+		}
+		world.Set(1, 0, source)
+
+		got := GetTransitions(image.Point{X: 1, Y: 1}, world)
+		if len(got) != 1 {
+			t.Fatalf("source %s: got %d transitions, want 1", source, len(got))
+		}
+		if got[0].SourceType != source || got[0].Side != "NW" {
+			t.Errorf("source %s: got %v", source, got[0])
+		}
+	}
+}

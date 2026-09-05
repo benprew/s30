@@ -20,6 +20,8 @@ type PositionedSprite struct {
 // sprites may be added to a Tile.
 type Tile struct {
 	sprites           []*ebiten.Image
+	transitionSprites []*PositionedSprite
+	terrainSprites    []*PositionedSprite
 	positionedSprites []*PositionedSprite
 	roadSprites       []*ebiten.Image     // Added for roads
 	encounterSprites  []*PositionedSprite // Random encounters
@@ -29,6 +31,7 @@ type Tile struct {
 	IsCastle          bool                // Indicates if this tile holds a wizard's castle
 	Castle            *domain.Castle      // Non-nil when IsCastle is true
 	TerrainType       int                 // Added terrain type
+	TerrainBand       TerrainBand         // Visual terrain and foliage band
 }
 
 func (t *Tile) UnmarshalJSON(data []byte) error {
@@ -40,6 +43,7 @@ func (t *Tile) UnmarshalJSON(data []byte) error {
 		IsCastle    bool            `json:"IsCastle"`
 		Castle      *domain.Castle  `json:"Castle"`
 		TerrainType int             `json:"TerrainType"`
+		TerrainBand *TerrainBand    `json:"TerrainBand,omitempty"`
 	}
 
 	var decoded tileJSON
@@ -56,7 +60,31 @@ func (t *Tile) UnmarshalJSON(data []byte) error {
 	t.IsCastle = decoded.IsCastle
 	t.Castle = decoded.Castle
 	t.TerrainType = decoded.TerrainType
+	if decoded.TerrainBand != nil {
+		t.TerrainBand = *decoded.TerrainBand
+	} else {
+		t.TerrainBand = defaultTerrainBand(decoded.TerrainType)
+	}
 	return nil
+}
+
+func defaultTerrainBand(terrain int) TerrainBand {
+	switch terrain {
+	case TerrainSand:
+		return TerrainBandSand
+	case TerrainMarsh:
+		return TerrainBandMarsh
+	case TerrainPlains:
+		return TerrainBandPlains
+	case TerrainForest:
+		return TerrainBandForest
+	case TerrainMountains:
+		return TerrainBandMountains
+	case TerrainSnow:
+		return TerrainBandIce
+	default:
+		return TerrainBandWater
+	}
 }
 
 // AddSprite adds a sprite to the Tile.
@@ -76,18 +104,35 @@ func (t *Tile) IsCity() bool {
 // Foliage sprites are taller than land tiles, so we need to position them
 // so their bottom is centered in the land tile.
 func (t *Tile) AddFoliageSprite(s *ebiten.Image) {
+	t.AddTerrainSprite(s, 0, -40)
+}
+
+// AddTerrainSprite adds one terrain object at an offset from its tile.
+func (t *Tile) AddTerrainSprite(s *ebiten.Image, offsetX, offsetY float64) {
 	if s == nil {
 		return
 	}
+	t.terrainSprites = append(t.terrainSprites, &PositionedSprite{
+		Image:   s,
+		OffsetX: offsetX,
+		OffsetY: offsetY,
+	})
+}
 
-	// Create a new sprite with positioning information
-	foliageSprite := &PositionedSprite{
-		Image: s,
-		// Foliage is 206x134, land tile is 206x102
-		OffsetY: -40,
+// AddTransitionSprite adds a terrain edge below roads and objects.
+func (t *Tile) AddTransitionSprite(s *ebiten.Image, offsetX, offsetY float64) {
+	if s == nil {
+		return
 	}
+	t.transitionSprites = append(t.transitionSprites, &PositionedSprite{
+		Image:   s,
+		OffsetX: offsetX,
+		OffsetY: offsetY,
+	})
+}
 
-	t.positionedSprites = append(t.positionedSprites, foliageSprite)
+func (t *Tile) suppressTerrainDecorations() {
+	t.terrainSprites = nil
 }
 
 // AddCitySprite adds a city sprite to the Tile with proper positioning.
@@ -158,35 +203,42 @@ func (t *Tile) RemoveRandomEncounter() {
 
 // Draw draws the Tile on the screen using the provided options.
 func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	// Draw regular sprites (base terrain)
+	t.drawBase(screen, options)
+	t.drawTransitions(screen, options)
+	t.drawRoads(screen, options)
+	t.drawObjects(screen, options)
+}
+
+func (t *Tile) drawBase(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 	for _, s := range t.sprites {
 		screen.DrawImage(s, options)
 	}
+}
 
-	// Draw road first if it exists, so it's under other elements
+func (t *Tile) drawTransitions(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	drawPositionedSprites(screen, options, t.transitionSprites)
+}
+
+func (t *Tile) drawRoads(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 	for _, s := range t.roadSprites {
 		if s == nil {
 			continue
 		}
 		screen.DrawImage(s, options)
 	}
+}
 
-	// Draw positioned sprites (foliage, cities) with their offsets
-	for _, ps := range t.positionedSprites {
-		// Create a copy of the options to avoid modifying the original
+func (t *Tile) drawObjects(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	drawPositionedSprites(screen, options, t.terrainSprites)
+	drawPositionedSprites(screen, options, t.positionedSprites)
+	drawPositionedSprites(screen, options, t.encounterSprites)
+}
+
+func drawPositionedSprites(screen *ebiten.Image, options *ebiten.DrawImageOptions, sprites []*PositionedSprite) {
+	for _, ps := range sprites {
 		posOptions := &ebiten.DrawImageOptions{}
 		posOptions.GeoM.Translate(ps.OffsetX, ps.OffsetY)
 		posOptions.GeoM.Concat(options.GeoM)
-
-		screen.DrawImage(ps.Image, posOptions)
-	}
-	// Draw encounter sprites (if any)
-	for _, ps := range t.encounterSprites {
-		// Create a copy of the options to avoid modifying the original
-		posOptions := &ebiten.DrawImageOptions{}
-		posOptions.GeoM.Translate(ps.OffsetX, ps.OffsetY)
-		posOptions.GeoM.Concat(options.GeoM)
-
 		screen.DrawImage(ps.Image, posOptions)
 	}
 }
