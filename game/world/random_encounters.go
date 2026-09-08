@@ -5,6 +5,7 @@ import (
 	"image"
 	"math"
 	"math/rand"
+	"time"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/timing"
@@ -45,6 +46,10 @@ func (l *Level) LoadRandomEncounterSprites() error {
 }
 
 func (l *Level) SpawnEncounters(count int) {
+	l.spawnEncountersWithRNG(count, rand.New(rand.NewSource(time.Now().UnixNano())))
+}
+
+func (l *Level) spawnEncountersWithRNG(count int, rng *rand.Rand) {
 	pLoc := l.Player.Loc()
 
 	for range count {
@@ -56,8 +61,8 @@ func (l *Level) SpawnEncounters(count int) {
 
 		for range maxAttempts {
 			// Random tile coordinates
-			tileX = rand.Intn(l.W)
-			tileY = rand.Intn(l.H)
+			tileX = rng.Intn(l.W)
+			tileY = rng.Intn(l.H)
 
 			// Get Tile
 			t := l.Tile(image.Point{tileX, tileY})

@@ -3,7 +3,6 @@ package world
 import (
 	"fmt"
 	"image"
-	"math/rand"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -20,6 +19,9 @@ type spriteAssets struct {
 	citySprites [][]*ebiten.Image
 	castles1    [][]*ebiten.Image
 	castles2    [][]*ebiten.Image
+	cstline1    [][]*ebiten.Image
+	cstline2    [][]*ebiten.Image
+	dungeons    [][]*ebiten.Image
 }
 
 func loadSpriteAssets(tileWidth, tileHeight int) (*spriteAssets, error) {
@@ -55,48 +57,41 @@ func loadSpriteAssets(tileWidth, tileHeight int) (*spriteAssets, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load Castles2 sprites: %w", err)
 	}
-	return &spriteAssets{ss, foliage, sfoliage, foliage2, sfoliage2, citySprites, castles1, castles2}, nil
+	cstline1, err := imageutil.LoadSpriteSheet(4, 21, assets.Cstline_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load Cstline1: %w", err)
+	}
+	cstline2, err := imageutil.LoadSpriteSheet(4, 14, assets.Cstline2_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load Cstline2: %w", err)
+	}
+	dungeons, err := imageutil.LoadSpriteSheet(6, 4, assets.Dungeons_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load dungeon sprites: %w", err)
+	}
+	return &spriteAssets{
+		ss: ss, foliage: foliage, sfoliage: sfoliage,
+		foliage2: foliage2, sfoliage2: sfoliage2,
+		citySprites: citySprites, castles1: castles1, castles2: castles2,
+		cstline1: cstline1, cstline2: cstline2, dungeons: dungeons,
+	}, nil
 }
 
-func rebuildTileSprites(tile *Tile, sa *spriteAssets) {
+func rebuildTileSprites(tile *Tile, position image.Point, seed int64, sa *spriteAssets) {
 	tile.sprites = nil
+	tile.transitionSprites = nil
+	tile.terrainSprites = nil
 	tile.positionedSprites = nil
 	tile.roadSprites = nil
 	tile.encounterSprites = nil
 
-	folIdx := rand.Intn(11)
-
-	switch tile.TerrainType {
-	case TerrainWater:
-		tile.AddSprite(sa.ss.Water)
-		if rand.Float64() < 0.1 {
-			tile.AddFoliageSprite(sa.sfoliage2[folIdx][0])
-			tile.AddFoliageSprite(sa.foliage2[folIdx][0])
-		}
-	case TerrainSand:
-		tile.AddSprite(sa.ss.Sand)
-		tile.AddFoliageSprite(sa.sfoliage[folIdx][1])
-		tile.AddFoliageSprite(sa.foliage[folIdx][1])
-	case TerrainMarsh:
-		tile.AddSprite(sa.ss.Marsh)
-		tile.AddFoliageSprite(sa.sfoliage[folIdx][0])
-		tile.AddFoliageSprite(sa.foliage[folIdx][0])
-	case TerrainPlains:
-		tile.AddSprite(sa.ss.Plains)
-		tile.AddFoliageSprite(sa.sfoliage[folIdx][4])
-		tile.AddFoliageSprite(sa.foliage[folIdx][4])
-	case TerrainForest:
-		tile.AddSprite(sa.ss.Forest)
-		tile.AddFoliageSprite(sa.sfoliage[folIdx][2])
-		tile.AddFoliageSprite(sa.foliage[folIdx][2])
-	case TerrainMountains, TerrainSnow:
-		tile.AddSprite(sa.ss.Plains)
-		tile.AddFoliageSprite(sa.sfoliage[folIdx][3])
-		tile.AddFoliageSprite(sa.foliage[folIdx][3])
+	addTerrainBase(tile, sa.ss)
+	if !tile.IsCity() && !tile.IsCastle && !tile.IsDungeon {
+		addTerrainDecorations(tile, position, seed, sa)
 	}
 
 	if tile.IsCity() {
-		cityIdx := rand.Intn(12)
+		cityIdx := deterministicIndex(seed, tile.City.X, tile.City.Y, 12)
 		cityX := cityIdx % 6
 		cityY := 0
 		if cityIdx > 5 {
@@ -116,6 +111,53 @@ func rebuildTileSprites(tile *Tile, sa *spriteAssets) {
 			addCastleSprites(tile, sheet, spec, tile.Castle.Defeated)
 		}
 	}
+
+	if tile.IsDungeon && tile.Dungeon != nil {
+		addDungeonSprites(tile, sa.dungeons, deterministicIndex(seed, position.X, position.Y, 6))
+	}
+}
+
+func addTerrainBase(tile *Tile, ss *SpriteSheet) {
+	switch tile.TerrainBand.properties().base {
+	case terrainBaseWater:
+		tile.AddSprite(ss.Water)
+	case terrainBaseSand:
+		tile.AddSprite(ss.Sand)
+	case terrainBaseMarsh:
+		tile.AddSprite(ss.Marsh)
+	case terrainBaseIce:
+		tile.AddSprite(ss.Ice)
+	default:
+		tile.AddSprite(ss.Plains)
+	}
+}
+
+func addTerrainDecorations(tile *Tile, position image.Point, seed int64, sa *spriteAssets) {
+	for _, decoration := range terrainDecorationPlan(seed, position, tile.TerrainBand, 206) {
+		foliage := sa.foliage
+		shadows := sa.sfoliage
+		if decoration.Secondary {
+			foliage = sa.foliage2
+			shadows = sa.sfoliage2
+		}
+		if decoration.Variant >= len(foliage) || decoration.Variant >= len(shadows) ||
+			decoration.Column >= len(foliage[decoration.Variant]) || decoration.Column >= len(shadows[decoration.Variant]) {
+			continue
+		}
+		tile.AddTerrainSprite(shadows[decoration.Variant][decoration.Column], decoration.OffsetX, decoration.OffsetY)
+		tile.AddTerrainSprite(foliage[decoration.Variant][decoration.Column], decoration.OffsetX, decoration.OffsetY)
+	}
+}
+
+func deterministicIndex(seed int64, x, y, size int) int {
+	if size <= 0 {
+		return 0
+	}
+	value := uint64(seed) ^ uint64(uint32(x))*0x9e3779b1 ^ uint64(uint32(y))*0x85ebca77
+	value ^= value >> 30
+	value *= 0xbf58476d1ce4e5b9
+	value ^= value >> 27
+	return int(value % uint64(size))
 }
 
 // RebuildSprites reloads all image data after deserializing a Level from JSON.
@@ -163,12 +205,15 @@ func (l *Level) RebuildSprites() error {
 	for y := 0; y < l.H; y++ {
 		for x := 0; x < l.W; x++ {
 			if tile := l.Tiles[y][x]; tile != nil {
-				rebuildTileSprites(tile, sa)
+				rebuildTileSprites(tile, image.Point{X: x, Y: y}, l.GenerationSeed, sa)
 			}
 		}
 	}
 
 	l.rebuildRoads()
+	if err := l.rebuildTerrainTransitions(sa); err != nil {
+		return err
+	}
 
 	if err := l.rebuildEncounters(); err != nil {
 		return err

@@ -13,6 +13,9 @@ const (
 	TilePlains TileType = iota
 	TileForest
 	TileWater
+	TileSand
+	TileMarsh
+	TileIce
 )
 
 func (t TileType) String() string {
@@ -23,8 +26,33 @@ func (t TileType) String() string {
 		return "Forest"
 	case TileWater:
 		return "Water"
+	case TileSand:
+		return "Sand"
+	case TileMarsh:
+		return "Marsh"
+	case TileIce:
+		return "Ice"
 	default:
 		return "Unknown"
+	}
+}
+
+func transitionPriority(t TileType) int {
+	switch t {
+	case TilePlains:
+		return 0
+	case TileSand:
+		return 1
+	case TileMarsh:
+		return 2
+	case TileForest:
+		return 3
+	case TileWater:
+		return 4
+	case TileIce:
+		return 5
+	default:
+		return -1
 	}
 }
 
@@ -115,14 +143,14 @@ func GetTransitions(currentPos image.Point, world *TileMap) []Transition {
 		adjType := world.Get(adjPos)
 		adjD := Directions[adjPos.Y%2]
 		adjNeighborType := world.Get(adjPos.Add(adjD[sideDirIdx]))
-		return adjNeighborType == sourceType && sourceType >= adjType
+		return adjNeighborType == sourceType && transitionPriority(sourceType) >= transitionPriority(adjType)
 	}
 
 	checkEdge := func(sideVec image.Point, sideDirIdx dirIdx, sideName string, corner1Adj, corner2Adj dirIdx) {
 		neighborPos := currentPos.Add(sideVec)
 		neighborType := world.Get(neighborPos)
 
-		if neighborType > myType {
+		if transitionPriority(neighborType) > transitionPriority(myType) {
 			transitions = append(transitions, Transition{
 				Side:       sideName,
 				SourceType: neighborType,

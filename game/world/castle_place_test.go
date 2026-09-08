@@ -104,35 +104,33 @@ func TestPlaceCastlesAvoidsWater(t *testing.T) {
 	}
 }
 
-func TestPlaceCastlesStampsZoneTerrain(t *testing.T) {
-	l := createTestLevel(40, 40)
+func TestPlaceCastlesPrefersMatchingTerrainWithoutRepainting(t *testing.T) {
+	l := createTestLevel(50, 40)
+	terrains := []int{TerrainPlains, TerrainSand, TerrainMarsh, TerrainMountains, TerrainForest}
+	before := make([][]int, l.H)
+	for y := 0; y < l.H; y++ {
+		before[y] = make([]int, l.W)
+		for x := 0; x < l.W; x++ {
+			terrain := terrains[x/10]
+			l.Tile(image.Point{X: x, Y: y}).TerrainType = terrain
+			before[y][x] = terrain
+		}
+	}
+
 	l.placeCastles(6, nil, nil, nil, nil, nil)
 
-	for _, c := range l.Castles {
-		expected := castleZoneTerrain[c.Color]
-		// Sample a tile one step away from the castle center; it should
-		// have been re-painted to the zone terrain (unless it was on or
-		// near water, which the stamp skips).
-		center := c.MapTile
-		var found bool
-		for dy := -castleZoneRadius; dy <= castleZoneRadius && !found; dy++ {
-			for dx := -castleZoneRadius; dx <= castleZoneRadius && !found; dx++ {
-				if dx == 0 && dy == 0 {
-					continue
-				}
-				p := image.Point{X: center.X + dx, Y: center.Y + dy}
-				tile := l.Tile(p)
-				if tile == nil {
-					continue
-				}
-				if tile.TerrainType == expected {
-					found = true
-				}
-			}
+	for _, castle := range l.Castles {
+		got := l.Tile(castle.MapTile).TerrainType
+		want := castleZoneTerrain[castle.Color]
+		if got != want {
+			t.Errorf("%s castle terrain = %d, want %d", domain.ColorMaskToString(castle.Color), got, want)
 		}
-		if !found {
-			t.Errorf("zone for %s castle has no %d-typed tile around %v",
-				domain.ColorMaskToString(c.Color), expected, center)
+	}
+	for y := 0; y < l.H; y++ {
+		for x := 0; x < l.W; x++ {
+			if got := l.Tile(image.Point{X: x, Y: y}).TerrainType; got != before[y][x] {
+				t.Fatalf("terrain at (%d,%d) changed from %d to %d", x, y, before[y][x], got)
+			}
 		}
 	}
 }

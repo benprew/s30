@@ -25,6 +25,7 @@ type Level struct {
 	// the latest save of a given game is kept. Difficulty and PlayerColor are
 	// the choices made when the game started; together they form SaveName.
 	GameID            string
+	GenerationSeed    int64
 	Difficulty        domain.Difficulty
 	PlayerColor       domain.ColorMask
 	EnemyStartingLife int `json:"-"`
@@ -65,6 +66,11 @@ type Level struct {
 
 // NewLevel returns a new randomly generated Level.
 func NewLevel(c *domain.Player) (*Level, error) {
+	return NewLevelWithSeed(c, time.Now().UnixNano())
+}
+
+// NewLevelWithSeed returns a level that can be reproduced with the same seed.
+func NewLevelWithSeed(c *domain.Player, seed int64) (*Level, error) {
 	startTime := time.Now()
 	fmt.Println("NewLevel start")
 
@@ -75,6 +81,7 @@ func NewLevel(c *domain.Player) (*Level, error) {
 		TileHeight:     102,
 		Enemies:        make([]domain.Enemy, 0),
 		Player:         c,
+		GenerationSeed: seed,
 		encounterIndex: -1,
 	}
 
@@ -111,6 +118,10 @@ func NewLevel(c *domain.Player) (*Level, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load embedded spritesheet: %s", err)
 	}
+	cstline1, err := imageutil.LoadSpriteSheet(4, 21, assets.Cstline_png)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load Cstline1 spritesheet: %s", err)
+	}
 
 	citySprites, err := imageutil.LoadSpriteSheet(6, 4, assets.Cities1_png)
 	if err != nil {
@@ -145,13 +156,27 @@ func NewLevel(c *domain.Player) (*Level, error) {
 		{"", "NE", "E", "SE", "N", "SW"},
 		{"W", "NW", "S", "", "", ""},
 	}
-	noise := generateTerrain(l.W, l.H)
-	// mapTerrainTypes now returns valid city locations and sets Tile.TerrainType
-	validCityLocations := l.mapTerrainTypes(noise, ss, foliage, Sfoliage, foliage2, Sfoliage2, Cstline2, citySprites)
+	bands := generateTerrainBands(l.W, l.H, seed)
+	validCityLocations := l.mapTerrainTypes(bands)
 
-	l.placeCastles(time.Now().UnixNano(), castles1, castles2, ss, foliage, Sfoliage)
-	l.placeCities(validCityLocations, citySprites, 35, 6)
-	l.placeDungeons(5, 6, time.Now().UnixNano(), dungeonSprites)
+	l.placeCastles(seed+1, nil, nil, nil, nil, nil)
+	sa := &spriteAssets{
+		ss: ss, foliage: foliage, sfoliage: Sfoliage,
+		foliage2: foliage2, sfoliage2: Sfoliage2,
+		citySprites: citySprites, castles1: castles1, castles2: castles2,
+		cstline1: cstline1, cstline2: Cstline2, dungeons: dungeonSprites,
+	}
+	for y := 0; y < l.H; y++ {
+		for x := 0; x < l.W; x++ {
+			rebuildTileSprites(l.Tiles[y][x], image.Point{X: x, Y: y}, seed, sa)
+		}
+	}
+	l.placeCities(validCityLocations, citySprites, 35, 6, rand.New(rand.NewSource(seed+2)))
+	l.placeDungeons(5, 3, seed+3, dungeonSprites)
+	l.rebuildRoads()
+	if err := l.rebuildTerrainTransitions(sa); err != nil {
+		return nil, err
+	}
 
 	// Set initial player position at center of map
 	loc := image.Point{X: l.LevelW() / 2, Y: l.LevelH() / 2}
@@ -159,14 +184,14 @@ func NewLevel(c *domain.Player) (*Level, error) {
 	fmt.Printf("Starting player at position: %d, %d\n", loc.X, loc.Y)
 
 	// Spawn initial enemies
-	if err := l.SpawnEnemies(3); err != nil {
+	if err := l.spawnEnemiesWithRNG(3, rand.New(rand.NewSource(seed+4))); err != nil {
 		return nil, fmt.Errorf("failed to spawn enemies: %s", err)
 	}
 
 	if err := l.LoadRandomEncounterSprites(); err != nil {
 		return nil, fmt.Errorf("failed to load random encounter sprites: %s", err)
 	}
-	l.SpawnEncounters(10)
+	l.spawnEncountersWithRNG(10, rand.New(rand.NewSource(seed+5)))
 
 	fmt.Printf("NewLevel execution time: %s\n", time.Since(startTime))
 	return l, nil
@@ -407,8 +432,11 @@ func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
 }
 
 func (l *Level) SpawnEnemies(count int) error {
+	return l.spawnEnemiesWithRNG(count, rand.New(rand.NewSource(time.Now().UnixNano())))
+}
+
+func (l *Level) spawnEnemiesWithRNG(count int, rng *rand.Rand) error {
 	pLoc := l.Player.Loc()
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	spawnTiles := l.enemySpawnTiles(pLoc)
 	if len(spawnTiles) == 0 {
 		return fmt.Errorf("no valid enemy spawn position available")
@@ -537,31 +565,23 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale
 
 	for y := 0; y < l.H; y++ {
 		for x := 0; x < l.W; x++ {
-			tile := l.Tile(image.Point{x, y})
+			tile := l.Tile(image.Point{X: x, Y: y})
 			if tile == nil {
 				continue
 			}
 
-			// Calculate screen position
 			pixelX := x * tileWidth
 			pixelY := y * tileHeight / 2
-
-			// Offset every other row to create the zigzag pattern
 			if y%2 != 0 {
 				pixelX += tileWidth / 2
 			}
-
-			if pixelX < visibleXOrigin || pixelX > visibleXOpposite {
-				continue // Skip rendering if outside visible area
+			if pixelX < visibleXOrigin || pixelX > visibleXOpposite ||
+				pixelY < visibleYOrigin || pixelY > visibleYOpposite {
+				continue
 			}
 
-			if pixelY < visibleYOrigin || pixelY > visibleYOpposite {
-				continue // Skip rendering if outside visible area
-			}
 			screenX := pixelX - (pX - 1024/2)
 			screenY := pixelY - (pY - 768/2)
-
-			// we don't scale the world view up
 			op.GeoM.Reset()
 			op.GeoM.Translate(float64(screenX), float64(screenY))
 			tile.Draw(screen, op)

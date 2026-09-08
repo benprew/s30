@@ -157,6 +157,24 @@ func TestConnectCityBFS(t *testing.T) {
 	}
 }
 
+func TestConnectCityBFSUsesLowerCostTerrain(t *testing.T) {
+	level := createTestLevel(7, 7)
+	start := image.Point{X: 1, Y: 2}
+	target := image.Point{X: 5, Y: 2}
+	level.Tile(start).City = &domain.City{}
+	level.Tile(target).roadSprites = []*ebiten.Image{ebiten.NewImage(1, 1)}
+	for x := 2; x < 5; x++ {
+		level.Tile(image.Point{X: x, Y: 2}).TerrainType = TerrainMountains
+	}
+
+	path := level.connectCityBFS(start)
+	for _, position := range path[1 : len(path)-1] {
+		if level.Tile(position).TerrainType == TerrainMountains {
+			t.Fatalf("weighted path crossed mountain tile %v: %v", position, path)
+		}
+	}
+}
+
 func TestTileToPixel(t *testing.T) {
 	// Initialize a level with known tile dimensions
 	l := &Level{

@@ -93,7 +93,6 @@ var castleZoneTerrain = map[domain.ColorMask]int{
 }
 
 const (
-	castleZoneRadius      = 5
 	castleMinDist         = 12
 	castlePlayerSafeRange = 10
 )
@@ -108,11 +107,10 @@ var castleNames = []string{
 	"Hold of Life",
 }
 
-// placeCastles picks one tile per MTG color, stamps its zone terrain, attaches
-// a Castle to the tile, and adds the castle/shadow sprites. Sheets passed in
-// are loaded as 2 cols × 6 rows of 309×309 cells.
+// placeCastles picks one biome-compatible tile for each MTG color. If the map
+// does not contain the preferred terrain, it uses another land tile.
 func (l *Level) placeCastles(seed int64, castles1, castles2 [][]*ebiten.Image,
-	ss *SpriteSheet, foliage, Sfoliage [][]*ebiten.Image) {
+	_ *SpriteSheet, _, _ [][]*ebiten.Image) {
 	candidates := l.castleCandidateTiles()
 	if len(candidates) == 0 {
 		fmt.Println("Warning: no candidate tiles for castle placement.")
@@ -128,14 +126,16 @@ func (l *Level) placeCastles(seed int64, castles1, castles2 [][]*ebiten.Image,
 	placed := []image.Point{}
 
 	for idx, color := range colors {
-		loc, ok := pickCastleLocation(candidates, placed, []int{castleMinDist, 9, 6, 0})
+		terrain := castleZoneTerrain[color]
+		preferred := castleCandidatesForTerrain(l, candidates, terrain)
+		loc, ok := pickCastleLocation(preferred, placed, []int{castleMinDist, 9, 6})
+		if !ok {
+			loc, ok = pickCastleLocation(candidates, placed, []int{castleMinDist, 9, 6, 0})
+		}
 		if !ok {
 			fmt.Printf("Warning: no location available for %s castle.\n", domain.ColorMaskToString(color))
 			continue
 		}
-
-		terrain := castleZoneTerrain[color]
-		l.stampZone(loc, terrain, castleZoneRadius, ss, foliage, Sfoliage, rng)
 
 		castle := &domain.Castle{
 			Name:      castleNames[idx%len(castleNames)],
@@ -144,6 +144,7 @@ func (l *Level) placeCastles(seed int64, castles1, castles2 [][]*ebiten.Image,
 			MapTile:   loc,
 		}
 		tile := l.Tile(loc)
+		tile.suppressTerrainDecorations()
 		tile.IsCastle = true
 		tile.Castle = castle
 
@@ -159,6 +160,16 @@ func (l *Level) placeCastles(seed int64, castles1, castles2 [][]*ebiten.Image,
 		l.Castles = append(l.Castles, castle)
 		placed = append(placed, loc)
 	}
+}
+
+func castleCandidatesForTerrain(l *Level, candidates []image.Point, terrain int) []image.Point {
+	matching := make([]image.Point, 0, len(candidates))
+	for _, candidate := range candidates {
+		if tile := l.Tile(candidate); tile != nil && tile.TerrainType == terrain {
+			matching = append(matching, candidate)
+		}
+	}
+	return matching
 }
 
 // pickCastleLocation walks the candidate list and returns the first tile that
@@ -202,52 +213,6 @@ func addSpriteAt(tile *Tile, sheet [][]*ebiten.Image, rc [2]int) {
 		return
 	}
 	tile.AddCitySprite(sheet[r][c])
-}
-
-// stampZone overrides terrain in a square around center, replacing each tile's
-// base sprite and foliage with the target terrain. Water tiles and tiles
-// adjacent to water are skipped so coastlines stay visually consistent. When
-// ss is nil only the TerrainType is updated (used by tests that don't load
-// sprite assets).
-func (l *Level) stampZone(center image.Point, terrain, radius int,
-	ss *SpriteSheet, foliage, Sfoliage [][]*ebiten.Image, rng *rand.Rand) {
-	for dy := -radius; dy <= radius; dy++ {
-		for dx := -radius; dx <= radius; dx++ {
-			p := image.Point{X: center.X + dx, Y: center.Y + dy}
-			if p.X < 0 || p.Y < 0 || p.X >= l.W || p.Y >= l.H {
-				continue
-			}
-			t := l.Tile(p)
-			if t == nil || t.TerrainType == TerrainWater {
-				continue
-			}
-			if neighborIsWater(l, p) {
-				continue
-			}
-			if ss == nil {
-				t.TerrainType = terrain
-				continue
-			}
-			t.sprites = nil
-			t.positionedSprites = nil
-			folRow := rng.Intn(11)
-			paintTerrain(t, terrain, ss, foliage, Sfoliage, folRow)
-		}
-	}
-}
-
-func neighborIsWater(l *Level, p image.Point) bool {
-	for _, n := range Directions[p.Y%2] {
-		np := image.Point{X: p.X + n.X, Y: p.Y + n.Y}
-		if np.X < 0 || np.Y < 0 || np.X >= l.W || np.Y >= l.H {
-			continue
-		}
-		t := l.Tile(np)
-		if t != nil && t.TerrainType == TerrainWater {
-			return true
-		}
-	}
-	return false
 }
 
 // castleCandidateTiles returns tiles eligible to anchor a wizard's castle:
