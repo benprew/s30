@@ -201,7 +201,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	options.GeoM.Scale(scale, scale)
 	options.GeoM.Translate(float64(screenW)/2, float64(screenH)/2)
 	options.GeoM.Translate(-float64(domain.SpriteWidth/2)*scale, -float64(domain.SpriteHeight/2)*scale)
-	l.Player.Draw(screen, options)
+	l.Player.Draw(screen, options, screenW/2, screenH/2)
 }
 
 func (l *Level) UpdateWorld(screenW, screenH int) error {

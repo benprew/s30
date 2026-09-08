@@ -34,9 +34,13 @@ type Player struct {
 	DungeonState    *DungeonState
 }
 
-const TravelDistancePerDay = 5000.0
-const TravelDistancePerFood = 450.0
-const StarvationSpeedPenalty = 0.5
+const (
+	TravelDistancePerDay   = 5000.0
+	TravelDistancePerFood  = 450.0
+	StarvationSpeedPenalty = 0.5
+
+	DebugDrawHitbox = true
+)
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty, color ColorMask) (*Player, error) {
 	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
@@ -111,19 +115,20 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 		CardCollection: cardCollection,
 	}
 
+	characterInstance := NewCharacterInstance()
+	characterInstance.MoveSpeed = MovementSpeed(100)
+
 	return &Player{
-		Character: c,
-		CharacterInstance: CharacterInstance{
-			MoveSpeed: MovementSpeed(100),
-		},
-		Name:        string(name),
-		Gold:        gold,
-		Food:        food,
-		MinDeckSize: minDeckSize,
-		IsMale:      isM,
-		Amulets:     amulets,
-		WorldMagics: make([]*WorldMagic, 0),
-		ActiveDeck:  0,
+		Character:         c,
+		CharacterInstance: characterInstance,
+		Name:              string(name),
+		Gold:              gold,
+		Food:              food,
+		MinDeckSize:       minDeckSize,
+		IsMale:            isM,
+		Amulets:           amulets,
+		WorldMagics:       make([]*WorldMagic, 0),
+		ActiveDeck:        0,
 	}, nil
 }
 
@@ -149,9 +154,13 @@ func (p *Player) LoadImages() error {
 	return nil
 }
 
-func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions, screenX, screenY int) {
 	screen.DrawImage(p.ShadowSprite[p.Direction][p.Frame], options)
 	screen.DrawImage(p.WalkingSprite[p.Direction][p.Frame], options)
+
+	if DebugDrawHitbox {
+		p.Hitbox.Draw(screen, screenX, screenY)
+	}
 }
 
 func (p *Player) NumCards() int {
