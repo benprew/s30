@@ -192,7 +192,7 @@ func (cj *CardJSON) ToCard() *Card {
 		Keywords:          cj.Keywords,
 		CardType:          parseCardType(cj.TypeLine),
 		TypeLine:          cj.TypeLine,
-		Subtypes:          cj.Subtypes,
+		Subtypes:          subtypesOf(cj),
 		Text:              cj.Text,
 		Power:             power,
 		Toughness:         toughness,
@@ -210,6 +210,28 @@ func (cj *CardJSON) ToCard() *Card {
 func toFloat(str string) float64 {
 	f, _ := strconv.ParseFloat(str, 64)
 	return f
+}
+
+// subtypesOf returns a card's subtypes, falling back to the type line when the
+// bulk data carries no explicit list. The Scryfall pipeline emits no Subtypes
+// field, so without the fallback every card would look subtype-less — which
+// makes a dual land indistinguishable from a land that was granted a basic
+// land type by an effect.
+func subtypesOf(cj *CardJSON) []string {
+	if len(cj.Subtypes) > 0 {
+		return cj.Subtypes
+	}
+	return parseSubtypes(cj.TypeLine)
+}
+
+// parseSubtypes splits the portion of a type line after the em dash, which is
+// where Scryfall lists subtypes space-separated ("Land — Island Swamp").
+func parseSubtypes(typeLine string) []string {
+	_, after, found := strings.Cut(typeLine, "—")
+	if !found {
+		return nil
+	}
+	return strings.Fields(after)
 }
 
 // parseCardType converts a TypeLine string to a CardType enum
