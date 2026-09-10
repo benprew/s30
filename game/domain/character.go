@@ -256,3 +256,7 @@ func (c *CharacterInstance) activeMoveSpeed() float64 {
 	penalty := max(0.0, min(1.0, c.MoveSpeedPenalty))
 	return c.MoveSpeed * (1.0 - penalty)
 }
+
+func (c *CharacterInstance) Loc() image.Point {
+	return image.Point{c.X, c.Y}
+}
