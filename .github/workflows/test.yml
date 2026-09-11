@@ -17,11 +17,21 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Check out mage-go main
+        uses: actions/checkout@v4
+        with:
+          repository: benprew/mage-go
+          ref: main
+          path: mage-go
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: mage-go/go.mod
           cache: true
+
+      - name: Use mage-go checkout
+        run: go work init . ./mage-go
 
       - name: Install Linux dependencies
         run: |
