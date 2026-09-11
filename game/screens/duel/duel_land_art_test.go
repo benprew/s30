@@ -92,3 +92,45 @@ func TestBuildCardImageMap_IncludesBasicLands(t *testing.T) {
 		}
 	}
 }
+
+// A dual land has printed basic land types, so nothing about it has changed and
+// it must keep its own art instead of degrading to one of the basics.
+func TestPermanentArtName_DualLandKeepsItsOwnArt(t *testing.T) {
+	duals := map[string]string{
+		"Badlands":        "Swamp Mountain",
+		"Bayou":           "Swamp Forest",
+		"Plateau":         "Mountain Plains",
+		"Savannah":        "Forest Plains",
+		"Scrubland":       "Plains Swamp",
+		"Taiga":           "Mountain Forest",
+		"Tropical Island": "Forest Island",
+		"Tundra":          "Plains Island",
+		"Underground Sea": "Island Swamp",
+		"Volcanic Island": "Island Mountain",
+	}
+
+	for name, subtypes := range duals {
+		printed := domain.FindCardByName(name)
+		if printed == nil {
+			t.Errorf("%s missing from the card database", name)
+			continue
+		}
+		perm := interactive.PermanentState{Name: name, IsLand: true, SubTypes: subtypes}
+		if got := permanentArtName(perm, printed); got != name {
+			t.Errorf("permanentArtName(%s) = %q, want %q", name, got, name)
+		}
+	}
+}
+
+// Blood Moon-style effects still override a dual land's art.
+func TestPermanentArtName_DualLandTurnedIntoMountain(t *testing.T) {
+	printed := domain.FindCardByName("Underground Sea")
+	if printed == nil {
+		t.Fatal("Underground Sea missing from the card database")
+	}
+	perm := interactive.PermanentState{Name: "Underground Sea", IsLand: true, SubTypes: "Mountain"}
+
+	if got := permanentArtName(perm, printed); got != "Mountain" {
+		t.Fatalf("permanentArtName() = %q, want %q", got, "Mountain")
+	}
+}
