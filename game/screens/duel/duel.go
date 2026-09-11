@@ -1105,19 +1105,35 @@ func (s *DuelScreen) getKeywordIcons(perm interactive.PermanentState) []*ebiten.
 		}
 	}
 
+	addProtection := func(quality string) {
+		if idx, ok := protectionColorIconIndex(quality); ok && idx < len(s.abilityIcons) && seen&(1<<idx) == 0 {
+			seen |= 1 << idx
+			icons = append(icons, s.abilityIcons[idx])
+		}
+	}
+
 	if s.game != nil {
 		if p := s.game.FindPermanent(perm.ID); p != nil {
-			for _, ability := range p.Card.Abilities() {
-				if pa, ok := ability.(*mage.ProtectionAbility); ok {
-					for _, c := range pa.FromColors {
-						if idx, ok := protectionColorIconIndex(c.String()); ok && idx < len(s.abilityIcons) {
-							if (seen & (1 << idx)) == 0 {
-								seen |= 1 << idx
-								icons = append(icons, s.abilityIcons[idx])
-							}
-						}
-					}
+			// RuntimeAbilities rather than the printed card: protection granted by
+			// another permanent (Black Ward, Goblin Wizard) only lives there.
+			for _, ability := range p.RuntimeAbilities {
+				pa, ok := mage.UnwrapAbility(ability).(*mage.ProtectionAbility)
+				if !ok {
+					continue
 				}
+				for _, c := range pa.FromColors {
+					addProtection(c.String())
+				}
+				if strings.EqualFold(pa.Filter.Text(), core.TypeArtifact.String()) {
+					addProtection("artifacts")
+				}
+			}
+			// Artifact Ward's Oracle text lists three restrictions instead of the
+			// word "protection", but together they keep artifacts from touching
+			// the creature, which is what the original game's brown artifact
+			// shield told the player.
+			if p.HasAttr(core.AttrCantBeTargetedByArtifacts) {
+				addProtection("artifacts")
 			}
 		}
 	}
