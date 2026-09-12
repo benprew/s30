@@ -1,0 +1,4 @@
+interface:
+  display_name: "S30 Player Changelog"
+  short_description: "Summarize player-facing changes across both repos"
+  default_prompt: "Use $s30-player-changelog to summarize player-facing changes from v1.0.0 to HEAD in S30 and mage-go."
