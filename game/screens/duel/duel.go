@@ -4152,7 +4152,12 @@ func (s *DuelScreen) doHumanMulligan() {
 	}
 	s.mulliganCount++
 	s.mulliganSelected = make(map[uuid.UUID]bool)
-	if s.mulliganCount >= 7 {
+	if s.mulliganCount >= maxMulligans {
+		// The whole hand goes to the bottom, so there is nothing left to
+		// choose: bottom it and start the game with an empty hand.
+		for _, c := range s.human.Hand() {
+			s.mulliganSelected[c.ID()] = true
+		}
 		s.finishMulligan()
 	}
 }
@@ -4174,10 +4179,29 @@ func (s *DuelScreen) finishMulligan() {
 }
 
 const (
+	// maxMulligans is the point where London rules stop being a choice: the
+	// seventh mulligan puts all seven cards back, leaving an empty hand.
+	maxMulligans          = 7
 	mulliganCardW         = 120
 	mulliganCardGap       = 12
 	mulliganPreviewMargin = 20
 )
+
+// mulliganTitle explains the current step of the London mulligan. Every
+// mulligan redeals a full seven cards, so the title has to name the price of
+// keeping — otherwise nothing on screen says the hand shrinks at all.
+func mulliganTitle(count, selected int, bottoming bool) string {
+	switch {
+	case bottoming:
+		return fmt.Sprintf("Select %d card(s) to put on the bottom of your library (%d selected)",
+			count, selected)
+	case count == 0:
+		return "Opening hand — Keep or Mulligan?"
+	default:
+		return fmt.Sprintf("Mulligan #%d — keeping puts %d card(s) on the bottom of your library",
+			count, count)
+	}
+}
 
 func (s *DuelScreen) mulliganCardRects(W, H int) []image.Rectangle {
 	hand := s.human.Hand()
@@ -4230,7 +4254,7 @@ func (s *DuelScreen) updateMulliganUI(W, H int) {
 	} else {
 		s.mulliganKeepBtn.MoveTo(W/2-btnW-10, btnY)
 		s.mulliganKeepBtn.Update(&ebiten.DrawImageOptions{}, 1.0, W, H)
-		if s.mulliganCount < 7 {
+		if s.mulliganCount < maxMulligans {
 			s.mulliganMullBtn.MoveTo(W/2+10, btnY)
 			s.mulliganMullBtn.Update(&ebiten.DrawImageOptions{}, 1.0, W, H)
 		}
@@ -4240,7 +4264,7 @@ func (s *DuelScreen) updateMulliganUI(W, H int) {
 			} else {
 				s.mulliganBottoming = true
 			}
-		} else if s.mulliganCount < 7 && s.mulliganMullBtn.IsClicked() {
+		} else if s.mulliganCount < maxMulligans && s.mulliganMullBtn.IsClicked() {
 			s.doHumanMulligan()
 		}
 	}
@@ -4303,15 +4327,7 @@ func mulliganPreviewPosition(W, H int, cardRect, previewBounds image.Rectangle) 
 func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{20, 20, 30, 255}, false)
 
-	var title string
-	if s.mulliganBottoming {
-		title = fmt.Sprintf("Select %d card(s) to put on the bottom of your library (%d selected)",
-			s.mulliganCount, len(s.mulliganSelected))
-	} else if s.mulliganCount == 0 {
-		title = "Opening hand — Keep or Mulligan?"
-	} else {
-		title = fmt.Sprintf("Mulligan #%d — Keep this hand or take another mulligan?", s.mulliganCount)
-	}
+	title := mulliganTitle(s.mulliganCount, len(s.mulliganSelected), s.mulliganBottoming)
 	t := elements.NewText(20, title, 0, 30)
 	t.HAlign = elements.AlignCenter
 	t.BoundsW = float64(W)
@@ -4358,7 +4374,7 @@ func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 		s.mulliganConfirmBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	} else {
 		s.mulliganKeepBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-		if s.mulliganCount < 7 {
+		if s.mulliganCount < maxMulligans {
 			s.mulliganMullBtn.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 		}
 	}
