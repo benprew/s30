@@ -254,7 +254,7 @@ func TestGenerateDuelReward_RestrictedCardsAreRare(t *testing.T) {
 func TestRandomCardsForColor_ZeroRestrictedChance(t *testing.T) {
 	// When restrictedChance is 0, no restricted cards should be returned
 	for range 50 {
-		cards := randomCardsForColorInTiersWithRestrictedChance(ColorBlue, 3, 0.0, TierMandatory, TierAlmostMandatory, TierStaple)
+		cards := randomCardsForColorInTiersWithRestrictedChance(ColorBlue, 3, 0.0, TierS, TierA)
 		for _, c := range cards {
 			if c.VintageRestricted {
 				t.Fatalf("drew restricted card %q with 0.0 restricted chance", c.CardName)

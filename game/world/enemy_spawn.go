@@ -118,9 +118,8 @@ func powerfulCardProgressionLevels(collection domain.CardCollection) int {
 	}
 
 	powerTiers := []domain.CardTier{
-		domain.TierMandatory,
-		domain.TierAlmostMandatory,
-		domain.TierStaple,
+		domain.TierS,
+		domain.TierA,
 	}
 	cardPower := map[string]bool{}
 	for _, tier := range powerTiers {

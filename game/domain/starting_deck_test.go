@@ -199,12 +199,10 @@ func TestExpertDeckIsRainbow(t *testing.T) {
 func TestStartingDeckUsesEligibleTiers(t *testing.T) {
 	allowed := make(map[*Card]bool)
 	for _, c := range CardsInTiers(
-		TierPlayedQuiteOften,
-		TierPlayedFromTimeToTime,
-		TierPlayedInSpecificArchetypes,
-		TierRarelyPlayed,
-		TierAlmostNeverPlayed,
-		TierMeme,
+		TierB,
+		TierC,
+		TierD,
+		TierF,
 	) {
 		allowed[c] = true
 	}
@@ -235,8 +233,7 @@ func TestStartingDeckUsesEligibleTiers(t *testing.T) {
 }
 
 // TestStartingResourcesExcludesMandatoryAndRestrictedCards verifies that no starting deck
-// or extra collection cards ever include TierMandatory, TierAlmostMandatory,
-// or VintageRestricted cards.
+// or extra collection cards ever include TierS or VintageRestricted cards.
 func TestStartingResourcesExcludesMandatoryAndRestrictedCards(t *testing.T) {
 	difficulties := []Difficulty{DifficultyEasy, DifficultyMedium, DifficultyHard, DifficultyExpert}
 	colors := []ColorMask{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
@@ -256,7 +253,7 @@ func TestStartingResourcesExcludesMandatoryAndRestrictedCards(t *testing.T) {
 							seed, diff, color, source, c.CardName)
 					}
 					if tier, ok := CardTierForName(c.CardName); ok {
-						if tier == TierMandatory || tier == TierAlmostMandatory {
+						if tier == TierS {
 							t.Errorf("seed=%d diff=%d color=%d: %s contains top-tier card %q (tier %d)",
 								seed, diff, color, source, c.CardName, tier)
 						}

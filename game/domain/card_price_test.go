@@ -18,12 +18,12 @@ func TestBasicLandsPrice(t *testing.T) {
 }
 
 func TestMandatoryCardsPriceCap(t *testing.T) {
-	for _, c := range CardsByTier[TierMandatory] {
+	for _, c := range CardsByTier[TierS] {
 		if c.Price > 7000 {
-			t.Errorf("Mandatory card %s price = %d, exceeds cap of 7000", c.CardName, c.Price)
+			t.Errorf("Tier S card %s price = %d, exceeds cap of 7000", c.CardName, c.Price)
 		}
 		if c.Price < 3500 {
-			t.Errorf("Mandatory card %s price = %d, unexpectedly low for mandatory tier", c.CardName, c.Price)
+			t.Errorf("Tier S card %s price = %d, unexpectedly low for Tier S", c.CardName, c.Price)
 		}
 	}
 
@@ -36,50 +36,30 @@ func TestMandatoryCardsPriceCap(t *testing.T) {
 	}
 }
 
-func TestStaplesBasePrice(t *testing.T) {
-	if base := BasePriceForTier(TierStaple); base != 500 {
-		t.Errorf("TierStaple base price = %d, want 500", base)
+func TestTierABasePrice(t *testing.T) {
+	if base := BasePriceForTier(TierA); base != 350 {
+		t.Errorf("TierA base price = %d, want 350", base)
 	}
 
-	playedInMost := CardsByTier[TierPlayedInMostDecks]
-	if len(playedInMost) == 0 {
-		t.Fatal("No played_in_most_decks cards found")
+	tierACards := CardsByTier[TierA]
+	if len(tierACards) == 0 {
+		t.Fatal("No Tier A cards found")
 	}
 
-	for _, c := range playedInMost {
+	for _, c := range tierACards {
 		if c.Price < 150 || c.Price > 500 {
-			t.Errorf("PlayedInMostDecks card %s price = %d out of expected range [150, 500]", c.CardName, c.Price)
+			t.Errorf("Tier A card %s price = %d out of expected range [150, 500]", c.CardName, c.Price)
 		}
 	}
 }
 
-func TestRarelyPlayedPrice(t *testing.T) {
-	for _, c := range CardsByTier[TierRarelyPlayed] {
-		if c.Price > 30 {
-			t.Errorf("Rarely played card %s price = %d, should be <= 30", c.CardName, c.Price)
+func TestTierFPrice(t *testing.T) {
+	for _, c := range CardsByTier[TierF] {
+		if c.Price > 35 {
+			t.Errorf("Tier F card %s price = %d, should be <= 35", c.CardName, c.Price)
 		}
 		if c.Price < 7 {
-			t.Errorf("Rarely played card %s price = %d, below minimum of 7", c.CardName, c.Price)
-		}
-	}
-}
-
-func TestAlmostNeverPlayedAndMemePrice(t *testing.T) {
-	for _, c := range CardsByTier[TierAlmostNeverPlayed] {
-		if c.Price < 7 {
-			t.Errorf("Almost never played card %s price = %d, below minimum of 7", c.CardName, c.Price)
-		}
-		if c.Price > 25 {
-			t.Errorf("Almost never played card %s price = %d, unexpectedly high", c.CardName, c.Price)
-		}
-	}
-
-	for _, c := range CardsByTier[TierMeme] {
-		if c.Price < 7 {
-			t.Errorf("Meme card %s price = %d, below minimum of 7", c.CardName, c.Price)
-		}
-		if c.Price > 20 {
-			t.Errorf("Meme card %s price = %d, unexpectedly high", c.CardName, c.Price)
+			t.Errorf("Tier F card %s price = %d, below minimum of 7", c.CardName, c.Price)
 		}
 	}
 }
@@ -94,16 +74,12 @@ func TestGlobalMinimumPrice(t *testing.T) {
 
 func TestTierHierarchy(t *testing.T) {
 	tiers := []CardTier{
-		TierMandatory,
-		TierAlmostMandatory,
-		TierStaple,
-		TierPlayedInMostDecks,
-		TierPlayedQuiteOften,
-		TierPlayedFromTimeToTime,
-		TierPlayedInSpecificArchetypes,
-		TierRarelyPlayed,
-		TierAlmostNeverPlayed,
-		TierMeme,
+		TierS,
+		TierA,
+		TierB,
+		TierC,
+		TierD,
+		TierF,
 	}
 
 	for i := 0; i < len(tiers)-1; i++ {

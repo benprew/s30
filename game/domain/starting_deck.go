@@ -74,12 +74,9 @@ func DeckBuilder(difficulty Difficulty, playerColor ColorMask, seed int64) *Deck
 		playerColor: playerColor,
 		rng:         rand.New(rand.NewSource(seed)),
 		weakPool: CardsInTiers(
-			TierPlayedQuiteOften,
-			TierPlayedFromTimeToTime,
-			TierPlayedInSpecificArchetypes,
-			TierRarelyPlayed,
-			TierAlmostNeverPlayed,
-			TierMeme,
+			TierC,
+			TierD,
+			TierF,
 		),
 	}
 }
@@ -220,8 +217,8 @@ func (dg *DeckGenerator) pickGuaranteedRare(color ColorMask) *Card {
 	var candidates []*Card
 	seen := make(map[*Card]bool)
 
-	// Sample from upper-mid tiers (TierStaple, TierPlayedInMostDecks, TierPlayedQuiteOften)
-	highPool := CardsInTiers(TierStaple, TierPlayedInMostDecks, TierPlayedQuiteOften)
+	// Sample from upper-mid tiers (TierA, TierB)
+	highPool := CardsInTiers(TierA, TierB)
 	for _, card := range highPool {
 		if card.CardType == CardTypeLand || seen[card] {
 			continue
@@ -451,9 +448,9 @@ func (dg *DeckGenerator) shouldSkipCard(card *Card) bool {
 		return true
 	}
 
-	// Never allow top-tier mandatory or almost mandatory cards in starting decks
+	// Never allow top-tier mandatory cards in starting decks
 	if tier, ok := CardTierForName(card.CardName); ok {
-		if tier == TierMandatory || tier == TierAlmostMandatory {
+		if tier == TierS {
 			return true
 		}
 	}

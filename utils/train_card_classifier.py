@@ -30,16 +30,12 @@ CARDS_PATH = ASSETS / "card_info" / "scryfall_cards.json"
 PARSED_PATH = ASSETS / "card_info" / "parsed_cards.json"
 
 TIER_ORDER = [
-    "mandatory_cards",
-    "almost_mandatory",
-    "staples",
-    "played_in_most_decks",
-    "played_quite_often",
-    "played_from_time_to_time",
-    "played_in_specific_archetypes",
-    "rarely_played",
-    "almost_never_played",
-    "meme_card",
+    "s",
+    "a",
+    "b",
+    "c",
+    "d",
+    "f",
 ]
 
 NUM_TIERS = len(TIER_ORDER)

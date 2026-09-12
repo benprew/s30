@@ -51,7 +51,7 @@ func TestProgressionEnemyMaxLevelScalesWithPowerfulCards(t *testing.T) {
 	}
 
 	var powerfulCard *domain.Card
-	for _, card := range domain.CardsByTier[domain.TierMandatory] {
+	for _, card := range domain.CardsByTier[domain.TierS] {
 		if card.CardType != domain.CardTypeLand {
 			powerfulCard = card
 			break

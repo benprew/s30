@@ -282,7 +282,7 @@ func CalculateCardPrice(cardName string, typeLine string, priceUSD float64) int 
 
 	tier, ok := CardTierForName(cardName)
 	if !ok {
-		tier = TierRarelyPlayed
+		tier = TierF
 	}
 
 	basePrice := BasePriceForTier(tier)
@@ -307,11 +307,11 @@ func CalculateCardPrice(cardName string, typeLine string, priceUSD float64) int 
 	price := int(math.Round(float64(basePrice) * multiplier))
 
 	switch tier {
-	case TierMandatory:
+	case TierS:
 		if price > 7000 {
 			price = 7000
 		}
-	case TierRarelyPlayed:
+	case TierF:
 		if price > 30 {
 			price = 30
 		}

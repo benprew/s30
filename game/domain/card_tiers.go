@@ -10,34 +10,26 @@ import (
 )
 
 // CardTier ranks a card's competitive strength in Old School 93/94,
-// from mandatory staples (0) down to meme-tier unplayables (9).
+// from Tier S (0) down to Tier F (5).
 type CardTier int
 
 const (
-	TierMandatory CardTier = iota
-	TierAlmostMandatory
-	TierStaple
-	TierPlayedInMostDecks
-	TierPlayedQuiteOften
-	TierPlayedFromTimeToTime
-	TierPlayedInSpecificArchetypes
-	TierRarelyPlayed
-	TierAlmostNeverPlayed
-	TierMeme
+	TierS CardTier = iota
+	TierA
+	TierB
+	TierC
+	TierD
+	TierF
 )
 
 // cardTiersRaw mirrors the TOML layout in assets/configs/card_tiers.toml.
 type cardTiersRaw struct {
-	MandatoryCards             []string `toml:"mandatory_cards"`
-	AlmostMandatory            []string `toml:"almost_mandatory"`
-	Staples                    []string `toml:"staples"`
-	PlayedInMostDecks          []string `toml:"played_in_most_decks"`
-	PlayedQuiteOften           []string `toml:"played_quite_often"`
-	PlayedFromTimeToTime       []string `toml:"played_from_time_to_time"`
-	PlayedInSpecificArchetypes []string `toml:"played_in_specific_archetypes"`
-	RarelyPlayed               []string `toml:"rarely_played"`
-	AlmostNeverPlayed          []string `toml:"almost_never_played"`
-	MemeCard                   []string `toml:"meme_card"`
+	S []string `toml:"s"`
+	A []string `toml:"a"`
+	B []string `toml:"b"`
+	C []string `toml:"c"`
+	D []string `toml:"d"`
+	F []string `toml:"f"`
 }
 
 var cardNameToTier = loadCardNameToTier()
@@ -49,16 +41,12 @@ func loadCardNameToTier() map[string]CardTier {
 	}
 
 	tiers := map[CardTier][]string{
-		TierMandatory:                  raw.MandatoryCards,
-		TierAlmostMandatory:            raw.AlmostMandatory,
-		TierStaple:                     raw.Staples,
-		TierPlayedInMostDecks:          raw.PlayedInMostDecks,
-		TierPlayedQuiteOften:           raw.PlayedQuiteOften,
-		TierPlayedFromTimeToTime:       raw.PlayedFromTimeToTime,
-		TierPlayedInSpecificArchetypes: raw.PlayedInSpecificArchetypes,
-		TierRarelyPlayed:               raw.RarelyPlayed,
-		TierAlmostNeverPlayed:          raw.AlmostNeverPlayed,
-		TierMeme:                       raw.MemeCard,
+		TierS: raw.S,
+		TierA: raw.A,
+		TierB: raw.B,
+		TierC: raw.C,
+		TierD: raw.D,
+		TierF: raw.F,
 	}
 
 	out := make(map[string]CardTier, 500)
@@ -79,26 +67,18 @@ func CardTierForName(name string) (CardTier, bool) {
 // BasePriceForTier returns the baseline gold cost for cards in the given tier.
 func BasePriceForTier(tier CardTier) int {
 	switch tier {
-	case TierMandatory:
+	case TierS:
 		return 5600
-	case TierAlmostMandatory:
-		return 2000
-	case TierStaple:
-		return 500
-	case TierPlayedInMostDecks:
-		return 300
-	case TierPlayedQuiteOften:
+	case TierA:
+		return 350
+	case TierB:
 		return 175
-	case TierPlayedFromTimeToTime:
+	case TierC:
 		return 100
-	case TierPlayedInSpecificArchetypes:
+	case TierD:
 		return 50
-	case TierRarelyPlayed:
-		return 25
-	case TierAlmostNeverPlayed:
-		return 14
-	case TierMeme:
-		return 11
+	case TierF:
+		return 15
 	default:
 		return 25
 	}
@@ -114,16 +94,12 @@ func loadCardTiers() map[CardTier][]*Card {
 	}
 
 	tiers := map[CardTier][]string{
-		TierMandatory:                  raw.MandatoryCards,
-		TierAlmostMandatory:            raw.AlmostMandatory,
-		TierStaple:                     raw.Staples,
-		TierPlayedInMostDecks:          raw.PlayedInMostDecks,
-		TierPlayedQuiteOften:           raw.PlayedQuiteOften,
-		TierPlayedFromTimeToTime:       raw.PlayedFromTimeToTime,
-		TierPlayedInSpecificArchetypes: raw.PlayedInSpecificArchetypes,
-		TierRarelyPlayed:               raw.RarelyPlayed,
-		TierAlmostNeverPlayed:          raw.AlmostNeverPlayed,
-		TierMeme:                       raw.MemeCard,
+		TierS: raw.S,
+		TierA: raw.A,
+		TierB: raw.B,
+		TierC: raw.C,
+		TierD: raw.D,
+		TierF: raw.F,
 	}
 
 	out := make(map[CardTier][]*Card, len(tiers))
@@ -181,24 +157,20 @@ const RestrictedRewardChance = 0.03
 // smaller.
 // Used for wizard castle rewards (and similar) since it includes restricted cards.
 func RandomPowerfulCardsForColor(color ColorMask, count int) []*Card {
-	return randomCardsForColorInTiersWithRestrictedChance(color, count, 1.0, TierMandatory, TierAlmostMandatory, TierStaple, TierPlayedInMostDecks)
+	return randomCardsForColorInTiersWithRestrictedChance(color, count, 1.0, TierS, TierA)
 }
 
 // RandomHighCardsForColor picks up to count unique high-tier cards whose color
 // identity matches the requested color or are colorless. Vintage-restricted cards
 // only appear very rarely.
 func RandomHighCardsForColor(color ColorMask, count int) []*Card {
-	return randomCardsForColorInTiers(color, count, TierMandatory, TierAlmostMandatory, TierStaple, TierPlayedInMostDecks)
+	return randomCardsForColorInTiers(color, count, TierS, TierA)
 }
 
 // RandomMidCardsForColor picks up to count unique medium-tier cards whose color
 // identity matches the requested color or are colorless.
 func RandomMidCardsForColor(color ColorMask, count int) []*Card {
-	return randomCardsForColorInTiers(color, count,
-		TierPlayedInMostDecks,
-		TierPlayedQuiteOften,
-		TierPlayedFromTimeToTime,
-	)
+	return randomCardsForColorInTiers(color, count, TierB, TierC)
 }
 
 // RandomLowMidCardsForColor picks up to count unique cards of low-to-medium
@@ -206,23 +178,13 @@ func RandomMidCardsForColor(color ColorMask, count int) []*Card {
 // draws from the mid tiers, avoiding both top-tier staples and meme-tier
 // unplayables, so it suits a modest duel reward.
 func RandomLowMidCardsForColor(color ColorMask, count int) []*Card {
-	return randomCardsForColorInTiers(color, count,
-		TierPlayedQuiteOften,
-		TierPlayedFromTimeToTime,
-		TierPlayedInSpecificArchetypes,
-		TierRarelyPlayed,
-	)
+	return randomCardsForColorInTiers(color, count, TierC, TierD)
 }
 
 // RandomLowCardsForColor picks up to count unique low-power cards whose color
 // identity matches the requested color or are colorless.
 func RandomLowCardsForColor(color ColorMask, count int) []*Card {
-	return randomCardsForColorInTiers(color, count,
-		TierPlayedInSpecificArchetypes,
-		TierRarelyPlayed,
-		TierAlmostNeverPlayed,
-		TierMeme,
-	)
+	return randomCardsForColorInTiers(color, count, TierD, TierF)
 }
 
 func randomCardsForColorInTiers(color ColorMask, count int, tiers ...CardTier) []*Card {
