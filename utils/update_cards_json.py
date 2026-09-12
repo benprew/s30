@@ -20,7 +20,7 @@ import zstandard
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ALLOWED_SETS: list[str] = ["2ed", "arn", "past", "atq", "phpr", "4ed"]
+DEFAULT_ALLOWED_SETS: list[str] = ["2ed", "arn", "past", "atq", "phpr", "4ed", "drk"]
 DEFAULT_EXCLUDED_NAMES: set[str] = {"Chaos Orb", "Shahrazad", "Word of Command"}
 
 
@@ -179,8 +179,9 @@ def process_card_records(
         if name.lower() in excluded_names_lower:
             continue
 
-        results_set = results[name]["SetID"]
-        results_set_idx = allowed_sets_lower.index(results_set)
+        if name in results:
+            results_set = results[name]["SetID"]
+            results_set_idx = allowed_sets_lower.index(results_set)
         set_idx = allowed_sets_lower.index(set_id)
 
         if name in results and set_idx > results_set_idx:
