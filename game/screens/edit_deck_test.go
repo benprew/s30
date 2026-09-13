@@ -29,6 +29,28 @@ func TestLoadEditDeckBackgroundUsesBlueManaTerrain(t *testing.T) {
 	}
 }
 
+// The exit button shares the filter row's band, at its right end, which is where the
+// original keeps its Done. Pinned so a later layout change cannot quietly move it back
+// to the top corner or on top of the toggles.
+func TestEditDeckExitButtonSharesTheFilterRowBand(t *testing.T) {
+	const W, H = 1024, 768
+	exit := editDeckBackBounds(W)
+	bandTop := H - COLLECTION_HEIGHT - filterBtnSize - filterGapAboveCarousel
+	bandBottom := bandTop + filterBtnSize
+
+	if exit.Min.Y < bandTop || exit.Max.Y > bandBottom {
+		t.Errorf("exit button %v is not inside the filter row's band %d..%d", exit, bandTop, bandBottom)
+	}
+	if exit.Max.X != W-12 {
+		t.Errorf("exit button right edge = %d, want %d", exit.Max.X, W-12)
+	}
+	// The toggles grow from the left edge of the row, so the exit button has to stay
+	// clear of the space they occupy, with room left for the ones still to come.
+	if exit.Min.X < 500 {
+		t.Errorf("exit button starts at x=%d, which the filter toggles can reach", exit.Min.X)
+	}
+}
+
 func TestEditDeckSellBoundsAtTopOfScreen(t *testing.T) {
 	want := image.Rect(10, 12, 150, 68)
 
