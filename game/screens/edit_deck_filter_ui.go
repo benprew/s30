@@ -28,18 +28,21 @@ const (
 	filterColorCount       = 5  // number of color toggles (rest are card types)
 )
 
-// filterButton wraps a sprite-sheet button with the filter toggle it controls
-// and a predicate reporting whether that toggle is currently active.
+// filterButton wraps a sprite-sheet button with the filter toggle it controls,
+// a predicate reporting whether that toggle is currently active, and the key its
+// hover hint has in the game's cue-card table.
 type filterButton struct {
 	btn      *elements.Button
+	cue      string
 	toggle   func(f *collectionFilter)
 	isActive func(f *collectionFilter) bool
 }
 
 // filterCell identifies a single icon within the filter sprite sheet along with
-// the collection filter it toggles.
+// the collection filter it toggles and the cue-card key for its hover hint.
 type filterCell struct {
 	row, col int
+	cue      string
 	toggle   func(f *collectionFilter)
 	isActive func(f *collectionFilter) bool
 }
@@ -47,6 +50,7 @@ type filterCell struct {
 func colorCell(row, col int, color string) filterCell {
 	return filterCell{
 		row: row, col: col,
+		cue:      cueKeyForColor(color),
 		toggle:   func(f *collectionFilter) { f.toggleColor(color) },
 		isActive: func(f *collectionFilter) bool { return f.colors[color] },
 	}
@@ -55,6 +59,7 @@ func colorCell(row, col int, color string) filterCell {
 func typeCell(row, col int, t domain.CardType) filterCell {
 	return filterCell{
 		row: row, col: col,
+		cue:      cueKeyForType(t),
 		toggle:   func(f *collectionFilter) { f.toggleType(t) },
 		isActive: func(f *collectionFilter) bool { return f.types[t] },
 	}
@@ -99,7 +104,7 @@ func createFilterButtons() ([]*filterButton, error) {
 		out := make([]*filterButton, 0, len(cells))
 		for _, c := range cells {
 			btn := elements.NewButton(normal[c.row][c.col], hover[c.row][c.col], pressed[c.row][c.col], 0, 0, 1.0)
-			out = append(out, &filterButton{btn: btn, toggle: c.toggle, isActive: c.isActive})
+			out = append(out, &filterButton{btn: btn, cue: c.cue, toggle: c.toggle, isActive: c.isActive})
 		}
 		return out
 	}
@@ -139,17 +144,25 @@ func (s *EditDeckScreen) updateFilterButtons(opts *ebiten.DrawImageOptions, scal
 	return changed
 }
 
+// filterDrawState returns the visual state a filter toggle must be drawn in. A
+// toggle that is on is always drawn pressed, because that sprite is this screen's
+// only signal that the filter is active — hovering it must not lift it, or an
+// active filter and an inactive one look identical under the cursor.
+func filterDrawState(active bool, current elements.ButtonState) elements.ButtonState {
+	if active {
+		return elements.StatePressed
+	}
+	return current
+}
+
 // drawFilterButtons renders the filter toggles, showing the pressed sprite for
 // active toggles so the current filter state is visible at a glance.
 func (s *EditDeckScreen) drawFilterButtons(screen *ebiten.Image, scale float64) {
 	identity := &ebiten.DrawImageOptions{}
 	for _, fb := range s.filterButtons {
-		if fb.isActive(&s.filter) && fb.btn.State == elements.StateNormal {
-			fb.btn.State = elements.StatePressed
-			fb.btn.Draw(screen, identity, scale)
-			fb.btn.State = elements.StateNormal
-			continue
-		}
+		saved := fb.btn.State
+		fb.btn.State = filterDrawState(fb.isActive(&s.filter), saved)
 		fb.btn.Draw(screen, identity, scale)
+		fb.btn.State = saved
 	}
 }
