@@ -294,7 +294,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.CollectionList.Draw(screen, &opts, scale)
 	s.drawCollectionCounts(screen, scale, collectionY)
 
-	drawDeckSellTarget(screen, editDeckSellBounds())
+	drawDeckSellTarget(screen, editDeckSellBounds(), s.Player.Gold)
 	s.sellDropArea.Draw(screen)
 
 	s.drawDeckCards(screen, scale)
@@ -307,7 +307,10 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		magOpts := &ebiten.DrawImageOptions{}
 		magOpts.GeoM.Scale(scale, scale)
 		magX := 1.0
-		magY := (float64(H-COLLECTION_HEIGHT) - 419.0) / 2.0
+		// The left panel stacks the sell target, the hint under it, the sale price
+		// and then the card. The shift keeps the price line clear of the hint above
+		// it and off the card's top edge.
+		magY := (float64(H-COLLECTION_HEIGHT)-419.0)/2.0 + 12
 		if magY < 10 {
 			magY = 10
 		}
@@ -482,18 +485,17 @@ func (s *EditDeckScreen) sellHoveredCard() {
 	}
 }
 
-func editDeckBackBounds(W int) image.Rectangle { return image.Rect(W-110, 12, W-12, 56) }
+// editDeckBackBounds places the exit button in the filter row's band, at its right
+// end, which is where the original keeps its Done. The screen's logical height is
+// fixed at 768 by Game.Layout.
+func editDeckBackBounds(W int) image.Rectangle {
+	const height = 26
+	top := 768 - COLLECTION_HEIGHT - filterBtnSize - filterGapAboveCarousel + (filterBtnSize-height)/2
+	return image.Rect(W-110, top, W-12, top+height)
+}
 
 func editDeckSellBounds() image.Rectangle { return image.Rect(10, 12, 150, 68) }
 
-func drawDeckSellTarget(screen *ebiten.Image, bounds image.Rectangle) {
-	target := ebiten.NewImage(bounds.Dx(), bounds.Dy())
-	target.Fill(color.RGBA{R: 75, G: 35, B: 30, A: 240})
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
-	screen.DrawImage(target, opts)
-	elements.NewText(18, "Drop to Sell", bounds.Min.X+18, bounds.Min.Y+16).Draw(screen, &ebiten.DrawImageOptions{}, 1)
-}
 
 func drawDeckActionButton(screen *ebiten.Image, bounds image.Rectangle, label string) {
 	button := ebiten.NewImage(bounds.Dx(), bounds.Dy())
