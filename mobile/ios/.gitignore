@@ -1,0 +1,27 @@
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-builder
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Generated Ebiten framework
+*.xcframework/
+s30/*.xcframework/
+Mobile.xcframework
+s30/Mobile.xcframework
+
+# macOS
+.DS_Store

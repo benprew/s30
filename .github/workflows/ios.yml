@@ -1,0 +1,81 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ios]
+  workflow_call:
+    inputs:
+      version_name:
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: iOS release version name
+        required: false
+        type: string
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    env:
+      IOS_VERSION_CODE: ${{ github.run_number }}
+      IOS_VERSION_NAME: ${{ inputs.version_name || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Download and process card images
+        run: uv run python utils/download_card_images.py assets/card_info/scryfall_cards.json.zst
+
+      - name: Ensure dependencies
+        run: go mod download
+
+      - name: Build XCFramework with ebitenmobile
+        run: |
+          mkdir -p ./mobile/ios/s30
+          go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind \
+            -target ios \
+            -tags embedded_card_images \
+            -o ./mobile/ios/s30/Mobile.xcframework \
+            ./mobile
+
+      - name: Build iOS archive
+        run: |
+          VERSION="${IOS_VERSION_NAME#v}"
+          xcodebuild archive \
+            -project mobile/ios/s30.xcodeproj \
+            -scheme s30 \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "${RUNNER_TEMP}/s30.xcarchive" \
+            MARKETING_VERSION="${VERSION}" \
+            CURRENT_PROJECT_VERSION="${IOS_VERSION_CODE}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Package IPA and archive artifacts
+        run: |
+          mkdir -p "${RUNNER_TEMP}/Payload"
+          cp -r "${RUNNER_TEMP}/s30.xcarchive/Products/Applications/s30.app" "${RUNNER_TEMP}/Payload/"
+          (cd "${RUNNER_TEMP}" && zip -r -q "${GITHUB_WORKSPACE}/s30_ios.ipa" Payload)
+          (cd "${RUNNER_TEMP}" && zip -r -q "${GITHUB_WORKSPACE}/s30_ios.xcarchive.zip" s30.xcarchive)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: s30_ios.ipa
+          path: s30_ios.ipa
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: s30_ios.xcarchive.zip
+          path: s30_ios.xcarchive.zip
+          retention-days: 30

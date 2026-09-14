@@ -1,0 +1,404 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 54;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		30A000200000000000000002 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000002 /* AppDelegate.m */; };
+		30A000200000000000000003 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000003 /* main.m */; };
+		30A000200000000000000005 /* MobileEbitenViewControllerWithErrorHandling.m in Sources */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000005 /* MobileEbitenViewControllerWithErrorHandling.m */; };
+		30A000200000000000000007 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000007 /* Main.storyboard */; };
+		30A000200000000000000009 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000009 /* LaunchScreen.storyboard */; };
+		30A00020000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 30A00010000000000000000B /* Assets.xcassets */; };
+		30A000200000000000000010 /* Mobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000010 /* Mobile.xcframework */; };
+		30A000300000000000000010 /* Mobile.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000010 /* Mobile.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		30A000200000000000000011 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000011 /* GameController.framework */; };
+		30A000200000000000000012 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000012 /* AudioToolbox.framework */; };
+		30A000200000000000000013 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000013 /* AVFoundation.framework */; };
+		30A000200000000000000014 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000014 /* Metal.framework */; };
+		30A000200000000000000015 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000015 /* QuartzCore.framework */; };
+		30A000200000000000000016 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000016 /* UIKit.framework */; };
+		30A000200000000000000017 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000017 /* Foundation.framework */; };
+		30A000200000000000000018 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30A000100000000000000018 /* CoreGraphics.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		30A000080000000000000001 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				30A000300000000000000010 /* Mobile.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		30A000040000000000000001 /* s30.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = s30.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		30A000100000000000000001 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		30A000100000000000000002 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		30A000100000000000000003 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		30A000100000000000000004 /* MobileEbitenViewControllerWithErrorHandling.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MobileEbitenViewControllerWithErrorHandling.h; sourceTree = "<group>"; };
+		30A000100000000000000005 /* MobileEbitenViewControllerWithErrorHandling.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MobileEbitenViewControllerWithErrorHandling.m; sourceTree = "<group>"; };
+		30A000100000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		30A000100000000000000008 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		30A00010000000000000000A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		30A00010000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		30A000100000000000000010 /* Mobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = s30/Mobile.xcframework; sourceTree = "<group>"; };
+		30A000100000000000000011 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
+		30A000100000000000000012 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		30A000100000000000000013 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		30A000100000000000000014 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		30A000100000000000000015 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		30A000100000000000000016 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		30A000100000000000000017 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		30A000100000000000000018 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		30A000060000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				30A000200000000000000010 /* Mobile.xcframework in Frameworks */,
+				30A000200000000000000011 /* GameController.framework in Frameworks */,
+				30A000200000000000000012 /* AudioToolbox.framework in Frameworks */,
+				30A000200000000000000013 /* AVFoundation.framework in Frameworks */,
+				30A000200000000000000014 /* Metal.framework in Frameworks */,
+				30A000200000000000000015 /* QuartzCore.framework in Frameworks */,
+				30A000200000000000000016 /* UIKit.framework in Frameworks */,
+				30A000200000000000000017 /* Foundation.framework in Frameworks */,
+				30A000200000000000000018 /* CoreGraphics.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		30A000020000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				30A000400000000000000002 /* s30 */,
+				30A000400000000000000003 /* Frameworks */,
+				30A000400000000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		30A000400000000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				30A000040000000000000001 /* s30.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		30A000400000000000000002 /* s30 */ = {
+			isa = PBXGroup;
+			children = (
+				30A000100000000000000001 /* AppDelegate.h */,
+				30A000100000000000000002 /* AppDelegate.m */,
+				30A000100000000000000004 /* MobileEbitenViewControllerWithErrorHandling.h */,
+				30A000100000000000000005 /* MobileEbitenViewControllerWithErrorHandling.m */,
+				30A000100000000000000003 /* main.m */,
+				30A000100000000000000007 /* Main.storyboard */,
+				30A000100000000000000009 /* LaunchScreen.storyboard */,
+				30A00010000000000000000B /* Assets.xcassets */,
+				30A000100000000000000006 /* Info.plist */,
+			);
+			path = s30;
+			sourceTree = "<group>";
+		};
+		30A000400000000000000003 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				30A000100000000000000010 /* Mobile.xcframework */,
+				30A000100000000000000011 /* GameController.framework */,
+				30A000100000000000000012 /* AudioToolbox.framework */,
+				30A000100000000000000013 /* AVFoundation.framework */,
+				30A000100000000000000014 /* Metal.framework */,
+				30A000100000000000000015 /* QuartzCore.framework */,
+				30A000100000000000000016 /* UIKit.framework */,
+				30A000100000000000000017 /* Foundation.framework */,
+				30A000100000000000000018 /* CoreGraphics.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		30A000030000000000000001 /* s30 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 30A000600000000000000001 /* Build configuration list for PBXNativeTarget "s30" */;
+			buildPhases = (
+				30A000050000000000000001 /* Sources */,
+				30A000060000000000000001 /* Frameworks */,
+				30A000070000000000000001 /* Resources */,
+				30A000080000000000000001 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = s30;
+			productName = s30;
+			productReference = 30A000040000000000000001 /* s30.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		30A000010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					30A000030000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 30A000500000000000000001 /* Build configuration list for PBXProject "s30" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 30A000020000000000000001;
+			productRefGroup = 30A000400000000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				30A000030000000000000001 /* s30 */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		30A000070000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				30A000200000000000000009 /* LaunchScreen.storyboard in Resources */,
+				30A000200000000000000007 /* Main.storyboard in Resources */,
+				30A00020000000000000000B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		30A000050000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				30A000200000000000000002 /* AppDelegate.m in Sources */,
+				30A000200000000000000005 /* MobileEbitenViewControllerWithErrorHandling.m in Sources */,
+				30A000200000000000000003 /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		30A000100000000000000007 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				30A000100000000000000008 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		30A000100000000000000009 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				30A00010000000000000000A /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		30A000510000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		30A000510000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		30A000610000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/s30",
+					"$(PROJECT_DIR)",
+				);
+				INFOPLIST_FILE = s30/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				CURRENT_PROJECT_VERSION = 1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.throwingbones.s30;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		30A000610000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/s30",
+					"$(PROJECT_DIR)",
+				);
+				INFOPLIST_FILE = s30/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				CURRENT_PROJECT_VERSION = 1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.throwingbones.s30;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		30A000500000000000000001 /* Build configuration list for PBXProject "s30" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				30A000510000000000000001 /* Debug */,
+				30A000510000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		30A000600000000000000001 /* Build configuration list for PBXNativeTarget "s30" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				30A000610000000000000001 /* Debug */,
+				30A000610000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 30A000010000000000000001 /* Project object */;
+}
