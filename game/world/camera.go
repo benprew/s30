@@ -22,12 +22,12 @@ const (
 	DynamicOffsetDisplacement float64 = 50.0
 
 	// Defaults
-	DefaultMaxOffsetX      float64        = 200.0
-	DefaultMaxOffsetY      float64        = 200.0
-	DefaultManualPanSpeed  float64        = 250.0
-	DefaultDynamicPanSpeed float64        = 100.0
-	DefaultEnableManualPan bool           = true
-	DefaultDynamicPanMode  DynamicPanMode = DynamicPanModeLookAhead
+	DefaultMaxManualOffsetX float64        = 200.0
+	DefaultMaxManualOffsetY float64        = 200.0
+	DefaultManualPanSpeed   float64        = 250.0
+	DefaultDynamicPanSpeed  float64        = 100.0
+	DefaultEnableManualPan  bool           = false
+	DefaultDynamicPanMode   DynamicPanMode = DynamicPanModeLookAhead
 )
 
 type Camera struct {
@@ -50,8 +50,8 @@ type Camera struct {
 
 func NewCamera() *Camera {
 	return &Camera{
-		maxManualOffsetX: DefaultMaxOffsetX,
-		maxManualOffsetY: DefaultMaxOffsetY,
+		maxManualOffsetX: DefaultMaxManualOffsetX,
+		maxManualOffsetY: DefaultMaxManualOffsetY,
 		enableManualPan:  DefaultEnableManualPan,
 		manualPanSpeed:   DefaultManualPanSpeed,
 		dynamicPanMode:   DefaultDynamicPanMode,
