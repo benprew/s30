@@ -98,3 +98,48 @@ func TestCounterPromptsWithMultipleOpponentSpells(t *testing.T) {
 		t.Fatal("should enter targeting mode when multiple opponent spells are on the stack")
 	}
 }
+
+func TestXCounterAutoTargetsSingleOpponentSpell(t *testing.T) {
+	human, fromTUI := newTestHuman()
+	spellID := uuid.New()
+	sinkID := uuid.New()
+
+	s := &DuelScreen{
+		human: human,
+		lastMsg: &interactive.GameMsg{
+			State: &interactive.GameState{
+				Opponent: interactive.PlayerState{Name: "Enemy"},
+				StackItems: []interactive.StackItemState{
+					{ID: spellID.String(), Name: "Bolt", Controller: "Enemy"},
+				},
+			},
+		},
+		xChoosingActions: []interactive.ActionOption{{
+			Type:         interactive.ActionCastSpell,
+			CardID:       sinkID,
+			CardName:     "Power Sink",
+			NeedsTarget:  true,
+			NeedsX:       true,
+			TargetType:   mage.TargetSpellOnStack(),
+			ValidTargets: []uuid.UUID{spellID},
+		}},
+	}
+
+	s.selectXValue(2)
+
+	if s.targetingCardID != uuid.Nil {
+		t.Fatal("should not enter targeting mode when only one opponent spell is on the stack")
+	}
+
+	select {
+	case pa := <-fromTUI:
+		if len(pa.Targets) != 1 || pa.Targets[0] != spellID {
+			t.Fatalf("expected auto-target %v, got %v", spellID, pa.Targets)
+		}
+		if pa.XValue != 2 {
+			t.Fatalf("expected X=2, got %d", pa.XValue)
+		}
+	default:
+		t.Fatal("expected a cast action to be sent")
+	}
+}
