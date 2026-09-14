@@ -43,7 +43,7 @@ test:
 	$(TEST_COMMAND) ./...
 
 test-flaky:
-	$(TEST_COMMAND) -count=20 -shuffle=on
+	$(TEST_COMMAND) -count=20 -shuffle=on ./...
 
 build:
 	$(MKDIR_DIST)
