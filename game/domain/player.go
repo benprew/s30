@@ -167,7 +167,7 @@ func (p *Player) NumCards() int {
 	return p.CardCollection.NumCards()
 }
 
-func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(image.Point) bool) error {
+func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(image.Point) bool) (int, error) {
 	oldX, oldY := p.X, p.Y
 	dirBits := p.Move(screenW, screenH)
 	p.updateSpeedPenalty()
@@ -205,7 +205,7 @@ func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(ima
 		p.Y = levelH - screenH/2
 	}
 
-	return nil
+	return dirBits, nil
 }
 
 func (p *Player) updateSpeedPenalty() {

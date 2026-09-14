@@ -35,6 +35,8 @@ type Level struct {
 	TileWidth  int
 	TileHeight int
 
+	Camera *Camera
+
 	roadSprites    [][]*ebiten.Image // Sprites for roads
 	roadSpriteInfo [][]string        // Maps sprite index to direction string (e.g., "N", "NE")
 
@@ -79,6 +81,7 @@ func NewLevelWithSeed(c *domain.Player, seed int64) (*Level, error) {
 		H:              63,
 		TileWidth:      206,
 		TileHeight:     102,
+		Camera:         NewCamera(),
 		Enemies:        make([]domain.Enemy, 0),
 		Player:         c,
 		GenerationSeed: seed,
@@ -181,6 +184,7 @@ func NewLevelWithSeed(c *domain.Player, seed int64) (*Level, error) {
 	// Set initial player position at center of map
 	loc := image.Point{X: l.LevelW() / 2, Y: l.LevelH() / 2}
 	l.Player.SetLoc(loc)
+	l.Camera.Follow(&l.Player.CharacterInstance)
 	fmt.Printf("Starting player at position: %d, %d\n", loc.X, loc.Y)
 
 	// Spawn initial enemies
@@ -200,9 +204,9 @@ func NewLevelWithSeed(c *domain.Player, seed int64) (*Level, error) {
 func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) {
 	padding := 400
 
-	pLoc := l.Player.Loc()
+	cameraLoc := l.Camera.Loc()
 
-	l.RenderZigzag(screen, pLoc.X, pLoc.Y, (screenW/2)+padding, (screenH/2)+padding, scale)
+	l.RenderZigzag(screen, cameraLoc.X, cameraLoc.Y, (screenW/2)+padding, (screenH/2)+padding, scale)
 
 	// Draw enemies
 	for _, e := range l.Enemies {
@@ -222,27 +226,38 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	}
 
 	// Draw player
+	pLoc := l.Player.Loc()
+	screenX, screenY := l.screenOffset(pLoc.X, pLoc.Y, screenW, screenH)
+
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
-	options.GeoM.Translate(float64(screenW)/2, float64(screenH)/2)
-	options.GeoM.Translate(-float64(domain.SpriteWidth/2)*scale, -float64(domain.SpriteHeight/2)*scale)
-	l.Player.Draw(screen, options, screenW/2, screenH/2)
+	options.GeoM.Translate(
+		-float64(domain.SpriteWidth/2)*scale,
+		-float64(domain.SpriteHeight/2)*scale,
+	)
+	options.GeoM.Translate(float64(screenX), float64(screenY))
+
+	l.Player.Draw(screen, options, screenX, screenY)
 }
 
 func (l *Level) UpdateWorld(screenW, screenH int) error {
 	l.totalTicks++
 	l.ticksSinceLastInteraction++
 
-	if err := l.Player.Update(
+	dirBits, err := l.Player.Update(
 		screenW,
 		screenH,
 		l.LevelW(),
 		l.LevelH(),
 		func(pos image.Point) bool {
 			return l.IsWaterAtPixel(pos)
-		}); err != nil {
+		},
+	)
+	if err != nil {
 		return err
 	}
+
+	l.UpdateCamera(dirBits)
 
 	for i := range l.Enemies {
 		ex, ey := l.Enemies[i].X, l.Enemies[i].Y
@@ -408,10 +423,10 @@ func (l *Level) AllCastlesDefeated() bool {
 // Check if the tile is visible on the screen
 // return the position of the tile in the screen
 func (l *Level) isVisible(x, y, width, height, screenW, screenH int) bool {
-	// convert screenW and screenH based on the player position
-	pLoc := l.Player.Loc()
-	screenX := pLoc.X - (screenW / 2)
-	screenY := pLoc.Y - (screenH / 2)
+	// convert screenW and screenH based on the camera position
+	cameraLoc := l.Camera.Loc()
+	screenX := cameraLoc.X - (screenW / 2)
+	screenY := cameraLoc.Y - (screenH / 2)
 
 	// Check if the object is within the screen bounds
 	if x+width < screenX || x > screenX+screenW || y+height < screenY || y > screenY+screenH {
@@ -422,10 +437,10 @@ func (l *Level) isVisible(x, y, width, height, screenW, screenH int) bool {
 }
 
 func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
-	pLoc := l.Player.Loc()
-	// Calculate screen position based on player position
-	screenX := pLoc.X - screenW/2
-	screenY := pLoc.Y - screenH/2
+	cameraLoc := l.Camera.Loc()
+	// Calculate screen position based on camera position
+	screenX := cameraLoc.X - screenW/2
+	screenY := cameraLoc.Y - screenH/2
 
 	// Calculate the position relative to the screen
 	return x - screenX, y - screenY
@@ -713,4 +728,23 @@ func PrintLevel(l *Level) {
 		}
 		fmt.Println()
 	}
+}
+
+func (l *Level) UpdateCamera(playerDirBits int) {
+	var manualDirBits int
+
+	if ebiten.IsKeyPressed(ebiten.KeyJ) {
+		manualDirBits |= domain.DirLeft
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyL) {
+		manualDirBits |= domain.DirRight
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyK) {
+		manualDirBits |= domain.DirDown
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyI) {
+		manualDirBits |= domain.DirUp
+	}
+
+	l.Camera.Update(manualDirBits, playerDirBits, timing.DeltaTime)
 }
