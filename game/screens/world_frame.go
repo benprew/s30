@@ -13,6 +13,7 @@ import (
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -264,4 +265,13 @@ func mkWfText(p *domain.Player) []*elements.Text {
 	}
 
 	return texts
+}
+
+func (f *WorldFrame) Viewport() world.Viewport {
+	return world.Viewport{
+		X:      FrameOffsetX,
+		Y:      FrameOffsetY,
+		Width:  FrameWidth,
+		Height: FrameHeight,
+	}
 }

@@ -23,9 +23,9 @@ const (
 
 	// Defaults
 	DefaultMaxManualOffsetX float64        = 200.0
-	DefaultMaxManualOffsetY float64        = 200.0
+	DefaultMaxManualOffsetY float64        = 75.0
 	DefaultManualPanSpeed   float64        = 250.0
-	DefaultDynamicPanSpeed  float64        = 100.0
+	DefaultDynamicPanSpeed  float64        = 75.0
 	DefaultEnableManualPan  bool           = false
 	DefaultDynamicPanMode   DynamicPanMode = DynamicPanModeLookAhead
 )
@@ -127,7 +127,7 @@ func (c *Camera) UpdatePosition(dirBits int, dt float64) {
 }
 
 func (c *Camera) UpdateManualOffset(dirBits int, dt float64) {
-	if c.followTarget == nil || c.manualPanSpeed <= 0.0 {
+	if !c.enableManualPan || c.followTarget == nil || c.manualPanSpeed <= 0.0 {
 		return
 	}
 
@@ -194,6 +194,11 @@ func (c *Camera) SetDynamicOffsetTarget(dirBits int) {
 	} else if dirBits&domain.DirRight != 0 {
 		c.targetDynamicOffsetX = displacement
 	}
+
+	if c.targetDynamicOffsetX != 0.0 && c.targetDynamicOffsetY != 0.0 {
+		c.targetDynamicOffsetX *= domain.DiagonalMovementScale
+		c.targetDynamicOffsetY *= domain.DiagonalMovementScale
+	}
 }
 
 func (c *Camera) UpdateDynamicOffset(dirBits int, dt float64) {
@@ -240,6 +245,11 @@ func calculateDelta(dirBits int, dt float64, speed float64) (dx, dy float64) {
 		dx = -(dt * speed)
 	} else if dirBits&domain.DirRight != 0 {
 		dx = dt * speed
+	}
+
+	if dx != 0.0 && dy != 0.0 {
+		dx *= domain.DiagonalMovementScale
+		dy *= domain.DiagonalMovementScale
 	}
 
 	return dx, dy

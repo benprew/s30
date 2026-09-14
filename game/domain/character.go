@@ -18,7 +18,7 @@ const (
 	SpriteHeight = 102
 
 	updatesPerWalkingFrame = timing.UpdatesPerSecond / 10
-	diagonalMovementScale  = 1 / math.Sqrt2
+	DiagonalMovementScale  = 1 / math.Sqrt2
 
 	// Direction bit flags
 	DirUp    = 0x8 // 1000
@@ -142,7 +142,7 @@ func (c *CharacterInstance) movementDelta(dirBits int) (float64, float64) {
 
 	distance := c.activeMoveSpeed()
 	if dx != 0 && dy != 0 {
-		distance *= diagonalMovementScale
+		distance *= DiagonalMovementScale
 	}
 
 	return float64(dx) * distance, float64(dy) * distance

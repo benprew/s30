@@ -35,7 +35,8 @@ type Level struct {
 	TileWidth  int
 	TileHeight int
 
-	Camera *Camera
+	Camera   *Camera
+	Viewport Viewport
 
 	roadSprites    [][]*ebiten.Image // Sprites for roads
 	roadSpriteInfo [][]string        // Maps sprite index to direction string (e.g., "N", "NE")
@@ -201,22 +202,22 @@ func NewLevelWithSeed(c *domain.Player, seed int64) (*Level, error) {
 	return l, nil
 }
 
-func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) {
+func (l *Level) Draw(screen *ebiten.Image, scale float64) {
 	padding := 400
 
 	cameraLoc := l.Camera.Loc()
 
-	l.RenderZigzag(screen, cameraLoc.X, cameraLoc.Y, (screenW/2)+padding, (screenH/2)+padding, scale)
+	l.RenderZigzag(screen, cameraLoc.X, cameraLoc.Y, (l.Viewport.Width/2)+padding, (l.Viewport.Height/2)+padding)
 
 	// Draw enemies
 	for _, e := range l.Enemies {
 		eLoc := e.Loc()
 		eDim := e.Dims()
-		if !l.isVisible(eLoc.X, eLoc.Y, eDim.Dx(), eDim.Dy(), screenW, screenH) {
+		if !l.isVisible(eLoc.X, eLoc.Y, eDim.Dx(), eDim.Dy()) {
 			continue // Skip if not visible
 		}
 
-		screenX, screenY := l.screenOffset(eLoc.X, eLoc.Y, screenW, screenH)
+		screenX, screenY := l.screenOffset(eLoc.X, eLoc.Y)
 		// Draw enemy
 		enemyOp := &ebiten.DrawImageOptions{}
 		enemyOp.GeoM.Scale(scale, scale)
@@ -227,7 +228,7 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 
 	// Draw player
 	pLoc := l.Player.Loc()
-	screenX, screenY := l.screenOffset(pLoc.X, pLoc.Y, screenW, screenH)
+	screenX, screenY := l.screenOffset(pLoc.X, pLoc.Y)
 
 	options := &ebiten.DrawImageOptions{}
 	options.GeoM.Scale(scale, scale)
@@ -240,13 +241,13 @@ func (l *Level) Draw(screen *ebiten.Image, screenW, screenH int, scale float64) 
 	l.Player.Draw(screen, options, screenX, screenY)
 }
 
-func (l *Level) UpdateWorld(screenW, screenH int) error {
+func (l *Level) UpdateWorld() error {
 	l.totalTicks++
 	l.ticksSinceLastInteraction++
 
 	dirBits, err := l.Player.Update(
-		screenW,
-		screenH,
+		l.Viewport.Width,
+		l.Viewport.Height,
 		l.LevelW(),
 		l.LevelH(),
 		func(pos image.Point) bool {
@@ -337,6 +338,7 @@ func (l *Level) SetEncounter(idx int) {
 	l.encounterIndex = idx
 	l.encounterPending = true
 	l.ticksSinceLastInteraction = 0
+
 }
 
 // SetPendingCastle records that a castle duel is in progress so the level can
@@ -419,30 +421,37 @@ func (l *Level) AllCastlesDefeated() bool {
 	return true
 }
 
-// x,y is the pixel position of the tile, width and height are the dimensions of the tile
-// Check if the tile is visible on the screen
-// return the position of the tile in the screen
-func (l *Level) isVisible(x, y, width, height, screenW, screenH int) bool {
-	// convert screenW and screenH based on the camera position
-	cameraLoc := l.Camera.Loc()
-	screenX := cameraLoc.X - (screenW / 2)
-	screenY := cameraLoc.Y - (screenH / 2)
+func (l *Level) isVisible(x, y, width, height int) bool {
+	// Convert sprite center to top-left corner for culling.
+	// This is necessary to match Ebiten's render positioning.
+	x -= width / 2
+	y -= height / 2
 
-	// Check if the object is within the screen bounds
-	if x+width < screenX || x > screenX+screenW || y+height < screenY || y > screenY+screenH {
+	// Convert world coordinates based on the camera position.
+	cameraLoc := l.Camera.Loc()
+	viewportCenter := l.Viewport.Center()
+
+	screenX := cameraLoc.X - viewportCenter.X
+	screenY := cameraLoc.Y - viewportCenter.Y
+
+	// Check if the object is within the viewport bounds.
+	if x+width < screenX ||
+		x > screenX+l.Viewport.Width ||
+		y+height < screenY ||
+		y > screenY+l.Viewport.Height {
 		return false
 	}
 
 	return true
 }
 
-func (l *Level) screenOffset(x, y, screenW, screenH int) (int, int) {
+func (l *Level) screenOffset(x, y int) (int, int) {
 	cameraLoc := l.Camera.Loc()
-	// Calculate screen position based on camera position
-	screenX := cameraLoc.X - screenW/2
-	screenY := cameraLoc.Y - screenH/2
+	viewportCenter := l.Viewport.Center()
 
-	// Calculate the position relative to the screen
+	screenX := cameraLoc.X - viewportCenter.X
+	screenY := cameraLoc.Y - viewportCenter.Y
+
 	return x - screenX, y - screenY
 }
 
@@ -566,7 +575,7 @@ func (l *Level) TotalTicks() int {
 	return l.totalTicks
 }
 
-func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale float64) {
+func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
 	tileWidth := l.TileWidth
 	tileHeight := l.TileHeight
 
@@ -595,8 +604,10 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int, scale
 				continue
 			}
 
-			screenX := pixelX - (pX - 1024/2)
-			screenY := pixelY - (pY - 768/2)
+			viewportCenter := l.Viewport.Center()
+			screenX := pixelX - (pX - viewportCenter.X)
+			screenY := pixelY - (pY - viewportCenter.Y)
+
 			op.GeoM.Reset()
 			op.GeoM.Translate(float64(screenX), float64(screenY))
 			tile.Draw(screen, op)
@@ -730,9 +741,16 @@ func PrintLevel(l *Level) {
 	}
 }
 
+func (l *Level) SetViewport(viewport Viewport) {
+	l.Viewport = viewport
+}
+
 func (l *Level) UpdateCamera(playerDirBits int) {
 	var manualDirBits int
 
+	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		l.Camera.ResetManualOffset()
+	}
 	if ebiten.IsKeyPressed(ebiten.KeyJ) {
 		manualDirBits |= domain.DirLeft
 	}

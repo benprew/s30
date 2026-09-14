@@ -39,7 +39,7 @@ const (
 	TravelDistancePerFood  = 450.0
 	StarvationSpeedPenalty = 0.5
 
-	DebugDrawHitbox = true
+	DebugDrawHitbox = false
 )
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty, color ColorMask) (*Player, error) {
@@ -167,9 +167,9 @@ func (p *Player) NumCards() int {
 	return p.CardCollection.NumCards()
 }
 
-func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(image.Point) bool) (int, error) {
+func (p *Player) Update(viewportW, viewportH, levelW, levelH int, isBlocked func(image.Point) bool) (int, error) {
 	oldX, oldY := p.X, p.Y
-	dirBits := p.Move(screenW, screenH)
+	dirBits := p.Move(viewportW, viewportH)
 	p.updateSpeedPenalty()
 	p.UpdateWithCollision(dirBits, isBlocked)
 
@@ -193,16 +193,16 @@ func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(ima
 		}
 	}
 
-	if p.X < screenW/2 {
-		p.X = screenW / 2
+	if p.X < viewportW/2 {
+		p.X = viewportW / 2
 	}
-	if p.X > levelW-screenW/2 {
-		p.X = levelW - screenW/2
+	if p.X > levelW-viewportW/2 {
+		p.X = levelW - viewportW/2
 	}
-	if p.Y < screenH/2 {
-		p.Y = screenH / 2
-	} else if p.Y > levelH-screenH/2 {
-		p.Y = levelH - screenH/2
+	if p.Y < viewportH/2 {
+		p.Y = viewportH / 2
+	} else if p.Y > levelH-viewportH/2 {
+		p.Y = levelH - viewportH/2
 	}
 
 	return dirBits, nil
