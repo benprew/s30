@@ -235,6 +235,11 @@ func (l *Level) RebuildSprites() error {
 
 	l.rebuildDungeonEnemies()
 
+	l.Camera = NewCamera()
+	if l.Player != nil {
+		l.Camera.Follow(&l.Player.CharacterInstance)
+	}
+
 	return nil
 }
 

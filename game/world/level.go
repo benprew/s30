@@ -35,7 +35,7 @@ type Level struct {
 	TileWidth  int
 	TileHeight int
 
-	Camera   *Camera
+	Camera   *Camera `json:"-"`
 	Viewport Viewport
 
 	roadSprites    [][]*ebiten.Image // Sprites for roads
@@ -205,6 +205,7 @@ func NewLevelWithSeed(c *domain.Player, seed int64) (*Level, error) {
 func (l *Level) Draw(screen *ebiten.Image, scale float64) {
 	padding := 400
 
+	l.ensureCamera()
 	cameraLoc := l.Camera.Loc()
 
 	l.RenderZigzag(screen, cameraLoc.X, cameraLoc.Y, (l.Viewport.Width/2)+padding, (l.Viewport.Height/2)+padding)
@@ -428,6 +429,7 @@ func (l *Level) isVisible(x, y, width, height int) bool {
 	y -= height / 2
 
 	// Convert world coordinates based on the camera position.
+	l.ensureCamera()
 	cameraLoc := l.Camera.Loc()
 	viewportCenter := l.Viewport.Center()
 
@@ -446,6 +448,7 @@ func (l *Level) isVisible(x, y, width, height int) bool {
 }
 
 func (l *Level) screenOffset(x, y int) (int, int) {
+	l.ensureCamera()
 	cameraLoc := l.Camera.Loc()
 	viewportCenter := l.Viewport.Center()
 
@@ -746,6 +749,7 @@ func (l *Level) SetViewport(viewport Viewport) {
 }
 
 func (l *Level) UpdateCamera(playerDirBits int) {
+	l.ensureCamera()
 	var manualDirBits int
 
 	if ebiten.IsKeyPressed(ebiten.KeySpace) {
@@ -765,4 +769,13 @@ func (l *Level) UpdateCamera(playerDirBits int) {
 	}
 
 	l.Camera.Update(manualDirBits, playerDirBits, timing.DeltaTime)
+}
+
+func (l *Level) ensureCamera() {
+	if l.Camera == nil {
+		l.Camera = NewCamera()
+		if l.Player != nil {
+			l.Camera.Follow(&l.Player.CharacterInstance)
+		}
+	}
 }
