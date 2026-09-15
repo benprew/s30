@@ -180,6 +180,7 @@ func main() {
 	aiTestDeck := flag.Bool("ai-test-deck", false, "AI opponent plays xTestDeck() instead of its rogue deck")
 	duelLog := flag.Bool("duel-log", false, "enable verbose duel logging (skews allocation profiles)")
 	loadCardImages := flag.Bool("load-card-images", true, "load embedded card art before profiling")
+	headless := flag.Bool("headless", false, "run without opening a visible window")
 	flag.Parse()
 	if *duels < 1 {
 		log.Fatal("-duels must be at least 1")
@@ -273,6 +274,9 @@ func main() {
 
 	ebiten.SetWindowSize(1024, 768)
 	ebiten.SetWindowTitle("Duel Test - X Spells")
+	if *headless {
+		ebiten.SetWindowVisible(false)
+	}
 	if err := ebiten.RunGame(g); err != nil && err != ebiten.Termination {
 		log.Fatal(err)
 	}

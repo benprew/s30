@@ -639,7 +639,7 @@ func (am *AudioManager) CurrentBGM() BGM {
 // StopBGM stops the current background music.
 func (am *AudioManager) StopBGM() {
 	if am.bgmPlayer != nil {
-		am.bgmPlayer.Close()
+		am.bgmPlayer.PauseAndStopReading()
 		am.bgmPlayer = nil
 	}
 	am.currentBGM = BGMNone

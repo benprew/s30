@@ -47,6 +47,7 @@ func main() {
 	memProfileRate := flag.Int("memprofilerate", runtime.MemProfileRate, "bytes allocated per heap-profile sample (1 records every allocation)")
 	debug := flag.Bool("debug", false, "use the debug burn deck and start enemies at 1 life")
 	showOpponentHand := flag.Bool("show-opponent-hand", false, "reveal the opponent's hand")
+	headless := flag.Bool("headless", false, "run without opening a visible window")
 	flag.Parse()
 
 	if *verbose != "" {
@@ -83,6 +84,9 @@ func main() {
 	// ebiten.SetWindowSize(1024, 768)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFullscreen(true)
+	if *headless {
+		ebiten.SetWindowVisible(false)
+	}
 
 	g, err := game.NewGameWithOptions(game.Options{
 		Debug:            *debug,

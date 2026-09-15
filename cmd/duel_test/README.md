@@ -6,10 +6,11 @@ Build the graphical AI-vs-AI profiling harness with embedded card art:
 make duelprofile
 ```
 
-On Linux, run it without a visible window through Xvfb:
+Run it headlessly without opening a visible window (no Xvfb required):
 
 ```bash
-xvfb-run -a ./dist/duel_profile \
+./dist/duel_profile \
+  -headless \
   -autoplay \
   -duels 10 \
   -memprofile /tmp/duel-heap.pprof \
