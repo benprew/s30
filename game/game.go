@@ -147,6 +147,7 @@ func (g *Game) initWorld(level *world.Level) error {
 	g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(level)
 	g.screenMap[screenui.MiniMapScr] = m
 	g.screenMap[screenui.QuestScrollScr] = screens.NewQuestScrollScreen(level.Player)
+	g.screenMap[screenui.GameMenuScr] = screens.NewGameMenuScreen()
 	g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreen()
 
 	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
