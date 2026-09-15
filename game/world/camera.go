@@ -116,7 +116,7 @@ func (c *Camera) CancelFollow() {
 	c.ResetDynamicOffset()
 }
 
-// UpdatePosition moves the camera independently, cancelling any follow target.
+// UpdatePosition moves the camera independently, canceling any follow target.
 // UpdateManualOffset moves the camera relative to its follow target.
 func (c *Camera) UpdatePosition(dirBits int, dt float64) {
 	if c.manualPanSpeed <= 0.0 {

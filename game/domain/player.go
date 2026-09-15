@@ -225,23 +225,29 @@ func (p *Player) SetLoc(loc image.Point) {
 }
 
 func (p *Player) Move(screenW, screenH int) (dirBits int) {
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-		dirBits |= DirLeft
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-		dirBits |= DirRight
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
-		dirBits |= DirDown
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
-		dirBits |= DirUp
-	}
+	dirBits = moveDirectionBits(ebiten.IsKeyPressed)
 
 	if ui.Pressed() {
 		dirBits |= pointerMoveDirection(ui.Position(), screenW, screenH)
 	}
 
+	return dirBits
+}
+
+func moveDirectionBits(isKeyPressed func(ebiten.Key) bool) int {
+	var dirBits int
+	if isKeyPressed(ebiten.KeyLeft) || isKeyPressed(ebiten.KeyA) {
+		dirBits |= DirLeft
+	}
+	if isKeyPressed(ebiten.KeyRight) || isKeyPressed(ebiten.KeyD) {
+		dirBits |= DirRight
+	}
+	if isKeyPressed(ebiten.KeyDown) || isKeyPressed(ebiten.KeyS) {
+		dirBits |= DirDown
+	}
+	if isKeyPressed(ebiten.KeyUp) || isKeyPressed(ebiten.KeyW) {
+		dirBits |= DirUp
+	}
 	return dirBits
 }
 
