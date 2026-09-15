@@ -34,9 +34,13 @@ type Player struct {
 	DungeonState    *DungeonState
 }
 
-const TravelDistancePerDay = 5000.0
-const TravelDistancePerFood = 450.0
-const StarvationSpeedPenalty = 0.5
+const (
+	TravelDistancePerDay   = 5000.0
+	TravelDistancePerFood  = 450.0
+	StarvationSpeedPenalty = 0.5
+
+	DebugDrawHitbox = false
+)
 
 func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficulty, color ColorMask) (*Player, error) {
 	sprite, err := imageutil.LoadSpriteSheet(5, 8, getEmbeddedFile("Ego_F.spr.png"))
@@ -111,19 +115,20 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 		CardCollection: cardCollection,
 	}
 
+	characterInstance := NewCharacterInstance()
+	characterInstance.MoveSpeed = MovementSpeed(100)
+
 	return &Player{
-		Character: c,
-		CharacterInstance: CharacterInstance{
-			MoveSpeed: MovementSpeed(100),
-		},
-		Name:        string(name),
-		Gold:        gold,
-		Food:        food,
-		MinDeckSize: minDeckSize,
-		IsMale:      isM,
-		Amulets:     amulets,
-		WorldMagics: make([]*WorldMagic, 0),
-		ActiveDeck:  0,
+		Character:         c,
+		CharacterInstance: characterInstance,
+		Name:              string(name),
+		Gold:              gold,
+		Food:              food,
+		MinDeckSize:       minDeckSize,
+		IsMale:            isM,
+		Amulets:           amulets,
+		WorldMagics:       make([]*WorldMagic, 0),
+		ActiveDeck:        0,
 	}, nil
 }
 
@@ -149,18 +154,22 @@ func (p *Player) LoadImages() error {
 	return nil
 }
 
-func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+func (p *Player) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions, screenX, screenY int) {
 	screen.DrawImage(p.ShadowSprite[p.Direction][p.Frame], options)
 	screen.DrawImage(p.WalkingSprite[p.Direction][p.Frame], options)
+
+	if DebugDrawHitbox {
+		p.Hitbox.Draw(screen, screenX, screenY)
+	}
 }
 
 func (p *Player) NumCards() int {
 	return p.CardCollection.NumCards()
 }
 
-func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(image.Point) bool) error {
+func (p *Player) Update(viewportW, viewportH, levelW, levelH int, isBlocked func(image.Point) bool) (int, error) {
 	oldX, oldY := p.X, p.Y
-	dirBits := p.Move(screenW, screenH)
+	dirBits := p.Move(viewportW, viewportH)
 	p.updateSpeedPenalty()
 	p.UpdateWithCollision(dirBits, isBlocked)
 
@@ -184,19 +193,19 @@ func (p *Player) Update(screenW, screenH, levelW, levelH int, isBlocked func(ima
 		}
 	}
 
-	if p.X < screenW/2 {
-		p.X = screenW / 2
+	if p.X < viewportW/2 {
+		p.X = viewportW / 2
 	}
-	if p.X > levelW-screenW/2 {
-		p.X = levelW - screenW/2
+	if p.X > levelW-viewportW/2 {
+		p.X = levelW - viewportW/2
 	}
-	if p.Y < screenH/2 {
-		p.Y = screenH / 2
-	} else if p.Y > levelH-screenH/2 {
-		p.Y = levelH - screenH/2
+	if p.Y < viewportH/2 {
+		p.Y = viewportH / 2
+	} else if p.Y > levelH-viewportH/2 {
+		p.Y = levelH - viewportH/2
 	}
 
-	return nil
+	return dirBits, nil
 }
 
 func (p *Player) updateSpeedPenalty() {
@@ -216,23 +225,29 @@ func (p *Player) SetLoc(loc image.Point) {
 }
 
 func (p *Player) Move(screenW, screenH int) (dirBits int) {
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-		dirBits |= DirLeft
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-		dirBits |= DirRight
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
-		dirBits |= DirDown
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
-		dirBits |= DirUp
-	}
+	dirBits = moveDirectionBits(ebiten.IsKeyPressed)
 
 	if ui.Pressed() {
 		dirBits |= pointerMoveDirection(ui.Position(), screenW, screenH)
 	}
 
+	return dirBits
+}
+
+func moveDirectionBits(isKeyPressed func(ebiten.Key) bool) int {
+	var dirBits int
+	if isKeyPressed(ebiten.KeyLeft) || isKeyPressed(ebiten.KeyA) {
+		dirBits |= DirLeft
+	}
+	if isKeyPressed(ebiten.KeyRight) || isKeyPressed(ebiten.KeyD) {
+		dirBits |= DirRight
+	}
+	if isKeyPressed(ebiten.KeyDown) || isKeyPressed(ebiten.KeyS) {
+		dirBits |= DirDown
+	}
+	if isKeyPressed(ebiten.KeyUp) || isKeyPressed(ebiten.KeyW) {
+		dirBits |= DirUp
+	}
 	return dirBits
 }
 

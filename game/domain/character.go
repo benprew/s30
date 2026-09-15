@@ -18,7 +18,7 @@ const (
 	SpriteHeight = 102
 
 	updatesPerWalkingFrame = timing.UpdatesPerSecond / 10
-	diagonalMovementScale  = 1 / math.Sqrt2
+	DiagonalMovementScale  = 1 / math.Sqrt2
 
 	// Direction bit flags
 	DirUp    = 0x8 // 1000
@@ -35,6 +35,12 @@ const (
 	DirectionUpRight   = 5
 	DirectionRight     = 6
 	DirectionDownRight = 7
+
+	// Hitbox defaults
+	DefaultHitboxOffsetX = 0
+	DefaultHitboxOffsetY = 0
+	DefaultHitboxWidth   = 10
+	DefaultHitboxHeight  = 10
 )
 
 // MovementSpeed converts pixels per second to distance per update.
@@ -72,10 +78,22 @@ type CharacterInstance struct {
 	MoveSpeedPenalty float64 // 0.0 is full speed. Single multiplier for now, can make more robust with an array later.
 	Width            int
 	Height           int
+	Hitbox           Hitbox
 
 	moveRemainderX float64
 	moveRemainderY float64
 	animationTicks int
+}
+
+func NewCharacterInstance() CharacterInstance {
+	return CharacterInstance{
+		Hitbox: Hitbox{
+			OffsetX: DefaultHitboxOffsetX,
+			OffsetY: DefaultHitboxOffsetY,
+			Width:   DefaultHitboxWidth,
+			Height:  DefaultHitboxHeight,
+		},
+	}
 }
 
 func (c *CharacterInstance) Update(dirBits int) {
@@ -124,7 +142,7 @@ func (c *CharacterInstance) movementDelta(dirBits int) (float64, float64) {
 
 	distance := c.activeMoveSpeed()
 	if dx != 0 && dy != 0 {
-		distance *= diagonalMovementScale
+		distance *= DiagonalMovementScale
 	}
 
 	return float64(dx) * distance, float64(dy) * distance
@@ -237,4 +255,8 @@ func getEmbeddedFile(filename string) []byte {
 func (c *CharacterInstance) activeMoveSpeed() float64 {
 	penalty := max(0.0, min(1.0, c.MoveSpeedPenalty))
 	return c.MoveSpeed * (1.0 - penalty)
+}
+
+func (c *CharacterInstance) Loc() image.Point {
+	return image.Point{c.X, c.Y}
 }

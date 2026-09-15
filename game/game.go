@@ -5,6 +5,8 @@ import (
 	"math"
 	"time"
 
+	"runtime/debug"
+
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/bugreport"
 	"github.com/benprew/s30/game/domain"
@@ -18,7 +20,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"runtime/debug"
 )
 
 type Game struct {
@@ -141,6 +142,7 @@ func (g *Game) initWorld(level *world.Level) error {
 	}
 
 	g.worldFrame = wf
+	level.SetViewport(wf.Viewport())
 	g.player = level.Player
 	g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(level)
 	g.screenMap[screenui.MiniMapScr] = m

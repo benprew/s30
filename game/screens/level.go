@@ -31,13 +31,13 @@ func (s *LevelScreen) IsFramed() bool {
 func (s *LevelScreen) IsOverlay() bool { return false }
 
 func (s *LevelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
-	s.Level.Draw(screen, W, H, scale)
+	s.Level.Draw(screen, scale)
 }
 
 func (s *LevelScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	prevTile := s.Level.CharacterTile()
 
-	if err := s.Level.UpdateWorld(W, H); err != nil {
+	if err := s.Level.UpdateWorld(); err != nil {
 		return screenui.WorldScr, nil, err
 	}
 

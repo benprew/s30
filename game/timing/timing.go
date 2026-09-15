@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-const UpdatesPerSecond = 60
+const (
+	UpdatesPerSecond = 60
+	DeltaTime        = 1.0 / float64(UpdatesPerSecond)
+)
 
 // Ticks converts a wall-clock duration to fixed updates.
 func Ticks(duration time.Duration) int {

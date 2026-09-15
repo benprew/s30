@@ -9,13 +9,14 @@ import (
 	"runtime/pprof"
 	"strings"
 
+	rdebug "runtime/debug"
+
 	"github.com/benprew/s30/game"
 	"github.com/benprew/s30/game/bugreport"
 	"github.com/benprew/s30/game/world"
 	"github.com/benprew/s30/internal/pprofutil"
 	"github.com/benprew/s30/logging"
 	"github.com/hajimehoshi/ebiten/v2"
-	rdebug "runtime/debug"
 )
 
 func writeProfile(name, profileName string, gc bool) error {
