@@ -334,6 +334,11 @@ func buildCardImageMap(decks ...domain.Deck) map[string]*domain.Card {
 			m[name] = card
 		}
 	}
+	for _, token := range domain.TOKENS {
+		if m[token.CardName] == nil {
+			m[token.CardName] = token
+		}
+	}
 	return m
 }
 

@@ -19,6 +19,9 @@ var (
 	//go:embed card_info/parsed_cards.json
 	ParsedCards_json []byte
 
+	//go:embed card_info/token_cards.json
+	TokenCards_json []byte
+
 	// Basic land tiles
 	//go:embed art/screens/world/land/Landtile.spr.png
 	Landtile_png []byte

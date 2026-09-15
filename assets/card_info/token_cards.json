@@ -1,0 +1,28 @@
+[
+  {
+    "CardName": "Wasp",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Artifact Creature — Insect",
+    "Subtypes": [
+      "Insect"
+    ],
+    "Text": "Flying",
+    "Power": "1",
+    "Toughness": "1",
+    "SetName": "30th Anniversary Tokens",
+    "SetID": "t30a",
+    "CollectorNo": "16",
+    "Rarity": "common",
+    "Frame": "2015",
+    "Artist": "Sandra Everingham",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://cards.scryfall.io/png/front/0/9/09921372-126f-4c81-b6d8-ea50b1d0eb44.png?1783919200",
+    "BorderCropURL": "https://cards.scryfall.io/border_crop/front/0/9/09921372-126f-4c81-b6d8-ea50b1d0eb44.jpg?1783919200"
+  }
+]
