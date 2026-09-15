@@ -252,8 +252,6 @@ var (
 	//go:embed text/Advblocks.txt
 	Advblocks_txt []byte
 
-	//go:embed text/Cuecards.txt
-	Cuecards_txt []byte
 
 	// Audio
 	//go:embed audio/sfx/* audio/bgm/*

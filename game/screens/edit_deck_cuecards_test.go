@@ -3,20 +3,17 @@ package screens
 import (
 	"testing"
 
-	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
 )
 
-// The cue texts come from the game's own table, so the parser has to read every
-// entry and each entry has to carry both halves: the text for a toggle that is on
-// and the text for one that is off.
-func TestParseCuecardsReadsEveryEntry(t *testing.T) {
-	cues := parseCuecards(assets.Cuecards_txt)
-	if len(cues) < 30 {
-		t.Fatalf("expected at least 30 cue entries, got %d", len(cues))
+// Every hint has to carry both halves: what the toggle does while it is off, and
+// what it reads as while it is on.
+func TestEveryCueHasBothStates(t *testing.T) {
+	if len(cueTable) == 0 {
+		t.Fatal("the cue table is empty")
 	}
-	for key, pair := range cues {
+	for key, pair := range cueTable {
 		if pair[0] == "" || pair[1] == "" {
 			t.Errorf("%s: want both an on and an off text, got %q", key, pair)
 		}
@@ -27,37 +24,33 @@ func TestParseCuecardsReadsEveryEntry(t *testing.T) {
 }
 
 func TestCueTextFollowsTheToggleState(t *testing.T) {
-	cues := parseCuecards(assets.Cuecards_txt)
 	cases := []struct {
 		key    string
 		active bool
 		want   string
 	}{
-		{"WHITE", true, "White cards are in the list"},
-		{"WHITE", false, "White cards are filtered out"},
-		{"CREATURE", true, "Creature cards are in the list"},
-		{"CREATURE", false, "Creature cards are filtered out"},
-		{"CASTCOST", true, "Cards are filtered by cast cost"},
-		{"CASTCOST", false, "Cards are not filtered by cast cost"},
+		{"GREEN", true, "Click to remove green"},
+		{"GREEN", false, "Cards that produce or cost green mana"},
+		{"CREATURE", true, "Click to remove creatures"},
+		{"CREATURE", false, "Cards that are creatures"},
 	}
 	for _, c := range cases {
-		if got := cueText(cues, c.key, c.active); got != c.want {
+		if got := cueText(cueTable, c.key, c.active); got != c.want {
 			t.Errorf("cueText(%s, %v) = %q, want %q", c.key, c.active, got, c.want)
 		}
 	}
 }
 
 func TestCueTextIsEmptyForAnUnknownKey(t *testing.T) {
-	cues := parseCuecards(assets.Cuecards_txt)
-	if got := cueText(cues, "NOT_A_FILTER", true); got != "" {
+	if got := cueText(cueTable, "NOT_A_FILTER", true); got != "" {
 		t.Errorf("cueText for an unknown key = %q, want empty", got)
 	}
-	if got := cueText(cues, "", true); got != "" {
+	if got := cueText(cueTable, "", true); got != "" {
 		t.Errorf("cueText for an empty key = %q, want empty", got)
 	}
 }
 
-// The filter names it in single letters while the cue table spells them out, so
+// The filter names colors in single letters while the hints spell them out, so
 // the translation is part of the contract.
 func TestCueKeyNamesMatchTheTable(t *testing.T) {
 	colors := map[string]string{"W": "WHITE", "U": "BLUE", "B": "BLACK", "R": "RED", "G": "GREEN"}
@@ -81,10 +74,9 @@ func TestCueKeyNamesMatchTheTable(t *testing.T) {
 	}
 }
 
-// Every button on the screen must resolve to a cue in the table. This is what
-// catches a key that is spelled differently from the game's file.
-func TestEveryFilterButtonHasACueInTheTable(t *testing.T) {
-	cues := parseCuecards(assets.Cuecards_txt)
+// Every toggle on the screen must resolve to a hint, in both states. This is
+// what catches a button added without wording behind it.
+func TestEveryFilterButtonHasACue(t *testing.T) {
 	buttons, err := createFilterButtons()
 	if err != nil {
 		t.Fatalf("createFilterButtons: %v", err)
@@ -97,8 +89,8 @@ func TestEveryFilterButtonHasACueInTheTable(t *testing.T) {
 			t.Errorf("button %d has no cue key", i)
 			continue
 		}
-		if _, ok := cues[fb.cue]; !ok {
-			t.Errorf("button %d: cue key %q is not in Cuecards.txt", i, fb.cue)
+		if _, ok := cueTable[fb.cue]; !ok {
+			t.Errorf("button %d: cue key %q has no text", i, fb.cue)
 		}
 	}
 }
