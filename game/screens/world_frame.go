@@ -14,6 +14,7 @@ import (
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 // This is the frame that you see when you're walking around the world and in cities
@@ -64,6 +65,10 @@ type WorldFrame struct {
 
 	questScrollEmpty  *ebiten.Image
 	questScrollActive *ebiten.Image
+
+	// menuButton is the three-dot button's rectangle, recomputed each update so
+	// the draw and the click test cannot drift apart.
+	menuButton image.Rectangle
 }
 
 func NewWorldFrame(p *domain.Player) (*WorldFrame, error) {
@@ -121,6 +126,7 @@ func (f *WorldFrame) Draw(screen *ebiten.Image, scale float64) {
 	}
 
 	f.drawQuestScroll(screen, scale)
+	drawWorldMenuButton(screen, f.menuButton, scale)
 }
 
 // drawQuestScroll draws the lower-right quest scroll indicator, which opens the
@@ -189,6 +195,14 @@ func (f *WorldFrame) questScrollBounds(scale float64) image.Rectangle {
 }
 
 func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	f.menuButton = worldMenuButtonBounds(W)
+	if worldMenuOpens(ui.Click(f.menuButton), inpututil.IsKeyJustPressed(ebiten.KeyEscape)) {
+		if am := gameaudio.Get(); am != nil {
+			am.PlaySFX(gameaudio.SFXClick2)
+		}
+		return screenui.GameMenuScr, nil, nil
+	}
+
 	options := &ebiten.DrawImageOptions{}
 	for i := range f.Buttons {
 		b := f.Buttons[i]
