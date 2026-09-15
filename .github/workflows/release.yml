@@ -94,8 +94,13 @@ jobs:
       version_name: ${{ inputs.version || github.ref_name }}
     secrets: inherit
 
+  ios:
+    uses: ./.github/workflows/ios.yml
+    with:
+      version_name: ${{ inputs.version || github.ref_name }}
+
   release:
-    needs: [build, android]
+    needs: [build, android, ios]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8
@@ -119,4 +124,6 @@ jobs:
             artifacts/s30_windows-arm.exe/s30_windows-arm.exe \
             artifacts/s30_android.apk/s30_android.apk \
             artifacts/s30_android.apk/s30_android.apk.idsig \
-            artifacts/s30_android.aab/s30_android.aab
+            artifacts/s30_android.aab/s30_android.aab \
+            artifacts/s30_ios.ipa/s30_ios.ipa \
+            artifacts/s30_ios.xcarchive.zip/s30_ios.xcarchive.zip
