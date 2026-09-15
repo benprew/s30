@@ -77,23 +77,23 @@ func TestGameMenuChoice(t *testing.T) {
 	}
 }
 
-// The button has to be reachable by touch, on the screen, and clear of both the
-// sidebar buttons down the left edge and the frame's top border, or it would sit
-// on top of something the player already uses.
-func TestWorldMenuButtonSitsInTheFreeCorner(t *testing.T) {
-	const W = 1024
-	b := worldMenuButtonBounds(W)
-	if !b.In(image.Rect(0, 0, W, 768)) {
+// The button has to be reachable by touch, on the screen, and inside the frame's
+// playable area rather than on its border.
+func TestWorldMenuButtonSitsInTheFrameCorner(t *testing.T) {
+	b := worldMenuButtonBounds()
+	if !b.In(image.Rect(0, 0, 1024, 768)) {
 		t.Fatalf("button %v is not on the screen", b)
 	}
 	if b.Dx() < 44 || b.Dy() < 44 {
 		t.Errorf("button is %dx%d, too small to hit with a finger", b.Dx(), b.Dy())
 	}
-	if frameRight := FrameOffsetX + FrameWidth; b.Min.X < frameRight {
-		t.Errorf("button starts at x=%d, inside the frame's right edge (%d)", b.Min.X, frameRight)
+	// The frame's art ends at x=922 and its top strip at y=66; a button outside
+	// that corner sits on the border, not on the map.
+	if b.Max.X > worldMenuButtonRight {
+		t.Errorf("button ends at x=%d, past the frame's playable area (%d)", b.Max.X, worldMenuButtonRight)
 	}
-	if b.Max.Y > FrameOffsetY {
-		t.Errorf("button ends at y=%d, below the frame's top edge (%d)", b.Max.Y, FrameOffsetY)
+	if b.Min.Y < worldMenuButtonTop {
+		t.Errorf("button starts at y=%d, above the frame's playable area (%d)", b.Min.Y, worldMenuButtonTop)
 	}
 }
 
