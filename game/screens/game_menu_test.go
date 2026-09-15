@@ -7,8 +7,8 @@ import (
 	"github.com/benprew/s30/game/ui/screenui"
 )
 
-// The menu has to fit on the screen it floats over, and every row has to sit
-// inside the panel, or a row would be drawn where no click can reach it.
+// The menu has to fit on the screen it floats over, and every row of both faces
+// has to sit inside the panel, or a row would be drawn where no click can reach it.
 func TestGameMenuFitsOnScreenAndRowsSitInsideIt(t *testing.T) {
 	const W = 1024
 	panel := gameMenuBounds(W)
@@ -21,7 +21,12 @@ func TestGameMenuFitsOnScreenAndRowsSitInsideIt(t *testing.T) {
 	}
 	for i := range gameMenuRows {
 		if row := gameMenuRowBounds(i, W); !row.In(panel) {
-			t.Errorf("row %d %v is not inside the panel %v", i, row, panel)
+			t.Errorf("row %d of the list %v is not inside the panel %v", i, row, panel)
+		}
+	}
+	for i := range gameMenuConfirmRows {
+		if row := gameMenuRowBounds(i, W); !row.In(panel) {
+			t.Errorf("row %d of the question %v is not inside the panel %v", i, row, panel)
 		}
 	}
 }
@@ -29,15 +34,19 @@ func TestGameMenuFitsOnScreenAndRowsSitInsideIt(t *testing.T) {
 // Rows must not overlap, or a click between two labels would be ambiguous.
 func TestGameMenuRowsDoNotOverlap(t *testing.T) {
 	const W = 1024
-	for i := 1; i < len(gameMenuRows); i++ {
+	rows := len(gameMenuRows)
+	if len(gameMenuConfirmRows) > rows {
+		rows = len(gameMenuConfirmRows)
+	}
+	for i := 1; i < rows; i++ {
 		if gameMenuRowBounds(i, W).Overlaps(gameMenuRowBounds(i-1, W)) {
 			t.Errorf("rows %d and %d overlap", i-1, i)
 		}
 	}
 }
 
-// Every row has to lead somewhere else: a row pointing at the menu itself, or at
-// no screen, would be a button that does nothing.
+// Every row of the list has to lead somewhere else: one pointing at the menu
+// itself, or at no screen, would be a button that does nothing.
 func TestGameMenuRowsLeadToOtherScreens(t *testing.T) {
 	for _, row := range gameMenuRows {
 		switch row.target {
@@ -50,12 +59,53 @@ func TestGameMenuRowsLeadToOtherScreens(t *testing.T) {
 	}
 }
 
-// The three outcomes of a click: a row opens its screen, the panel's dead space
-// keeps the menu, and anywhere else pops back to the world.
+// Quit asks first. The original puts "Ready to Quit? No. Yes." behind it, and a
+// row that left the game on the first click would be the wrong answer to that.
+func TestGameMenuAsksBeforeQuitting(t *testing.T) {
+	const W = 1024
+	quit := gameMenuRowBounds(0, W).Min.Add(image.Pt(5, 5))
+
+	step, name := gameMenuChoice(quit, true, W, menuStepRows)
+	if step != menuStepConfirmQuit {
+		t.Errorf("clicking Quit showed face %v, want the question", step)
+	}
+	if name != screenui.GameMenuScr {
+		t.Errorf("clicking Quit went to %v, want to stay in the menu", name)
+	}
+
+	yes := gameMenuRowBounds(1, W).Min.Add(image.Pt(5, 5))
+	if step, name := gameMenuChoice(yes, true, W, menuStepConfirmQuit); name != screenui.StartScr || step != menuStepRows {
+		t.Errorf("answering Yes gave (%v, %v), want the list and StartScr", step, name)
+	}
+
+	no := gameMenuRowBounds(0, W).Min.Add(image.Pt(5, 5))
+	if _, name := gameMenuChoice(no, true, W, menuStepConfirmQuit); name != screenui.GameMenuScr {
+		t.Errorf("answering No went to %v, want to stay in the menu", name)
+	}
+}
+
+// The question uses the game's own words (Advstrings.txt line 9).
+func TestGameMenuConfirmUsesTheOriginalsWords(t *testing.T) {
+	if gameMenuConfirmTitle != "Ready to Quit?" {
+		t.Errorf("confirm title = %q, want %q", gameMenuConfirmTitle, "Ready to Quit?")
+	}
+	want := []string{"No.", "Yes."}
+	if len(gameMenuConfirmRows) != len(want) {
+		t.Fatalf("the question has %d answers, want %d", len(gameMenuConfirmRows), len(want))
+	}
+	for i, label := range want {
+		if gameMenuConfirmRows[i].label != label {
+			t.Errorf("answer %d = %q, want %q", i, gameMenuConfirmRows[i].label, label)
+		}
+	}
+}
+
+// The list face: a row opens its screen, the panel's dead space keeps the menu,
+// and anywhere else pops back to the world.
 func TestGameMenuChoice(t *testing.T) {
 	const W = 1024
 	panel := gameMenuBounds(W)
-	firstRow := gameMenuRowBounds(0, W).Min.Add(image.Pt(5, 5))
+	seeMap := gameMenuRowBounds(1, W).Min.Add(image.Pt(5, 5))
 	titleArea := image.Pt(panel.Min.X+5, panel.Min.Y+2)
 	outside := image.Pt(panel.Min.X-20, panel.Min.Y+5)
 
@@ -65,13 +115,13 @@ func TestGameMenuChoice(t *testing.T) {
 		clicked bool
 		want    screenui.ScreenName
 	}{
-		{"a click on the first row opens it", firstRow, true, screenui.StartScr},
+		{"a click on See Map opens the map", seeMap, true, screenui.MiniMapScr},
 		{"a click on the panel's title area keeps the menu", titleArea, true, screenui.GameMenuScr},
 		{"a click outside pops back to the world", outside, true, screenui.PopScr},
-		{"no click this frame leaves the menu open", firstRow, false, screenui.GameMenuScr},
+		{"no click this frame leaves the menu open", seeMap, false, screenui.GameMenuScr},
 	}
 	for _, c := range cases {
-		if got := gameMenuChoice(c.pos, c.clicked, W); got != c.want {
+		if _, got := gameMenuChoice(c.pos, c.clicked, W, menuStepRows); got != c.want {
 			t.Errorf("%s: gameMenuChoice(%v, %v) = %v, want %v", c.name, c.pos, c.clicked, got, c.want)
 		}
 	}
