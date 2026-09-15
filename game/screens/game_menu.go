@@ -29,13 +29,15 @@ type gameMenuRow struct {
 }
 
 // The original's Escape menu (Advstrings.txt line 4) lists Save, Load, Quit and
-// five "See ..." entries. Only the entries that lead somewhere in the port are
-// rows here: one that opens nothing would be worse than no row at all. Save and
-// Load are not rows yet for the same reason — the port saves with F5 and loads
-// from the opening menu, so neither has a screen to open from inside a game.
+// five "See ..." entries. Only the entries that lead somewhere from the map are
+// rows here: one that opens nothing would be worse than no row at all.
+//
+// See/Edit Deck is not a row even though the screen exists. It is built with the
+// city the player is standing in (city.go) and that is the only way to reach it,
+// so from the map there is no screen to open at all. Whether the original let you
+// open it on the road, and at what price, is a separate question.
 var gameMenuRows = []gameMenuRow{
 	{"Quit", screenui.StartScr},
-	{"See/Edit Deck", screenui.EditDeckScr},
 	{"See Map", screenui.MiniMapScr},
 }
 
@@ -45,10 +47,11 @@ func gameMenuPanelHeight() int {
 	return gameMenuTitleH + len(gameMenuRows)*gameMenuRowH + gameMenuPadBottom
 }
 
-// gameMenuBounds is the panel's rectangle, hanging below the menu button.
+// gameMenuBounds is the panel's rectangle, hanging below the menu button so the
+// button stays clickable while the menu is open.
 func gameMenuBounds(W int) image.Rectangle {
 	x := W - gameMenuMargin - gameMenuPanelW
-	y := worldMenuButtonSize + 2*gameMenuMargin
+	y := worldMenuButtonTop + worldMenuButtonInset + worldMenuButtonSize + gameMenuMargin
 	return image.Rect(x, y, x+gameMenuPanelW, y+gameMenuPanelHeight())
 }
 

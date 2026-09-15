@@ -9,22 +9,27 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-// The world frame's menu button: three dots in the screen's upper right corner,
-// clear of the frame itself (which starts at x=100, y=75) and of the sidebar
-// buttons down the left edge. It is sized for touch, because the menu behind it
-// is the one the original only reached with a keyboard.
+// The world frame's menu button: three dots in a round button, in the frame's
+// upper right corner. It is sized for touch, because the menu behind it is the
+// one the original only reached with a keyboard.
+//
+// The corner comes from the frame's own art (Advinter1024.pic.png): its playable
+// area starts at x=922 and its top strip ends at y=66. Insetting from the screen
+// instead put the button outside the frame, on the border itself.
 const (
 	worldMenuButtonSize  = 44
-	worldMenuButtonY     = 16
-	worldMenuButtonInset = 30 // distance from the screen's right edge
+	worldMenuButtonRight = 922
+	worldMenuButtonTop   = 66
+	worldMenuButtonInset = 10
 	worldMenuDotRadius   = 3.5
 	worldMenuDotSpacing  = 12
 )
 
-// worldMenuButtonBounds is the button's rectangle for a screen of width W.
-func worldMenuButtonBounds(W int) image.Rectangle {
-	x := W - worldMenuButtonInset - worldMenuButtonSize
-	return image.Rect(x, worldMenuButtonY, x+worldMenuButtonSize, worldMenuButtonY+worldMenuButtonSize)
+// worldMenuButtonBounds is the button's rectangle, inside the frame's corner.
+func worldMenuButtonBounds() image.Rectangle {
+	x := worldMenuButtonRight - worldMenuButtonInset - worldMenuButtonSize
+	y := worldMenuButtonTop + worldMenuButtonInset
+	return image.Rect(x, y, x+worldMenuButtonSize, y+worldMenuButtonSize)
 }
 
 // worldMenuOpens reports whether the menu was asked for, by clicking the button
@@ -46,7 +51,10 @@ func drawWorldMenuButton(screen *ebiten.Image, bounds image.Rectangle, scale flo
 	if ui.Position().In(bounds) {
 		bg = color.RGBA{R: 62, G: 54, B: 42, A: 230}
 	}
-	vector.FillRect(screen, x, y, size, size, bg, false)
+	// Round rather than a box: the button sits on the map's frame, where a square
+	// corner reads as something the game drew by accident. Ebiten's vector
+	// package has no rounded rectangle, so the shape is a circle.
+	vector.FillCircle(screen, x+size/2, y+size/2, size/2, bg, false)
 
 	dot := color.RGBA{R: 235, G: 231, B: 219, A: 255}
 	radius := float32(worldMenuDotRadius) * f
