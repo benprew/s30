@@ -1,6 +1,40 @@
 package domain
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
+
+// Tokens without a printing still show their name, so a Tetravite reads as a
+// Tetravite rather than as a blank card.
+func TestFetchAndCacheCardImageWithoutURLKeepsTheName(t *testing.T) {
+	cardImages.Clear()
+	labeledBlankCards.Clear()
+	t.Cleanup(func() {
+		cardImages.Clear()
+		labeledBlankCards.Clear()
+	})
+
+	card := &Card{CardName: "Tetravite", cardID: "tst-3-Tetravite"}
+	fetchAndCacheCardImage(card)
+
+	cached, ok := cardImages.Load(card.cardID)
+	if !ok {
+		t.Fatal("card without a URL was not cached")
+	}
+	if cached.(*ebiten.Image) != labeledBlankCard(card.CardName) {
+		t.Error("card without a URL cached an unlabeled blank instead of a labeled one")
+	}
+}
+
+func TestEveryArtlessPoolTokenIsKnown(t *testing.T) {
+	for _, name := range []string{"Bird", "Djinn", "Tetravite", "Spawn of Azar"} {
+		if FindTokenByName(name) == nil {
+			t.Errorf("FindTokenByName(%q) = nil, want a token entry so it gets a labeled card", name)
+		}
+	}
+}
 
 func TestFindTokenByNameWasp(t *testing.T) {
 	wasp := FindTokenByName("Wasp")

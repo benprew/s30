@@ -14,3 +14,14 @@ func TestBuildCardImageMapIncludesTokens(t *testing.T) {
 		t.Error("Wasp entry has no BorderCropURL")
 	}
 }
+
+// Tokens without a printing need an entry too, or they fall back to the
+// board's empty frame instead of a labeled card.
+func TestBuildCardImageMapIncludesArtlessTokens(t *testing.T) {
+	m := buildCardImageMap()
+	for _, name := range []string{"Bird", "Djinn", "Tetravite", "Spawn of Azar"} {
+		if m[name] == nil {
+			t.Errorf("buildCardImageMap() has no entry for the %s token", name)
+		}
+	}
+}

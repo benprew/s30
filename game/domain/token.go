@@ -9,9 +9,9 @@ import (
 
 // TOKENS holds printings for the tokens the rules engine puts onto the
 // battlefield, so the duel screen can draw their art. They are kept out of
-// CARDS because a token is never owned, traded or sold. Only tokens with a
-// matching Scryfall printing are listed; any other token keeps the labeled
-// placeholder frame.
+// CARDS because a token is never owned, traded or sold. Tokens that were never
+// printed leave BorderCropURL empty and are drawn as a blank card labeled with
+// their name.
 var TOKENS = loadTokenCards()
 
 func loadTokenCards() []*Card {

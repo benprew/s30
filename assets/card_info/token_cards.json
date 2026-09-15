@@ -24,5 +24,109 @@
     "VintageRestricted": false,
     "PngURL": "https://cards.scryfall.io/png/front/0/9/09921372-126f-4c81-b6d8-ea50b1d0eb44.png?1783919200",
     "BorderCropURL": "https://cards.scryfall.io/border_crop/front/0/9/09921372-126f-4c81-b6d8-ea50b1d0eb44.jpg?1783919200"
+  },
+  {
+    "CardName": "Bird",
+    "ManaCost": "",
+    "Colors": [
+      "R"
+    ],
+    "ColorIdentity": [
+      "R"
+    ],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Creature — Bird",
+    "Subtypes": [
+      "Bird"
+    ],
+    "Text": "Flying",
+    "Power": "4",
+    "Toughness": "4",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "1",
+    "Rarity": "common",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "",
+    "BorderCropURL": ""
+  },
+  {
+    "CardName": "Djinn",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Artifact Creature — Djinn",
+    "Subtypes": [
+      "Djinn"
+    ],
+    "Text": "Flying",
+    "Power": "5",
+    "Toughness": "5",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "2",
+    "Rarity": "common",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "",
+    "BorderCropURL": ""
+  },
+  {
+    "CardName": "Tetravite",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Artifact Creature — Tetravite",
+    "Subtypes": [
+      "Tetravite"
+    ],
+    "Text": "Flying\nThis token can't be enchanted.",
+    "Power": "1",
+    "Toughness": "1",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "3",
+    "Rarity": "common",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "",
+    "BorderCropURL": ""
+  },
+  {
+    "CardName": "Spawn of Azar",
+    "ManaCost": "",
+    "Colors": [
+      "B"
+    ],
+    "ColorIdentity": [
+      "B"
+    ],
+    "Keywords": [
+      "Swampwalk"
+    ],
+    "TypeLine": "Token Creature — Spawn",
+    "Subtypes": [
+      "Spawn"
+    ],
+    "Text": "Swampwalk\nThis token's power and toughness are each a random value from 1 to 3.",
+    "Power": "*",
+    "Toughness": "*",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "4",
+    "Rarity": "common",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "",
+    "BorderCropURL": ""
   }
 ]
