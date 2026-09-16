@@ -91,6 +91,39 @@ func (s *stubScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {}
 func (s *stubScreen) IsFramed() bool                                     { return false }
 func (s *stubScreen) IsOverlay() bool                                    { return s.overlay }
 
+// The menu opening the map chains two overlays. Popping back onto the menu would
+// leave nothing drawing the world behind it, which is what showed as a black
+// screen; the pop lands on the world instead.
+func TestNavigatePopSkipsOverlays(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.GameMenuScr] = &stubScreen{overlay: true}
+
+	g.navigate(screenui.GameMenuScr)
+	g.navigate(screenui.MiniMapScr)
+	g.navigate(screenui.PopScr)
+
+	if g.currentScreen != screenui.WorldScr {
+		t.Errorf("currentScreen = %v, want WorldScr", g.currentScreen)
+	}
+}
+
+// A screen nobody registered would hand the draw a nil. The player stays where
+// they are instead of the game falling over.
+func TestNavigateToUnregisteredScreenStaysPut(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.GameMenuScr] = &stubScreen{overlay: true}
+	g.navigate(screenui.GameMenuScr)
+
+	g.navigate(screenui.EditDeckScr)
+
+	if g.currentScreen != screenui.GameMenuScr {
+		t.Errorf("currentScreen = %v, want to stay on GameMenuScr", g.currentScreen)
+	}
+	if g.prevScreen != screenui.WorldScr {
+		t.Errorf("prevScreen = %v, want WorldScr", g.prevScreen)
+	}
+}
+
 func newTestGame() *Game {
 	return &Game{
 		currentScreen: screenui.WorldScr,
@@ -175,4 +208,3 @@ func TestGameUpdateRecoversAndReportsPanic(t *testing.T) {
 
 	_ = g.Update()
 }
-

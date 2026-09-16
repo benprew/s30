@@ -60,14 +60,34 @@ func (g *Game) navigate(name screenui.ScreenName) {
 	case screenui.NoScr, g.currentScreen:
 		// no-op
 	case screenui.PopScr:
-		g.currentScreen = g.prevScreen
+		g.currentScreen = g.popTarget()
 	default:
+		// A screen nobody registered would hand the draw a nil. Staying put is
+		// what a dead entry deserves.
+		if g.screenMap[name] == nil {
+			return
+		}
 		g.prevScreen = g.currentScreen
 		g.currentScreen = name
 	}
 	if g.CurrentScreen() != previous {
 		closeLifecycleScreen(previous)
 	}
+}
+
+// popTarget is the screen a pop lands on. Overlays are stepped over: an overlay
+// opened from another overlay - the game menu opening the map - would otherwise
+// pop back onto the menu with nothing drawing the world behind it. When the
+// registry cannot answer, the current screen is kept rather than handing the
+// draw a nil.
+func (g *Game) popTarget() screenui.ScreenName {
+	if s := g.screenMap[g.prevScreen]; s != nil && !s.IsOverlay() {
+		return g.prevScreen
+	}
+	if g.screenMap[screenui.WorldScr] != nil {
+		return screenui.WorldScr
+	}
+	return g.currentScreen
 }
 
 func closeLifecycleScreen(screen screenui.Screen) {
@@ -147,6 +167,7 @@ func (g *Game) initWorld(level *world.Level) error {
 	g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(level)
 	g.screenMap[screenui.MiniMapScr] = m
 	g.screenMap[screenui.QuestScrollScr] = screens.NewQuestScrollScreen(level.Player)
+	g.screenMap[screenui.GameMenuScr] = screens.NewGameMenuScreen()
 	g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreen()
 
 	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
@@ -329,7 +350,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	cur := g.CurrentScreen()
 	if cur.IsOverlay() {
-		if below := g.screenMap[g.prevScreen]; below != nil {
+		below := g.screenMap[g.prevScreen]
+		// An overlay opened from another overlay - the game menu opening the map
+		// - would otherwise be drawn on a menu panel with no world behind it.
+		if below != nil && below.IsOverlay() {
+			below = g.screenMap[screenui.WorldScr]
+		}
+		if below != nil {
 			below.Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
 		}
 	}
