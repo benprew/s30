@@ -1,0 +1,258 @@
+[
+  {
+    "CardName": "Assembly Worker",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [],
+    "TypeLine": "Token Land Artifact Creature — Assembly-Worker",
+    "Subtypes": [
+      "Assembly-Worker"
+    ],
+    "Text": "{T}: Add {C}.\n{1}: Until end of turn, this land is a 2/2 artifact creature named Assembly Worker.\n{T}: Target Assembly Worker gets +1/+1 until end of turn.",
+    "Power": "2",
+    "Toughness": "2",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "1",
+    "Rarity": "common",
+    "Artist": "Kaja & Phil Foglio",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_To4n5BIzFuZptL2h5N4V353737395f2e706e675f31_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_To4n5BIzFuZptL2h5N4V353737395f2e706e675f31_pict.jpg"
+  },
+  {
+    "CardName": "Djinn",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Artifact Creature — Djinn",
+    "Subtypes": [
+      "Djinn"
+    ],
+    "Text": "Flying\nDjinn of the Bottle counts as an artifact creature.",
+    "Power": "5",
+    "Toughness": "5",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "2",
+    "Rarity": "common",
+    "Artist": "Jesper Myrfors",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_CGlIMetWhAZ3UcZKPcSz353738305f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_CGlIMetWhAZ3UcZKPcSz353738305f2e706e675f32_pict.jpg"
+  },
+  {
+    "CardName": "Djinn of the Bottle",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Artifact Creature — Djinn",
+    "Subtypes": [
+      "Djinn"
+    ],
+    "Text": "Flying\nDjinn of the Bottle counts as an artifact creature.",
+    "Power": "5",
+    "Toughness": "5",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "2",
+    "Rarity": "common",
+    "Artist": "Jesper Myrfors",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_CGlIMetWhAZ3UcZKPcSz353738305f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_CGlIMetWhAZ3UcZKPcSz353738305f2e706e675f32_pict.jpg"
+  },
+  {
+    "CardName": "Poison Snake",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [],
+    "TypeLine": "Token Artifact Creature — Snake",
+    "Subtypes": [
+      "Snake"
+    ],
+    "Text": "Whenever this creature deals damage to a player, that player gets a poison counter.",
+    "Power": "1",
+    "Toughness": "1",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "3",
+    "Rarity": "common",
+    "Artist": "Jeff A. Menges",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_LE8qEJdjymRAzW7bSCMV353738315f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_LE8qEJdjymRAzW7bSCMV353738315f2e706e675f32_pict.jpg"
+  },
+  {
+    "CardName": "Snake",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [],
+    "TypeLine": "Token Artifact Creature — Snake",
+    "Subtypes": [
+      "Snake"
+    ],
+    "Text": "Whenever this creature deals damage to a player, that player gets a poison counter.",
+    "Power": "1",
+    "Toughness": "1",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "3",
+    "Rarity": "common",
+    "Artist": "Jeff A. Menges",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_LE8qEJdjymRAzW7bSCMV353738315f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_LE8qEJdjymRAzW7bSCMV353738315f2e706e675f32_pict.jpg"
+  },
+  {
+    "CardName": "Bird",
+    "ManaCost": "",
+    "Colors": [
+      "R"
+    ],
+    "ColorIdentity": [
+      "R"
+    ],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Creature — Bird",
+    "Subtypes": [
+      "Bird"
+    ],
+    "Text": "Flying",
+    "Power": "4",
+    "Toughness": "4",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "4",
+    "Rarity": "common",
+    "Artist": "Christopher Rush",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_c2VnXE05oEeYbmx3344Y353738325f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_c2VnXE05oEeYbmx3344Y353738325f2e706e675f32_pict.jpg"
+  },
+  {
+    "CardName": "Rukh",
+    "ManaCost": "",
+    "Colors": [
+      "R"
+    ],
+    "ColorIdentity": [
+      "R"
+    ],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Creature — Bird",
+    "Subtypes": [
+      "Bird"
+    ],
+    "Text": "Flying",
+    "Power": "4",
+    "Toughness": "4",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "4",
+    "Rarity": "common",
+    "Artist": "Christopher Rush",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_c2VnXE05oEeYbmx3344Y353738325f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_c2VnXE05oEeYbmx3344Y353738325f2e706e675f32_pict.jpg"
+  },
+  {
+    "CardName": "Spawn of Azar",
+    "ManaCost": "",
+    "Colors": [
+      "B"
+    ],
+    "ColorIdentity": [
+      "B"
+    ],
+    "Keywords": [
+      "Swampwalk"
+    ],
+    "TypeLine": "Token Creature — Spawn",
+    "Subtypes": [
+      "Spawn"
+    ],
+    "Text": "Swampwalk\nThis token's power and toughness are each a random value from 1 to 3.",
+    "Power": "*",
+    "Toughness": "*",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "5",
+    "Rarity": "common",
+    "Artist": "Rob Alexander",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_2xOve0QRnC5GqM5inZ5R353738335f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_2xOve0QRnC5GqM5inZ5R353738335f2e706e675f32_pict.jpg"
+  },
+  {
+    "CardName": "Tetravite",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Artifact Creature — Tetravite",
+    "Subtypes": [
+      "Tetravite"
+    ],
+    "Text": "Flying\nThis token can't be enchanted.",
+    "Power": "1",
+    "Toughness": "1",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "6",
+    "Rarity": "common",
+    "Artist": "Mark Tedin",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_MAxcTeGomUMDYvzZXsOY353738345f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_MAxcTeGomUMDYvzZXsOY353738345f2e706e675f32_pict.jpg"
+  },
+  {
+    "CardName": "Wasp",
+    "ManaCost": "",
+    "Colors": [],
+    "ColorIdentity": [],
+    "Keywords": [
+      "Flying"
+    ],
+    "TypeLine": "Token Artifact Creature — Insect",
+    "Subtypes": [
+      "Insect"
+    ],
+    "Text": "Flying",
+    "Power": "1",
+    "Toughness": "1",
+    "SetName": "Shandalar Tokens",
+    "SetID": "s30t",
+    "CollectorNo": "7",
+    "Rarity": "common",
+    "Artist": "Sandra Everingham",
+    "PriceUSD": "0",
+    "VintageRestricted": false,
+    "PngURL": "https://www.magiclibrarities.net/rarities_4mQ9OaWbmpIxgbBoRWni353738355f2e706e675f32_pict.jpg",
+    "BorderCropURL": "https://www.magiclibrarities.net/rarities_4mQ9OaWbmpIxgbBoRWni353738355f2e706e675f32_pict.jpg"
+  }
+]

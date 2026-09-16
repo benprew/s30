@@ -173,7 +173,7 @@ func fetchAndCacheCardImage(card *Card) {
 	id := card.cardID
 	if card.BorderCropURL == "" {
 		fmt.Printf("WARN: No BorderCropURL for card: %s\n", card.CardName)
-		cardImages.Store(id, blankCard())
+		cardImages.Store(id, labeledBlankCard(card.CardName))
 		return
 	}
 

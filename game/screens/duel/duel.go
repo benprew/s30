@@ -334,6 +334,11 @@ func buildCardImageMap(decks ...domain.Deck) map[string]*domain.Card {
 			m[name] = card
 		}
 	}
+	for _, token := range domain.TOKENS {
+		if m[token.CardName] == nil {
+			m[token.CardName] = token
+		}
+	}
 	return m
 }
 
@@ -3386,10 +3391,11 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 				cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
 				screen.DrawImage(cardImg, cardOpts)
 			} else {
+				w, h := placeholderSize(perm.Tapped)
 				vector.FillRect(screen, float32(pos.X), float32(pos.Y),
-					float32(fieldCardW), float32(fieldCardH), color.RGBA{60, 60, 80, 255}, false)
+					float32(w), float32(h), color.RGBA{60, 60, 80, 255}, false)
 				vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
-					float32(fieldCardW), float32(fieldCardH), 1, color.RGBA{120, 120, 140, 255}, false)
+					float32(w), float32(h), 1, color.RGBA{120, 120, 140, 255}, false)
 				nameTxt := elements.NewText(10, perm.Name, pos.X+4, pos.Y+4)
 				nameTxt.Color = color.RGBA{220, 220, 220, 255}
 				nameTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
@@ -3404,6 +3410,16 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 			s.drawPermanentBorders(screen, dp, perm, pos)
 		}
 	}
+}
+
+// placeholderSize returns the size of the frame drawn for a permanent without
+// art. A tapped one lies on its side like tapped art does, so tapping stays
+// visible for tokens and any card whose image is missing.
+func placeholderSize(tapped bool) (w, h int) {
+	if tapped {
+		return fieldCardH, fieldCardW
+	}
+	return fieldCardW, fieldCardH
 }
 
 func (s *DuelScreen) drawAbilityIcons(screen *ebiten.Image, perm interactive.PermanentState, pos image.Point) {
