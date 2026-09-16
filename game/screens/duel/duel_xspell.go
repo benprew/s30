@@ -11,6 +11,7 @@ import (
 	"github.com/benprew/s30/logging"
 
 	"github.com/benprew/s30/assets"
+	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -98,6 +99,21 @@ func (s *DuelScreen) updateXChoosingUI() {
 func (s *DuelScreen) selectXValue(xValue int) {
 	actions := s.xChoosingActions
 	s.exitXChoosingMode()
+
+	// Stack spells cannot be clicked as targets yet, so X counters such as
+	// Power Sink need the same auto-target as Counterspell or they get stuck.
+	if len(actions) == 1 && actions[0].NeedsTarget {
+		if tid, ok := s.autoCounterTarget(actions[0]); ok {
+			pa := actionOptionToPriorityAction(actions[0])
+			pa.Targets = []uuid.UUID{tid}
+			pa.XValue = xValue
+			select {
+			case s.human.FromTUI() <- pa:
+			default:
+			}
+			return
+		}
+	}
 
 	if len(actions) > 1 || actions[0].NeedsTarget {
 		s.xChosenValue = xValue
