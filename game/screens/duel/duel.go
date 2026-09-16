@@ -2772,8 +2772,8 @@ func (s *DuelScreen) respondToChoice(index int) {
 			logging.Printf(logging.Duel, "CHOICE_RESP: type=ManaColor color=%v reason=%q\n", req.Options[index].Color, req.Reason)
 			s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedColor: req.Options[index].Color}
 		}
-	case interactive.ChoiceMode:
-		logging.Printf(logging.Duel, "CHOICE_RESP: type=Mode index=%d reason=%q\n", index, req.Reason)
+	case interactive.ChoiceMode, interactive.ChoiceNumber:
+		logging.Printf(logging.Duel, "CHOICE_RESP: type=%d index=%d reason=%q\n", req.Type, index, req.Reason)
 		s.human.ChoiceResponses() <- interactive.ChoiceResponse{SelectedIndex: index}
 	case interactive.ChoicePermanent:
 		if index < len(req.Options) {
