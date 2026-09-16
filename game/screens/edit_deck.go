@@ -300,6 +300,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawDeckCards(screen, scale)
 	s.drawDeckStats(screen, scale)
 	s.drawFilterButtons(screen, scale)
+	s.drawFilterCue(screen, W, H, scale)
 
 	// Draw the magnifier image if it exists
 	if s.MagnifierImage != nil {
