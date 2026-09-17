@@ -51,10 +51,10 @@ func (f *collectionFilter) matches(c *domain.Card) bool {
 	return true
 }
 
-// matchesColor reports whether a card satisfies the active color filter. Cards
-// match by their color, and lands additionally match by the mana they can
-// produce, so a red filter surfaces Mountains and any-color lands like City of
-// Brass while remaining colorless for other purposes.
+// matchesColor reports whether a card satisfies the active color filter. A card
+// matches by its color, or by any color it can produce, so a red filter surfaces
+// Mountains, any-color lands like City of Brass and colorless artifacts that tap
+// for red. What the card can give you decides, not what it is.
 func (f *collectionFilter) matchesColor(c *domain.Card) bool {
 	for _, col := range c.Colors {
 		if f.colors[col] {
@@ -62,11 +62,9 @@ func (f *collectionFilter) matchesColor(c *domain.Card) bool {
 		}
 	}
 
-	if c.IsLand() {
-		for _, col := range c.ManaProduction {
-			if f.colors[col] {
-				return true
-			}
+	for _, col := range c.ManaProduction {
+		if f.colors[col] {
+			return true
 		}
 	}
 
