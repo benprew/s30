@@ -334,7 +334,6 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.DrawImage(s.TiledBackground, &baseOpts)
 
 	screen.DrawImage(s.DeckBackground, &dckOpts)
-	s.deckDropArea.Draw(screen)
 
 	// Calculate position for collection list at bottom of screen
 	collectionY := H - COLLECTION_HEIGHT
@@ -345,7 +344,6 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawCollectionCounts(screen, scale, collectionY)
 
 	drawDeckSellTarget(screen, editDeckSellBounds(), s.Player.Gold)
-	s.sellDropArea.Draw(screen)
 
 	s.drawDeckCards(screen, scale)
 	s.drawDeckStats(screen, scale)
@@ -548,7 +546,6 @@ func editDeckBackBounds(W int) image.Rectangle {
 }
 
 func editDeckSellBounds() image.Rectangle { return image.Rect(10, 12, 150, 68) }
-
 
 func drawDeckActionButton(screen *ebiten.Image, bounds image.Rectangle, label string) {
 	button := ebiten.NewImage(bounds.Dx(), bounds.Dy())

@@ -1,16 +1,10 @@
 package dragdrop
 
-import (
-	"image"
-	"image/color"
-
-	"github.com/hajimehoshi/ebiten/v2"
-)
+import "image"
 
 type DropArea struct {
 	bounds        image.Rectangle
 	acceptTypes   []string
-	isHovered     bool
 	onDropFunc    func(DragData) bool
 	canAcceptFunc func(DragData) bool
 }
@@ -56,23 +50,15 @@ func (da *DropArea) GetDropBounds() image.Rectangle {
 	return da.bounds
 }
 
+// OnDragOver does nothing on purpose. A drop target used to tint itself while a
+// card passed over it, which on a panel this size read as a flash rather than a
+// cue; the card following the cursor already says where it will land. The method
+// stays because Droppable asks for it.
 func (da *DropArea) OnDragOver(data DragData) {
-	da.isHovered = true
 }
 
+// OnDragLeave does nothing, paired with OnDragOver.
 func (da *DropArea) OnDragLeave() {
-	da.isHovered = false
-}
-
-func (da *DropArea) Draw(screen *ebiten.Image) {
-	if da.isHovered {
-		img := ebiten.NewImage(da.bounds.Dx(), da.bounds.Dy())
-		img.Fill(color.RGBA{0, 255, 0, 64})
-
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(da.bounds.Min.X), float64(da.bounds.Min.Y))
-		screen.DrawImage(img, opts)
-	}
 }
 
 func (da *DropArea) SetBounds(bounds image.Rectangle) {
