@@ -578,17 +578,26 @@ func (l *Level) TotalTicks() int {
 	return l.totalTicks
 }
 
+// RenderZigzag renders the visible isometric tile map around the given focus point.
+// Terrain is drawn for all visible tiles before objects to prevent land tiles from
+// overlapping elevated trees or structures.
 func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
 	tileWidth := l.TileWidth
 	tileHeight := l.TileHeight
 
 	op := &ebiten.DrawImageOptions{}
 
-	// the visible drawable area
 	visibleXOrigin := pX - padX
 	visibleYOrigin := pY - padY
 	visibleXOpposite := pX + padX
 	visibleYOpposite := pY + padY
+
+	type visibleTile struct {
+		tile    *Tile
+		screenX int
+		screenY int
+	}
+	visibleTiles := make([]visibleTile, 0, 128)
 
 	for y := 0; y < l.H; y++ {
 		for x := 0; x < l.W; x++ {
@@ -611,10 +620,22 @@ func (l *Level) RenderZigzag(screen *ebiten.Image, pX, pY, padX, padY int) {
 			screenX := pixelX - (pX - viewportCenter.X)
 			screenY := pixelY - (pY - viewportCenter.Y)
 
+			visibleTiles = append(visibleTiles, visibleTile{
+				tile:    tile,
+				screenX: screenX,
+				screenY: screenY,
+			})
+
 			op.GeoM.Reset()
 			op.GeoM.Translate(float64(screenX), float64(screenY))
-			tile.Draw(screen, op)
+			tile.DrawTerrain(screen, op)
 		}
+	}
+
+	for _, vt := range visibleTiles {
+		op.GeoM.Reset()
+		op.GeoM.Translate(float64(vt.screenX), float64(vt.screenY))
+		vt.tile.DrawObjects(screen, op)
 	}
 }
 

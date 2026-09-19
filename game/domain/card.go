@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"image"
 	"regexp"
 	"sort"
 	"strconv"
@@ -30,9 +29,18 @@ type CardView int
 const (
 	CardViewFull CardView = iota
 	CardViewArtOnly
+	CardViewFullMini
+	CardViewArtMini
 )
-const CardArtHeight = 215
+const cardSourceArtHeight = 215
+const CardArtWidth = 147
+const CardArtHeight = 129
+const CardFullMiniWidth = 183
+const CardFullMiniHeight = 256
 const CardFullWidth = 245
+
+const CardArtMiniWidth = 110
+const CardArtMiniHeight = 96
 
 type EntityID int
 
@@ -289,7 +297,7 @@ func FindAllCardsByName(name string) []*Card {
 	return result
 }
 
-func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
+func (card *Card) fullCardImage() *ebiten.Image {
 	var fullImg *ebiten.Image
 
 	if cached, ok := cardImages.Load(card.cardID); ok {
@@ -301,14 +309,7 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 		fullImg = labeledBlankCard(card.CardName)
 	}
 
-	if view == CardViewArtOnly {
-		bounds := fullImg.Bounds()
-		width := bounds.Dx()
-		artRect := image.Rect(0, 0, width, CardArtHeight)
-		return fullImg.SubImage(artRect).(*ebiten.Image), nil
-	}
-
-	return fullImg, nil
+	return fullImg
 }
 
 func (c *Card) SalePrice(city *City) int {

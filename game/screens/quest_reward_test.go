@@ -1,6 +1,7 @@
 package screens
 
 import (
+	"image"
 	"testing"
 
 	gameaudio "github.com/benprew/s30/game/audio"
@@ -36,5 +37,25 @@ func TestQuestRewardSound(t *testing.T) {
 	}
 	if got := questRewardSound([]domain.DeckQuestReward{{Reward: domain.QuestReward{ManaLinks: 1}}}); got != gameaudio.SFXManalink {
 		t.Fatalf("mana-link reward sound = %v, want manalink", got)
+	}
+}
+
+func TestQuestRewardsPaginateMiniCards(t *testing.T) {
+	card := domain.CARDS[0]
+	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	t.Cleanup(domain.ClearCardImageCache)
+	s := NewQuestRewardScreen([]domain.DeckQuestReward{{Quest: &domain.Quest{Title: "Reward"}, Cards: []*domain.Card{card, card, card, card}}}, nil, nil, nil)
+	if len(s.rewards) != 2 {
+		t.Fatalf("pages = %d, want 2", len(s.rewards))
+	}
+	for _, page := range s.rewards {
+		for _, img := range page.cardImgs {
+			if img.Bounds().Size() != image.Pt(183, 256) {
+				t.Fatal("wrong reward card size")
+			}
+		}
+	}
+	if s.panelH < 450 {
+		t.Fatal("reward panel is too short")
 	}
 }

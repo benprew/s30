@@ -84,11 +84,10 @@ func (s *DuelLoseScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	cardOpts := &ebiten.DrawImageOptions{}
 	cardOpts.GeoM.Translate(20, 20)
 	for _, c := range s.cards {
-		img, err := c.CardImage(domain.CardViewFull)
+		img, err := c.CardImage(domain.CardViewFullMini)
 		if err != nil {
 			continue
 		}
-		img = imageutil.ScaleImage(img, 0.75)
 		screen.DrawImage(img, cardOpts)
 		cardOpts.GeoM.Translate(260, 0)
 	}

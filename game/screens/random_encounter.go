@@ -105,7 +105,7 @@ func NewRandomEncounterScreen(player *domain.Player, landName string, terrainTyp
 
 	var cardImg *ebiten.Image
 	if card != nil {
-		cardImg, _ = card.CardImage(domain.CardViewFull)
+		cardImg, _ = card.CardImage(domain.CardViewFullMini)
 	}
 
 	bgFile := encounterBgFiles[terrainType]
@@ -161,7 +161,7 @@ func (s *RandomEncounterScreen) Draw(screen *ebiten.Image, W, H int, scale float
 
 	if s.CardImg != nil {
 		op := &ebiten.DrawImageOptions{}
-		cardScale := scale * 0.75
+		cardScale := scale
 		op.GeoM.Scale(cardScale, cardScale)
 		w := float64(s.CardImg.Bounds().Dx()) * cardScale
 		h := float64(s.CardImg.Bounds().Dy()) * cardScale

@@ -22,12 +22,12 @@ import (
 // won over the Winbk_Questn quest-rewards background, then enters the town.
 
 const (
-	qrLogicalW   = 1024
-	qrLogicalH   = 768
-	qrPanelW     = 760
-	qrCardScale  = 0.30
-	qrCardGap    = 12
-	qrLineHeight = 30
+	qrLogicalW     = 1024
+	qrLogicalH     = 768
+	qrPanelW       = 760
+	qrCardsPerPage = 3
+	qrCardGap      = 12
+	qrLineHeight   = 30
 )
 
 type qrReward struct {
@@ -38,6 +38,7 @@ type qrReward struct {
 
 type QuestRewardScreen struct {
 	rewards []qrReward
+	page    int
 	bg      *ebiten.Image
 	dim     *ebiten.Image
 	panelX  int
@@ -64,6 +65,13 @@ func NewQuestRewardScreen(rewards []domain.DeckQuestReward, city *domain.City, p
 		panelH = bg.Bounds().Dy()
 	}
 
+	if panelH < 500 {
+		panelH = 500
+		if bg != nil {
+			bg = imageutil.ScaleImageInd(bg, 1, float64(panelH)/float64(bg.Bounds().Dy()))
+		}
+	}
+
 	dim := ebiten.NewImage(qrLogicalW, qrLogicalH)
 	dim.Fill(color.RGBA{0, 0, 0, 160})
 
@@ -71,13 +79,22 @@ func NewQuestRewardScreen(rewards []domain.DeckQuestReward, city *domain.City, p
 	for _, r := range rewards {
 		imgs := make([]*ebiten.Image, 0, len(r.Cards))
 		for _, c := range r.Cards {
-			img, err := c.CardImage(domain.CardViewFull)
+			img, err := c.CardImage(domain.CardViewFullMini)
 			if err != nil {
 				continue
 			}
-			imgs = append(imgs, imageutil.ScaleImage(img, qrCardScale))
+			imgs = append(imgs, img)
 		}
-		qr = append(qr, qrReward{title: r.Quest.Title, gold: r.Reward.Gold, cardImgs: imgs})
+		if len(imgs) == 0 {
+			qr = append(qr, qrReward{title: r.Quest.Title, gold: r.Reward.Gold})
+		}
+		for start := 0; start < len(imgs); start += qrCardsPerPage {
+			gold := 0
+			if start == 0 {
+				gold = r.Reward.Gold
+			}
+			qr = append(qr, qrReward{title: r.Quest.Title, gold: gold, cardImgs: imgs[start:min(start+qrCardsPerPage, len(imgs))]})
+		}
 	}
 
 	return &QuestRewardScreen{
@@ -124,7 +141,7 @@ func (s *QuestRewardScreen) Draw(screen *ebiten.Image, W, H int, scale float64) 
 	title.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
 	y := s.panelY + 90
-	for _, r := range s.rewards {
+	for _, r := range s.rewards[s.page:min(s.page+1, len(s.rewards))] {
 		header := r.title
 		if r.gold > 0 {
 			header = fmt.Sprintf("%s   +%d gold", r.title, r.gold)
@@ -148,7 +165,11 @@ func (s *QuestRewardScreen) Draw(screen *ebiten.Image, W, H int, scale float64) 
 		y += 8
 	}
 
-	prompt := elements.NewText(20, "Click to continue", s.panelX, s.panelY+s.panelH-40)
+	promptText := "Click to continue"
+	if s.page+1 < len(s.rewards) {
+		promptText = fmt.Sprintf("Click for next reward (%d/%d)", s.page+1, len(s.rewards))
+	}
+	prompt := elements.NewText(20, promptText, s.panelX, s.panelY+s.panelH-40)
 	prompt.Color = color.RGBA{220, 220, 220, 255}
 	prompt.HAlign = elements.AlignCenter
 	prompt.BoundsW = qrPanelW
@@ -161,6 +182,10 @@ func (s *QuestRewardScreen) Update(W, H int, scale float64) (screenui.ScreenName
 		inpututil.IsKeyJustPressed(ebiten.KeySpace),
 		inpututil.IsKeyJustPressed(ebiten.KeyEscape),
 	) {
+		if s.page+1 < len(s.rewards) {
+			s.page++
+			return screenui.QuestRewardScr, nil, nil
+		}
 		return screenui.CityScr, NewCityScreen(s.city, s.player, s.level), nil
 	}
 	return screenui.QuestRewardScr, nil, nil

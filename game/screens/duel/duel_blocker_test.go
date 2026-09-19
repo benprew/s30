@@ -68,7 +68,6 @@ func setupBlockerTest() (*DuelScreen, interactive.PermanentState, interactive.Pe
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 
@@ -308,7 +307,6 @@ func TestAIBlockerArrows(t *testing.T) {
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 

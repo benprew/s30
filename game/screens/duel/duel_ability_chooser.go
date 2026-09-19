@@ -67,9 +67,10 @@ func (s *DuelScreen) updateAbilityChoosingUI() {
 		btnW = s.abilityButtons[0].Normal.Bounds().Dx()
 	}
 
+	img := s.previewImage()
 	cardH := 0
-	if s.cardPreviewImg != nil {
-		cardH = s.cardPreviewImg.Bounds().Dy()
+	if img != nil {
+		cardH = img.Bounds().Dy()
 	}
 
 	centerX := 512
@@ -116,9 +117,10 @@ func (s *DuelScreen) drawAbilityChoosingUI(screen *ebiten.Image, W, H int) {
 
 	centerX := float64(W) / 2
 
+	img := s.previewImage()
 	cardH := 0
-	if s.cardPreviewImg != nil {
-		cardH = s.cardPreviewImg.Bounds().Dy()
+	if img != nil {
+		cardH = img.Bounds().Dy()
 	}
 	titleH := 30
 	totalH := titleH + cardH + 10 + len(s.abilityButtons)*40
@@ -130,11 +132,11 @@ func (s *DuelScreen) drawAbilityChoosingUI(screen *ebiten.Image, W, H int) {
 	title.Color = color.White
 	title.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-	if s.cardPreviewImg != nil {
-		cardW := float64(s.cardPreviewImg.Bounds().Dx())
+	if img != nil {
+		cardW := float64(img.Bounds().Dx())
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(centerX-cardW/2, startY+float64(titleH))
-		screen.DrawImage(s.cardPreviewImg, op)
+		screen.DrawImage(img, op)
 	}
 
 	btnOpts := &ebiten.DrawImageOptions{}

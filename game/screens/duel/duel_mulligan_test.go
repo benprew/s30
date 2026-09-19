@@ -169,3 +169,22 @@ func TestMulliganTitleNamesTheCostOfKeeping(t *testing.T) {
 		t.Fatalf("bottoming title = %q, want the selection count", got)
 	}
 }
+
+func TestMulliganMiniCardsFitWithoutOverlap(t *testing.T) {
+	s, _ := newMulliganScreen(t)
+	rects := s.mulliganCardRects(1024, 768)
+	if len(rects) != 7 {
+		t.Fatalf("card count = %d", len(rects))
+	}
+	area := image.Rect(0, 90, 1024, 688)
+	for i, rect := range rects {
+		if rect.Size() != image.Pt(183, 256) || !rect.In(area) {
+			t.Fatalf("card %d bounds = %v", i, rect)
+		}
+		for _, other := range rects[i+1:] {
+			if rect.Overlaps(other) {
+				t.Fatal("mulligan cards overlap")
+			}
+		}
+	}
+}

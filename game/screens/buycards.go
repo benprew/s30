@@ -37,7 +37,6 @@ func (s *BuyCardsScreen) IsFramed() bool {
 func (s *BuyCardsScreen) IsOverlay() bool { return false }
 
 const (
-	cardArtScale   = 0.45
 	ResetCardsCost = 25
 )
 
@@ -226,14 +225,14 @@ func (s *BuyCardsScreen) updateCardArt() {
 	}
 	for i, card := range s.City.CardsForSale {
 		if s.cardPlaceholders[i] && card.ImageLoaded() {
-			cardUpperImg, err := card.CardImage(domain.CardViewArtOnly)
+			cardUpperImg, err := card.CardImage(domain.CardViewArtMini)
 			if err != nil || cardUpperImg == nil {
 				continue
 			}
 			cardBtnID := fmt.Sprintf("card_%d", i)
 			for _, b := range s.Buttons {
 				if b.ID == cardBtnID {
-					b.SetImage(cardUpperImg, cardArtScale)
+					b.SetImage(cardUpperImg, 1)
 					delete(s.cardPlaceholders, i)
 					break
 				}
@@ -308,7 +307,7 @@ func (s *BuyCardsScreen) mkCardButtons() ([]*elements.Button, map[int]bool) {
 			placeholders[i] = true
 		}
 
-		cardUpperImg, err := card.CardImage(domain.CardViewArtOnly)
+		cardUpperImg, err := card.CardImage(domain.CardViewArtMini)
 		if err != nil {
 			fmt.Printf("WARN: Unable to load card image for %s: %v\n", card.Name(), err)
 			continue
@@ -326,7 +325,7 @@ func (s *BuyCardsScreen) mkCardButtons() ([]*elements.Button, map[int]bool) {
 		text.Draw(priceLabel, priceText, priceFontFace, &text.DrawOptions{DrawImageOptions: *priceOptions})
 
 		x := 120 + (i * 160)
-		cardBtn := elements.NewButton(cardUpperImg, cardUpperImg, cardUpperImg, x, 200, cardArtScale)
+		cardBtn := elements.NewButton(cardUpperImg, cardUpperImg, cardUpperImg, x, 200, 1)
 		cardBtn.ID = fmt.Sprintf("card_%d", i)
 		cards = append(cards, cardBtn)
 

@@ -146,6 +146,16 @@ func TestBuyCardsScreen_ReplacesPlaceholderWhenImageLoads(t *testing.T) {
 		t.Fatalf("Update failed: %v", err)
 	}
 
+	shared, err := card.CardImage(domain.CardViewArtMini)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cardBtn.Normal != shared || cardBtn.Hover != shared || cardBtn.Pressed != shared {
+		t.Fatal("shop button does not use the shared card image")
+	}
+	if cardBtn.Bounds.Size() != image.Pt(110, 96) {
+		t.Fatalf("shop card size = %v", cardBtn.Bounds.Size())
+	}
 	if cardBtn.Normal == initialNormalImg {
 		t.Errorf("Expected card_0 button image to be replaced after card art loaded")
 	}
@@ -258,4 +268,3 @@ func TestBuyCardsScreen_NewCardsButtonExists(t *testing.T) {
 		t.Errorf("Expected button text 'Done', got %q", doneBtn.ButtonText.Text)
 	}
 }
-

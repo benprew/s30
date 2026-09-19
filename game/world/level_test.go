@@ -201,3 +201,45 @@ func TestTileToPixel(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderZigzagDrawsAllTerrainBeforeObjects(t *testing.T) {
+	level := createTestLevel(3, 3)
+	level.TileWidth = 206
+	level.TileHeight = 102
+	level.Viewport = Viewport{Width: 1000, Height: 1000}
+
+	var drawEvents []string
+	for y := 0; y < level.H; y++ {
+		for x := 0; x < level.W; x++ {
+			tilePos := image.Point{X: x, Y: y}
+			tile := level.Tile(tilePos)
+			tile.onDrawTerrain = func() {
+				drawEvents = append(drawEvents, "terrain")
+			}
+			tile.onDrawObjects = func() {
+				drawEvents = append(drawEvents, "objects")
+			}
+		}
+	}
+
+	screen := ebiten.NewImage(1000, 1000)
+	center := level.Viewport.Center()
+	level.RenderZigzag(screen, center.X, center.Y, 500, 500)
+
+	firstObjectIdx := -1
+	for i, ev := range drawEvents {
+		if ev == "objects" {
+			firstObjectIdx = i
+			break
+		}
+	}
+	if firstObjectIdx == -1 {
+		t.Fatal("expected at least one object draw event")
+	}
+
+	for i := firstObjectIdx + 1; i < len(drawEvents); i++ {
+		if drawEvents[i] == "terrain" {
+			t.Fatalf("terrain rendered after object at index %d (first object at index %d)", i, firstObjectIdx)
+		}
+	}
+}
