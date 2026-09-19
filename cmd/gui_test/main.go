@@ -310,7 +310,7 @@ func mainGameScenario() scenarioConfig {
 func editDeckScenario() scenarioConfig {
 	return scenarioConfig{
 		name:   "edit_deck",
-		pkg:    "./cmd/edit_deck_test",
+		pkg:    "./cmd/edit_deck",
 		width:  1024,
 		height: 768,
 		runTest: func(d *guiDriver) error {
