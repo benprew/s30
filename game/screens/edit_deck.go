@@ -154,9 +154,12 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 
 	screen.deckDropArea = dragdrop.NewDropArea(
 		deckAreaBounds,
-		[]string{"*"}, // Accept any card
+		[]string{"*"},
 		screen.handleCardDrop,
 	)
+	screen.deckDropArea.SetCanAccept(func(data dragdrop.DragData) bool {
+		return !strings.HasPrefix(data.GetID(), deckCardDragIDPrefix)
+	})
 	screen.dragManager.RegisterDroppable(screen.deckDropArea)
 
 	// Create collection area drop zone
@@ -164,9 +167,12 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 	collectionAreaBounds := image.Rect(0, collectionY, COLLECTION_WIDTH, H)
 	screen.collectionDropArea = dragdrop.NewDropArea(
 		collectionAreaBounds,
-		[]string{"*"}, // Accept any card
+		[]string{"*"},
 		screen.handleCardDropToCollection,
 	)
+	screen.collectionDropArea.SetCanAccept(func(data dragdrop.DragData) bool {
+		return strings.HasPrefix(data.GetID(), deckCardDragIDPrefix)
+	})
 	screen.dragManager.RegisterDroppable(screen.collectionDropArea)
 
 	// Convert collection buttons to draggable items
@@ -816,8 +822,20 @@ func (s *EditDeckScreen) createDeckDraggableItems() {
 
 // handleCardDrop handles when a card is dropped in the deck area
 func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
+	if !s.addDroppedCardToDeck(data) {
+		return false
+	}
+	s.updateState()
+	return true
+}
+
+func (s *EditDeckScreen) addDroppedCardToDeck(data dragdrop.DragData) bool {
 	cardData, ok := data.(*dragdrop.CardDragData)
 	if !ok {
+		return false
+	}
+
+	if strings.HasPrefix(cardData.ID, deckCardDragIDPrefix) {
 		return false
 	}
 
@@ -826,14 +844,12 @@ func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
 		return false
 	}
 
-	// Get the card group for this card
 	group, exists := s.collectionGroups[droppedCard.Name()]
 	if !exists || len(group.cards) == 0 {
 		fmt.Printf("No card group found for %s\n", droppedCard.Name())
 		return false
 	}
 
-	// Find an available card from the group to add to deck
 	var cardToAdd *domain.Card
 	for _, card := range group.cards {
 		collectionCount := s.Player.CardCollection.GetTotalCount(card)
@@ -841,7 +857,6 @@ func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
 			continue
 		}
 
-		// Check how many of this specific printing are already in deck
 		deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
 		if deckCount < collectionCount {
 			cardToAdd = card
@@ -854,7 +869,6 @@ func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
 		return false
 	}
 
-	// Move card to deck
 	err := s.Player.CardCollection.MoveCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
 	if err != nil {
 		fmt.Printf("Error moving card to deck: %v\n", err)
@@ -863,23 +877,25 @@ func (s *EditDeckScreen) handleCardDrop(data dragdrop.DragData) bool {
 	newCount := s.Player.CardCollection.GetDeckCount(cardToAdd, s.Player.ActiveDeck)
 	fmt.Printf("Added %s to deck via drag (now %d copies)\n", cardToAdd.Name(), newCount)
 
-	// Reload deck display and collection list
-	err = s.loadDeckCards()
-	if err != nil {
-		fmt.Printf("Error reloading deck cards: %v\n", err)
-	}
-	err = s.reloadCollectionList()
-	if err != nil {
-		fmt.Printf("Error reloading collection list: %v\n", err)
-	}
-
 	return true
 }
 
 // handleCardDropToCollection handles when a card is dropped in the collection area
 func (s *EditDeckScreen) handleCardDropToCollection(data dragdrop.DragData) bool {
+	if !s.removeDroppedCardFromDeck(data) {
+		return false
+	}
+	s.updateState()
+	return true
+}
+
+func (s *EditDeckScreen) removeDroppedCardFromDeck(data dragdrop.DragData) bool {
 	cardData, ok := data.(*dragdrop.CardDragData)
 	if !ok {
+		return false
+	}
+
+	if !strings.HasPrefix(cardData.ID, deckCardDragIDPrefix) {
 		return false
 	}
 
@@ -895,15 +911,6 @@ func (s *EditDeckScreen) handleCardDropToCollection(data dragdrop.DragData) bool
 	}
 	newCount := s.Player.CardCollection.GetDeckCount(droppedCard, s.Player.ActiveDeck)
 	fmt.Printf("Removed %s from deck via drag (now %d copies)\n", droppedCard.Name(), newCount)
-
-	err = s.loadDeckCards()
-	if err != nil {
-		fmt.Printf("Error reloading deck cards: %v\n", err)
-	}
-	err = s.reloadCollectionList()
-	if err != nil {
-		fmt.Printf("Error reloading collection list: %v\n", err)
-	}
 
 	return true
 }
