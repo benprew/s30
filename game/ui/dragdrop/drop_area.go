@@ -8,10 +8,11 @@ import (
 )
 
 type DropArea struct {
-	bounds      image.Rectangle
-	acceptTypes []string
-	isHovered   bool
-	onDropFunc  func(DragData) bool
+	bounds        image.Rectangle
+	acceptTypes   []string
+	isHovered     bool
+	onDropFunc    func(DragData) bool
+	canAcceptFunc func(DragData) bool
 }
 
 func NewDropArea(bounds image.Rectangle, acceptTypes []string, onDrop func(DragData) bool) *DropArea {
@@ -22,7 +23,16 @@ func NewDropArea(bounds image.Rectangle, acceptTypes []string, onDrop func(DragD
 	}
 }
 
+// SetCanAccept sets an optional custom predicate to validate accepted drag data.
+func (da *DropArea) SetCanAccept(fn func(DragData) bool) {
+	da.canAcceptFunc = fn
+}
+
 func (da *DropArea) CanAcceptDrop(data DragData) bool {
+	if da.canAcceptFunc != nil && !da.canAcceptFunc(data) {
+		return false
+	}
+
 	if len(da.acceptTypes) == 0 {
 		return true
 	}
