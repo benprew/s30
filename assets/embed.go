@@ -218,6 +218,9 @@ var (
 	//go:embed art/screens/edit_deck/sprite_sheet_pressed.png
 	EditDeckFilterSheetPressed_png []byte
 
+	//go:embed art/screens/edit_deck/Dektit1.pic.png
+	EditDeckGoldPlate_png []byte
+
 	//go:embed art/ui/MapBttns.png
 	InfoBar_png []byte
 	//go:embed art/ui/MapBttns_map.json
