@@ -61,7 +61,6 @@ func TestPerformCardAction_MultipleAbilities_EntersAbilityChoosingMode(t *testin
 		cardActions:      map[uuid.UUID][]interactive.ActionOption{permID: actions},
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 
@@ -108,7 +107,6 @@ func TestSelectAbility_NoTarget_SendsAction(t *testing.T) {
 		cardActions:      map[uuid.UUID][]interactive.ActionOption{permID: actions},
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 		human:            human,
 	}
@@ -160,7 +158,6 @@ func TestSelectAbility_WithTarget_EntersTargetingMode(t *testing.T) {
 		cardActions:      map[uuid.UUID][]interactive.ActionOption{permID: actions},
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 

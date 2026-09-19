@@ -40,7 +40,6 @@ func setupGraveyardTest() *DuelScreen {
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 	return s
@@ -118,5 +117,32 @@ func TestGraveyardClick_ToggleClose(t *testing.T) {
 	}
 	if s.viewingGraveyard != nil {
 		t.Errorf("expected second click on same graveyard to close view")
+	}
+}
+
+func TestCompactCardHitAreasMatchSharedSize(t *testing.T) {
+	s := setupGraveyardTest()
+	for _, dp := range []*duelPlayer{s.self, s.opponent} {
+		if got := s.graveyardBounds(dp).Size(); got != image.Pt(110, 96) {
+			t.Fatalf("graveyard size = %v", got)
+		}
+	}
+	w, h := fieldCardW, fieldCardH
+	if w != 110 || h != 96 {
+		t.Fatalf("battlefield size = %dx%d", w, h)
+	}
+}
+
+func TestGraveyardBrowserUsesArtCropBounds(t *testing.T) {
+	s := setupGraveyardTest()
+	s.viewingGraveyard = s.self
+	sections := s.graveyardViewLayout(1024)
+	if len(sections) != 1 || len(sections[0].Cards) != 2 {
+		t.Fatal("missing graveyard cards")
+	}
+	for _, card := range sections[0].Cards {
+		if card.Rect.Size() != image.Pt(147, 129) {
+			t.Fatalf("graveyard browser card bounds = %v", card.Rect)
+		}
 	}
 }

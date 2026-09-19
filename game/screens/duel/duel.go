@@ -102,6 +102,11 @@ type dungeonDuelContext struct {
 	tile  *domain.DungeonTile
 }
 
+type cardPreview struct {
+	Card      *domain.Card
+	Permanent *interactive.PermanentState
+}
+
 type DuelScreen struct {
 	player    *domain.Player
 	enemy     *domain.Enemy
@@ -135,16 +140,10 @@ type DuelScreen struct {
 	doneBtn      [3]*ebiten.Image
 	abilityIcons []*ebiten.Image
 
-	selectedCardIdx        int
-	cardPreviewImg         *ebiten.Image
-	cardPreviewID          string
-	cardPreviewPlaceholder bool
-	cardPreviewName        string
-	cardPreviewPerm        *interactive.PermanentState
+	selectedCardIdx int
+	preview         *cardPreview
 
 	cardPositions map[uuid.UUID]image.Point
-
-	cardImgCache map[cardImgKey]cardImgEntry
 
 	cardActions      map[uuid.UUID][]interactive.ActionOption
 	pendingAttackers map[uuid.UUID]bool
@@ -223,16 +222,6 @@ type DuelScreen struct {
 	questProgressApplied bool
 }
 
-type cardImgKey struct {
-	name  string
-	width int
-}
-
-type cardImgEntry struct {
-	scaled      *ebiten.Image
-	placeholder bool
-}
-
 func (s *DuelScreen) IsFramed() bool { return false }
 
 func (s *DuelScreen) IsOverlay() bool { return false }
@@ -257,7 +246,6 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		selectedCardIdx:  -1,
 		anteCard:         anteCard,
 		enemyAnteCard:    enemyAnteCard,
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 		pendingAttackers: make(map[uuid.UUID]bool),
 		attackerLifts:    make(map[uuid.UUID]*attackerLiftAnimation),
@@ -1016,6 +1004,17 @@ func (s *DuelScreen) loadImages() {
 	s.opponent.graveyardImg = loadDuelImage(fmt.Sprintf("Grave_%s.pic.png", enemyColor))
 	s.opponent.lifeBg = imageutil.ScaleImageInd(loadDuelImage(fmt.Sprintf("Life_%spict.pic.png", enemyColor)), 1, 1.09)
 
+	for _, dp := range []*duelPlayer{s.self, s.opponent} {
+		if dp.handBg != nil {
+			dp.handBg = imageutil.ScaleImageInd(dp.handBg, float64(domain.CardArtWidth)/float64(dp.handBg.Bounds().Dx()), 1)
+		}
+		if dp.graveyardImg != nil {
+			bounds := dp.graveyardImg.Bounds()
+			dp.graveyardImg = imageutil.ScaleImageInd(dp.graveyardImg,
+				float64(graveyardW)/float64(bounds.Dx()), float64(graveyardH)/float64(bounds.Dy()))
+		}
+	}
+
 	s.manaPoolBg = loadDuelImage("Winbk_Manapool.pic.png")
 	s.bigCardBg = loadDuelImage("Winbk_Bigcard.pic.png")
 	s.spellChainBg = loadDuelImage("Winbk_Spellchain.pic.png")
@@ -1440,8 +1439,8 @@ func (s *DuelScreen) handleConcede() (screenui.ScreenName, screenui.Screen, erro
 
 const (
 	handCardOverlap              = 20
-	fieldCardW                   = 100
-	fieldCardH                   = 83
+	fieldCardW                   = domain.CardArtMiniWidth
+	fieldCardH                   = domain.CardArtMiniHeight
 	battlefieldCreatureStatsSize = 20
 	creatureStatsRightPadding    = 3
 	creatureStatsBottomInset     = 22
@@ -1738,11 +1737,8 @@ func (s *DuelScreen) refreshCardActions() {
 	}
 }
 
-func (s *DuelScreen) panelCardW(dp *duelPlayer) int {
-	if dp.handBg != nil {
-		return dp.handBg.Bounds().Dx()
-	}
-	return 145
+func (s *DuelScreen) panelCardW(_ *duelPlayer) int {
+	return domain.CardArtWidth
 }
 
 func (s *DuelScreen) panelCardH(dp *duelPlayer) int {
@@ -2169,7 +2165,8 @@ func (s *DuelScreen) graveyardViewLayout(W int) []graveyardViewSection {
 	}
 
 	const (
-		cardW  = 150
+		cardW  = domain.CardArtWidth
+		cardH  = domain.CardArtHeight
 		gap    = 12
 		topY   = 24
 		titleH = 36
@@ -2200,15 +2197,6 @@ func (s *DuelScreen) graveyardViewLayout(W int) []graveyardViewSection {
 			col := i % cols
 			row := i / cols
 
-			cardH := 210
-			domainCard := s.getDomainCard(c.Name)
-			if domainCard != nil {
-				if img, err := domainCard.CardImage(domain.CardViewFull); err == nil && img != nil {
-					scale := float64(cardW) / float64(img.Bounds().Dx())
-					cardH = int(float64(img.Bounds().Dy()) * scale)
-				}
-			}
-
 			x := startX + col*(cardW+gap)
 			y := currentY + row*(cardH+gap)
 			rect := image.Rect(x, y, x+cardW, y+cardH)
@@ -2222,7 +2210,6 @@ func (s *DuelScreen) graveyardViewLayout(W int) []graveyardViewSection {
 		}
 
 		rows := (len(ps.Graveyard) + cols - 1) / cols
-		cardH := 210
 		currentY += rows*(cardH+gap) + 16
 
 		sections = append(sections, sec)
@@ -2371,8 +2358,9 @@ func (s *DuelScreen) submitTargetingAction() bool {
 	return true
 }
 
-func graveyardCardBounds(i, W, cardH int) image.Rectangle {
-	const cardW = 150
+func graveyardCardBounds(i, W int) image.Rectangle {
+	const cardW = domain.CardArtWidth
+	const cardH = domain.CardArtHeight
 	const gap = 12
 	const startY = 60
 	cols := max((W-gap)/(cardW+gap), 1)
@@ -2481,29 +2469,16 @@ func (s *DuelScreen) isPlayerBoardClick(mx, my int, dp *duelPlayer) bool {
 	return my >= duelOpponentBoardY && my < duelMsgY
 }
 
-func (s *DuelScreen) getCardArtImg(name string, targetW int) *ebiten.Image {
-	key := cardImgKey{name: name, width: targetW}
-	if entry, ok := s.cardImgCache[key]; ok {
-		if !entry.placeholder {
-			return entry.scaled
-		}
-	}
-
+func (s *DuelScreen) getCardArtImg(name string, view domain.CardView) *ebiten.Image {
 	domainCard := s.getDomainCard(name)
 	if domainCard == nil {
 		return nil
 	}
-
-	artImg, err := domainCard.CardImage(domain.CardViewArtOnly)
-	if err != nil || artImg == nil {
+	img, err := domainCard.CardImage(view)
+	if err != nil {
 		return nil
 	}
-
-	loaded := domainCard.ImageLoaded()
-	scale := float64(targetW) / float64(artImg.Bounds().Dx())
-	scaled := imageutil.ScaleImage(artImg, scale)
-	s.cardImgCache[key] = cardImgEntry{scaled: scaled, placeholder: !loaded}
-	return scaled
+	return img
 }
 
 func (s *DuelScreen) updateMouse(mx, my int, clicked bool) {
@@ -2849,36 +2824,30 @@ func (s *DuelScreen) loadCardPreviewByName(name string) {
 }
 
 func (s *DuelScreen) loadCardPreview(name string, perm *interactive.PermanentState) {
-	artName := name
-	if perm != nil {
-		artName = permanentArtName(*perm, s.getDomainCard(name))
-	}
-	previewID := name + "\x00" + artName
-	if s.cardPreviewID == previewID {
-		s.cardPreviewPerm = perm
+	card := s.getDomainCard(name)
+	if card == nil {
+		s.preview = nil
 		return
 	}
-	domainCard := s.getDomainCard(artName)
-	if domainCard == nil {
-		s.cardPreviewImg = nil
-		s.cardPreviewID = ""
-		s.cardPreviewName = ""
-		s.cardPreviewPerm = nil
-		return
+	s.preview = &cardPreview{Card: card, Permanent: perm}
+}
+
+func (s *DuelScreen) previewImage() *ebiten.Image {
+	if s.preview == nil {
+		return nil
 	}
-	img, err := domainCard.CardImage(domain.CardViewFull)
-	if err != nil || img == nil {
-		s.cardPreviewImg = nil
-		s.cardPreviewID = ""
-		s.cardPreviewName = ""
-		s.cardPreviewPerm = nil
-		return
+	card := s.preview.Card
+	if perm := s.preview.Permanent; perm != nil {
+		card = s.getDomainCard(permanentArtName(*perm, card))
 	}
-	s.cardPreviewImg = img
-	s.cardPreviewID = previewID
-	s.cardPreviewPlaceholder = !domainCard.ImageLoaded()
-	s.cardPreviewName = name
-	s.cardPreviewPerm = perm
+	if card == nil {
+		return nil
+	}
+	img, err := card.CardImage(domain.CardViewFull)
+	if err != nil {
+		return nil
+	}
+	return img
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
@@ -3095,8 +3064,6 @@ func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {
 
 	vector.FillRect(screen, 0, 0, float32(W), float32(H), color.RGBA{0, 0, 0, 200}, false)
 
-	const cardW = 150
-
 	for _, sec := range sections {
 		titleTxt := elements.NewText(22, sec.Title, 0, sec.TitlePos.Y)
 		titleTxt.HAlign = elements.AlignCenter
@@ -3109,13 +3076,11 @@ func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {
 			if domainCard == nil {
 				continue
 			}
-			img, err := domainCard.CardImage(domain.CardViewFull)
+			img, err := domainCard.CardImage(domain.CardViewArtOnly)
 			if err != nil || img == nil {
 				continue
 			}
-			scale := float64(cardW) / float64(img.Bounds().Dx())
 			opts := &ebiten.DrawImageOptions{}
-			opts.GeoM.Scale(scale, scale)
 			opts.GeoM.Translate(float64(gc.Rect.Min.X), float64(gc.Rect.Min.Y))
 			screen.DrawImage(img, opts)
 
@@ -3365,7 +3330,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 			// reverse order so it draws correctly on the screen
 			for j, aura := range slices.Backward(auras) {
 				auraY := pos.Y - (j+1)*14
-				auraImg := s.getCardArtImg(aura.Name, fieldCardW)
+				auraImg := s.getCardArtImg(aura.Name, domain.CardViewArtMini)
 				if auraImg != nil {
 					auraOpts := &ebiten.DrawImageOptions{}
 					auraOpts.GeoM.Translate(float64(pos.X), float64(auraY))
@@ -3380,7 +3345,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 			}
 
 			artName := permanentArtName(perm, s.getDomainCard(perm.Name))
-			cardImg := s.getCardArtImg(artName, fieldCardW)
+			cardImg := s.getCardArtImg(artName, domain.CardViewArtMini)
 			if cardImg != nil {
 				cardOpts := &ebiten.DrawImageOptions{}
 				if perm.Tapped {
@@ -3706,7 +3671,7 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps *int
 		return
 	}
 
-	handBgW := dp.handBg.Bounds().Dx()
+	handBgW := domain.CardArtWidth
 	handBgH := dp.handBg.Bounds().Dy()
 
 	opts := &ebiten.DrawImageOptions{}
@@ -3736,7 +3701,7 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps *int
 	handCards := handDisplayOrder(ps.Hand)
 	for i, card := range handCards {
 		y := dp.handY + handBgH + i*handCardOverlap
-		cardImg := s.getCardArtImg(card.Name, handBgW)
+		cardImg := s.getCardArtImg(card.Name, domain.CardViewArtOnly)
 		if cardImg != nil {
 			cardOpts := &ebiten.DrawImageOptions{}
 			cardOpts.GeoM.Translate(float64(dp.handX), float64(y))
@@ -3761,7 +3726,7 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps *int
 		y := dp.handY + handBgH + i*handCardOverlap
 		cardH := handCardOverlap
 		if i == len(handCards)-1 {
-			if cardImg := s.getCardArtImg(card.Name, handBgW); cardImg != nil {
+			if cardImg := s.getCardArtImg(card.Name, domain.CardViewArtOnly); cardImg != nil {
 				cardH = cardImg.Bounds().Dy()
 			}
 		}
@@ -3803,10 +3768,10 @@ func drawLife(screen *ebiten.Image, dp *duelPlayer, life int, Y int) {
 
 const (
 	graveyardX         = 60
-	graveyardW         = 61
-	graveyardH         = 91
+	graveyardW         = domain.CardArtMiniWidth
+	graveyardH         = domain.CardArtMiniHeight
 	graveyardSelfY     = 580
-	graveyardOpponentY = 94
+	graveyardOpponentY = 90
 )
 
 func (s *DuelScreen) graveyardBounds(dp *duelPlayer) image.Rectangle {
@@ -3838,7 +3803,7 @@ func (s *DuelScreen) drawGraveyard(screen *ebiten.Image, dp *duelPlayer) {
 		return
 	}
 	top := ps.Graveyard[graveyardIndex]
-	art := s.getCardArtImg(top.Name, graveyardW)
+	art := s.getCardArtImg(top.Name, domain.CardViewArtMini)
 	if art == nil {
 		return
 	}
@@ -3900,22 +3865,23 @@ func (s *DuelScreen) drawSidebar(screen *ebiten.Image, W, H int) {
 }
 
 func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
-	if s.cardPreviewImg == nil {
+	img := s.previewImage()
+	if img == nil {
 		return
 	}
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(cardPreviewX, cardPreviewY)
-	screen.DrawImage(s.cardPreviewImg, opts)
+	screen.DrawImage(img, opts)
 
-	if s.cardPreviewName != "" {
-		domainCard := s.getDomainCard(s.cardPreviewName)
+	if s.preview != nil {
+		domainCard := s.preview.Card
 		if domainCard != nil && domainCard.CardType == domain.CardTypeCreature {
 			power, toughness := domainCard.Power, domainCard.Toughness
-			if s.cardPreviewPerm != nil {
-				power, toughness = displayedCreatureStats(*s.cardPreviewPerm)
+			if s.preview.Permanent != nil {
+				power, toughness = displayedCreatureStats(*s.preview.Permanent)
 			}
-			imgW := s.cardPreviewImg.Bounds().Dx()
-			imgH := s.cardPreviewImg.Bounds().Dy()
+			imgW := img.Bounds().Dx()
+			imgH := img.Bounds().Dy()
 			statText := fmt.Sprintf("%d/%d", power, toughness)
 			stat := elements.NewText(cardPreviewCreatureStatsSize, statText, 0, 0)
 			textW, _ := stat.Measure()
@@ -3929,9 +3895,9 @@ func (s *DuelScreen) drawCardPreview(screen *ebiten.Image, H int) {
 			bg.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 			stat.X = textPos.X
 			stat.Y = textPos.Y
-			if s.cardPreviewPerm != nil && (power > domainCard.Power || toughness > domainCard.Toughness) {
+			if s.preview.Permanent != nil && (power > domainCard.Power || toughness > domainCard.Toughness) {
 				stat.Color = color.RGBA{100, 255, 100, 255}
-			} else if s.cardPreviewPerm != nil && (power < domainCard.Power || toughness < domainCard.Toughness) {
+			} else if s.preview.Permanent != nil && (power < domainCard.Power || toughness < domainCard.Toughness) {
 				stat.Color = color.RGBA{255, 100, 100, 255}
 			} else {
 				stat.Color = color.RGBA{255, 255, 255, 255}
@@ -4198,7 +4164,7 @@ const (
 	// maxMulligans is the point where London rules stop being a choice: the
 	// seventh mulligan puts all seven cards back, leaving an empty hand.
 	maxMulligans          = 7
-	mulliganCardW         = 120
+	mulliganCardW         = domain.CardFullMiniWidth
 	mulliganCardGap       = 12
 	mulliganPreviewMargin = 20
 )
@@ -4225,15 +4191,21 @@ func (s *DuelScreen) mulliganCardRects(W, H int) []image.Rectangle {
 	if n == 0 {
 		return nil
 	}
-	totalW := n*mulliganCardW + (n-1)*mulliganCardGap
-	startX := (W - totalW) / 2
-	cardH := int(float64(mulliganCardW) * 1.4)
-	y := (H - cardH) / 2
+	cols := max(1, min(n, (W-mulliganCardGap)/(mulliganCardW+mulliganCardGap)))
+	rows := (n + cols - 1) / cols
+	cardH := domain.CardFullMiniHeight
+	totalH := rows*cardH + (rows-1)*mulliganCardGap
+	y := (H - totalH) / 2
 	rects := make([]image.Rectangle, n)
 	for i := range hand {
-		x := startX + i*(mulliganCardW+mulliganCardGap)
-		rects[i] = image.Rect(x, y, x+mulliganCardW, y+cardH)
+		row, col := i/cols, i%cols
+		rowCount := min(cols, n-row*cols)
+		totalW := rowCount*mulliganCardW + (rowCount-1)*mulliganCardGap
+		x := (W-totalW)/2 + col*(mulliganCardW+mulliganCardGap)
+		top := y + row*(cardH+mulliganCardGap)
+		rects[i] = image.Rect(x, top, x+mulliganCardW, top+cardH)
 	}
+
 	return rects
 }
 
@@ -4307,10 +4279,6 @@ func (s *DuelScreen) updateMulliganPreview(rects []image.Rectangle, mx, my int) 
 	}
 
 	card := mulliganDisplayOrder(s.human.Hand())[idx]
-	if s.mulliganPreviewImg != nil && s.mulliganPreviewName == card.Name() {
-		s.mulliganPreviewIdx = idx
-		return
-	}
 
 	domainCard := s.getDomainCard(card.Name())
 	if domainCard == nil {
@@ -4362,10 +4330,8 @@ func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 		domainCard := s.getDomainCard(c.Name())
 		drawn := false
 		if domainCard != nil {
-			if img, err := domainCard.CardImage(domain.CardViewFull); err == nil && img != nil {
-				scale := float64(r.Dx()) / float64(img.Bounds().Dx())
+			if img, err := domainCard.CardImage(domain.CardViewFullMini); err == nil && img != nil {
 				opts := &ebiten.DrawImageOptions{}
-				opts.GeoM.Scale(scale, scale)
 				opts.GeoM.Translate(float64(r.Min.X), float64(r.Min.Y))
 				screen.DrawImage(img, opts)
 				drawn = true

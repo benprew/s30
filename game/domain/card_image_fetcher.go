@@ -108,6 +108,7 @@ func CacheCardImage(id string, img image.Image) {
 // ClearCardImageCache clears all cached card images.
 func ClearCardImageCache() {
 	cardImages.Clear()
+	clearCardImageVariants()
 }
 
 func cardIDFromImageFilename(name string) (string, bool) {

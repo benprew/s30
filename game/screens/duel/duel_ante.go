@@ -18,22 +18,20 @@ import (
 )
 
 type DuelAnteScreen struct {
-	background        *ebiten.Image
-	playerAnteCardImg *ebiten.Image
-	playerAnteCard    *domain.Card
-	enemy             *domain.Enemy
-	enemyAnteCard     *domain.Card
-	enemyAnteCardImg  *ebiten.Image
-	enemyVisage       *ebiten.Image
-	enemyName         string
-	lvl               *world.Level
-	idx               int
-	duelBtn           elements.Button
-	bribeBtn          elements.Button
-	visageBorder      []*ebiten.Image
-	playerStatsUI     []*ebiten.Image
-	player            *domain.Player
-	wonCards          []*domain.Card
+	background     *ebiten.Image
+	playerAnteCard *domain.Card
+	enemy          *domain.Enemy
+	enemyAnteCard  *domain.Card
+	enemyVisage    *ebiten.Image
+	enemyName      string
+	lvl            *world.Level
+	idx            int
+	duelBtn        elements.Button
+	bribeBtn       elements.Button
+	visageBorder   []*ebiten.Image
+	playerStatsUI  []*ebiten.Image
+	player         *domain.Player
+	wonCards       []*domain.Card
 }
 
 func (s *DuelAnteScreen) IsFramed() bool { return false }
@@ -92,18 +90,12 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	s.background = loadBackgroundForEnemy(enemy)
 
 	s.playerAnteCard = selectPlayerAnteCard(l.Player.GetActiveDeck())
-	card, err := s.playerAnteCard.CardImage(domain.CardViewFull)
+	card, err := s.playerAnteCard.CardImage(domain.CardViewFullMini)
 	if err != nil || card == nil {
 		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
 	}
-	s.playerAnteCardImg = imageutil.ScaleImage(card, 0.75)
 
 	s.enemyAnteCard = selectEnemyAnteCard(enemy.Character.GetActiveDeck())
-	card, err = s.enemyAnteCard.CardImage(domain.CardViewFull)
-	if err != nil {
-		panic(fmt.Sprintf("No card image for %s\n", s.enemyAnteCard.Name()))
-	}
-	s.enemyAnteCardImg = imageutil.ScaleImage(card, 0.75)
 	s.visageBorder = loadVisageBorder()
 	s.playerStatsUI = loadPlayerStatsUI()
 
@@ -149,6 +141,16 @@ func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	return screenui.DuelAnteScr, nil, nil
 }
 
+func (s *DuelAnteScreen) cardImages() (player, enemy *ebiten.Image) {
+	if s.playerAnteCard != nil {
+		player, _ = s.playerAnteCard.CardImage(domain.CardViewFullMini)
+	}
+	if s.enemyAnteCard != nil {
+		enemy, _ = s.enemyAnteCard.CardImage(domain.CardViewFullMini)
+	}
+	return player, enemy
+}
+
 func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	// Scale background to fill screen (1024x768)
 	if s.background != nil {
@@ -160,20 +162,22 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		screen.DrawImage(s.background, opts)
 	}
 
+	playerImg, enemyImg := s.cardImages()
+
 	// Player ante card - left side
-	if s.playerAnteCardImg != nil {
+	if playerImg != nil {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(50, 50)
-		screen.DrawImage(s.playerAnteCardImg, opts)
+		screen.DrawImage(playerImg, opts)
 	}
 
 	// Enemy ante card - right side
-	if s.enemyAnteCardImg != nil {
+	if enemyImg != nil {
 		opts := &ebiten.DrawImageOptions{}
-		cardBounds := s.enemyAnteCardImg.Bounds()
+		cardBounds := enemyImg.Bounds()
 		xPos := W - cardBounds.Dx() - 50
 		opts.GeoM.Translate(float64(xPos), 50)
-		screen.DrawImage(s.enemyAnteCardImg, opts)
+		screen.DrawImage(enemyImg, opts)
 	}
 
 	// Enemy Name

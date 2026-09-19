@@ -156,7 +156,6 @@ func TestTargetingRaiseDead_AutoOpensGraveyardAndSelectsGraveyardCreature(t *tes
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 
@@ -173,7 +172,7 @@ func TestTargetingRaiseDead_AutoOpensGraveyardAndSelectsGraveyardCreature(t *tes
 	}
 
 	// Click on the valid creature in the graveyard view (index 0)
-	bounds := graveyardCardBounds(0, 1024, 210)
+	bounds := graveyardCardBounds(0, 1024)
 	clickX := bounds.Min.X + 10
 	clickY := bounds.Min.Y + 10
 
@@ -248,14 +247,13 @@ func TestTargetingRaiseDead_IgnoresInvalidGraveyardCardClick(t *testing.T) {
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 
 	s.enterTargetingMode(cardID, action.CardName, []interactive.ActionOption{action})
 
 	// Click on Dark Ritual (index 1), which is NOT a valid target for Raise Dead
-	bounds := graveyardCardBounds(1, 1024, 210)
+	bounds := graveyardCardBounds(1, 1024)
 	clickX := bounds.Min.X + 10
 	clickY := bounds.Min.Y + 10
 
@@ -322,7 +320,6 @@ func TestTargetingAnimateDead_ShowsCreaturesInAllGraveyards(t *testing.T) {
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 

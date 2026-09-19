@@ -52,7 +52,6 @@ func TestRefreshCardActions_PopulatesFromOptions(t *testing.T) {
 		pendingAttackers: make(map[uuid.UUID]bool),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 
@@ -95,7 +94,6 @@ func TestRefreshCardActions_ClearsPendingAttackersOutsideCombat(t *testing.T) {
 		pendingAttackers: map[uuid.UUID]bool{creatureID: true},
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		cardImgCache:     make(map[cardImgKey]cardImgEntry),
 		cardPositions:    make(map[uuid.UUID]image.Point),
 	}
 

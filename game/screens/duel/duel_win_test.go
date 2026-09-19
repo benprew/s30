@@ -254,7 +254,7 @@ func TestDuelWin_AllCardsAwarded(t *testing.T) {
 	}
 }
 
-func TestDuelWinScreen_DynamicLayoutScaling(t *testing.T) {
+func TestDuelWinScreen_FixedSizePages(t *testing.T) {
 	c1 := domain.FindCardByName("Mountain")
 	c2 := domain.FindCardByName("Island")
 	c3 := domain.FindCardByName("Plains")
@@ -270,8 +270,8 @@ func TestDuelWinScreen_DynamicLayoutScaling(t *testing.T) {
 
 	// Ensure all cards fit within 0..1024 bounds
 	for i, wc := range layout {
-		if wc.scale >= 1.0 {
-			t.Errorf("card %d scale = %f, expected scale < 1.0 for 6 cards", i, wc.scale)
+		if wc.rect.Size() != image.Pt(245, 342) {
+			t.Errorf("card %d size = %v", i, wc.rect.Size())
 		}
 		if wc.rect.Min.X < 0 || wc.rect.Max.X > winLogicalW {
 			t.Errorf("card %d rect %v out of screen bounds [0, %d]", i, wc.rect, winLogicalW)
@@ -436,5 +436,18 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 	// All reward cards should be added to player's collection
 	if _, exists := player.CardCollection[giantGrowth]; !exists {
 		t.Error("enemy ante card was not added to player collection upon winning")
+	}
+}
+
+func TestDuelWinBonusUsesMiniPresetAndSeparatePage(t *testing.T) {
+	card := domain.CARDS[0]
+	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	t.Cleanup(domain.ClearCardImageCache)
+	s := NewWinDuelScreen(nil, domain.DuelReward{Cards: []*domain.Card{card}}, []*domain.Card{card})
+	if s.bonusImgs[0].Bounds().Size() != image.Pt(183, 256) {
+		t.Fatal("wrong bonus size")
+	}
+	if s.pageCount() != 2 || !s.nextPage() || s.nextPage() {
+		t.Fatal("bonus page navigation failed")
 	}
 }

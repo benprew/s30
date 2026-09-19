@@ -32,6 +32,8 @@ type Tile struct {
 	Castle            *domain.Castle      // Non-nil when IsCastle is true
 	TerrainType       int                 // Added terrain type
 	TerrainBand       TerrainBand         // Visual terrain and foliage band
+	onDrawTerrain     func()
+	onDrawObjects     func()
 }
 
 func (t *Tile) UnmarshalJSON(data []byte) error {
@@ -201,12 +203,28 @@ func (t *Tile) RemoveRandomEncounter() {
 	t.encounterSprites = []*PositionedSprite{}
 }
 
-// Draw draws the Tile on the screen using the provided options.
-func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+// DrawTerrain draws ground-level terrain elements: base, transitions, and roads.
+func (t *Tile) DrawTerrain(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	if t.onDrawTerrain != nil {
+		t.onDrawTerrain()
+	}
 	t.drawBase(screen, options)
 	t.drawTransitions(screen, options)
 	t.drawRoads(screen, options)
+}
+
+// DrawObjects draws elevated world elements: foliage, structures, and encounters.
+func (t *Tile) DrawObjects(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	if t.onDrawObjects != nil {
+		t.onDrawObjects()
+	}
 	t.drawObjects(screen, options)
+}
+
+// Draw draws the Tile on the screen using the provided options.
+func (t *Tile) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	t.DrawTerrain(screen, options)
+	t.DrawObjects(screen, options)
 }
 
 func (t *Tile) drawBase(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
