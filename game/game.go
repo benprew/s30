@@ -167,7 +167,8 @@ func (g *Game) initWorld(level *world.Level) error {
 	g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(level)
 	g.screenMap[screenui.MiniMapScr] = m
 	g.screenMap[screenui.QuestScrollScr] = screens.NewQuestScrollScreen(level.Player)
-	g.screenMap[screenui.GameMenuScr] = screens.NewGameMenuScreen()
+	g.screenMap[screenui.GameMenuScr] = screens.NewGameMenuScreen(g.SaveGame)
+	g.screenMap[screenui.LoadGameScr] = screens.NewLoadGameScreen()
 	g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreen()
 
 	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
@@ -176,17 +177,21 @@ func (g *Game) initWorld(level *world.Level) error {
 	return nil
 }
 
+func (g *Game) loadSave(savePath string) error {
+	level, err := save.LoadGame(savePath)
+	if err != nil {
+		return fmt.Errorf("failed to load save: %w", err)
+	}
+	if err := level.RebuildSprites(); err != nil {
+		return fmt.Errorf("failed to rebuild sprites: %w", err)
+	}
+	return g.initWorld(level)
+}
+
 func (g *Game) handleStartTransition() error {
 	startScr := g.screenMap[screenui.StartScr].(*screens.StartScreen)
 	if startScr.SelectedSave != "" {
-		level, err := save.LoadGame(startScr.SelectedSave)
-		if err != nil {
-			return fmt.Errorf("failed to load save: %w", err)
-		}
-		if err := level.RebuildSprites(); err != nil {
-			return fmt.Errorf("failed to rebuild sprites: %w", err)
-		}
-		return g.initWorld(level)
+		return g.loadSave(startScr.SelectedSave)
 	}
 
 	startTime := time.Now()
@@ -279,6 +284,15 @@ func (g *Game) Update() error {
 	if prevScreen == screenui.StartScr && name == screenui.WorldScr {
 		if transitionErr := g.handleStartTransition(); transitionErr != nil {
 			return transitionErr
+		}
+	}
+
+	// Entering the world from the in-game load screen loads the selected save.
+	if prevScreen == screenui.LoadGameScr && name == screenui.WorldScr {
+		if loadScr, ok := g.screenMap[screenui.LoadGameScr].(*screens.LoadGameScreen); ok && loadScr.SelectedSave != "" {
+			if err := g.loadSave(loadScr.SelectedSave); err != nil {
+				return err
+			}
 		}
 	}
 

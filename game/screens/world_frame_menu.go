@@ -9,27 +9,25 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-// The world frame's menu button: three dots in a round button, in the frame's
+// The world frame's menu button: three dots in a round button, in the screen's
 // upper right corner. It is sized for touch, because the menu behind it is the
 // one the original only reached with a keyboard.
-//
-// The corner comes from the frame's own art (Advinter1024.pic.png): its playable
-// area starts at x=922 and its top strip ends at y=66. Insetting from the screen
-// instead put the button outside the frame, on the border itself.
 const (
 	worldMenuButtonSize  = 44
-	worldMenuButtonRight = 922
-	worldMenuButtonTop   = 66
-	worldMenuButtonInset = 10
+	worldMenuButtonTop   = 12
+	worldMenuButtonInset = 12
 	worldMenuDotRadius   = 3.5
 	worldMenuDotSpacing  = 12
 )
 
-// worldMenuButtonBounds is the button's rectangle, inside the frame's corner.
-func worldMenuButtonBounds() image.Rectangle {
-	x := worldMenuButtonRight - worldMenuButtonInset - worldMenuButtonSize
-	y := worldMenuButtonTop + worldMenuButtonInset
-	return image.Rect(x, y, x+worldMenuButtonSize, y+worldMenuButtonSize)
+// worldMenuButtonBounds is the button's rectangle, in the screen's upper right corner.
+func worldMenuButtonBounds(w ...int) image.Rectangle {
+	W := 1024
+	if len(w) > 0 {
+		W = w[0]
+	}
+	x := W - worldMenuButtonInset - worldMenuButtonSize
+	return image.Rect(x, worldMenuButtonTop, x+worldMenuButtonSize, worldMenuButtonTop+worldMenuButtonSize)
 }
 
 // worldMenuOpens reports whether the menu was asked for, by clicking the button

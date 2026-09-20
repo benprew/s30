@@ -107,6 +107,20 @@ func TestNavigatePopSkipsOverlays(t *testing.T) {
 	}
 }
 
+func TestNavigatePopFromLoadGameScrLandsOnWorld(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.GameMenuScr] = &stubScreen{overlay: true}
+	g.screenMap[screenui.LoadGameScr] = &stubScreen{overlay: true}
+
+	g.navigate(screenui.GameMenuScr)
+	g.navigate(screenui.LoadGameScr)
+	g.navigate(screenui.PopScr)
+
+	if g.currentScreen != screenui.WorldScr {
+		t.Errorf("currentScreen = %v, want WorldScr", g.currentScreen)
+	}
+}
+
 // A screen nobody registered would hand the draw a nil. The player stays where
 // they are instead of the game falling over.
 func TestNavigateToUnregisteredScreenStaysPut(t *testing.T) {

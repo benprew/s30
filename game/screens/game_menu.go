@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 
+	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/screenui"
@@ -19,6 +20,7 @@ const (
 	gameMenuTitleH    = 38
 	gameMenuPadBottom = 10
 	gameMenuMargin    = 12
+	gameMenuTitlePadX = 16
 
 	gameMenuTitle        = "Will you ..."
 	gameMenuConfirmTitle = "Ready to Quit?"
@@ -50,6 +52,8 @@ type gameMenuRow struct {
 // so from the map there is no screen to open at all. Whether the original let you
 // open it on the road, and at what price, is a separate question.
 var gameMenuRows = []gameMenuRow{
+	{"Save", screenui.PopScr, false},
+	{"Load", screenui.LoadGameScr, false},
 	{"Quit", screenui.StartScr, true},
 	{"See Map", screenui.MiniMapScr, false},
 }
@@ -65,18 +69,16 @@ var gameMenuConfirmRows = []gameMenuRow{
 // gameMenuPanelHeight fits the taller of the two faces, so neither can push a row
 // past the panel's edge.
 func gameMenuPanelHeight() int {
-	rows := len(gameMenuRows)
-	if len(gameMenuConfirmRows) > rows {
-		rows = len(gameMenuConfirmRows)
-	}
+	rows := max(len(gameMenuConfirmRows), len(gameMenuRows))
 	return gameMenuTitleH + rows*gameMenuRowH + gameMenuPadBottom
 }
 
 // gameMenuBounds is the panel's rectangle, hanging below the menu button so the
 // button stays clickable while the menu is open.
 func gameMenuBounds(W int) image.Rectangle {
+	btn := worldMenuButtonBounds(W)
 	x := W - gameMenuMargin - gameMenuPanelW
-	y := worldMenuButtonTop + worldMenuButtonInset + worldMenuButtonSize + gameMenuMargin
+	y := btn.Max.Y + gameMenuMargin
 	return image.Rect(x, y, x+gameMenuPanelW, y+gameMenuPanelHeight())
 }
 
@@ -125,21 +127,54 @@ type GameMenuScreen struct {
 	panelBg *ebiten.Image
 	hoverBg *ebiten.Image
 	step    menuStep
+	onSave  func() error
 }
 
-func NewGameMenuScreen() *GameMenuScreen {
+func NewGameMenuScreen(onSave ...func() error) *GameMenuScreen {
 	panelBg := ebiten.NewImage(gameMenuPanelW, gameMenuPanelHeight())
 	panelBg.Fill(color.RGBA{20, 12, 4, 220})
 
 	hoverBg := ebiten.NewImage(1, 1)
 	hoverBg.Fill(color.White)
 
-	return &GameMenuScreen{panelBg: panelBg, hoverBg: hoverBg}
+	var saveFn func() error
+	if len(onSave) > 0 {
+		saveFn = onSave[0]
+	}
+
+	return &GameMenuScreen{panelBg: panelBg, hoverBg: hoverBg, onSave: saveFn}
 }
 
 func (s *GameMenuScreen) IsFramed() bool { return true }
 
 func (s *GameMenuScreen) IsOverlay() bool { return true }
+
+func (s *GameMenuScreen) handleChoice(pos image.Point, clicked bool, W int) (screenui.ScreenName, screenui.Screen) {
+	if clicked && s.step == menuStepRows {
+		for i, row := range gameMenuRows {
+			if pos.In(gameMenuRowBounds(i, W)) {
+				if row.label == "Save" {
+					if s.onSave != nil {
+						_ = s.onSave()
+					}
+					if am := gameaudio.Get(); am != nil {
+						am.PlaySFX(gameaudio.SFXClick2)
+					}
+					return screenui.PopScr, nil
+				}
+				if row.label == "Load" {
+					if am := gameaudio.Get(); am != nil {
+						am.PlaySFX(gameaudio.SFXClick2)
+					}
+					return screenui.LoadGameScr, NewLoadGameScreen()
+				}
+			}
+		}
+	}
+	step, name := gameMenuChoice(pos, clicked, W, s.step)
+	s.step = step
+	return name, nil
+}
 
 // Update runs the menu. Escape leaves the question rather than the menu when the
 // question is open, which is the one place the two faces differ by keyboard.
@@ -151,9 +186,8 @@ func (s *GameMenuScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		}
 		return screenui.PopScr, nil, nil
 	}
-	step, name := gameMenuChoice(ui.Position(), ui.Click(image.Rect(0, 0, W, H)), W, s.step)
-	s.step = step
-	return name, nil, nil
+	name, scr := s.handleChoice(ui.Position(), ui.Click(image.Rect(0, 0, W, H)), W)
+	return name, scr, nil
 }
 
 // titleAndRows is the face showing now: the list of entries, or the question
@@ -173,6 +207,16 @@ func (s *GameMenuScreen) titleAndRows() (string, []string) {
 	return gameMenuTitle, labels
 }
 
+func gameMenuTitleElement(panel image.Rectangle, titleText string) *elements.Text {
+	title := elements.NewText(20, titleText, panel.Min.X+gameMenuTitlePadX, panel.Min.Y)
+	title.Color = color.White
+	title.HAlign = elements.AlignLeft
+	title.VAlign = elements.AlignMiddle
+	title.BoundsW = float64(panel.Dx() - gameMenuTitlePadX)
+	title.BoundsH = float64(gameMenuTitleH)
+	return title
+}
+
 func (s *GameMenuScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	panel := gameMenuBounds(W)
 	panelOpts := &ebiten.DrawImageOptions{}
@@ -181,12 +225,7 @@ func (s *GameMenuScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.DrawImage(s.panelBg, panelOpts)
 
 	titleText, labels := s.titleAndRows()
-	title := elements.NewText(20, titleText, panel.Min.X, panel.Min.Y)
-	title.Color = color.White
-	title.HAlign = elements.AlignCenter
-	title.VAlign = elements.AlignMiddle
-	title.BoundsW = float64(panel.Dx())
-	title.BoundsH = float64(gameMenuTitleH)
+	title := gameMenuTitleElement(panel, titleText)
 	title.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 
 	pos := ui.Position()

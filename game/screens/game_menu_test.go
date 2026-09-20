@@ -4,6 +4,7 @@ import (
 	"image"
 	"testing"
 
+	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/screenui"
 )
 
@@ -34,10 +35,7 @@ func TestGameMenuFitsOnScreenAndRowsSitInsideIt(t *testing.T) {
 // Rows must not overlap, or a click between two labels would be ambiguous.
 func TestGameMenuRowsDoNotOverlap(t *testing.T) {
 	const W = 1024
-	rows := len(gameMenuRows)
-	if len(gameMenuConfirmRows) > rows {
-		rows = len(gameMenuConfirmRows)
-	}
+	rows := max(len(gameMenuConfirmRows), len(gameMenuRows))
 	for i := 1; i < rows; i++ {
 		if gameMenuRowBounds(i, W).Overlaps(gameMenuRowBounds(i-1, W)) {
 			t.Errorf("rows %d and %d overlap", i-1, i)
@@ -45,10 +43,27 @@ func TestGameMenuRowsDoNotOverlap(t *testing.T) {
 	}
 }
 
-// Every row of the list has to lead somewhere else: one pointing at the menu
-// itself, or at no screen, would be a button that does nothing.
+func findGameMenuRow(t *testing.T, label string) int {
+	t.Helper()
+	for i, r := range gameMenuRows {
+		if r.label == label {
+			return i
+		}
+	}
+	t.Fatalf("row %q not found in gameMenuRows", label)
+	return -1
+}
+
+// Every row of the list has to lead somewhere: Quit and See Map open other
+// screens, Load opens the load overlay, and Save saves and continues (PopScr).
 func TestGameMenuRowsLeadToOtherScreens(t *testing.T) {
 	for _, row := range gameMenuRows {
+		if row.label == "Save" {
+			if row.target != screenui.PopScr {
+				t.Errorf("row %q opens %v, want PopScr", row.label, row.target)
+			}
+			continue
+		}
 		switch row.target {
 		case screenui.NoScr, screenui.PopScr, screenui.GameMenuScr:
 			t.Errorf("row %q opens %v, which is not a screen to go to", row.label, row.target)
@@ -63,7 +78,8 @@ func TestGameMenuRowsLeadToOtherScreens(t *testing.T) {
 // row that left the game on the first click would be the wrong answer to that.
 func TestGameMenuAsksBeforeQuitting(t *testing.T) {
 	const W = 1024
-	quit := gameMenuRowBounds(0, W).Min.Add(image.Pt(5, 5))
+	quitIdx := findGameMenuRow(t, "Quit")
+	quit := gameMenuRowBounds(quitIdx, W).Min.Add(image.Pt(5, 5))
 
 	step, name := gameMenuChoice(quit, true, W, menuStepRows)
 	if step != menuStepConfirmQuit {
@@ -100,12 +116,17 @@ func TestGameMenuConfirmUsesTheOriginalsWords(t *testing.T) {
 	}
 }
 
-// The list face: a row opens its screen, the panel's dead space keeps the menu,
+// The list face: a row opens its screen, Save continues, the panel's dead space keeps the menu,
 // and anywhere else pops back to the world.
 func TestGameMenuChoice(t *testing.T) {
 	const W = 1024
 	panel := gameMenuBounds(W)
-	seeMap := gameMenuRowBounds(1, W).Min.Add(image.Pt(5, 5))
+	seeMapIdx := findGameMenuRow(t, "See Map")
+	seeMap := gameMenuRowBounds(seeMapIdx, W).Min.Add(image.Pt(5, 5))
+	saveIdx := findGameMenuRow(t, "Save")
+	savePt := gameMenuRowBounds(saveIdx, W).Min.Add(image.Pt(5, 5))
+	loadIdx := findGameMenuRow(t, "Load")
+	loadPt := gameMenuRowBounds(loadIdx, W).Min.Add(image.Pt(5, 5))
 	titleArea := image.Pt(panel.Min.X+5, panel.Min.Y+2)
 	outside := image.Pt(panel.Min.X-20, panel.Min.Y+5)
 
@@ -116,6 +137,8 @@ func TestGameMenuChoice(t *testing.T) {
 		want    screenui.ScreenName
 	}{
 		{"a click on See Map opens the map", seeMap, true, screenui.MiniMapScr},
+		{"a click on Save continues the game", savePt, true, screenui.PopScr},
+		{"a click on Load opens load game", loadPt, true, screenui.LoadGameScr},
 		{"a click on the panel's title area keeps the menu", titleArea, true, screenui.GameMenuScr},
 		{"a click outside pops back to the world", outside, true, screenui.PopScr},
 		{"no click this frame leaves the menu open", seeMap, false, screenui.GameMenuScr},
@@ -127,23 +150,70 @@ func TestGameMenuChoice(t *testing.T) {
 	}
 }
 
-// The button has to be reachable by touch, on the screen, and inside the frame's
-// playable area rather than on its border.
-func TestWorldMenuButtonSitsInTheFrameCorner(t *testing.T) {
-	b := worldMenuButtonBounds()
-	if !b.In(image.Rect(0, 0, 1024, 768)) {
+// The button has to be reachable by touch, on the screen, and in the screen's
+// upper right corner clear of the playable map frame.
+func TestWorldMenuButtonSitsInTheScreenCorner(t *testing.T) {
+	const W = 1024
+	b := worldMenuButtonBounds(W)
+	if !b.In(image.Rect(0, 0, W, 768)) {
 		t.Fatalf("button %v is not on the screen", b)
 	}
 	if b.Dx() < 44 || b.Dy() < 44 {
 		t.Errorf("button is %dx%d, too small to hit with a finger", b.Dx(), b.Dy())
 	}
-	// The frame's art ends at x=922 and its top strip at y=66; a button outside
-	// that corner sits on the border, not on the map.
-	if b.Max.X > worldMenuButtonRight {
-		t.Errorf("button ends at x=%d, past the frame's playable area (%d)", b.Max.X, worldMenuButtonRight)
+	if frameRight := FrameOffsetX + FrameWidth; b.Min.X < frameRight {
+		t.Errorf("button starts at x=%d, inside the map frame's right edge (%d)", b.Min.X, frameRight)
 	}
-	if b.Min.Y < worldMenuButtonTop {
-		t.Errorf("button starts at y=%d, above the frame's playable area (%d)", b.Min.Y, worldMenuButtonTop)
+	if b.Max.Y > FrameOffsetY {
+		t.Errorf("button ends at y=%d, below the map frame's top edge (%d)", b.Max.Y, FrameOffsetY)
+	}
+}
+
+func TestGameMenuTitleIsLeftJustified(t *testing.T) {
+	const W = 1024
+	panel := gameMenuBounds(W)
+	for _, titleText := range []string{gameMenuTitle, gameMenuConfirmTitle} {
+		title := gameMenuTitleElement(panel, titleText)
+		if title.HAlign != elements.AlignLeft {
+			t.Errorf("title %q HAlign = %v, want AlignLeft (%v)", titleText, title.HAlign, elements.AlignLeft)
+		}
+		if title.X != panel.Min.X+gameMenuTitlePadX {
+			t.Errorf("title %q X = %d, want %d", titleText, title.X, panel.Min.X+gameMenuTitlePadX)
+		}
+	}
+}
+
+func TestGameMenuSaveTriggersCallback(t *testing.T) {
+	const W = 1024
+	saved := false
+	menu := NewGameMenuScreen(func() error {
+		saved = true
+		return nil
+	})
+	saveIdx := findGameMenuRow(t, "Save")
+	savePt := gameMenuRowBounds(saveIdx, W).Min.Add(image.Pt(5, 5))
+
+	name, _ := menu.handleChoice(savePt, true, W)
+	if !saved {
+		t.Error("clicking Save did not invoke onSave callback")
+	}
+	if name != screenui.PopScr {
+		t.Errorf("name = %v, want PopScr", name)
+	}
+}
+
+func TestGameMenuLoadReturnsLoadGameScreen(t *testing.T) {
+	const W = 1024
+	menu := NewGameMenuScreen()
+	loadIdx := findGameMenuRow(t, "Load")
+	loadPt := gameMenuRowBounds(loadIdx, W).Min.Add(image.Pt(5, 5))
+
+	name, screen := menu.handleChoice(loadPt, true, W)
+	if name != screenui.LoadGameScr {
+		t.Errorf("name = %v, want LoadGameScr", name)
+	}
+	if screen == nil {
+		t.Error("expected non-nil screen for LoadGameScr")
 	}
 }
 

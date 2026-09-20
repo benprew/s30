@@ -30,6 +30,7 @@ const (
 	// iota-derived, so inserting one in the middle renumbers every screen after
 	// it.
 	GameMenuScr
+	LoadGameScr
 )
 
 type Screen interface {
@@ -82,6 +83,8 @@ func ScreenNameToString(sn ScreenName) string {
 		return "BugReport"
 	case GameMenuScr:
 		return "GameMenu"
+	case LoadGameScr:
+		return "LoadGame"
 	default:
 		return "Unknown"
 	}

@@ -196,7 +196,7 @@ func (f *WorldFrame) questScrollBounds(scale float64) image.Rectangle {
 }
 
 func (f *WorldFrame) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	f.menuButton = worldMenuButtonBounds()
+	f.menuButton = worldMenuButtonBounds(W)
 	if worldMenuOpens(ui.Click(f.menuButton), inpututil.IsKeyJustPressed(ebiten.KeyEscape)) {
 		if am := gameaudio.Get(); am != nil {
 			am.PlaySFX(gameaudio.SFXClick2)
