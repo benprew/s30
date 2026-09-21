@@ -54,7 +54,7 @@ type gameMenuRow struct {
 var gameMenuRows = []gameMenuRow{
 	{"Save", screenui.PopScr, false},
 	{"Load", screenui.LoadGameScr, false},
-	{"Quit", screenui.StartScr, true},
+	{"Quit", screenui.QuitScr, true},
 	{"See Map", screenui.MiniMapScr, false},
 }
 
@@ -63,7 +63,7 @@ var gameMenuRows = []gameMenuRow{
 // a click past the question counts as No.
 var gameMenuConfirmRows = []gameMenuRow{
 	{"No.", screenui.GameMenuScr, false},
-	{"Yes.", screenui.StartScr, false},
+	{"Yes.", screenui.QuitScr, false},
 }
 
 // gameMenuPanelHeight fits the taller of the two faces, so neither can push a row
@@ -128,6 +128,7 @@ type GameMenuScreen struct {
 	hoverBg *ebiten.Image
 	step    menuStep
 	onSave  func() error
+	open    bool
 }
 
 func NewGameMenuScreen(onSave ...func() error) *GameMenuScreen {
@@ -145,7 +146,19 @@ func NewGameMenuScreen(onSave ...func() error) *GameMenuScreen {
 	return &GameMenuScreen{panelBg: panelBg, hoverBg: hoverBg, onSave: saveFn}
 }
 
-func (s *GameMenuScreen) IsFramed() bool { return true }
+func (s *GameMenuScreen) IsOpen() bool { return s.open }
+
+func (s *GameMenuScreen) Open() {
+	s.open = true
+	s.step = menuStepRows
+}
+
+func (s *GameMenuScreen) Close() {
+	s.open = false
+	s.step = menuStepRows
+}
+
+func (s *GameMenuScreen) IsFramed() bool { return false }
 
 func (s *GameMenuScreen) IsOverlay() bool { return true }
 
@@ -176,18 +189,45 @@ func (s *GameMenuScreen) handleChoice(pos image.Point, clicked bool, W int) (scr
 	return name, nil
 }
 
-// Update runs the menu. Escape leaves the question rather than the menu when the
-// question is open, which is the one place the two faces differ by keyboard.
-func (s *GameMenuScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+// UpdateMenu runs the menu. When closed, clicking the button or pressing Escape
+// (if allowed) opens the menu. When open, Escape leaves the question or closes
+// the menu.
+func (s *GameMenuScreen) UpdateMenu(W, H int, scale float64, allowEscapeOpen bool) (screenui.ScreenName, screenui.Screen, error) {
+	if !s.open {
+		btn := gameMenuButtonBounds(W)
+		if ui.Click(btn) || (allowEscapeOpen && inpututil.IsKeyJustPressed(ebiten.KeyEscape)) {
+			if am := gameaudio.Get(); am != nil {
+				am.PlaySFX(gameaudio.SFXClick2)
+			}
+			s.Open()
+			return screenui.GameMenuScr, nil, nil
+		}
+		return screenui.NoScr, nil, nil
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		if s.step == menuStepConfirmQuit {
 			s.step = menuStepRows
 			return screenui.GameMenuScr, nil, nil
 		}
+		s.Close()
 		return screenui.PopScr, nil, nil
 	}
+
 	name, scr := s.handleChoice(ui.Position(), ui.Click(image.Rect(0, 0, W, H)), W)
+	if name == screenui.QuitScr {
+		s.Close()
+		return screenui.QuitScr, nil, ebiten.Termination
+	}
+	if name == screenui.PopScr || name == screenui.LoadGameScr || name == screenui.MiniMapScr {
+		s.Close()
+	}
 	return name, scr, nil
+}
+
+// Update implements screenui.Screen.
+func (s *GameMenuScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	return s.UpdateMenu(W, H, scale, true)
 }
 
 // titleAndRows is the face showing now: the list of entries, or the question
@@ -218,6 +258,13 @@ func gameMenuTitleElement(panel image.Rectangle, titleText string) *elements.Tex
 }
 
 func (s *GameMenuScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
+	btn := gameMenuButtonBounds(W)
+	drawGameMenuButton(screen, btn, scale)
+
+	if !s.open {
+		return
+	}
+
 	panel := gameMenuBounds(W)
 	panelOpts := &ebiten.DrawImageOptions{}
 	panelOpts.GeoM.Scale(scale, scale)

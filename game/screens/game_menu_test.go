@@ -6,6 +6,7 @@ import (
 
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 // The menu has to fit on the screen it floats over, and every row of both faces
@@ -54,8 +55,8 @@ func findGameMenuRow(t *testing.T, label string) int {
 	return -1
 }
 
-// Every row of the list has to lead somewhere: Quit and See Map open other
-// screens, Load opens the load overlay, and Save saves and continues (PopScr).
+// Every row of the list has to lead somewhere: Quit exits the game (QuitScr),
+// See Map opens the minimap, Load opens the load overlay, and Save saves and continues (PopScr).
 func TestGameMenuRowsLeadToOtherScreens(t *testing.T) {
 	for _, row := range gameMenuRows {
 		if row.label == "Save" {
@@ -64,8 +65,14 @@ func TestGameMenuRowsLeadToOtherScreens(t *testing.T) {
 			}
 			continue
 		}
+		if row.label == "Quit" {
+			if row.target != screenui.QuitScr {
+				t.Errorf("row %q opens %v, want QuitScr", row.label, row.target)
+			}
+			continue
+		}
 		switch row.target {
-		case screenui.NoScr, screenui.PopScr, screenui.GameMenuScr:
+		case screenui.NoScr, screenui.PopScr, screenui.GameMenuScr, screenui.QuitScr:
 			t.Errorf("row %q opens %v, which is not a screen to go to", row.label, row.target)
 		}
 		if row.label == "" {
@@ -90,8 +97,8 @@ func TestGameMenuAsksBeforeQuitting(t *testing.T) {
 	}
 
 	yes := gameMenuRowBounds(1, W).Min.Add(image.Pt(5, 5))
-	if step, name := gameMenuChoice(yes, true, W, menuStepConfirmQuit); name != screenui.StartScr || step != menuStepRows {
-		t.Errorf("answering Yes gave (%v, %v), want the list and StartScr", step, name)
+	if step, name := gameMenuChoice(yes, true, W, menuStepConfirmQuit); name != screenui.QuitScr || step != menuStepRows {
+		t.Errorf("answering Yes gave (%v, %v), want the list and QuitScr", step, name)
 	}
 
 	no := gameMenuRowBounds(0, W).Min.Add(image.Pt(5, 5))
@@ -217,6 +224,26 @@ func TestGameMenuLoadReturnsLoadGameScreen(t *testing.T) {
 	}
 }
 
+func TestGameMenuYesReturnsQuitScr(t *testing.T) {
+	const W = 1024
+	menu := NewGameMenuScreen()
+	quitIdx := findGameMenuRow(t, "Quit")
+	quitPt := gameMenuRowBounds(quitIdx, W).Min.Add(image.Pt(5, 5))
+
+	// First click Quit to show confirmation
+	menu.handleChoice(quitPt, true, W)
+	if menu.step != menuStepConfirmQuit {
+		t.Fatalf("step = %v, want menuStepConfirmQuit", menu.step)
+	}
+
+	// Click "Yes." (row 1)
+	yesPt := gameMenuRowBounds(1, W).Min.Add(image.Pt(5, 5))
+	name, _ := menu.handleChoice(yesPt, true, W)
+	if name != screenui.QuitScr {
+		t.Errorf("name = %v, want QuitScr", name)
+	}
+}
+
 // Either input opens the menu: the button for touch and mouse, Escape for the
 // keyboard path the original used.
 func TestWorldMenuOpensOnClickOrEscape(t *testing.T) {
@@ -230,5 +257,63 @@ func TestWorldMenuOpensOnClickOrEscape(t *testing.T) {
 		if got := worldMenuOpens(c.clicked, c.escape); got != c.want {
 			t.Errorf("worldMenuOpens(%v, %v) = %v, want %v", c.clicked, c.escape, got, c.want)
 		}
+	}
+}
+
+func TestGameMenuOpenAndClose(t *testing.T) {
+	menu := NewGameMenuScreen()
+	if menu.IsOpen() {
+		t.Error("menu should start closed")
+	}
+	menu.Open()
+	if !menu.IsOpen() {
+		t.Error("menu should be open after Open()")
+	}
+	menu.Close()
+	if menu.IsOpen() {
+		t.Error("menu should be closed after Close()")
+	}
+}
+
+func TestGameMenuNotFramed(t *testing.T) {
+	menu := NewGameMenuScreen()
+	if menu.IsFramed() {
+		t.Error("game menu should not be framed by WorldFrame")
+	}
+}
+
+func TestGameMenuUpdateClosedReturnsNoScr(t *testing.T) {
+	menu := NewGameMenuScreen()
+	name, scr, err := menu.UpdateMenu(1024, 768, 1.0, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if name != screenui.NoScr {
+		t.Errorf("name = %v, want NoScr when closed without interaction", name)
+	}
+	if scr != nil {
+		t.Errorf("scr = %v, want nil", scr)
+	}
+}
+
+func TestGameMenuDrawDoesNotPanic(t *testing.T) {
+	menu := NewGameMenuScreen()
+	screen := ebiten.NewImage(1024, 768)
+
+	// Draw while closed
+	menu.Draw(screen, 1024, 768, 1.0)
+
+	// Draw while open
+	menu.Open()
+	menu.Draw(screen, 1024, 768, 1.0)
+}
+
+func TestMenuSquareImageLoads(t *testing.T) {
+	img := getMenuSquareImage()
+	if img == nil {
+		t.Fatal("menu square image is nil")
+	}
+	if img.Bounds().Dx() != 24 || img.Bounds().Dy() != 24 {
+		t.Errorf("menu square size = %dx%d, want 24x24", img.Bounds().Dx(), img.Bounds().Dy())
 	}
 }

@@ -4,12 +4,17 @@ import (
 	"testing"
 
 	gameaudio "github.com/benprew/s30/game/audio"
+	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type stubScreen struct {
-	overlay bool
+	overlay  bool
+	next     screenui.ScreenName
+	err      error
+	onUpdate func()
 }
 
 type closableStubScreen struct {
@@ -85,6 +90,12 @@ func TestFixedScreenBGM(t *testing.T) {
 }
 
 func (s *stubScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	if s.onUpdate != nil {
+		s.onUpdate()
+	}
+	if s.next != 0 || s.err != nil {
+		return s.next, nil, s.err
+	}
 	return screenui.NoScr, nil, nil
 }
 func (s *stubScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {}
@@ -222,3 +233,99 @@ func TestGameUpdateRecoversAndReportsPanic(t *testing.T) {
 
 	_ = g.Update()
 }
+
+func TestGameUpdateTerminatesOnQuitScr(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.WorldScr] = &stubScreen{next: screenui.QuitScr}
+
+	err := g.Update()
+	if err != ebiten.Termination {
+		t.Fatalf("Update() error = %v, want ebiten.Termination", err)
+	}
+}
+
+func TestGameUpdateTerminatesOnTerminationError(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.WorldScr] = &stubScreen{err: ebiten.Termination}
+
+	err := g.Update()
+	if err != ebiten.Termination {
+		t.Fatalf("Update() error = %v, want ebiten.Termination", err)
+	}
+}
+
+func TestGameMenuVisible(t *testing.T) {
+	g := newTestGame()
+	g.gameMenu = screens.NewGameMenuScreen()
+
+	if g.menuVisible() {
+		t.Error("menuVisible should be false when player is nil")
+	}
+
+	p, err := domain.NewPlayer("Hero", nil, false, domain.DifficultyEasy, domain.ColorRed)
+	if err != nil {
+		t.Fatalf("failed to create player: %v", err)
+	}
+	g.player = p
+
+	g.currentScreen = screenui.WorldScr
+	if !g.menuVisible() {
+		t.Error("menuVisible should be true on WorldScr")
+	}
+
+	g.currentScreen = screenui.StartScr
+	if g.menuVisible() {
+		t.Error("menuVisible should be false on StartScr")
+	}
+
+	g.currentScreen = screenui.BugReportScr
+	if g.menuVisible() {
+		t.Error("menuVisible should be false on BugReportScr")
+	}
+
+	g.currentScreen = screenui.LoadGameScr
+	if g.menuVisible() {
+		t.Error("menuVisible should be false on LoadGameScr")
+	}
+
+	g.currentScreen = screenui.CityScr
+	if !g.menuVisible() {
+		t.Error("menuVisible should be true on CityScr")
+	}
+
+	g.currentScreen = screenui.DuelScr
+	if !g.menuVisible() {
+		t.Error("menuVisible should be true on DuelScr")
+	}
+}
+
+func TestGameMenuUpdateProcessedFirstWhenOpen(t *testing.T) {
+	g := newTestGame()
+	p, err := domain.NewPlayer("Hero", nil, false, domain.DifficultyEasy, domain.ColorRed)
+	if err != nil {
+		t.Fatalf("failed to create player: %v", err)
+	}
+	g.player = p
+
+	screenUpdated := false
+	screen := &stubScreen{
+		onUpdate: func() {
+			screenUpdated = true
+		},
+	}
+	g.screenMap[screenui.WorldScr] = screen
+	g.currentScreen = screenui.WorldScr
+
+	g.gameMenu = screens.NewGameMenuScreen()
+	g.gameMenu.Open()
+
+	err = g.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	if screenUpdated {
+		t.Error("CurrentScreen().Update() should NOT be called when gameMenu is open")
+	}
+}
+

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -28,6 +29,7 @@ type Game struct {
 	camScaleTo           float64
 	mousePanX, mousePanY int
 	worldFrame           *screens.WorldFrame
+	gameMenu             *screens.GameMenuScreen
 	currentScreen        screenui.ScreenName
 	prevScreen           screenui.ScreenName
 	screenMap            map[screenui.ScreenName]screenui.Screen
@@ -162,12 +164,13 @@ func (g *Game) initWorld(level *world.Level) error {
 	}
 
 	g.worldFrame = wf
+	g.gameMenu = screens.NewGameMenuScreen(g.SaveGame)
 	level.SetViewport(wf.Viewport())
 	g.player = level.Player
 	g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(level)
 	g.screenMap[screenui.MiniMapScr] = m
 	g.screenMap[screenui.QuestScrollScr] = screens.NewQuestScrollScreen(level.Player)
-	g.screenMap[screenui.GameMenuScr] = screens.NewGameMenuScreen(g.SaveGame)
+	g.screenMap[screenui.GameMenuScr] = g.gameMenu
 	g.screenMap[screenui.LoadGameScr] = screens.NewLoadGameScreen()
 	g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreen()
 
@@ -191,7 +194,9 @@ func (g *Game) loadSave(savePath string) error {
 func (g *Game) handleStartTransition() error {
 	startScr := g.screenMap[screenui.StartScr].(*screens.StartScreen)
 	if startScr.SelectedSave != "" {
-		return g.loadSave(startScr.SelectedSave)
+		savePath := startScr.SelectedSave
+		startScr.SelectedSave = ""
+		return g.loadSave(savePath)
 	}
 
 	startTime := time.Now()
@@ -210,6 +215,13 @@ func (g *Game) handleStartTransition() error {
 	}
 	fmt.Printf("New game creation time: %s\n", time.Since(startTime))
 	return nil
+}
+
+func (g *Game) menuVisible() bool {
+	return g.gameMenu != nil && g.player != nil &&
+		g.currentScreen != screenui.StartScr &&
+		g.currentScreen != screenui.BugReportScr &&
+		g.currentScreen != screenui.LoadGameScr
 }
 
 func (g *Game) Update() error {
@@ -234,6 +246,30 @@ func (g *Game) Update() error {
 	}
 
 	ui.UpdatePointer()
+
+	if g.menuVisible() {
+		menuOpenBefore := g.gameMenu.IsOpen()
+		allowEscapeOpen := g.currentScreen == screenui.WorldScr
+		menuName, menuScr, menuErr := g.gameMenu.UpdateMenu(g.ScreenW, g.ScreenH, g.camScale, allowEscapeOpen)
+		if menuErr != nil {
+			if errors.Is(menuErr, ebiten.Termination) {
+				return ebiten.Termination
+			}
+			return fmt.Errorf("err updating game menu: %w", menuErr)
+		}
+		if menuName == screenui.QuitScr {
+			return ebiten.Termination
+		}
+		if menuScr != nil && menuName != screenui.PopScr && menuName != screenui.NoScr {
+			g.screenMap[menuName] = menuScr
+		}
+		if menuName == screenui.LoadGameScr || menuName == screenui.MiniMapScr {
+			g.navigate(menuName)
+		}
+		if menuOpenBefore || g.gameMenu.IsOpen() {
+			return nil
+		}
+	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF8) {
 		if g.currentScreen != screenui.BugReportScr {
@@ -277,7 +313,13 @@ func (g *Game) Update() error {
 	prevScreen := g.currentScreen
 	name, screen, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
 	if err != nil {
+		if errors.Is(err, ebiten.Termination) {
+			return ebiten.Termination
+		}
 		return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(prevScreen), err)
+	}
+	if name == screenui.QuitScr {
+		return ebiten.Termination
 	}
 
 	// Entering the world from the start screen builds the world first.
@@ -339,7 +381,13 @@ func (g *Game) Update() error {
 	if !screenChanged && g.CurrentScreen().IsFramed() {
 		wfName, wfScreen, wfErr := g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
 		if wfErr != nil {
+			if errors.Is(wfErr, ebiten.Termination) {
+				return ebiten.Termination
+			}
 			return fmt.Errorf("err updating world frame: %s", wfErr)
+		}
+		if wfName == screenui.QuitScr {
+			return ebiten.Termination
 		}
 		if wfScreen != nil && wfName != screenui.PopScr && wfName != screenui.NoScr {
 			g.screenMap[wfName] = wfScreen
@@ -377,6 +425,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	cur.Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
 	if cur.IsFramed() {
 		g.worldFrame.Draw(screen, g.camScale)
+	}
+	if g.menuVisible() {
+		g.gameMenu.Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
 	}
 
 	if logging.Enabled(logging.World) && g.screenMap[screenui.WorldScr] != nil {

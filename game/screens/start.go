@@ -280,6 +280,7 @@ func (s *StartScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 		for i, btn := range s.saveButtons {
 			if btn.IsClicked() {
 				s.SelectedSave = s.saves[i].Path
+				s.mode = startModeMenu
 				return screenui.WorldScr, nil, nil
 			}
 		}
@@ -305,6 +306,7 @@ func (s *StartScreen) Update(W, H int, scale float64) (screenui.ScreenName, scre
 			btn.Update(opts, scale, W, H)
 			if btn.IsClicked() {
 				s.SelectedColor = colorOrder[i]
+				s.mode = startModeMenu
 				btn.State = elements.StateNormal
 				return screenui.WorldScr, nil, nil
 			}

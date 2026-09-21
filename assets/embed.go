@@ -226,6 +226,10 @@ var (
 	//go:embed art/ui/Tradbut1.pic.png
 	Tradbut1_png []byte
 
+	// From: https://pixelarticons.com/
+	//go:embed art/ui/MenuSquare.png
+	MenuSquare_png []byte
+
 	//go:embed art/screens/start/Title.pic.png
 	StartTitle_png []byte
 
@@ -254,7 +258,6 @@ var (
 	// Text
 	//go:embed text/Advblocks.txt
 	Advblocks_txt []byte
-
 
 	// Audio
 	//go:embed audio/sfx/* audio/bgm/*

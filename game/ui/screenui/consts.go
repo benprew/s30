@@ -5,6 +5,7 @@ import "github.com/hajimehoshi/ebiten/v2"
 type ScreenName int
 
 const (
+	QuitScr             = -3 // exits the game
 	NoScr               = -2 // means "No naviagation"
 	PopScr              = -1 // used by transparent overlays
 	StartScr ScreenName = iota
@@ -85,6 +86,8 @@ func ScreenNameToString(sn ScreenName) string {
 		return "GameMenu"
 	case LoadGameScr:
 		return "LoadGame"
+	case QuitScr:
+		return "Quit"
 	default:
 		return "Unknown"
 	}
