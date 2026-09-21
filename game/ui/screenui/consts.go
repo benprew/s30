@@ -5,6 +5,7 @@ import "github.com/hajimehoshi/ebiten/v2"
 type ScreenName int
 
 const (
+	QuitScr             = -3 // exits the game
 	NoScr               = -2 // means "No naviagation"
 	PopScr              = -1 // used by transparent overlays
 	StartScr ScreenName = iota
@@ -26,6 +27,11 @@ const (
 	GameWinScr
 	GameLoseScr
 	BugReportScr
+	// Appended rather than slotted in beside QuestScrollScr: these values are
+	// iota-derived, so inserting one in the middle renumbers every screen after
+	// it.
+	GameMenuScr
+	LoadGameScr
 )
 
 type Screen interface {
@@ -76,6 +82,12 @@ func ScreenNameToString(sn ScreenName) string {
 		return "GameLose"
 	case BugReportScr:
 		return "BugReport"
+	case GameMenuScr:
+		return "GameMenu"
+	case LoadGameScr:
+		return "LoadGame"
+	case QuitScr:
+		return "Quit"
 	default:
 		return "Unknown"
 	}

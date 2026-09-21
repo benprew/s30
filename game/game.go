@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -28,6 +29,7 @@ type Game struct {
 	camScaleTo           float64
 	mousePanX, mousePanY int
 	worldFrame           *screens.WorldFrame
+	gameMenu             *screens.GameMenuScreen
 	currentScreen        screenui.ScreenName
 	prevScreen           screenui.ScreenName
 	screenMap            map[screenui.ScreenName]screenui.Screen
@@ -60,14 +62,34 @@ func (g *Game) navigate(name screenui.ScreenName) {
 	case screenui.NoScr, g.currentScreen:
 		// no-op
 	case screenui.PopScr:
-		g.currentScreen = g.prevScreen
+		g.currentScreen = g.popTarget()
 	default:
+		// A screen nobody registered would hand the draw a nil. Staying put is
+		// what a dead entry deserves.
+		if g.screenMap[name] == nil {
+			return
+		}
 		g.prevScreen = g.currentScreen
 		g.currentScreen = name
 	}
 	if g.CurrentScreen() != previous {
 		closeLifecycleScreen(previous)
 	}
+}
+
+// popTarget is the screen a pop lands on. Overlays are stepped over: an overlay
+// opened from another overlay - the game menu opening the map - would otherwise
+// pop back onto the menu with nothing drawing the world behind it. When the
+// registry cannot answer, the current screen is kept rather than handing the
+// draw a nil.
+func (g *Game) popTarget() screenui.ScreenName {
+	if s := g.screenMap[g.prevScreen]; s != nil && !s.IsOverlay() {
+		return g.prevScreen
+	}
+	if g.screenMap[screenui.WorldScr] != nil {
+		return screenui.WorldScr
+	}
+	return g.currentScreen
 }
 
 func closeLifecycleScreen(screen screenui.Screen) {
@@ -142,11 +164,14 @@ func (g *Game) initWorld(level *world.Level) error {
 	}
 
 	g.worldFrame = wf
+	g.gameMenu = screens.NewGameMenuScreen(g.SaveGame)
 	level.SetViewport(wf.Viewport())
 	g.player = level.Player
 	g.screenMap[screenui.WorldScr] = screens.NewLevelScreen(level)
 	g.screenMap[screenui.MiniMapScr] = m
 	g.screenMap[screenui.QuestScrollScr] = screens.NewQuestScrollScreen(level.Player)
+	g.screenMap[screenui.GameMenuScr] = g.gameMenu
+	g.screenMap[screenui.LoadGameScr] = screens.NewLoadGameScreen()
 	g.screenMap[screenui.DuelAnteScr] = screens.NewDuelAnteScreen()
 
 	go domain.PreloadCardImages(domain.CollectPriorityCards(level.Player))
@@ -155,17 +180,23 @@ func (g *Game) initWorld(level *world.Level) error {
 	return nil
 }
 
+func (g *Game) loadSave(savePath string) error {
+	level, err := save.LoadGame(savePath)
+	if err != nil {
+		return fmt.Errorf("failed to load save: %w", err)
+	}
+	if err := level.RebuildSprites(); err != nil {
+		return fmt.Errorf("failed to rebuild sprites: %w", err)
+	}
+	return g.initWorld(level)
+}
+
 func (g *Game) handleStartTransition() error {
 	startScr := g.screenMap[screenui.StartScr].(*screens.StartScreen)
 	if startScr.SelectedSave != "" {
-		level, err := save.LoadGame(startScr.SelectedSave)
-		if err != nil {
-			return fmt.Errorf("failed to load save: %w", err)
-		}
-		if err := level.RebuildSprites(); err != nil {
-			return fmt.Errorf("failed to rebuild sprites: %w", err)
-		}
-		return g.initWorld(level)
+		savePath := startScr.SelectedSave
+		startScr.SelectedSave = ""
+		return g.loadSave(savePath)
 	}
 
 	startTime := time.Now()
@@ -184,6 +215,13 @@ func (g *Game) handleStartTransition() error {
 	}
 	fmt.Printf("New game creation time: %s\n", time.Since(startTime))
 	return nil
+}
+
+func (g *Game) menuVisible() bool {
+	return g.gameMenu != nil && g.player != nil &&
+		g.currentScreen != screenui.StartScr &&
+		g.currentScreen != screenui.BugReportScr &&
+		g.currentScreen != screenui.LoadGameScr
 }
 
 func (g *Game) Update() error {
@@ -208,6 +246,30 @@ func (g *Game) Update() error {
 	}
 
 	ui.UpdatePointer()
+
+	if g.menuVisible() {
+		menuOpenBefore := g.gameMenu.IsOpen()
+		allowEscapeOpen := g.currentScreen == screenui.WorldScr
+		menuName, menuScr, menuErr := g.gameMenu.UpdateMenu(g.ScreenW, g.ScreenH, g.camScale, allowEscapeOpen)
+		if menuErr != nil {
+			if errors.Is(menuErr, ebiten.Termination) {
+				return ebiten.Termination
+			}
+			return fmt.Errorf("err updating game menu: %w", menuErr)
+		}
+		if menuName == screenui.QuitScr {
+			return ebiten.Termination
+		}
+		if menuScr != nil && menuName != screenui.PopScr && menuName != screenui.NoScr {
+			g.screenMap[menuName] = menuScr
+		}
+		if menuName == screenui.LoadGameScr || menuName == screenui.MiniMapScr {
+			g.navigate(menuName)
+		}
+		if menuOpenBefore || g.gameMenu.IsOpen() {
+			return nil
+		}
+	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF8) {
 		if g.currentScreen != screenui.BugReportScr {
@@ -251,13 +313,28 @@ func (g *Game) Update() error {
 	prevScreen := g.currentScreen
 	name, screen, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
 	if err != nil {
+		if errors.Is(err, ebiten.Termination) {
+			return ebiten.Termination
+		}
 		return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(prevScreen), err)
+	}
+	if name == screenui.QuitScr {
+		return ebiten.Termination
 	}
 
 	// Entering the world from the start screen builds the world first.
 	if prevScreen == screenui.StartScr && name == screenui.WorldScr {
 		if transitionErr := g.handleStartTransition(); transitionErr != nil {
 			return transitionErr
+		}
+	}
+
+	// Entering the world from the in-game load screen loads the selected save.
+	if prevScreen == screenui.LoadGameScr && name == screenui.WorldScr {
+		if loadScr, ok := g.screenMap[screenui.LoadGameScr].(*screens.LoadGameScreen); ok && loadScr.SelectedSave != "" {
+			if err := g.loadSave(loadScr.SelectedSave); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -304,7 +381,13 @@ func (g *Game) Update() error {
 	if !screenChanged && g.CurrentScreen().IsFramed() {
 		wfName, wfScreen, wfErr := g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
 		if wfErr != nil {
+			if errors.Is(wfErr, ebiten.Termination) {
+				return ebiten.Termination
+			}
 			return fmt.Errorf("err updating world frame: %s", wfErr)
+		}
+		if wfName == screenui.QuitScr {
+			return ebiten.Termination
 		}
 		if wfScreen != nil && wfName != screenui.PopScr && wfName != screenui.NoScr {
 			g.screenMap[wfName] = wfScreen
@@ -329,13 +412,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	cur := g.CurrentScreen()
 	if cur.IsOverlay() {
-		if below := g.screenMap[g.prevScreen]; below != nil {
+		below := g.screenMap[g.prevScreen]
+		// An overlay opened from another overlay - the game menu opening the map
+		// - would otherwise be drawn on a menu panel with no world behind it.
+		if below != nil && below.IsOverlay() {
+			below = g.screenMap[screenui.WorldScr]
+		}
+		if below != nil {
 			below.Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
 		}
 	}
 	cur.Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
 	if cur.IsFramed() {
 		g.worldFrame.Draw(screen, g.camScale)
+	}
+	if g.menuVisible() {
+		g.gameMenu.Draw(screen, g.ScreenW, g.ScreenH, g.camScale)
 	}
 
 	if logging.Enabled(logging.World) && g.screenMap[screenui.WorldScr] != nil {

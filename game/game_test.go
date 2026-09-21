@@ -4,12 +4,17 @@ import (
 	"testing"
 
 	gameaudio "github.com/benprew/s30/game/audio"
+	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type stubScreen struct {
-	overlay bool
+	overlay  bool
+	next     screenui.ScreenName
+	err      error
+	onUpdate func()
 }
 
 type closableStubScreen struct {
@@ -85,11 +90,64 @@ func TestFixedScreenBGM(t *testing.T) {
 }
 
 func (s *stubScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	if s.onUpdate != nil {
+		s.onUpdate()
+	}
+	if s.next != 0 || s.err != nil {
+		return s.next, nil, s.err
+	}
 	return screenui.NoScr, nil, nil
 }
 func (s *stubScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {}
 func (s *stubScreen) IsFramed() bool                                     { return false }
 func (s *stubScreen) IsOverlay() bool                                    { return s.overlay }
+
+// The menu opening the map chains two overlays. Popping back onto the menu would
+// leave nothing drawing the world behind it, which is what showed as a black
+// screen; the pop lands on the world instead.
+func TestNavigatePopSkipsOverlays(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.GameMenuScr] = &stubScreen{overlay: true}
+
+	g.navigate(screenui.GameMenuScr)
+	g.navigate(screenui.MiniMapScr)
+	g.navigate(screenui.PopScr)
+
+	if g.currentScreen != screenui.WorldScr {
+		t.Errorf("currentScreen = %v, want WorldScr", g.currentScreen)
+	}
+}
+
+func TestNavigatePopFromLoadGameScrLandsOnWorld(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.GameMenuScr] = &stubScreen{overlay: true}
+	g.screenMap[screenui.LoadGameScr] = &stubScreen{overlay: true}
+
+	g.navigate(screenui.GameMenuScr)
+	g.navigate(screenui.LoadGameScr)
+	g.navigate(screenui.PopScr)
+
+	if g.currentScreen != screenui.WorldScr {
+		t.Errorf("currentScreen = %v, want WorldScr", g.currentScreen)
+	}
+}
+
+// A screen nobody registered would hand the draw a nil. The player stays where
+// they are instead of the game falling over.
+func TestNavigateToUnregisteredScreenStaysPut(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.GameMenuScr] = &stubScreen{overlay: true}
+	g.navigate(screenui.GameMenuScr)
+
+	g.navigate(screenui.EditDeckScr)
+
+	if g.currentScreen != screenui.GameMenuScr {
+		t.Errorf("currentScreen = %v, want to stay on GameMenuScr", g.currentScreen)
+	}
+	if g.prevScreen != screenui.WorldScr {
+		t.Errorf("prevScreen = %v, want WorldScr", g.prevScreen)
+	}
+}
 
 func newTestGame() *Game {
 	return &Game{
@@ -174,5 +232,100 @@ func TestGameUpdateRecoversAndReportsPanic(t *testing.T) {
 	}()
 
 	_ = g.Update()
+}
+
+func TestGameUpdateTerminatesOnQuitScr(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.WorldScr] = &stubScreen{next: screenui.QuitScr}
+
+	err := g.Update()
+	if err != ebiten.Termination {
+		t.Fatalf("Update() error = %v, want ebiten.Termination", err)
+	}
+}
+
+func TestGameUpdateTerminatesOnTerminationError(t *testing.T) {
+	g := newTestGame()
+	g.screenMap[screenui.WorldScr] = &stubScreen{err: ebiten.Termination}
+
+	err := g.Update()
+	if err != ebiten.Termination {
+		t.Fatalf("Update() error = %v, want ebiten.Termination", err)
+	}
+}
+
+func TestGameMenuVisible(t *testing.T) {
+	g := newTestGame()
+	g.gameMenu = screens.NewGameMenuScreen()
+
+	if g.menuVisible() {
+		t.Error("menuVisible should be false when player is nil")
+	}
+
+	p, err := domain.NewPlayer("Hero", nil, false, domain.DifficultyEasy, domain.ColorRed)
+	if err != nil {
+		t.Fatalf("failed to create player: %v", err)
+	}
+	g.player = p
+
+	g.currentScreen = screenui.WorldScr
+	if !g.menuVisible() {
+		t.Error("menuVisible should be true on WorldScr")
+	}
+
+	g.currentScreen = screenui.StartScr
+	if g.menuVisible() {
+		t.Error("menuVisible should be false on StartScr")
+	}
+
+	g.currentScreen = screenui.BugReportScr
+	if g.menuVisible() {
+		t.Error("menuVisible should be false on BugReportScr")
+	}
+
+	g.currentScreen = screenui.LoadGameScr
+	if g.menuVisible() {
+		t.Error("menuVisible should be false on LoadGameScr")
+	}
+
+	g.currentScreen = screenui.CityScr
+	if !g.menuVisible() {
+		t.Error("menuVisible should be true on CityScr")
+	}
+
+	g.currentScreen = screenui.DuelScr
+	if !g.menuVisible() {
+		t.Error("menuVisible should be true on DuelScr")
+	}
+}
+
+func TestGameMenuUpdateProcessedFirstWhenOpen(t *testing.T) {
+	g := newTestGame()
+	p, err := domain.NewPlayer("Hero", nil, false, domain.DifficultyEasy, domain.ColorRed)
+	if err != nil {
+		t.Fatalf("failed to create player: %v", err)
+	}
+	g.player = p
+
+	screenUpdated := false
+	screen := &stubScreen{
+		onUpdate: func() {
+			screenUpdated = true
+		},
+	}
+	g.screenMap[screenui.WorldScr] = screen
+	g.currentScreen = screenui.WorldScr
+
+	g.gameMenu = screens.NewGameMenuScreen()
+	g.gameMenu.Open()
+
+	err = g.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	if screenUpdated {
+		t.Error("CurrentScreen().Update() should NOT be called when gameMenu is open")
+	}
 }
 
