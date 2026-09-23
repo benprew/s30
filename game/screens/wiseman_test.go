@@ -387,3 +387,31 @@ func TestPickBoonAllowsQuestWithFreeSlot(t *testing.T) {
 		t.Error("pickBoon should be able to offer a quest when a slot is free")
 	}
 }
+
+// The quest list draws a quest by its title, so a quest built without one shows up
+// as a blank row (#48). The wording comes from the original's own quest strings,
+// "Take letter to %s" and "Defeat the %s" in Advstrings.txt.
+func TestGeneratedQuestsCarryTitles(t *testing.T) {
+	target := &domain.City{Name: "TargetVille"}
+	delivery := newDeliveryQuest(target, domain.QuestReward{Gold: 100})
+	if delivery.Title == "" {
+		t.Error("delivery quest has no title")
+	}
+	if !strings.Contains(delivery.Title, target.Name) {
+		t.Errorf("delivery title %q does not name the target city", delivery.Title)
+	}
+	if delivery.DaysRemaining <= 0 {
+		t.Errorf("delivery quest has no deadline: %d", delivery.DaysRemaining)
+	}
+
+	defeat := newDefeatQuest("Goblin Warlord", domain.QuestReward{Gold: 100})
+	if defeat.Title == "" {
+		t.Error("defeat quest has no title")
+	}
+	if !strings.Contains(defeat.Title, "Goblin Warlord") {
+		t.Errorf("defeat title %q does not name the enemy", defeat.Title)
+	}
+	if defeat.DaysRemaining <= 0 {
+		t.Errorf("defeat quest has no deadline: %d", defeat.DaysRemaining)
+	}
+}

@@ -187,6 +187,31 @@ func (s *WisemanScreen) generateQuest() {
 	s.setupButtons()
 }
 
+// newDeliveryQuest builds the quest for carrying a letter to another city. The
+// title is the original's quest-list wording, "Take letter to %s"
+// (Advstrings.txt), which is what the quest list draws.
+func newDeliveryQuest(targetCity *domain.City, reward domain.QuestReward) *domain.Quest {
+	return &domain.Quest{
+		Type:          domain.QuestTypeDelivery,
+		TargetCity:    targetCity,
+		DaysRemaining: 20 + rand.Intn(20),
+		Reward:        reward,
+		Title:         fmt.Sprintf("Take letter to %s", targetCity.Name),
+	}
+}
+
+// newDefeatQuest builds the quest for hunting down a rogue. The title is the
+// original's wording, "Defeat the %s" (Advstrings.txt).
+func newDefeatQuest(enemyName string, reward domain.QuestReward) *domain.Quest {
+	return &domain.Quest{
+		Type:          domain.QuestTypeDefeatEnemy,
+		EnemyName:     enemyName,
+		DaysRemaining: 15 + rand.Intn(15),
+		Reward:        reward,
+		Title:         fmt.Sprintf("Defeat the %s", enemyName),
+	}
+}
+
 func (s *WisemanScreen) generateDeliveryQuest() {
 	targetCity := s.findRandomCity()
 	if targetCity == nil {
@@ -196,12 +221,7 @@ func (s *WisemanScreen) generateDeliveryQuest() {
 	}
 
 	reward := domain.RandomSingleReward(s.questProgressionLevel(), targetCity.AmuletColor)
-	s.ProposedQuest = &domain.Quest{
-		Type:          domain.QuestTypeDelivery,
-		TargetCity:    targetCity,
-		DaysRemaining: 20 + rand.Intn(20),
-		Reward:        reward,
-	}
+	s.ProposedQuest = newDeliveryQuest(targetCity, reward)
 
 	rewardText := reward.Description()
 	hooks := [][]string{
@@ -238,12 +258,7 @@ func (s *WisemanScreen) generateDefeatEnemyQuest() {
 	enemyName := randomRogueName(s.questEnemyMaxLevel())
 
 	reward := domain.RandomSingleReward(s.questProgressionLevel(), s.City.AmuletColor)
-	s.ProposedQuest = &domain.Quest{
-		Type:          domain.QuestTypeDefeatEnemy,
-		EnemyName:     enemyName,
-		DaysRemaining: 15 + rand.Intn(15),
-		Reward:        reward,
-	}
+	s.ProposedQuest = newDefeatQuest(enemyName, reward)
 
 	rewardText := reward.Description()
 	hooks := [][]string{
