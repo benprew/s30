@@ -68,6 +68,19 @@ func TestGenerateQuestCopiesObjective(t *testing.T) {
 	}
 }
 
+// Quests never hand out Tier S cards: those are reserved for dungeons (#49).
+func TestGrantQuestRewardNeverTierS(t *testing.T) {
+	p := &Player{Character: Character{CardCollection: NewCardCollection()}, Amulets: make(map[ColorMask]int)}
+
+	for range 500 {
+		for _, c := range GrantQuestReward(p, QuestReward{Cards: 3, CardColor: ColorAny}) {
+			if tier, ok := CardTierForName(c.CardName); ok && tier == TierS {
+				t.Fatalf("quest reward handed out Tier S card %q", c.CardName)
+			}
+		}
+	}
+}
+
 func TestGrantQuestReward(t *testing.T) {
 	p := &Player{Character: Character{CardCollection: NewCardCollection(), Life: 10}, Gold: 100, Amulets: make(map[ColorMask]int)}
 	r := QuestReward{Gold: 250, Cards: 2, CardColor: ColorRed, Amulets: 1, AmuletColor: ColorBlue, ManaLinks: 1}
