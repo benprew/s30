@@ -20,7 +20,7 @@ import zstandard
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ALLOWED_SETS: list[str] = ["2ed", "arn", "past", "atq", "phpr", "4ed", "drk"]
+DEFAULT_ALLOWED_SETS: list[str] = ["leb", "arn", "past", "atq", "phpr", "4ed", "drk"]
 DEFAULT_EXCLUDED_NAMES: set[str] = {"Chaos Orb", "Shahrazad", "Word of Command"}
 
 
