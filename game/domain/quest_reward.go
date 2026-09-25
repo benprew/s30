@@ -39,7 +39,7 @@ func GrantQuestReward(p *Player, r QuestReward) []*Card {
 		if color == ColorColorless {
 			color = ColorAny
 		}
-		cards = RandomPowerfulCardsForColor(color, r.Cards)
+		cards = RandomQuestCardsForColor(color, r.Cards)
 		for _, c := range cards {
 			p.CardCollection.AddCard(c, 1)
 		}

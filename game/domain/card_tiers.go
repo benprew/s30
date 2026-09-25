@@ -160,6 +160,13 @@ func RandomPowerfulCardsForColor(color ColorMask, count int) []*Card {
 	return randomCardsForColorInTiersWithRestrictedChance(color, count, 1.0, TierS, TierA)
 }
 
+// RandomQuestCardsForColor picks up to count unique cards to hand out as a quest
+// reward: high-tier ones, but never Tier S, which the dungeons keep for
+// themselves.
+func RandomQuestCardsForColor(color ColorMask, count int) []*Card {
+	return randomCardsForColorInTiersWithRestrictedChance(color, count, 1.0, TierA)
+}
+
 // RandomHighCardsForColor picks up to count unique high-tier cards whose color
 // identity matches the requested color or are colorless. Vintage-restricted cards
 // only appear very rarely.
