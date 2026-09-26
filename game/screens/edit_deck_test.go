@@ -8,6 +8,7 @@ import (
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/dragdrop"
+	"github.com/benprew/s30/game/ui/screenui"
 )
 
 func TestLoadEditDeckBackgroundUsesBlueManaTerrain(t *testing.T) {
@@ -420,4 +421,46 @@ func TestRemoveDroppedCardFromDeck(t *testing.T) {
 	}
 }
 
+// The deck editor is where a deck gets finished, so the player should learn there
+// that it is short, instead of finding out in a duel that silently pads it.
+func TestLeavingWithAShortDeckWarnsInsteadOfClosing(t *testing.T) {
+	player := testPlayerWithDeck(t, 3)
+	screen := &EditDeckScreen{Player: player, City: &domain.City{Tier: domain.TierHamlet}}
 
+	if got := screen.leaveEditor(); got != screenui.EditDeckScr {
+		t.Fatalf("leaveEditor() = %v, want the editor to stay open", got)
+	}
+	if !screen.leaveWarning {
+		t.Error("leaveWarning = false, want a warning when the deck is below the minimum")
+	}
+	if screen.leaveWarningBody == "" {
+		t.Error("leaveWarningBody is empty, want the deck size and the minimum in the warning")
+	}
+}
+
+func TestLeavingWithALegalDeckCloses(t *testing.T) {
+	player := testPlayerWithDeck(t, 36)
+	screen := &EditDeckScreen{Player: player, City: &domain.City{Tier: domain.TierHamlet}}
+
+	if got := screen.leaveEditor(); got != screenui.CityScr {
+		t.Fatalf("leaveEditor() = %v, want %v", got, screenui.CityScr)
+	}
+	if screen.leaveWarning {
+		t.Error("leaveWarning = true, want no warning for a legal deck")
+	}
+}
+
+func testPlayerWithDeck(t *testing.T, cards int) *domain.Player {
+	t.Helper()
+	plains := domain.FindCardByName("Plains")
+	collection := domain.NewCardCollection()
+	collection.AddCard(plains, cards)
+	if err := collection.MoveCardToDeck(plains, 0, cards); err != nil {
+		t.Fatalf("MoveCardToDeck() error = %v", err)
+	}
+	return &domain.Player{
+		Character:   domain.Character{CardCollection: collection},
+		MinDeckSize: 36,
+		ActiveDeck:  0,
+	}
+}
