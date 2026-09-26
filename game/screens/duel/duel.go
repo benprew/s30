@@ -3020,8 +3020,14 @@ func (s *DuelScreen) drawConcedeConfirmation(screen *ebiten.Image, W, H int) {
 	}
 }
 
+// positionTopRightButton puts the button in the screen's upper right corner. The
+// game menu's square (44px wide, 12px in from the edge, in game/screens) shares
+// that corner on every screen and is drawn last, so the button stops short of it
+// instead of hiding underneath.
 func (s *DuelScreen) positionTopRightButton(button *elements.Button, W int) {
-	button.MoveTo(W-button.Normal.Bounds().Dx()-12, 12)
+	const menuClearance = 44 + 12
+	const gap = 8
+	button.MoveTo(W-menuClearance-gap-button.Normal.Bounds().Dx(), 12)
 }
 
 func (s *DuelScreen) positionConcedeConfirmationButtons(W, H int) {
