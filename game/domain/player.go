@@ -300,6 +300,23 @@ func (p *Player) GetDuelDeck() Deck {
 	return deck
 }
 
+// DeckShortfall returns how many cards the active deck is below the player's
+// minimum deck size, or zero when the deck is large enough. GetDuelDeck pads the
+// gap with random basic lands at duel time; the deck editor warns about it first.
+func (p *Player) DeckShortfall() int {
+	deck := p.CardCollection.GetDeck(p.ActiveDeck)
+
+	deckSize := 0
+	for _, count := range deck {
+		deckSize += count
+	}
+
+	if deckSize >= p.MinDeckSize {
+		return 0
+	}
+	return p.MinDeckSize - deckSize
+}
+
 func (p *Player) RemoveCard(c *Card) error {
 	return p.CardCollection.DecrementCardCount(c)
 }

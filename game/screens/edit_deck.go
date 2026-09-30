@@ -13,11 +13,13 @@ import (
 	"github.com/benprew/s30/game/ui"
 	"github.com/benprew/s30/game/ui/dragdrop"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/layout"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 const (
@@ -58,6 +60,13 @@ type EditDeckScreen struct {
 	hoveredDeckIdx       int                   // Index of hovered deck card (-1 if none)
 	filter               collectionFilter      // Active color/type filters for the collection
 	filterButtons        []*filterButton       // Sprite-sheet toggle buttons for the filter
+
+	// The editor checks the active deck against the minimum before closing and
+	// warns the player when it falls short, instead of letting the duel pad it
+	// with random basic lands without a word.
+	leaveWarning     bool
+	leaveWarningBody string
+	leaveWarningBtn  *elements.Button
 }
 
 type DeckCardDisplay struct {
@@ -401,6 +410,10 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	elements.NewText(14, helpText, int(10*scale), int(helpY*scale)).Draw(screen, helpOpts, 1.0)
 	drawDeckActionButton(screen, editDeckBackBounds(W), "Back")
 
+	if s.leaveWarning {
+		s.drawLeaveWarning(screen, scale)
+	}
+
 	// Draw drag image if dragging
 	s.dragManager.Draw(screen)
 }
@@ -429,6 +442,10 @@ func (s *EditDeckScreen) drawDeckCards(screen *ebiten.Image, scale float64) {
 
 // Update handles user interactions
 func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	if s.leaveWarning {
+		return s.updateLeaveWarning(W, H, scale)
+	}
+
 	// Calculate position for collection list
 	collectionY := H - COLLECTION_HEIGHT
 
@@ -522,7 +539,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		s.sellHoveredCard()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || ui.Click(editDeckBackBounds(W)) {
-		return screenui.CityScr, nil, nil
+		return s.leaveEditor(), nil, nil
 	}
 
 	return screenui.EditDeckScr, nil, nil
@@ -546,6 +563,84 @@ func editDeckBackBounds(W int) image.Rectangle {
 }
 
 func editDeckSellBounds() image.Rectangle { return image.Rect(10, 12, 150, 68) }
+
+// leaveEditor decides where the screen goes when the player asks to leave. A deck
+// below the minimum does not block the exit: the player is warned first, and the
+// duel fills the shortfall with random basic lands either way.
+func (s *EditDeckScreen) leaveEditor() screenui.ScreenName {
+	if shortfall := s.Player.DeckShortfall(); shortfall > 0 {
+		s.leaveWarning = true
+		s.leaveWarningBody = deckShortfallMessage(s.Player.MinDeckSize-shortfall, s.Player.MinDeckSize)
+		s.leaveWarningBtn = newLeaveWarningButton()
+		return screenui.EditDeckScr
+	}
+
+	return screenui.CityScr
+}
+
+// deckShortfallMessage names both sizes so the player knows how far the deck is
+// from the minimum and what becomes of the gap.
+func deckShortfallMessage(deckSize, minDeckSize int) string {
+	return fmt.Sprintf("Your deck needs at least %d cards; it has %d.\nMissing cards are filled with random basic lands when you duel.",
+		minDeckSize, deckSize)
+}
+
+// updateLeaveWarning runs while the warning is up: the exit only completes after
+// the player has seen it. Escape dismisses it the same way its button does.
+func (s *EditDeckScreen) updateLeaveWarning(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	opts := &ebiten.DrawImageOptions{}
+	s.leaveWarningBtn.Update(opts, scale, W, H)
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || s.leaveWarningBtn.IsClicked() {
+		s.leaveWarning = false
+		s.leaveWarningBtn = nil
+		return screenui.CityScr, nil, nil
+	}
+
+	return screenui.EditDeckScr, nil, nil
+}
+
+// drawLeaveWarning mirrors the dungeon's overlay: a dimmed screen, a panel, and
+// the one button that closes it.
+func (s *EditDeckScreen) drawLeaveWarning(screen *ebiten.Image, scale float64) {
+	dim := ebiten.NewImage(1024, 768)
+	dim.Fill(color.RGBA{R: 0, G: 0, B: 0, A: 180})
+	screen.DrawImage(dim, &ebiten.DrawImageOptions{})
+
+	panelW, panelH := 620, 260
+	px := (1024 - panelW) / 2
+	py := (768 - panelH) / 2
+	panel := ebiten.NewImage(panelW, panelH)
+	panel.Fill(color.RGBA{R: 30, G: 25, B: 50, A: 255})
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(float64(px), float64(py))
+	screen.DrawImage(panel, op)
+
+	title := elements.NewText(28, "Deck Too Small", px+30, py+30)
+	title.Color = color.White
+	title.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+
+	body := elements.NewText(20, s.leaveWarningBody, px+30, py+90)
+	body.Color = color.RGBA{R: 230, G: 230, B: 240, A: 255}
+	body.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+
+	s.leaveWarningBtn.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+}
+
+func newLeaveWarningButton() *elements.Button {
+	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
+	if err != nil {
+		panic(err)
+	}
+	font := &text.GoTextFace{Source: fonts.MtgFont, Size: 18}
+	label := "Continue"
+	w, _ := elements.TextButtonSize(label, font)
+	return elements.NewButtonFromConfig(elements.ButtonConfig{
+		Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
+		Text: label, Font: font, ID: "continue",
+		X: 512 - w/2, Y: 460,
+	})
+}
 
 func drawDeckActionButton(screen *ebiten.Image, bounds image.Rectangle, label string) {
 	button := ebiten.NewImage(bounds.Dx(), bounds.Dy())
