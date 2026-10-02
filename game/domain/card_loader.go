@@ -195,18 +195,40 @@ func (cj *CardJSON) ToCard() *Card {
 		CardType:          parseCardType(cj.TypeLine),
 		TypeLine:          cj.TypeLine,
 		Subtypes:          subtypesOf(cj),
-		Text:              cj.Text,
+		Text:              compactCardText(cj.Text),
 		Power:             power,
 		Toughness:         toughness,
 		Rarity:            cj.Rarity,
 		Frame:             cj.Frame,
-		FlavorText:        cj.FlavorText,
 		FrameEffects:      cj.FrameEffects,
 		Watermark:         cj.Watermark,
 		Artist:            cj.Artist,
 		Price:             price,
 		VintageRestricted: cj.VintageRestricted,
 	}
+}
+
+func compactCardText(text string) string {
+	var result strings.Builder
+	depth := 0
+	for _, char := range text {
+		switch {
+		case char == '(':
+			depth++
+		case char == ')' && depth > 0:
+			depth--
+		case depth == 0:
+			result.WriteRune(char)
+		}
+	}
+	lines := strings.Split(result.String(), "\n")
+	cleaned := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if line = strings.Join(strings.Fields(line), " "); line != "" {
+			cleaned = append(cleaned, line)
+		}
+	}
+	return strings.Join(cleaned, "\n")
 }
 
 func toFloat(str string) float64 {

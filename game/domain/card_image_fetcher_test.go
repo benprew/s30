@@ -3,6 +3,7 @@ package domain
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -12,8 +13,6 @@ import (
 	"path"
 	"sync/atomic"
 	"testing"
-
-	"golang.org/x/image/draw"
 )
 
 func TestLoadCardImagesFromArchiveCachesEveryValidImage(t *testing.T) {
@@ -42,13 +41,13 @@ func TestLoadCardImagesFromArchiveCachesEveryValidImage(t *testing.T) {
 			t.Errorf("card image %q was not cached", id)
 			continue
 		}
-		if got := cachedImageBounds(cached); got.Dx() != CardFullWidth {
-			t.Errorf("cached image %q width = %d, want %d", id, got.Dx(), CardFullWidth)
+		if got := cachedImageBounds(cached); got.Dx() >= CardFullWidth {
+			t.Errorf("cached image %q contains the full card: %v", id, got)
 		}
 	}
 }
 
-func TestFetchAndCacheCardImageUsesURLWhenImageIsMissing(t *testing.T) {
+func TestFetchCardArtUsesArtURLWithoutCaching(t *testing.T) {
 	cardImages.Clear()
 	t.Cleanup(cardImages.Clear)
 
@@ -64,16 +63,23 @@ func TestFetchAndCacheCardImageUsesURLWhenImageIsMissing(t *testing.T) {
 
 	card := &Card{
 		CardName:      "Remote Card",
-		BorderCropURL: server.URL,
+		ArtURL:        server.URL,
+		BorderCropURL: "http://invalid.example/full-card",
 		cardID:        "tst-3-remote-card",
 	}
-	fetchAndCacheCardImage(card)
+	art, err := fetchCardArt(card)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if art.Bounds().Size() != image.Pt(CardFullWidth, 342) {
+		t.Fatal("art dimensions changed")
+	}
 
 	if requests.Load() != 1 {
 		t.Fatalf("HTTP requests = %d, want 1", requests.Load())
 	}
-	if _, ok := cardImages.Load(card.cardID); !ok {
-		t.Fatal("downloaded card image was not cached")
+	if _, ok := cardImages.Load(card.cardID); ok {
+		t.Fatal("fetcher cached artwork")
 	}
 }
 
@@ -93,14 +99,14 @@ func TestPreloadCardImagesOnlyFetchesPriorityCards(t *testing.T) {
 
 	priority := []*Card{
 		{
-			CardName:      "Priority 1",
-			BorderCropURL: server.URL,
-			cardID:        "tst-p1",
+			CardName: "Priority 1",
+			ArtURL:   server.URL,
+			cardID:   "tst-p1",
 		},
 		{
-			CardName:      "Priority 2",
-			BorderCropURL: server.URL,
-			cardID:        "tst-p2",
+			CardName: "Priority 2",
+			ArtURL:   server.URL,
+			cardID:   "tst-p2",
 		},
 	}
 
@@ -198,83 +204,19 @@ func cachedImageBounds(cached any) image.Rectangle {
 	return cached.(interface{ Bounds() image.Rectangle }).Bounds()
 }
 
-func TestResizeToWidthWithInterpolators(t *testing.T) {
-	const srcW, srcH = 488, 680
-	const targetWidth = CardFullWidth
-	expectedHeight := srcH * targetWidth / srcW
-
-	srcImg := generateTestCardImage(srcW, srcH)
-	methods := []struct {
-		name   string
-		scaler draw.Interpolator
-	}{
-		{"CatmullRom", draw.CatmullRom},
-		{"BiLinear", draw.BiLinear},
-		{"ApproxBiLinear", draw.ApproxBiLinear},
-		{"NearestNeighbor", draw.NearestNeighbor},
+func TestFetchCardArtRejectsMissingOrInvalidArt(t *testing.T) {
+	if _, err := fetchCardArt(&Card{BorderCropURL: "http://invalid.example/full-card"}); err == nil {
+		t.Fatal("missing ArtURL was accepted")
 	}
-
-	for _, m := range methods {
-		t.Run(m.name, func(t *testing.T) {
-			out := resizeToWidthWithInterpolator(srcImg, targetWidth, m.scaler)
-			if out.Bounds().Dx() != targetWidth {
-				t.Errorf("output width = %d, want %d", out.Bounds().Dx(), targetWidth)
-			}
-			if out.Bounds().Dy() != expectedHeight {
-				t.Errorf("output height = %d, want %d", out.Bounds().Dy(), expectedHeight)
+	for _, status := range []int{http.StatusNotFound, http.StatusOK} {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+			}))
+			defer server.Close()
+			if _, err := fetchCardArt(&Card{ArtURL: server.URL}); err == nil {
+				t.Fatal("invalid art response was accepted")
 			}
 		})
 	}
-}
-
-func BenchmarkResizeMethods(b *testing.B) {
-	srcImg := generateTestCardImage(488, 680)
-	const targetWidth = CardFullWidth
-
-	b.Run("CatmullRom", func(b *testing.B) {
-		for b.Loop() {
-			_ = resizeToWidthWithInterpolator(srcImg, targetWidth, draw.CatmullRom)
-		}
-	})
-	b.Run("BiLinear", func(b *testing.B) {
-		for b.Loop() {
-			_ = resizeToWidthWithInterpolator(srcImg, targetWidth, draw.BiLinear)
-		}
-	})
-	b.Run("ApproxBiLinear", func(b *testing.B) {
-		for b.Loop() {
-			_ = resizeToWidthWithInterpolator(srcImg, targetWidth, draw.ApproxBiLinear)
-		}
-	})
-	b.Run("NearestNeighbor", func(b *testing.B) {
-		for b.Loop() {
-			_ = resizeToWidthWithInterpolator(srcImg, targetWidth, draw.NearestNeighbor)
-		}
-	})
-}
-
-func generateTestCardImage(w, h int) *image.RGBA {
-	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	for y := range h {
-		for x := range w {
-			r := uint8((x * 255) / w)
-			g := uint8((y * 255) / h)
-			b := uint8(((x + y) * 128) / (w + h))
-			if (x+y)%16 < 4 {
-				r = 255 - r
-				g = 255 - g
-				b = 255 - b
-			}
-			if x < 15 || x >= w-15 || y < 15 || y >= h-15 {
-				r, g, b = 20, 20, 20
-			}
-			cx, cy := w/2, h/2
-			dx, dy := x-cx, y-cy
-			if dx*dx+dy*dy < 4000 {
-				r, g, b = 240, 200, 50
-			}
-			img.SetRGBA(x, y, color.RGBA{R: r, G: g, B: b, A: 255})
-		}
-	}
-	return img
 }

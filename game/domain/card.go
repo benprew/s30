@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"image"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/benprew/s30/assets"
-	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type CardType string
@@ -24,21 +24,20 @@ const (
 	CardTypeSorcery     CardType = "Sorcery"
 )
 
-type CardView int
+type CardView image.Point
 
-const (
-	CardViewFull CardView = iota
-	CardViewArtOnly
-	CardViewFullMini
-	CardViewArtMini
-)
-const cardSourceArtHeight = 215
+// contains the widths of the card view sizes, W,H
+var CardViewFull = CardView{250, 377}
+var CardViewFullMini = CardView{183, 256}
+var CardViewArtOnly = CardView{147, 129}
+var CardViewArtMini = CardView{110, 96}
+
+const cardSourceArtHeight = 176
 const CardArtWidth = 147
 const CardArtHeight = 129
 const CardFullMiniWidth = 183
 const CardFullMiniHeight = 256
 const CardFullWidth = 245
-
 const CardArtMiniWidth = 110
 const CardArtMiniHeight = 96
 
@@ -296,41 +295,6 @@ func FindAllCardsByName(name string) []*Card {
 	}
 
 	return result
-}
-
-func (card *Card) fullCardImage() *ebiten.Image {
-	var fullImg *ebiten.Image
-
-	if cached, ok := cardImages.Load(card.cardID); ok {
-		fullImg = cached.(*ebiten.Image)
-	} else {
-		if _, alreadyFetching := fetchingSet.LoadOrStore(card.cardID, true); !alreadyFetching {
-			go fetchAndCacheCardImage(card)
-		}
-		fullImg = labeledBlankCard(card.CardName)
-	}
-
-	return fullImg
-}
-
-// ResizedImage returns a crisp resized card image rendered at targetW directly from the domain model.
-func (card *Card) ResizedImage(targetW int, view CardView) (*ebiten.Image, error) {
-	if targetW <= 0 {
-		targetW = CardFullWidth
-	}
-	if !card.ImageLoaded() {
-		if _, alreadyFetching := fetchingSet.LoadOrStore(card.cardID, true); !alreadyFetching {
-			go fetchAndCacheCardImage(card)
-		}
-	}
-	img := RenderResizedCard(card, targetW, view)
-	if img != nil {
-		return img, nil
-	}
-	if cached, ok := cardImages.Load(card.cardID); ok {
-		return cached.(*ebiten.Image), nil
-	}
-	return labeledBlankCard(card.CardName), nil
 }
 
 func (c *Card) SalePrice(city *City) int {

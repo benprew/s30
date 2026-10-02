@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
+	"github.com/benprew/s30/game/domain"
 	"github.com/google/uuid"
 )
 
@@ -20,7 +21,7 @@ func TestSpellCastAnimationEasesToMagnifierAndHolds(t *testing.T) {
 
 	mid := animation.frame(start.Add(spellAnimationMoveDuration/2), 1024, 768)
 	magnifier := animation.frame(start.Add(spellAnimationMoveDuration), 1024, 768)
-	if magnifier.bounds != (spellAnimationBounds{0, 188, 245, 342}) {
+	if magnifier.bounds != (spellAnimationBounds{cardPreviewX, cardPreviewY, float64(domain.CardViewFull.X), float64(domain.CardViewFull.Y)}) {
 		t.Fatalf("arrival bounds = %+v, want magnifier bounds", magnifier.bounds)
 	}
 	linearMidX := (atStart.bounds.x + magnifier.bounds.x) / 2

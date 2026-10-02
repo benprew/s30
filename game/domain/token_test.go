@@ -2,29 +2,22 @@ package domain
 
 import (
 	"testing"
-
-	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// Tokens without a printing still show their name, so a Tetravite reads as a
-// Tetravite rather than as a blank card.
-func TestFetchAndCacheCardImageWithoutURLKeepsTheName(t *testing.T) {
-	cardImages.Clear()
-	labeledBlankCards.Clear()
-	t.Cleanup(func() {
-		cardImages.Clear()
-		labeledBlankCards.Clear()
-	})
-
+func TestArtlessTokenUsesBlankRenderedCard(t *testing.T) {
+	ClearCardImageCache()
+	t.Cleanup(ClearCardImageCache)
 	card := &Card{CardName: "Tetravite", cardID: "tst-3-Tetravite"}
-	fetchAndCacheCardImage(card)
-
-	cached, ok := cardImages.Load(card.cardID)
-	if !ok {
-		t.Fatal("card without a URL was not cached")
+	img, err := card.CardImage(CardViewFull)
+	if err != nil || img == nil {
+		t.Fatalf("render token: %v", err)
 	}
-	if cached.(*ebiten.Image) != labeledBlankCard(card.CardName) {
-		t.Error("card without a URL cached an unlabeled blank instead of a labeled one")
+	if card.ImageLoaded() {
+		t.Fatal("artless token was marked loaded")
+	}
+	again, _ := card.CardImage(CardViewFull)
+	if again != img {
+		t.Fatal("artless token was not cached")
 	}
 }
 
