@@ -17,8 +17,6 @@ import (
 const (
 	spellAnimationMoveDuration = 300 * time.Millisecond
 	spellAnimationHoldDuration = 200 * time.Millisecond
-	spellAnimationCardWidth    = 245.0
-	spellAnimationCardHeight   = 342.0
 )
 
 type spellAnimationBounds struct {
@@ -67,8 +65,8 @@ func (a *spellCastAnimation) frame(now time.Time, _, _ int) spellAnimationFrame 
 	magnifier := spellAnimationBounds{
 		x:      cardPreviewX,
 		y:      cardPreviewY,
-		width:  spellAnimationCardWidth,
-		height: spellAnimationCardHeight,
+		width:  float64(domain.CardViewFull.X),
+		height: float64(domain.CardViewFull.Y),
 	}
 	source := rectangleAnimationBounds(a.source)
 

@@ -1,8 +1,10 @@
 package domain
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"testing"
 )
 
@@ -98,7 +100,7 @@ func TestGetFrameFilename(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GetFrameFilename(tt.card)
+			got := getFrameFilename(tt.card)
 			if got != tt.expected {
 				t.Errorf("GetFrameFilename() = %v, want %v", got, tt.expected)
 			}
@@ -126,70 +128,6 @@ func TestExtractArtSubImage(t *testing.T) {
 	}
 }
 
-func TestRenderResizedCard(t *testing.T) {
-	card := &Card{
-		cardID:   "test-card-1",
-		CardName: "Lightning Bolt",
-		ManaCost: "{R}",
-		Colors:   []string{"R"},
-		TypeLine: "Instant",
-		Text:     "Lightning Bolt deals 3 damage to any target.",
-		CardSet:  CardSet{SetID: "4ed"},
-	}
-
-	// Test 100px width (battlefield permanent size)
-	img100 := RenderResizedCard(card, 100, CardViewArtOnly)
-	if img100 == nil {
-		t.Fatalf("RenderResizedCard(100, CardViewArtOnly) returned nil")
-	}
-	if img100.Bounds().Dx() != 100 {
-		t.Errorf("RenderResizedCard(100) width = %d, want 100", img100.Bounds().Dx())
-	}
-	if img100.Bounds().Dy() <= 0 {
-		t.Errorf("RenderResizedCard(100) invalid height = %d", img100.Bounds().Dy())
-	}
-
-	// Test 80px width (hand card size)
-	img80 := RenderResizedCard(card, 80, CardViewArtOnly)
-	if img80 == nil {
-		t.Fatalf("RenderResizedCard(80, CardViewArtOnly) returned nil")
-	}
-	if img80.Bounds().Dx() != 80 {
-		t.Errorf("RenderResizedCard(80) width = %d, want 80", img80.Bounds().Dx())
-	}
-
-	// Test caching returns same image pointer
-	img100Cached := RenderResizedCard(card, 100, CardViewArtOnly)
-	if img100Cached != img100 {
-		t.Errorf("RenderResizedCard did not return cached image pointer")
-	}
-}
-
-func TestCardResizedImageMethod(t *testing.T) {
-	card := &Card{
-		cardID:    "test-serra-angel",
-		CardName:  "Serra Angel",
-		ManaCost:  "{3}{W}{W}",
-		Colors:    []string{"W"},
-		TypeLine:  "Creature — Angel",
-		Text:      "Flying, vigilance",
-		Power:     4,
-		Toughness: 4,
-		CardSet:   CardSet{SetID: "2ed"},
-	}
-
-	resized, err := card.ResizedImage(100, CardViewArtOnly)
-	if err != nil {
-		t.Fatalf("card.ResizedImage() error = %v", err)
-	}
-	if resized == nil {
-		t.Fatalf("card.ResizedImage() returned nil")
-	}
-	if resized.Bounds().Dx() != 100 {
-		t.Errorf("card.ResizedImage() width = %d, want 100", resized.Bounds().Dx())
-	}
-}
-
 func TestCardImage_ArtOnlyConstructsImage(t *testing.T) {
 	card := &Card{
 		cardID:   "test-dark-ritual",
@@ -210,5 +148,76 @@ func TestCardImage_ArtOnlyConstructsImage(t *testing.T) {
 	}
 	if artCard.Bounds().Dx() != CardArtWidth {
 		t.Errorf("card.CardImage(CardViewArtOnly) width = %d, want %d", artCard.Bounds().Dx(), CardArtWidth)
+	}
+}
+
+func TestRendererDoesNotFetchOrCacheCards(t *testing.T) {
+	ClearCardImageCache()
+	t.Cleanup(ClearCardImageCache)
+	card := &Card{cardID: "renderer-only", CardName: "Test", ArtURL: "http://invalid.example/art"}
+	art := image.NewRGBA(image.Rect(0, 0, 186, 118))
+	first := renderCardImage(card, art, CardViewFull)
+	second := renderCardImage(card, nil, CardViewFull)
+	if first == nil || second == nil || first == second {
+		t.Fatal("renderer did not create separate images")
+	}
+	if card.ImageLoaded() || len(cardImageVariants.entries) != 0 || len(cardImageVariants.fetches) != 0 {
+		t.Fatal("renderer changed cache or fetch state")
+	}
+}
+
+func TestRendererUsesRequestedViewSize(t *testing.T) {
+	card := &Card{CardName: "Serra Angel", ManaCost: "{3}{W}{W}", TypeLine: "Creature — Angel", Text: "Flying, vigilance", Power: 4, Toughness: 4}
+	for _, view := range []CardView{CardViewFull, CardViewFullMini, CardViewArtOnly, CardViewArtMini, {300, 420}} {
+		t.Run(fmt.Sprint(view), func(t *testing.T) {
+			img := renderCardImage(card, nil, view)
+			if img == nil || img.Bounds().Size() != image.Point(view) {
+				t.Fatalf("wrong rendered size for %v", view)
+			}
+		})
+	}
+}
+
+func TestExtractArtSubImageUsesDocumentedLayout(t *testing.T) {
+	for _, size := range []image.Point{{200, 300}, {400, 600}, {300, 420}} {
+		img := image.NewRGBA(image.Rectangle{Max: size})
+		got := ExtractArtSubImage(img).Bounds()
+		want := image.Rect(int(math.Round(21*float64(size.X)/200)), int(math.Round(25*float64(size.Y)/300)), int(math.Round(181*float64(size.X)/200)), int(math.Round(164*float64(size.Y)/300)))
+		if got != want {
+			t.Errorf("size %v: bounds = %v, want %v", size, got, want)
+		}
+	}
+}
+
+func TestCardContrastOverlay(t *testing.T) {
+	for _, view := range []CardView{CardViewFull, CardViewFullMini, CardViewArtOnly, CardViewArtMini} {
+		artOnly := view == CardViewArtOnly || view == CardViewArtMini
+		height := 300.0
+		if artOnly {
+			height = float64(cardSourceArtHeight)
+		}
+		overlay := cardContrastOverlay(view, float64(view.X)/200, float64(view.Y)/height)
+		for _, p := range []image.Point{{0, 0}, {view.X - 1, 0}, {0, view.Y - 1}, {view.X - 1, view.Y - 1}} {
+			if got := overlay.RGBAAt(p.X, p.Y); got != (color.RGBA{A: 255}) {
+				t.Errorf("view %v edge %v = %v", view, p, got)
+			}
+		}
+		if !artOnly {
+			p := image.Pt(view.X/2, int(225*float64(view.Y)/height))
+			if got := overlay.RGBAAt(p.X, p.Y); got.A != 0 {
+				t.Errorf("overlay changes the rules panel: %v", got)
+			}
+		}
+		for _, y := range []float64{14, 172} {
+			if artOnly && y > 164 {
+				continue
+			}
+			if got := overlay.RGBAAt(view.X/2, int(y*float64(view.Y)/height)); got.A != 0 {
+				t.Errorf("overlay changes the label background: %v", got)
+			}
+		}
+		if got := overlay.RGBAAt(view.X/2, int(80*float64(view.Y)/height)); got.A != 0 {
+			t.Errorf("overlay covers artwork: %v", got)
+		}
 	}
 }

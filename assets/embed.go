@@ -5,6 +5,13 @@ import (
 )
 
 var (
+	//go:embed fonts/MPZurichCnBT.ttf
+	CardRegularFont []byte
+	//go:embed fonts/MagicMedieval.ttf
+	CardLabelFont []byte
+	//go:embed fonts/ZurichCnBT-Italic.ttf
+	CardItalicFont []byte
+
 	// Fonts
 	//go:embed fonts/Planewalker-38m6.ttf
 	Magic_ttf []byte
@@ -14,9 +21,6 @@ var (
 
 	//go:embed card_info/scryfall_cards.json.zst
 	Cards_json []byte
-
-	//go:embed card_info/parsed_cards.json
-	ParsedCards_json []byte
 
 	//go:embed card_info/token_cards.json
 	TokenCards_json []byte
@@ -130,7 +134,7 @@ var (
 	//go:embed art/screens/city/Wiseman3.pic.png
 	Wiseman_png []byte
 
-	//go:embed art/screens/Buybuttons.spr.png
+	//go:embed art/ui/Buybuttons.spr.png
 	BuyButtons_png []byte
 
 	//go:embed art/screens/Amsprite.spr.png

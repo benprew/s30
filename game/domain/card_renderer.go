@@ -11,28 +11,11 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/benprew/s30/assets"
-	"github.com/benprew/s30/game/ui/fonts"
-	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
-
-var (
-	frameCache     sync.Map
-	manaIconsCache []*ebiten.Image
-	setIconsCache  []*ebiten.Image
-	initIconsOnce  sync.Once
-	resizedCache   sync.Map
-)
-
-type resizedCardKey struct {
-	id    string
-	width int
-	view  CardView
-}
 
 // Token to mana symbol index in Manasymbols.pic.png (19 icons of 18x18)
 var tokenToManaIcon = map[string]int{
@@ -47,8 +30,180 @@ var setToSetIcon = map[string]int{
 
 var manaTokenRegex = regexp.MustCompile(`\{([^}]+)\}`)
 
-// GetFrameFilename determines the vintage card frame filename for a card.
-func GetFrameFilename(card *Card) string {
+var cardRulesFont = newCardFont(assets.CardRegularFont)
+var cardLabelFont = newCardFont(assets.CardLabelFont)
+var cardFlavorFont = newCardFont(assets.CardItalicFont)
+
+func newCardFont(data []byte) *text.GoTextFaceSource {
+	source, err := text.NewGoTextFaceSource(bytes.NewReader(data))
+	if err != nil {
+		panic(err)
+	}
+	return source
+}
+
+func cardContrastOverlay(view CardView, sx, sy float64) *image.RGBA {
+	overlay := image.NewRGBA(image.Rect(0, 0, view.X, view.Y))
+	border := max(2, int(math.Round(2*math.Min(sx, sy))))
+	black := &image.Uniform{C: color.Black}
+	for _, rect := range []image.Rectangle{
+		image.Rect(0, 0, view.X, border), image.Rect(0, view.Y-border, view.X, view.Y),
+		image.Rect(0, 0, border, view.Y), image.Rect(view.X-border, 0, view.X, view.Y),
+	} {
+		draw.Draw(overlay, rect, black, image.Point{}, draw.Src)
+	}
+	return overlay
+}
+
+// renderCardImage draws text at the requested image size.
+// The original artwork files are **mostly 288 × 232 pixels**, rather than 189 × 147:
+//
+// - `MEDART.CAT`: 404 of 430 images are **288 × 232**; the others have heights of 224, 230, or 236.
+// - `SMALLART.CAT`: 427 of 429 images are **144 × 116**; two have heights of 112 and 118.
+//
+// The renderer scales artwork and text using a **200 × 300 card coordinate system**. These offsets are measured from the card’s upper-left corner:
+//
+// | Element | Offset `(x, y)` | Rectangle size | Font / height |
+// |---|---:|---:|---|
+// | Artwork | `(21, 25)` | **160 × 139** | — |
+// | Card name | `(12, 9)` | 176 × 13 | MagicMedieval, **16** |
+// | Card type | `(12, 169)` | 174 × 11 | MagicMedieval, **14** |
+// | Rules text | `(28, 185)` | **146 × 83** | MPZurich Cn BT, **14** |
+// | Text panel background | `(20, 180)` | 162 × 91 | — |
+//
+// The rendering rectangles (src/magic/NedCard/Palette.c:3229) and original font settings (program/DuelArt/DUEL.DAT:1) specify these values. Font heights are GDI logical units, **not point sizes**. Name and type text are vertically centered within their rectangles and have a shadow offset of `(1, 1)`.
+//
+// For a displayed card of size `W × H`, scale horizontal values by `W/200` and vertical values by `H/300`. Thus, **189 × 147 could be a chosen display size**, but it is neither the stored artwork size nor the renderer’s base artwork rectangle.
+//
+// The rules-text offset can move upward when the “expand text box” option is enabled and the text overflows. Flavor text uses the same font in italics and follows the rules text.
+
+func renderCardImage(card *Card, art image.Image, view CardView) *ebiten.Image {
+	initIcons()
+	frameImg := loadFrameImage(getFrameFilename(card))
+	if frameImg == nil {
+		return nil
+	}
+	artOnly := view == CardViewArtOnly || view == CardViewArtMini
+	baseHeight := 300.0
+	if artOnly {
+		baseHeight = float64(cardSourceArtHeight)
+	}
+	sx, sy := float64(view.X)/200, float64(view.Y)/baseHeight
+	result := ebiten.NewImage(view.X, view.Y)
+	frameOpts := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
+	frameOpts.GeoM.Scale(float64(view.X)/float64(frameImg.Bounds().Dx()), sy*300/float64(frameImg.Bounds().Dy()))
+	result.DrawImage(ebiten.NewImageFromImage(frameImg), frameOpts)
+	if art != nil && !art.Bounds().Empty() {
+		opts := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
+		opts.GeoM.Scale(160*sx/float64(art.Bounds().Dx()), 139*sy/float64(art.Bounds().Dy()))
+		opts.GeoM.Translate(21*sx, 25*sy)
+		result.DrawImage(ebiten.NewImageFromImage(art), opts)
+	}
+	result.DrawImage(ebiten.NewImageFromImage(cardContrastOverlay(view, sx, sy)), nil)
+	currX := 188.0
+	tokens := manaTokenRegex.FindAllStringSubmatch(card.ManaCost, -1)
+	for _, token := range slices.Backward(tokens) {
+		idx, ok := tokenToManaIcon[strings.ToUpper(token[1])]
+		if !ok || idx >= len(manaIconsCache) || manaIconsCache[idx] == nil {
+			continue
+		}
+		icon := manaIconsCache[idx]
+		currX -= 13
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Scale(13*sx/float64(icon.Bounds().Dx()), 13*sy/float64(icon.Bounds().Dy()))
+		opts.GeoM.Translate(currX*sx, 9*sy)
+		result.DrawImage(icon, opts)
+		currX--
+	}
+	drawCardLabel(result, card.CardName, 16, 12, 5, math.Max(0, currX-14), 17, sx, sy)
+	if artOnly {
+		return result
+	}
+	typeWidth := 174.0
+	if idx, ok := setToSetIcon[strings.ToLower(card.SetID)]; ok && idx < len(setIconsCache) && setIconsCache[idx] != nil {
+		icon := setIconsCache[idx]
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Scale(11*sx/float64(icon.Bounds().Dx()), 11*sy/float64(icon.Bounds().Dy()))
+		opts.GeoM.Translate(175*sx, 169*sy)
+		result.DrawImage(icon, opts)
+		typeWidth -= 13
+	}
+	drawCardLabel(result, strings.ReplaceAll(card.TypeLine, "—", "-"), 12, 12, 166, typeWidth, 13, sx, sy)
+	rules := card.Text
+	if card.FlavorText != "" {
+		if rules != "" {
+			rules += "\n\n"
+		}
+		rules += card.FlavorText
+	}
+	face := &text.GoTextFace{Source: cardRulesFont, Size: 14}
+	lines := wrapCardText(rules, face, 146)
+	for face.Size > 5 && float64(len(lines))*face.Size*1.2 > 83 {
+		face.Size -= 0.5
+		lines = wrapCardText(rules, face, 146)
+	}
+	flavorStart := len(lines)
+	if card.FlavorText != "" {
+		flavorStart = 0
+		if card.Text != "" {
+			flavorStart = len(wrapCardText(card.Text, face, 146)) + 1
+		}
+	}
+	for i, line := range lines {
+		drawCardText(result, line, face, 28, 185+float64(i)*face.Size*1.2, sx, sy, i >= flavorStart)
+	}
+	if card.CardType == CardTypeCreature || strings.Contains(card.TypeLine, "Creature") {
+		stat := func(value int) string {
+			if value < 0 {
+				return "*"
+			}
+			return fmt.Sprint(value)
+		}
+		face.Size = 13
+		stats := stat(card.Power) + "/" + stat(card.Toughness)
+		width, _ := text.Measure(stats, face, 0)
+		drawTextOnImage(result, stats, face, 186-width, 278, sx, sy)
+	}
+	return result
+}
+
+func drawCardLabel(dst *ebiten.Image, value string, size, x, y, width, height, sx, sy float64) {
+	face := &text.GoTextFace{Source: cardLabelFont, Size: size}
+	for face.Size > 5 {
+		w, _ := text.Measure(value, face, 0)
+		if w <= width {
+			break
+		}
+		face.Size -= 0.5
+	}
+	_, h := text.Measure(value, face, 0)
+	drawTextOnImage(dst, value, face, x, y+(height-h)/2, sx, sy)
+}
+
+func wrapCardText(value string, face *text.GoTextFace, width float64) []string {
+	var lines []string
+	for _, paragraph := range strings.Split(value, "\n") {
+		line := ""
+		for _, word := range strings.Fields(paragraph) {
+			candidate := word
+			if line != "" {
+				candidate = line + " " + word
+			}
+			w, _ := text.Measure(candidate, face, 0)
+			if w > width && line != "" {
+				lines = append(lines, line)
+				line = word
+			} else {
+				line = candidate
+			}
+		}
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+// getFrameFilename determines the vintage card frame filename for a card.
+func getFrameFilename(card *Card) string {
 	typeLine := card.TypeLine
 	colors := card.Colors
 	setID := strings.ToLower(card.SetID)
@@ -123,83 +278,6 @@ func hasAny(str string, substrs ...string) bool {
 	return false
 }
 
-// loadFrameImage loads and caches a card frame from embedded assets.
-func loadFrameImage(filename string) image.Image {
-	if cached, ok := frameCache.Load(filename); ok {
-		return cached.(image.Image)
-	}
-
-	data, err := assets.CardFramesFS.ReadFile("art/card/" + filename)
-	if err != nil {
-		fmt.Printf("WARN: Failed to read frame %s: %v\n", filename, err)
-		return nil
-	}
-
-	img, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
-		fmt.Printf("WARN: Failed to decode frame %s: %v\n", filename, err)
-		return nil
-	}
-
-	frameCache.Store(filename, img)
-	return img
-}
-
-func initIcons() {
-	initIconsOnce.Do(func() {
-		// Load mana symbols
-		manaData, err := assets.CardFramesFS.ReadFile("art/card/Manasymbols.pic.png")
-		if err == nil {
-			if sheet, _, decodeErr := image.Decode(bytes.NewReader(manaData)); decodeErr == nil {
-				manaIconsCache = make([]*ebiten.Image, 19)
-				for i := range 19 {
-					iconRGBA := image.NewRGBA(image.Rect(0, 0, 18, 18))
-					for y := range 18 {
-						for x := range 18 {
-							srcX := i*18 + x
-							srcColor := color.RGBAModel.Convert(sheet.At(srcX, y)).(color.RGBA)
-							dx := float64(x) - 8.5
-							dy := float64(y) - 8.5
-							dist := dx*dx + dy*dy
-							if dist <= 64 && (srcColor.R != 0 || srcColor.G != 0 || srcColor.B != 0) {
-								srcColor.A = 255
-								iconRGBA.Set(x, y, srcColor)
-							} else if dist <= 72 && (srcColor.R != 0 || srcColor.G != 0 || srcColor.B != 0) {
-								alpha := uint8(255 * (1.0 - (dist-64.0)/8.0))
-								srcColor.A = alpha
-								iconRGBA.Set(x, y, srcColor)
-							}
-						}
-					}
-					manaIconsCache[i] = ebiten.NewImageFromImage(iconRGBA)
-				}
-			}
-		}
-
-		// Load set symbols
-		setData, err := assets.CardFramesFS.ReadFile("art/card/Cardsets.pic.png")
-		if err == nil {
-			if sheet, _, decodeErr := image.Decode(bytes.NewReader(setData)); decodeErr == nil {
-				setIconsCache = make([]*ebiten.Image, 22)
-				for i := range 22 {
-					iconRGBA := image.NewRGBA(image.Rect(0, 0, 15, 15))
-					for y := range 15 {
-						for x := range 15 {
-							srcX := i*15 + x
-							srcColor := color.RGBAModel.Convert(sheet.At(srcX, y)).(color.RGBA)
-							if srcColor.R != 0 || srcColor.G != 0 || srcColor.B != 0 {
-								srcColor.A = 255
-								iconRGBA.Set(x, y, srcColor)
-							}
-						}
-					}
-					setIconsCache[i] = ebiten.NewImageFromImage(iconRGBA)
-				}
-			}
-		}
-	})
-}
-
 // ExtractArtSubImage crops the pure artwork from a full card image.
 func ExtractArtSubImage(fullImg image.Image) image.Image {
 	if fullImg == nil {
@@ -213,14 +291,14 @@ func ExtractArtSubImage(fullImg image.Image) image.Image {
 		return nil
 	}
 
-	// Native art window on 228x325 frame: (21, 38, 207, 156) -> width=186, height=118
-	scaleX := float64(w) / 228.0
-	scaleY := float64(h) / 325.0
+	// Use the same art rectangle as the card renderer.
+	scaleX := float64(w) / 200.0
+	scaleY := float64(h) / 300.0
 
 	artX1 := int(math.Round(21.0 * scaleX))
-	artY1 := int(math.Round(38.0 * scaleY))
-	artX2 := int(math.Round(207.0 * scaleX))
-	artY2 := int(math.Round(156.0 * scaleY))
+	artY1 := int(math.Round(25.0 * scaleY))
+	artX2 := int(math.Round(181.0 * scaleX))
+	artY2 := int(math.Round(164.0 * scaleY))
 
 	if artX2 > w {
 		artX2 = w
@@ -242,183 +320,21 @@ func ExtractArtSubImage(fullImg image.Image) image.Image {
 	return artRGBA
 }
 
-// RenderResizedCard builds a sharp, scaled card image at targetW with native text rendering.
-func RenderResizedCard(card *Card, targetW int, view CardView) *ebiten.Image {
-	if card == nil || targetW <= 0 {
-		return nil
-	}
-
-	key := resizedCardKey{id: card.cardID, width: targetW, view: view}
-	if cached, ok := resizedCache.Load(key); ok {
-		return cached.(*ebiten.Image)
-	}
-
-	initIcons()
-
-	frameFn := GetFrameFilename(card)
-	frameImg := loadFrameImage(frameFn)
-	if frameImg == nil {
-		return nil
-	}
-
-	scale := float64(targetW) / 228.0
-	var nativeCropH int
-	if view == CardViewArtOnly {
-		nativeCropH = 176
-	} else {
-		nativeCropH = 325
-	}
-
-	targetH := int(math.Round(float64(nativeCropH) * scale))
-	if targetH <= 0 {
-		targetH = 1
-	}
-
-	// 1. Crop frame to requested view
-	var frameCrop image.Image
-	if sub, ok := frameImg.(interface {
-		SubImage(r image.Rectangle) image.Image
-	}); ok {
-		frameCrop = sub.SubImage(image.Rect(0, 0, 228, nativeCropH))
-	} else {
-		cropRGBA := image.NewRGBA(image.Rect(0, 0, 228, nativeCropH))
-		draw.Draw(cropRGBA, cropRGBA.Bounds(), frameImg, image.Point{}, draw.Src)
-		frameCrop = cropRGBA
-	}
-
-	// Scale frame
-	scaledFrame := imageutil.ScaleImage(ebiten.NewImageFromImage(frameCrop), scale)
-	resImg := ebiten.NewImage(targetW, targetH)
-	resImg.DrawImage(scaledFrame, &ebiten.DrawImageOptions{})
-
-	// 2. Extract and scale Art
-	fullCardImg, _ := card.CardImage(CardViewFull)
-	if fullCardImg != nil {
-		rawArt := ExtractArtSubImage(fullCardImg)
-		if rawArt != nil {
-			artTargetW := int(math.Round(186.0 * scale))
-			artTargetH := int(math.Round(118.0 * scale))
-			artTargetX := int(math.Round(21.0 * scale))
-			artTargetY := int(math.Round(38.0 * scale))
-
-			if artTargetW > 0 && artTargetH > 0 {
-				artEbiten := ebiten.NewImageFromImage(rawArt)
-				artScaleX := float64(artTargetW) / float64(artEbiten.Bounds().Dx())
-				artScaleY := float64(artTargetH) / float64(artEbiten.Bounds().Dy())
-
-				artOpts := &ebiten.DrawImageOptions{}
-				artOpts.GeoM.Scale(artScaleX, artScaleY)
-				artOpts.GeoM.Translate(float64(artTargetX), float64(artTargetY))
-				resImg.DrawImage(artEbiten, artOpts)
-			}
-		}
-	}
-
-	isBlackFrame := strings.Contains(frameFn, "Cardbk_Black.pic.png")
-	var headerTextColor color.Color = color.Black
-	if isBlackFrame {
-		headerTextColor = color.White
-	}
-
-	// 3. Mana Cost (drawn right-to-left in title bar)
-	currX := float64(int(math.Round(204.0 * scale)))
-	manaY := float64(int(math.Round(18.0 * scale)))
-	pipSize := math.Max(8.0, math.Round(14.0*scale))
-
-	tokens := manaTokenRegex.FindAllStringSubmatch(card.ManaCost, -1)
-	if len(manaIconsCache) > 0 {
-		for _, token := range slices.Backward(tokens) {
-			tok := strings.ToUpper(token[1])
-			if iconIdx, ok := tokenToManaIcon[tok]; ok && iconIdx < len(manaIconsCache) {
-				icon := manaIconsCache[iconIdx]
-				if icon != nil {
-					currX -= pipSize
-					iconScale := pipSize / float64(icon.Bounds().Dx())
-					opts := &ebiten.DrawImageOptions{}
-					opts.GeoM.Scale(iconScale, iconScale)
-					opts.GeoM.Translate(currX, manaY)
-					resImg.DrawImage(icon, opts)
-					currX -= 1.0
-				}
-			}
-		}
-	}
-
-	// 4. Card Title
-	titleX := float64(int(math.Round(24.0 * scale)))
-	titleY := float64(int(math.Round(18.0 * scale)))
-	maxTitleW := currX - titleX - 2.0
-
-	titleFontSize := math.Max(7.0, math.Round(13.0*scale))
-	titleFace := &text.GoTextFace{
-		Source: fonts.MtgFont,
-		Size:   titleFontSize,
-	}
-
-	for titleFontSize > 6.0 {
-		w, _ := text.Measure(card.CardName, titleFace, 0)
-		if w <= maxTitleW {
-			break
-		}
-		titleFontSize -= 0.5
-		titleFace.Size = titleFontSize
-	}
-
-	drawTextOnImage(resImg, card.CardName, titleFace, titleX, titleY, headerTextColor)
-
-	// 5. Type Line & Set Icon (if included in bounds)
-	if targetH >= int(math.Round(170.0*scale)) {
-		typeX := float64(int(math.Round(24.0 * scale)))
-		typeY := float64(int(math.Round(162.0 * scale)))
-		typeLine := strings.ReplaceAll(strings.ReplaceAll(card.TypeLine, "\u2014", "-"), "—", "-")
-
-		// Set icon
-		setID := strings.ToLower(card.SetID)
-		if setIdx, ok := setToSetIcon[setID]; ok && setIdx < len(setIconsCache) {
-			sIcon := setIconsCache[setIdx]
-			if sIcon != nil {
-				sIconSize := math.Max(8.0, math.Round(13.0*scale))
-				sIconScale := sIconSize / float64(sIcon.Bounds().Dx())
-				sX := float64(int(math.Round(192.0 * scale)))
-				sY := float64(int(math.Round(161.0 * scale)))
-				sOpts := &ebiten.DrawImageOptions{}
-				sOpts.GeoM.Scale(sIconScale, sIconScale)
-				sOpts.GeoM.Translate(sX, sY)
-				resImg.DrawImage(sIcon, sOpts)
-			}
-		}
-
-		typeFontSize := math.Max(6.5, math.Round(10.5*scale))
-		typeFace := &text.GoTextFace{
-			Source: fonts.MtgFont,
-			Size:   typeFontSize,
-		}
-		drawTextOnImage(resImg, typeLine, typeFace, typeX, typeY, headerTextColor)
-	}
-
-	resizedCache.Store(key, resImg)
-	return resImg
+func drawTextOnImage(dst *ebiten.Image, txt string, fontFace *text.GoTextFace, x, y, sx, sy float64) {
+	drawCardText(dst, txt, fontFace, x, y, sx, sy, false)
 }
 
-func drawTextOnImage(dst *ebiten.Image, txt string, fontFace *text.GoTextFace, x, y float64, clr color.Color) {
+func drawCardText(dst *ebiten.Image, txt string, fontFace *text.GoTextFace, x, y, sx, sy float64, italic bool) {
+	var transform ebiten.GeoM
+	if italic {
+		italicFace := *fontFace
+		italicFace.Source = cardFlavorFont
+		fontFace = &italicFace
+	}
+	transform.Scale(sx, sy)
 	opts := text.DrawOptions{}
-	opts.GeoM.Translate(x, y)
-	r, g, b, a := clr.RGBA()
-	opts.ColorScale.Scale(float32(r)/65535, float32(g)/65535, float32(b)/65535, float32(a)/65535)
+	opts.GeoM = transform
+	opts.GeoM.Translate(x*sx, y*sy)
+	opts.ColorScale.Scale(0, 0, 0, 1)
 	text.Draw(dst, txt, fontFace, &opts)
-}
-
-// ClearResizedCardCache clears the resized card cache.
-func ClearResizedCardCache() {
-	resizedCache.Clear()
-}
-
-// InvalidateResizedCardCache clears cached resized versions for a given card ID.
-func InvalidateResizedCardCache(id string) {
-	resizedCache.Range(func(k, v any) bool {
-		if key, ok := k.(resizedCardKey); ok && key.id == id {
-			resizedCache.Delete(key)
-		}
-		return true
-	})
 }
