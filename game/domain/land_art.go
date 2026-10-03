@@ -59,12 +59,12 @@ func ScanLandArt(fsys fs.FS) *LandArtLibrary {
 
 	// An unreadable entry skips that entry rather than discarding the art
 	// already found, so one bad folder can't cost the player their whole pack.
-	_ = fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+	_ = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d == nil || d.IsDir() {
 			return nil
 		}
 		if land, ok := classifyLandArt(d.Name()); ok {
-			lib.arts[land] = append(lib.arts[land], p)
+			lib.arts[land] = append(lib.arts[land], path)
 		}
 		return nil
 	})
