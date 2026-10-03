@@ -96,3 +96,32 @@ func (l *LandArtLibrary) Total() int {
 	}
 	return total
 }
+
+// Lands returns how many distinct basic lands the library has art for.
+func (l *LandArtLibrary) Lands() int {
+	if l == nil {
+		return 0
+	}
+	return len(l.arts)
+}
+
+var landArtLibrary *LandArtLibrary
+
+// InitLandArt scans the player's land art folder once at startup. The second
+// return reports whether a folder was there at all, which separates a player
+// who wants no alternate art from one whose filenames went unrecognized.
+func InitLandArt() (*LandArtLibrary, bool) {
+	fsys, found := landArtFS()
+	return initLandArtFrom(fsys), found
+}
+
+func initLandArtFrom(fsys fs.FS) *LandArtLibrary {
+	landArtLibrary = ScanLandArt(fsys)
+	return landArtLibrary
+}
+
+// LandArt returns the scanned land art. Every method on the result tolerates a
+// nil receiver, so callers need not care whether InitLandArt has run.
+func LandArt() *LandArtLibrary {
+	return landArtLibrary
+}
