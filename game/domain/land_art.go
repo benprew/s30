@@ -5,6 +5,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"sync"
 )
 
 var landArtExtensions = []string{".jpg", ".jpeg", ".png"}
@@ -44,8 +45,9 @@ func classifyLandArt(filename string) (string, bool) {
 // grouped by basic land name. It stores paths rather than decoded images so
 // that a large art pack costs nothing until the art is actually drawn.
 type LandArtLibrary struct {
-	fsys fs.FS
-	arts map[string][]string
+	fsys   fs.FS
+	arts   map[string][]string
+	images sync.Map
 }
 
 // ScanLandArt collects every image in fsys whose filename identifies a basic
