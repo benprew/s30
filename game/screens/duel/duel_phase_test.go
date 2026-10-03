@@ -1,6 +1,7 @@
 package duel
 
 import (
+	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"image"
 	"testing"
 )
@@ -81,5 +82,30 @@ func TestPhaseOverlay(t *testing.T) {
 				t.Errorf("phaseOverlayBounds(%d, %t) = %v, want %v", tt.idx, tt.isPlayer, got, tt.wantBounds)
 			}
 		})
+	}
+}
+
+func TestPhaseStopClicks(t *testing.T) {
+	s := &DuelScreen{human: interactive.NewHumanPlayer("You")}
+	s.human.EnablePhaseStops()
+	for _, own := range []bool{false, true} {
+		for idx := range phaseCount {
+			bounds := phaseButtonBounds(idx, own)
+			p := bounds.Min.Add(image.Pt(5, 5))
+			before := s.human.PhaseStop(phaseSteps[idx][0], own)
+			if !s.handlePhaseClick(p.X, p.Y) {
+				t.Fatal("phase click was not handled")
+			}
+			if s.human.PhaseStop(phaseSteps[idx][0], own) == before {
+				t.Fatal("phase stop did not toggle")
+			}
+			s.handlePhaseClick(p.X, p.Y)
+			if s.human.PhaseStop(phaseSteps[idx][0], own) != before {
+				t.Fatal("second click did not restore stop")
+			}
+		}
+	}
+	if s.handlePhaseClick(400, 400) {
+		t.Fatal("click outside phase panel was handled")
 	}
 }

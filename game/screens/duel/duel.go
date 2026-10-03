@@ -370,6 +370,7 @@ func permanentArtName(perm interactive.PermanentState, printedCard *domain.Card)
 
 func (s *DuelScreen) initGameState() {
 	s.human = interactive.NewHumanPlayer("You")
+	s.human.EnablePhaseStops()
 	s.human.SetLife(s.player.Life + s.player.BonusDuelLife)
 	s.aiPlayer = ai.NewAIPlayer(s.enemy.Name(), heuristic.NewAdaptive())
 	enemyLife := s.enemy.Character.Life
@@ -1242,6 +1243,10 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	pointerPosition := ui.Position()
 	mx, my := pointerPosition.X, pointerPosition.Y
 	clicked := ui.Click(image.Rect(0, 0, W, H))
+
+	if clicked && s.handlePhaseClick(mx, my) {
+		return screenui.DuelScr, nil, nil
+	}
 
 	if s.targetingCardID != uuid.Nil {
 		s.updateTargetingMouse(mx, my, clicked, W)
@@ -3130,6 +3135,14 @@ func (s *DuelScreen) drawPhasePanel(screen *ebiten.Image) {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(phaseX+float64(pos.X-s.phaseDefaultBg.Bounds().Dx()), float64(4+pos.Y))
 		screen.DrawImage(s.phaseActiveImgs[slot], opts)
+	}
+	for _, own := range []bool{false, true} {
+		for idx := range phaseCount {
+			if s.human != nil && s.human.PhaseStop(phaseSteps[idx][0], own) {
+				bounds := phaseButtonBounds(idx, own)
+				vector.FillCircle(screen, float32(bounds.Max.X-7), float32(bounds.Min.Y+7), 4, color.RGBA{255, 0, 0, 255}, true)
+			}
+		}
 	}
 }
 
