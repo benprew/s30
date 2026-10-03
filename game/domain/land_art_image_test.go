@@ -149,6 +149,38 @@ func TestLoadImageMissingPath(t *testing.T) {
 	}
 }
 
+func TestCardImageCacheStatsCountsLandArt(t *testing.T) {
+	previous := landArtLibrary
+	t.Cleanup(func() { landArtLibrary = previous })
+
+	lib := initLandArtFrom(fstest.MapFS{
+		"Forest.full.png": &fstest.MapFile{Data: landArtPNG(t, 490, 684)},
+		"Swamp.full.png":  &fstest.MapFile{Data: []byte("this is not an image")},
+	})
+
+	if _, _, landArt := CardImageCacheStats(); landArt != 0 {
+		t.Errorf("land art count = %d before any art is drawn, want 0", landArt)
+	}
+
+	if lib.loadImage("Forest.full.png") == nil {
+		t.Fatal("valid art failed to load")
+	}
+	if lib.loadImage("Swamp.full.png") != nil {
+		t.Fatal("corrupt art was loaded")
+	}
+
+	if _, _, landArt := CardImageCacheStats(); landArt != 1 {
+		t.Errorf("land art count = %d, want 1: an unreadable file retains no image", landArt)
+	}
+}
+
+func TestCachedImagesWithoutLibrary(t *testing.T) {
+	var missing *LandArtLibrary
+	if got := missing.cachedImages(); got != 0 {
+		t.Errorf("(*LandArtLibrary)(nil).cachedImages() = %d, want 0", got)
+	}
+}
+
 func TestLoadImageWithoutLibrary(t *testing.T) {
 	var missing *LandArtLibrary
 	if img := missing.loadImage("forest.png"); img != nil {

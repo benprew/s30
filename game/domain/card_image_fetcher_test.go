@@ -32,7 +32,7 @@ func TestLoadCardImagesFromArchiveCachesEveryValidImage(t *testing.T) {
 	if loaded != 2 {
 		t.Fatalf("loadCardImagesFromArchive() loaded = %d, want 2", loaded)
 	}
-	cards, _ := CardImageCacheStats()
+	cards, _, _ := CardImageCacheStats()
 	if cards != 2 {
 		t.Fatalf("CardImageCacheStats() cards = %d, want 2", cards)
 	}

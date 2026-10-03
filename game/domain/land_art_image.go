@@ -30,6 +30,23 @@ func (l *LandArtLibrary) loadImage(artPath string) *ebiten.Image {
 	return img
 }
 
+// cachedImages returns how many decoded land art images the library is holding
+// onto. Files that failed to decode are cached too, but retain no image and so
+// cost no memory to report.
+func (l *LandArtLibrary) cachedImages() int {
+	if l == nil {
+		return 0
+	}
+	count := 0
+	l.images.Range(func(_, value any) bool {
+		if img, _ := value.(*ebiten.Image); img != nil {
+			count++
+		}
+		return true
+	})
+	return count
+}
+
 func (l *LandArtLibrary) decodeImage(artPath string) *ebiten.Image {
 	file, err := l.fsys.Open(artPath)
 	if err != nil {
