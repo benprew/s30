@@ -63,9 +63,9 @@ func TestLoadImageNormalizesWidth(t *testing.T) {
 		"Forest.full.png": &fstest.MapFile{Data: landArtPNG(t, 490, 684)},
 	})
 
-	img, err := lib.loadImage("Forest.full.png")
-	if err != nil {
-		t.Fatalf("loadImage returned an error: %v", err)
+	img := lib.loadImage("Forest.full.png")
+	if img == nil {
+		t.Fatal("loadImage returned nil for valid art")
 	}
 	if got := img.Bounds().Dx(); got != CardFullWidth {
 		t.Errorf("width = %d, want %d", got, CardFullWidth)
@@ -80,9 +80,9 @@ func TestLoadImageJPEG(t *testing.T) {
 		"swamp.jpg": &fstest.MapFile{Data: landArtJPEG(t, 490, 684)},
 	})
 
-	img, err := lib.loadImage("swamp.jpg")
-	if err != nil {
-		t.Fatalf("loadImage returned an error: %v", err)
+	img := lib.loadImage("swamp.jpg")
+	if img == nil {
+		t.Fatal("loadImage returned nil for valid jpeg art")
 	}
 	if got := img.Bounds().Dx(); got != CardFullWidth {
 		t.Errorf("width = %d, want %d", got, CardFullWidth)
@@ -94,9 +94,9 @@ func TestLoadImageLeavesCorrectWidthAlone(t *testing.T) {
 		"island.png": &fstest.MapFile{Data: landArtPNG(t, CardFullWidth, 400)},
 	})
 
-	img, err := lib.loadImage("island.png")
-	if err != nil {
-		t.Fatalf("loadImage returned an error: %v", err)
+	img := lib.loadImage("island.png")
+	if img == nil {
+		t.Fatal("loadImage returned nil for valid art")
 	}
 	if got := img.Bounds().Dy(); got != 400 {
 		t.Errorf("height = %d, want 400 unchanged", got)
@@ -109,15 +109,12 @@ func TestLoadImageCachesDecodedArt(t *testing.T) {
 	})
 	lib := ScanLandArt(counting)
 
-	first, err := lib.loadImage("mountain.png")
-	if err != nil {
-		t.Fatalf("first loadImage returned an error: %v", err)
-	}
-	second, err := lib.loadImage("mountain.png")
-	if err != nil {
-		t.Fatalf("second loadImage returned an error: %v", err)
-	}
+	first := lib.loadImage("mountain.png")
+	second := lib.loadImage("mountain.png")
 
+	if first == nil {
+		t.Fatal("loadImage returned nil for valid art")
+	}
 	if first != second {
 		t.Error("loadImage decoded the same art twice instead of caching it")
 	}
@@ -126,16 +123,16 @@ func TestLoadImageCachesDecodedArt(t *testing.T) {
 	}
 }
 
-func TestLoadImageCachesFailure(t *testing.T) {
+func TestLoadImageCachesUnreadableArt(t *testing.T) {
 	counting := newCountingFS(fstest.MapFS{
 		"plains.png": &fstest.MapFile{Data: []byte("this is not an image")},
 	})
 	lib := ScanLandArt(counting)
 
-	if _, err := lib.loadImage("plains.png"); err == nil {
+	if img := lib.loadImage("plains.png"); img != nil {
 		t.Fatal("loadImage accepted a corrupt file")
 	}
-	if _, err := lib.loadImage("plains.png"); err == nil {
+	if img := lib.loadImage("plains.png"); img != nil {
 		t.Fatal("loadImage accepted a corrupt file on the second call")
 	}
 
@@ -147,19 +144,19 @@ func TestLoadImageCachesFailure(t *testing.T) {
 func TestLoadImageMissingPath(t *testing.T) {
 	lib := ScanLandArt(fstest.MapFS{})
 
-	if _, err := lib.loadImage("forest.png"); err == nil {
+	if img := lib.loadImage("forest.png"); img != nil {
 		t.Error("loadImage accepted a path that is not in the filesystem")
 	}
 }
 
 func TestLoadImageWithoutLibrary(t *testing.T) {
 	var missing *LandArtLibrary
-	if _, err := missing.loadImage("forest.png"); err == nil {
-		t.Error("loadImage on a nil library returned no error")
+	if img := missing.loadImage("forest.png"); img != nil {
+		t.Error("loadImage on a nil library returned an image")
 	}
 
 	noFS := ScanLandArt(nil)
-	if _, err := noFS.loadImage("forest.png"); err == nil {
-		t.Error("loadImage with no filesystem returned no error")
+	if img := noFS.loadImage("forest.png"); img != nil {
+		t.Error("loadImage with no filesystem returned an image")
 	}
 }
