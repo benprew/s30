@@ -32,10 +32,22 @@ var cardImageVariants = struct {
 // CardImage returns a shared image in one of the four display formats.
 // Callers must not change the returned image.
 func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
+	return card.cardImageFrom(nil, card.cardID, view)
+}
+
+// cardImageFrom derives a display format from one source image. Variants are
+// cached under artID rather than the card's ID so that two sources for the
+// same card and view - its printed art and a player's alternate land art -
+// cannot collide in the cache. A nil source means the card's own art, resolved
+// only once the view is known to be valid.
+func (card *Card) cardImageFrom(source *ebiten.Image, artID string, view CardView) (*ebiten.Image, error) {
 	var width, height int
 	switch view {
 	case CardViewFull:
-		return card.fullCardImage(), nil
+		if source == nil {
+			return card.fullCardImage(), nil
+		}
+		return source, nil
 	case CardViewFullMini:
 		width, height = CardFullMiniWidth, CardFullMiniHeight
 	case CardViewArtOnly:
@@ -45,8 +57,10 @@ func (card *Card) CardImage(view CardView) (*ebiten.Image, error) {
 	default:
 		return nil, fmt.Errorf("unknown card view: %d", view)
 	}
-	source := card.fullCardImage()
-	key := cardImageVariantKey{id: card.cardID, name: card.CardName, view: view}
+	if source == nil {
+		source = card.fullCardImage()
+	}
+	key := cardImageVariantKey{id: artID, name: card.CardName, view: view}
 	cardImageVariants.Lock()
 	defer cardImageVariants.Unlock()
 	if element := cardImageVariants.entries[key]; element != nil {
