@@ -220,6 +220,7 @@ type DuelScreen struct {
 	deckConstraintMet    map[*domain.Quest]bool
 	questWarnings        []string
 	questProgressApplied bool
+	arenaOutcome         func(bool) (screenui.ScreenName, screenui.Screen, error)
 }
 
 func (s *DuelScreen) IsFramed() bool { return false }
@@ -2856,6 +2857,9 @@ func (s *DuelScreen) previewImage() *ebiten.Image {
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
+	if s.arenaOutcome != nil {
+		return s.arenaOutcome(true)
+	}
 	if s.finalBoss {
 		return screenui.GameWinScr, NewGameResultScreen(true), nil
 	}
@@ -2911,6 +2915,9 @@ func (s *DuelScreen) completeCastleVictory() []*domain.Card {
 }
 
 func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) {
+	if s.arenaOutcome != nil {
+		return s.arenaOutcome(false)
+	}
 	if s.finalBoss {
 		return screenui.GameLoseScr, NewGameResultScreen(false), nil
 	}

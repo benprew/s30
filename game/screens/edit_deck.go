@@ -36,6 +36,9 @@ type cardGroup struct {
 
 // EditDeckScreen allows players to edit their decks
 type EditDeckScreen struct {
+	DisableSelling     bool
+	ReturnScr          screenui.ScreenName
+	ReturnScreen       screenui.Screen
 	Player             *domain.Player
 	City               *domain.City
 	CollectionList     *elements.ScrollableList
@@ -352,7 +355,9 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.CollectionList.Draw(screen, &opts, scale)
 	s.drawCollectionCounts(screen, scale, collectionY)
 
-	drawDeckSellTarget(screen, editDeckSellBounds(), s.Player.Gold)
+	if !s.DisableSelling {
+		drawDeckSellTarget(screen, editDeckSellBounds(), s.Player.Gold)
+	}
 
 	s.drawDeckCards(screen, scale)
 	s.drawDeckStats(screen, scale)
@@ -374,7 +379,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		magOpts.GeoM.Translate(magX*scale, magY*scale)
 		screen.DrawImage(s.MagnifierImage, magOpts)
 
-		if s.MagnifiedCard != nil {
+		if s.MagnifiedCard != nil && !s.DisableSelling {
 			salePrice := s.MagnifiedCard.SalePrice(s.City)
 			priceText := fmt.Sprintf("Sale Price: %d gold", salePrice)
 			textX := magX + 10
@@ -405,6 +410,9 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	// Draw helper text above collection area
 	helpText := "[A] Add to Deck\n[D] Remove from Deck\n[S] Sell Card"
+	if s.DisableSelling {
+		helpText = "[A] Add to Deck\n[D] Remove from Deck"
+	}
 	helpY := float64(collectionY) - 130
 	helpOpts := &ebiten.DrawImageOptions{}
 	elements.NewText(14, helpText, int(10*scale), int(helpY*scale)).Draw(screen, helpOpts, 1.0)
@@ -539,7 +547,11 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		s.sellHoveredCard()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || ui.Click(editDeckBackBounds(W)) {
-		return s.leaveEditor(), nil, nil
+		name := s.leaveEditor()
+		if name != screenui.EditDeckScr {
+			return name, s.ReturnScreen, nil
+		}
+		return name, nil, nil
 	}
 
 	return screenui.EditDeckScr, nil, nil
@@ -575,6 +587,13 @@ func (s *EditDeckScreen) leaveEditor() screenui.ScreenName {
 		return screenui.EditDeckScr
 	}
 
+	return s.returnScreenName()
+}
+
+func (s *EditDeckScreen) returnScreenName() screenui.ScreenName {
+	if s.ReturnScr != 0 {
+		return s.ReturnScr
+	}
 	return screenui.CityScr
 }
 
@@ -594,7 +613,7 @@ func (s *EditDeckScreen) updateLeaveWarning(W, H int, scale float64) (screenui.S
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || s.leaveWarningBtn.IsClicked() {
 		s.leaveWarning = false
 		s.leaveWarningBtn = nil
-		return screenui.CityScr, nil, nil
+		return s.returnScreenName(), s.ReturnScreen, nil
 	}
 
 	return screenui.EditDeckScr, nil, nil
@@ -778,6 +797,9 @@ func (s *EditDeckScreen) sellDroppedCard(data dragdrop.DragData) bool {
 }
 
 func (s *EditDeckScreen) sellCard(card *domain.Card, fromDeck bool) bool {
+	if s.DisableSelling {
+		return false
+	}
 	deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
 	if fromDeck {
 		if deckCount == 0 {

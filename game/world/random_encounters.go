@@ -26,10 +26,22 @@ const (
 	EncounterSpriteCols = 6
 )
 
+type EncounterType int
+
+const (
+	EncounterLand EncounterType = iota
+	EncounterArena
+)
+
 type RandomEncounter struct {
 	Tile        image.Point
 	SpriteIndex int
 	TerrainType int
+	Type        EncounterType
+}
+
+func randomEncounterType(rng *rand.Rand) EncounterType {
+	return EncounterType(rng.Intn(2))
 }
 
 func (l *Level) LoadRandomEncounterSprites() error {
@@ -77,6 +89,16 @@ func (l *Level) spawnEncountersWithRNG(count int, rng *rand.Rand) {
 
 			// Avoid Cities
 			if t.IsCity() {
+				continue
+			}
+			occupied := false
+			for _, encounter := range l.RandomEncounters {
+				if encounter.Tile == (image.Point{X: tileX, Y: tileY}) {
+					occupied = true
+					break
+				}
+			}
+			if occupied {
 				continue
 			}
 
@@ -128,6 +150,7 @@ func (l *Level) spawnEncountersWithRNG(count int, rng *rand.Rand) {
 			Tile:        image.Point{tileX, tileY},
 			SpriteIndex: spriteIdx,
 			TerrainType: t.TerrainType,
+			Type:        randomEncounterType(rng),
 		}
 		l.RandomEncounters = append(l.RandomEncounters, re)
 	}
@@ -145,9 +168,12 @@ func (l *Level) UpdateEncounters() {
 			l.randomEncounterPending = true
 			l.pendingEncounterSprite = re.SpriteIndex
 			l.pendingEncounterTerrain = re.TerrainType
-			t := l.Tile(re.Tile)
-			t.RemoveRandomEncounter()
-			l.RandomEncounters = append(l.RandomEncounters[:i], l.RandomEncounters[i+1:]...)
+			l.pendingRandomEncounter = re
+			if re.Type == EncounterLand {
+				t := l.Tile(re.Tile)
+				t.RemoveRandomEncounter()
+				l.RandomEncounters = append(l.RandomEncounters[:i], l.RandomEncounters[i+1:]...)
+			}
 			break // only process a single encounter at a time, see random_encounters_test
 		}
 	}
@@ -167,6 +193,28 @@ func (l *Level) TakeRandomEncounter() (spriteIdx int, terrainType int, ok bool) 
 	}
 	l.randomEncounterPending = false
 	return l.pendingEncounterSprite, l.pendingEncounterTerrain, true
+}
+
+// TakeRandomEncounterDetails retains the encounter type chosen at generation.
+func (l *Level) TakeRandomEncounterDetails() (RandomEncounter, bool) {
+	if !l.randomEncounterPending {
+		return RandomEncounter{}, false
+	}
+	l.randomEncounterPending = false
+	return l.pendingRandomEncounter, true
+}
+
+// CompleteRandomEncounter removes an arena after the player leaves it.
+func (l *Level) CompleteRandomEncounter(tile image.Point) {
+	for i, encounter := range l.RandomEncounters {
+		if encounter.Tile == tile {
+			if t := l.Tile(tile); t != nil {
+				t.RemoveRandomEncounter()
+			}
+			l.RandomEncounters = append(l.RandomEncounters[:i], l.RandomEncounters[i+1:]...)
+			return
+		}
+	}
 }
 
 var basicLands = []string{"Plains", "Island", "Swamp", "Mountain", "Forest"}

@@ -361,9 +361,13 @@ func (g *Game) Update() error {
 	if name == screenui.WorldScr {
 		lvl := g.Level()
 		if lvl.RandomEncounterPending() {
-			if _, terrainType, ok := lvl.TakeRandomEncounter(); ok {
-				landName := world.TerrainToLandName(terrainType)
-				g.screenMap[screenui.RandomEncounterScr] = screens.NewRandomEncounterScreen(g.player, landName, terrainType)
+			if encounter, ok := lvl.TakeRandomEncounterDetails(); ok {
+				if encounter.Type == world.EncounterArena {
+					g.screenMap[screenui.RandomEncounterScr] = screens.NewArenaEntryScreen(lvl, encounter)
+				} else {
+					landName := world.TerrainToLandName(encounter.TerrainType)
+					g.screenMap[screenui.RandomEncounterScr] = screens.NewRandomEncounterScreen(g.player, landName, encounter.TerrainType)
+				}
 				name = screenui.RandomEncounterScr
 			}
 		}

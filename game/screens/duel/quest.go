@@ -44,7 +44,7 @@ func (s *DuelScreen) evaluateQuestConstraints() {
 // applyQuestProgress reads the engine's per-duel objective tally and applies it
 // to the player's active deck-changing quests.
 func (s *DuelScreen) applyQuestProgress(won bool) {
-	if len(s.player.ActiveQuests) == 0 {
+	if s.arenaOutcome != nil || len(s.player.ActiveQuests) == 0 {
 		return
 	}
 	tally := s.buildDuelTally()

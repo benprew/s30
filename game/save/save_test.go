@@ -2,12 +2,48 @@ package save
 
 import (
 	"encoding/json"
+	"image"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/world"
 )
+
+func TestArenaSaveKeepsCampaignAndRestartsEncounter(t *testing.T) {
+	player := &domain.Player{Character: domain.Character{Life: 10, CardCollection: domain.NewCardCollection()}, Gold: 500, MinDeckSize: 36}
+	player.CardCollection.AddCardToDeck(domain.FindCardByName("Lightning Bolt"), 0, 1)
+	level := &world.Level{Player: player, W: 1, H: 1, TileWidth: 200, TileHeight: 100,
+		Tiles: [][]*world.Tile{{{}}}, RandomEncounters: []world.RandomEncounter{{Tile: image.Pt(0, 0), Type: world.EncounterArena}}}
+	player.SetLoc(level.TileToPixel(image.Pt(0, 0)))
+	level.UpdateEncounters()
+	if _, ok := level.TakeRandomEncounterDetails(); !ok {
+		t.Fatal("arena encounter did not start")
+	}
+	run, err := domain.NewArenaRun(player, rand.New(rand.NewSource(3)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	run.Win()
+	data, err := serializeSave(level)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := deserializeSave(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.World.Player.CardCollection.NumCards() != 2 || loaded.World.Player.Gold != 250 || loaded.World.Player.MinDeckSize != 36 {
+		t.Fatal("save contains arena cards or lost earned campaign rewards")
+	}
+	loaded.World.UpdateEncounters()
+	encounter, ok := loaded.World.TakeRandomEncounterDetails()
+	if !ok || encounter.Type != world.EncounterArena {
+		t.Fatal("loading did not restart the arena encounter")
+	}
+}
 
 func TestInvalidSaveVersion(t *testing.T) {
 	tmpDir := t.TempDir()

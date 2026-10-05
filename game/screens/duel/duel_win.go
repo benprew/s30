@@ -48,6 +48,7 @@ type DuelWinScreen struct {
 	textbox      *elements.Button
 	rewardText   *elements.Text
 	doneBtn      *elements.Button
+	continueText string
 	Background   *ebiten.Image
 	ReturnScr    screenui.ScreenName
 	ReturnScreen screenui.Screen
@@ -181,8 +182,17 @@ func (s *DuelWinScreen) pageCount() int {
 	return max(1, s.cardPageCount()+(len(s.bonusImgs)+winBonusPerPage-1)/winBonusPerPage)
 }
 
+// SetContinueText sets the button label for the final reward page.
+func (s *DuelWinScreen) SetContinueText(label string) {
+	s.continueText = label
+	s.updatePageLabels()
+}
+
 func (s *DuelWinScreen) updatePageLabels() {
 	s.doneBtn.ButtonText.Text = "Done"
+	if s.continueText != "" {
+		s.doneBtn.ButtonText.Text = s.continueText
+	}
 	if s.page+1 < s.pageCount() {
 		s.doneBtn.ButtonText.Text = "Next"
 	}

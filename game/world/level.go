@@ -53,6 +53,7 @@ type Level struct {
 	randomEncounterPending  bool
 	pendingEncounterSprite  int
 	pendingEncounterTerrain int
+	pendingRandomEncounter  RandomEncounter
 
 	Dungeons []*domain.Dungeon
 

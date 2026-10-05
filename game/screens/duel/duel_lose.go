@@ -38,6 +38,9 @@ func NewDuelLoseScreen(cards []*domain.Card) *DuelLoseScreen {
 	}
 
 	textContent := "Lost these cards!"
+	if len(cards) == 0 {
+		textContent = "You lost the duel!"
+	}
 	if len(cards) == 1 {
 		textContent = "Lost this card!"
 	}

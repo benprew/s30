@@ -14,6 +14,7 @@ import (
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
@@ -32,6 +33,12 @@ type DuelAnteScreen struct {
 	playerStatsUI  []*ebiten.Image
 	player         *domain.Player
 	wonCards       []*domain.Card
+	nameImage      *ebiten.Image
+	arenaRound     int
+	arenaOutcome   func(bool) (screenui.ScreenName, screenui.Screen, error)
+	arenaLeave     func() (screenui.ScreenName, screenui.Screen, error)
+	arenaEdit      func(int, int) (screenui.ScreenName, screenui.Screen, error)
+	editBtn        *elements.Button
 }
 
 func (s *DuelAnteScreen) IsFramed() bool { return false }
@@ -44,11 +51,27 @@ func NewDuelAnteScreen() *DuelAnteScreen {
 
 func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 	enemy := l.GetEnemyAt(idx)
+	return newDuelAnteScreen(l.Player, enemy, l, idx, 0)
+}
+
+// NewArenaDuelAnteScreen offers a duel, withdrawal, and editing without an ante.
+func NewArenaDuelAnteScreen(player *domain.Player, enemy *domain.Enemy, round int,
+	outcome func(bool) (screenui.ScreenName, screenui.Screen, error),
+	leave func() (screenui.ScreenName, screenui.Screen, error),
+	edit func(int, int) (screenui.ScreenName, screenui.Screen, error),
+) *DuelAnteScreen {
+	s := newDuelAnteScreen(player, enemy, nil, -1, round)
+	s.arenaOutcome, s.arenaLeave, s.arenaEdit = outcome, leave, edit
+	return s
+}
+
+func newDuelAnteScreen(player *domain.Player, enemy *domain.Enemy, level *world.Level, idx, arenaRound int) *DuelAnteScreen {
 	s := &DuelAnteScreen{
-		player: l.Player,
-		enemy:  enemy,
-		lvl:    l,
-		idx:    idx,
+		player:     player,
+		enemy:      enemy,
+		lvl:        level,
+		idx:        idx,
+		arenaRound: arenaRound,
 	}
 
 	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
@@ -59,6 +82,10 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 
 	duelText := "1. Duel the Enemy"
 	bribeText := fmt.Sprintf("2. Bribe for %d gold", enemy.BribeAmount())
+	if arenaRound > 0 {
+		duelText = "1. Duel the Creature"
+		bribeText = "2. Leave the Arena"
+	}
 	duelW, duelH := elements.TextButtonSize(duelText, fontFace)
 	bribeW, _ := elements.TextButtonSize(bribeText, fontFace)
 
@@ -74,7 +101,7 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 		Y:       btnY,
 	})
 
-	if canBribe(s) {
+	if arenaRound > 0 || canBribe(s) {
 		s.bribeBtn = *elements.NewButtonFromConfig(elements.ButtonConfig{
 			Normal:  btnSprites[0][0],
 			Hover:   btnSprites[0][1],
@@ -86,21 +113,36 @@ func NewDuelAnteScreenWithEnemy(l *world.Level, idx int) *DuelAnteScreen {
 			Y:       btnY + duelH + 10,
 		})
 	}
+	if arenaRound > 0 {
+		editText := "3. Edit Deck"
+		editW, _ := elements.TextButtonSize(editText, fontFace)
+		s.editBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
+			Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
+			Text: editText, Font: fontFace, ID: "edit",
+			X: 512 - editW/2, Y: btnY + 2*(duelH+10),
+		})
+	}
 
 	s.background = loadBackgroundForEnemy(enemy)
 
-	s.playerAnteCard = selectPlayerAnteCard(l.Player.GetActiveDeck())
-	card, err := s.playerAnteCard.CardImage(domain.CardViewFullMini)
-	if err != nil || card == nil {
-		panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
+	if arenaRound == 0 {
+		s.playerAnteCard = selectPlayerAnteCard(player.GetActiveDeck())
+		card, imageErr := s.playerAnteCard.CardImage(domain.CardViewFullMini)
+		if imageErr != nil || card == nil {
+			panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
+		}
+		s.enemyAnteCard = selectEnemyAnteCard(enemy.Character.GetActiveDeck())
 	}
 
-	s.enemyAnteCard = selectEnemyAnteCard(enemy.Character.GetActiveDeck())
 	s.visageBorder = loadVisageBorder()
 	s.playerStatsUI = loadPlayerStatsUI()
 
 	s.enemyVisage = borderedVisage(enemy.Character.Visage, s.visageBorder[20])
 	s.enemyName = enemy.Character.Name
+	s.nameImage = imageutil.ScaleImage(s.visageBorder[21], 1.5)
+	nameTxt := elements.NewText(30, s.enemyName, 30, 15)
+	nameTxt.Color = color.Black
+	nameTxt.Draw(s.nameImage, &ebiten.DrawImageOptions{}, 1)
 
 	if am := gameaudio.Get(); am != nil {
 		am.PlaySFX(gameaudio.EnemySFXForName(enemy.Character.Name))
@@ -119,22 +161,39 @@ func borderedVisage(visage, border *ebiten.Image) *ebiten.Image {
 }
 
 func (s *DuelAnteScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	if ebiten.IsKeyPressed(ebiten.Key1) {
+	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		return s.startDuel()
 	}
 
-	if ebiten.IsKeyPressed(ebiten.Key2) && canBribe(s) {
+	if s.arenaRound > 0 {
+		if inpututil.IsKeyJustPressed(ebiten.Key2) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+			return s.arenaLeave()
+		}
+		if inpututil.IsKeyJustPressed(ebiten.Key3) {
+			return s.arenaEdit(W, H)
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key2) && canBribe(s) {
 		return s.bribe()
 	}
 
 	opts := &ebiten.DrawImageOptions{}
 	s.duelBtn.Update(opts, scale, W, H)
 	s.bribeBtn.Update(opts, scale, W, H)
+	if s.editBtn != nil {
+		s.editBtn.Update(opts, scale, W, H)
+		if s.editBtn.IsClicked() {
+			return s.arenaEdit(W, H)
+		}
+	}
 
 	if s.duelBtn.IsClicked() {
 		return s.startDuel()
 	}
 	if s.bribeBtn.IsClicked() {
+		if s.arenaRound > 0 {
+			return s.arenaLeave()
+		}
 		return s.bribe()
 	}
 
@@ -181,10 +240,7 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	}
 
 	// Enemy Name
-	nameImg := imageutil.ScaleImage(s.visageBorder[21], 1.5)
-	nameTxt := elements.NewText(30, s.enemyName, 30, 15)
-	nameTxt.Color = color.Black
-	nameTxt.Draw(nameImg, &ebiten.DrawImageOptions{}, 1.0)
+	nameImg := s.nameImage
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(hCenter(screen, nameImg), 10)
 	screen.DrawImage(nameImg, opts)
@@ -196,15 +252,27 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	// Main description text - centered, positioned better
 	duelText := "Those who enter the stronghold of the Mighty Wizard\n will be met with the firmest resistance. You must..."
+	if s.arenaRound > 0 {
+		duelText = fmt.Sprintf("Arena round %d of %d. Win to advance!\nYour deck needs %d cards. There is no ante.",
+			s.arenaRound, domain.ArenaRounds, s.player.MinDeckSize)
+	}
 	textElement := elements.NewText(24, duelText, W/2-250, 450)
+	if s.arenaRound > 0 {
+		textElement.Y = 430
+	}
 	textElement.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	btnOpts := &ebiten.DrawImageOptions{}
 	s.duelBtn.Draw(screen, btnOpts, scale)
 	s.bribeBtn.Draw(screen, btnOpts, scale)
+	if s.editBtn != nil {
+		s.editBtn.Draw(screen, btnOpts, scale)
+		life := fmt.Sprintf("Your life: %d     Opponent life: %d", s.player.Life, s.enemy.Character.Life)
+		elements.NewText(22, life, W/2-220, 390).Draw(screen, &ebiten.DrawImageOptions{}, 1)
+	}
 
 	// Player stats UI background in lower-left
-	if len(s.playerStatsUI) > 0 && s.playerStatsUI[0] != nil {
+	if s.arenaRound == 0 && len(s.playerStatsUI) > 0 && s.playerStatsUI[0] != nil {
 		statsOpts := &ebiten.DrawImageOptions{}
 		statsUIBounds := s.playerStatsUI[0].Bounds()
 		statsScale := 0.4 // Scale down the stats UI
@@ -214,10 +282,10 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		screen.DrawImage(s.playerStatsUI[0], statsOpts)
 
 		// Player stats text overlay - positioned within the stats UI
-		lifeText := fmt.Sprintf("%d", s.lvl.Player.Life)
-		goldText := fmt.Sprintf("%d", s.lvl.Player.Gold)
-		foodText := fmt.Sprintf("%d", s.lvl.Player.Food)
-		cardsText := fmt.Sprintf("%d", s.lvl.Player.NumCards())
+		lifeText := fmt.Sprintf("%d", s.player.Life)
+		goldText := fmt.Sprintf("%d", s.player.Gold)
+		foodText := fmt.Sprintf("%d", s.player.Food)
+		cardsText := fmt.Sprintf("%d", s.player.NumCards())
 
 		// Position text within the scaled stats UI
 		statsY := float64(H) - scaledStatsH
@@ -239,7 +307,9 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, erro
 	if am := gameaudio.Get(); am != nil {
 		am.PlaySFX(gameaudio.SFXDice)
 	}
-	return screenui.DuelScr, NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, s.playerAnteCard, s.enemyAnteCard), nil
+	duel := NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, s.playerAnteCard, s.enemyAnteCard)
+	duel.arenaOutcome = s.arenaOutcome
+	return screenui.DuelScr, duel, nil
 }
 
 func (s *DuelAnteScreen) bribe() (screenui.ScreenName, screenui.Screen, error) {
@@ -322,6 +392,9 @@ func (s *DuelAnteScreen) LostCards() []*domain.Card {
 }
 
 func canBribe(s *DuelAnteScreen) bool {
+	if s.arenaRound > 0 {
+		return false
+	}
 	bribeAmount := s.enemy.BribeAmount()
 	return bribeAmount != 0 && s.player.Gold >= bribeAmount // 0 means cannot be bribed
 }
