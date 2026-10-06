@@ -1,0 +1,64 @@
+* Arenas
+Arena's are a type of random encounter and can be chosen whenever you contact a random encounter tile.
+
+The Arena will be a new type of random encounter. The only other random encounter is a random land. When a random encounter tile is generated the type of encounter should be chosen at generation time. encounter chance is equally distributed.
+
+At the start the player has the option to "Enter the Arena" or "Leave". Entering the Arena costs 150g.
+
+The arena is basically mini masters. The first round a player gets to build a deck using a single "booster pack" (follow standard mtg booster pack distribution) and 20 of each basic land cards.
+
+Booster packs are 14 cards: 10 common, 3 uncommon, 1 rare. Cards can be from any tier.
+
+They will play a random opponent of the tier based on the round they're in (ex. Round 1 is only tier 1 enemies, tier 2 is tier 2 enemies, etc)
+
+After each round the player will get an additional pack of cards to improve their deck.
+
+Computer Opponents will have similar decks constructed for them
+
+If the player wins they advance to the next round, if they lose, they're out. At the end of each round a player earns rewards. Higher rounds give better rewards.
+
+Arenas go on for a max of 7 rounds. If the player wins 7 rounds, they are declared "Champion of the Arena". The player does not get to keep any cards they used to build their deck. The only rewards they keep are the rewards for winning a round.
+
+A player can choose to leave the arena as an option in the duel_ante screen. Once a player leaves the arena, in any way, the random encounter is completed and removed from the tile.
+
+Arena duels don't count towards quests or campaigns or enemy scaling or anything else. The only thing the player takes away from the Arena is the rewards they've been given for the rounds they've won.
+
+If a game is drawn it is considered a loss for the player. (Same as regular duels)
+
+For now loading a saved game works like other duels and encounters. It restarts the event, and doesn't pick up in the middle of it.
+
+Players and Opponents use their starting life for each duel.
+
+** UI screens
+1. Initial screen, similar to wandering monster screen. Shows a "Welcome to the Arena" banner. Textbox describing the Arena in game terms "Challenge all comers, hear the roar of the crowd, etc"
+
+   2 buttons:
+   1. Enter Arena (150g)
+   2. Leave Quietly - gives player a random land and returns them to the overworld
+
+2. Initial deck build screen. Drop player into edit_deck screen but only show the arena cards they have. Can build a deck add/remove cards, but can't sell cards.
+
+3. Duel screen - after player leaves deck edit screen, go to duel_ante screen, but with no ante cards for either. Only options are "Duel the Creature", "Leave the Arena (quits the random encounter)" and "Edit Deck"
+
+4. Duel - same as regular duel screen, but with modified decks (both opponent and player)
+   - If player loses, show the duel loss screen then return player to overworld
+
+5. If player wins, show the duel reward screen with winnings then play goes back to deck build screen (#2). This loop continues until the player wins 7 rounds
+
+6. If player has won 7 rounds show the "Champion of the Arena" screen then return player to the overworld.
+
+
+** Cards and Rewards Table
+Details about the rewards and cards at each round.
+
+| MinCards | Round | Rewards                                                |
+|----------+-------+--------------------------------------------------------|
+|       15 |     1 | 50g + 1 D/F card                                       |
+|       20 |     2 | 50g + 1 D/F card + 1 random amulet                     |
+|       25 |     3 | 25g + 2 D/F cards + 1 amulet                           |
+|       30 |     4 | 25g + 2 C/D cards + 1 amulet                           |
+|       35 |     5 | 50g + 2 tier B/C cards + 1 amulet                      |
+|       40 |     6 | 100g + 2 tier A/B + 1 amulet                           |
+|       45 |     7 | 100g + 2 tier A/B + 1 3% chance S else A/B + 2 amulets |
+
+For decks under the MinCard size, fill the remaining slots with random lands, similar to the way duel works.
