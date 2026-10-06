@@ -75,8 +75,8 @@ func TestArenaRoundsRewardsAndChampion(t *testing.T) {
 		for _, n := range enemy.Character.GetActiveDeck() {
 			size += n
 		}
-		if size < run.Player.MinDeckSize {
-			t.Fatalf("opponent deck too small: %d", size)
+		if size != run.Player.MinDeckSize {
+			t.Fatalf("opponent deck size = %d, want %d", size, run.Player.MinDeckSize)
 		}
 		reward := run.Win()
 		if reward.Gold != gold[round-1] || len(reward.Cards) != cardCounts[round-1] || len(reward.Amulets) != amulets[round-1] {
@@ -156,6 +156,169 @@ func TestArenaOpponentUsesOnlyItsPoolAndBasicLandSupply(t *testing.T) {
 		} else if card != bears && card != bolt {
 			t.Fatalf("opponent used unopened card %s", card.CardName)
 		}
+	}
+}
+
+func TestArenaOpponentColorSelectionUsesCardTier(t *testing.T) {
+	squire := FindCardByName("Squire")
+	bolt := FindCardByName("Lightning Bolt")
+	counterspell := FindCardByName("Counterspell")
+	collection := arenaOpponentCollection([]*Card{squire, bolt, counterspell}, 15)
+	if collection.GetDeckCount(bolt, 0) != 1 || collection.GetDeckCount(counterspell, 0) != 1 {
+		t.Fatal("opponent must choose the colors with stronger cards")
+	}
+	if collection.GetDeckCount(squire, 0) != 0 {
+		t.Fatal("a weaker creature must not displace the stronger spell colors")
+	}
+}
+
+func TestArenaOpponentUnrankedCardsUseLowestTier(t *testing.T) {
+	unranked := &Card{CardName: "Unranked arena spell", CardType: CardTypeInstant, ColorIdentity: []string{"W"}}
+	bears := FindCardByName("Grizzly Bears")
+	bolt := FindCardByName("Lightning Bolt")
+	collection := arenaOpponentCollection([]*Card{unranked, bears, bolt}, 15)
+	if collection.GetDeckCount(bears, 0) != 1 || collection.GetDeckCount(bolt, 0) != 1 {
+		t.Fatal("opponent must prefer the creature and ranked spell to the unranked spell")
+	}
+	if collection.GetDeckCount(unranked, 0) != 0 {
+		t.Fatal("an unranked card must not receive a top-tier score")
+	}
+}
+
+func TestArenaOpponentCutsLowestScoringCards(t *testing.T) {
+	bolt := FindCardByName("Lightning Bolt")
+	goblin := FindCardByName("Mons's Goblin Raiders")
+	chaoslace := FindCardByName("Chaoslace")
+	gem := FindCardByName("Gem Bazaar")
+	pool := []*Card{gem, chaoslace, chaoslace, chaoslace}
+	for range 6 {
+		pool = append(pool, goblin, bolt)
+	}
+	collection := arenaOpponentCollection(pool, 15)
+	if collection.NumCards() != 15 {
+		t.Fatalf("deck size = %d, want 15", collection.NumCards())
+	}
+	if collection.GetDeckCount(bolt, 0) != 6 || collection.GetDeckCount(goblin, 0) != 4 || collection.GetDeckCount(chaoslace, 0) != 0 {
+		t.Fatal("deck must retain the strongest ten nonland cards")
+	}
+	if collection.GetDeckCount(gem, 0) != 1 || collection.GetDeckCount(FindCardByName("Mountain"), 0) != 4 {
+		t.Fatal("opened lands must count toward the five land slots")
+	}
+}
+
+func TestArenaOpponentCapsOpenedLands(t *testing.T) {
+	bolt := FindCardByName("Lightning Bolt")
+	gem := FindCardByName("Gem Bazaar")
+	var pool []*Card
+	for range 20 {
+		pool = append(pool, gem, bolt)
+	}
+	collection := arenaOpponentCollection(pool, 15)
+	if collection.NumCards() != 15 || collection.GetDeckCount(bolt, 0) != 10 || collection.GetDeckCount(gem, 0) != 5 {
+		t.Fatal("excess opened lands and spells must not exceed the round deck size")
+	}
+}
+
+func TestArenaOpponentLandCountUsesSelectedCurve(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		size  int
+		cost  string
+		lands int
+	}{
+		{"small aggressive", 15, "{R}", 5},
+		{"small midrange", 15, "{2}{R}", 6},
+		{"small expensive", 15, "{5}{R}", 8},
+		{"large aggressive", 45, "{R}", 15},
+		{"large midrange", 45, "{2}{R}", 19},
+		{"large expensive", 45, "{5}{R}", 23},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &Card{CardName: "Curve spell", CardType: CardTypeSorcery, ManaCost: tt.cost, ColorIdentity: []string{"R"}}
+			var pool []*Card
+			for range 60 {
+				pool = append(pool, card)
+			}
+			collection := arenaOpponentCollection(pool, tt.size)
+			if collection.NumCards() != tt.size || collection.GetDeckCount(card, 0) != tt.size-tt.lands {
+				t.Fatalf("deck has %d cards and %d spells, want %d cards and %d spells", collection.NumCards(), collection.GetDeckCount(card, 0), tt.size, tt.size-tt.lands)
+			}
+		})
+	}
+}
+
+func TestArenaOpponentCheapRampReducesLands(t *testing.T) {
+	elves := FindCardByName("Llanowar Elves")
+	bears := FindCardByName("Grizzly Bears")
+	pool := []*Card{elves, elves, elves}
+	for range 20 {
+		pool = append(pool, bears)
+	}
+	collection := arenaOpponentCollection(pool, 15)
+	if collection.NumCards() != 15 || collection.GetDeckCount(elves, 0) != 3 || collection.GetDeckCount(bears, 0) != 7 {
+		t.Fatal("three cheap mana creatures must allow ten spells and five lands")
+	}
+}
+
+func TestArenaOpponentCheapDrawReducesLands(t *testing.T) {
+	recall := FindCardByName("Ancestral Recall")
+	counterspell := FindCardByName("Counterspell")
+	pool := []*Card{recall, recall, recall}
+	for range 20 {
+		pool = append(pool, counterspell)
+	}
+	collection := arenaOpponentCollection(pool, 15)
+	if collection.NumCards() != 15 || collection.GetDeckCount(recall, 0) != 3 || collection.GetDeckCount(counterspell, 0) != 7 {
+		t.Fatal("three cheap draw spells must allow ten spells and five lands")
+	}
+}
+
+func TestArenaOpponentAggressiveLandFloor(t *testing.T) {
+	elves := FindCardByName("Llanowar Elves")
+	var pool []*Card
+	for range 30 {
+		pool = append(pool, elves)
+	}
+	collection := arenaOpponentCollection(pool, 30)
+	if collection.NumCards() != 30 || collection.GetDeckCount(elves, 0) != 21 || collection.GetDeckCount(FindCardByName("Forest"), 0) != 9 {
+		t.Fatal("cheap ramp must not reduce an aggressive deck below its land floor")
+	}
+}
+
+func TestArenaOpponentExcludedCardsDoNotChangeLandCount(t *testing.T) {
+	counterspell := FindCardByName("Counterspell")
+	cantrip := &Card{CardName: "Weak cantrip", CardType: CardTypeSorcery, ManaCost: "{U}", ColorIdentity: []string{"U"}, Text: "Draw a card."}
+	expensive := &Card{CardName: "Weak expensive spell", CardType: CardTypeSorcery, ManaCost: "{9}{U}", ColorIdentity: []string{"U"}}
+	var pool []*Card
+	for range 30 {
+		pool = append(pool, counterspell, cantrip, expensive)
+	}
+	collection := arenaOpponentCollection(pool, 40)
+	if collection.NumCards() != 40 || collection.GetDeckCount(counterspell, 0) != 24 || collection.GetDeckCount(cantrip, 0) != 0 || collection.GetDeckCount(expensive, 0) != 0 {
+		t.Fatal("excluded cantrips and expensive spells must not affect the selected curve")
+	}
+}
+
+func TestArenaCheapManaSupport(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		want bool
+	}{
+		{"Ancestral Recall", true},
+		{"Llanowar Elves", true},
+		{"Wild Growth", true},
+		{"Sol Ring", true},
+		{"Fellwar Stone", true},
+		{"Lightning Bolt", false},
+		{"Jayemdae Tome", false},
+		{"Howling Mine", false},
+		{"Island", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := arenaCheapManaSupport(FindCardByName(tt.name)); got != tt.want {
+				t.Fatalf("cheap mana support = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"regexp"
 	"slices"
@@ -108,10 +109,7 @@ func arenaOpponentCollection(pool []*Card, minimum int) CardCollection {
 		if card.CardType == CardTypeLand {
 			continue
 		}
-		weight := 1
-		if card.CardType == CardTypeCreature {
-			weight = 2
-		}
+		weight := arenaCardScore(card)
 		for _, c := range card.ColorIdentity {
 			weights[c] += weight
 		}
@@ -119,22 +117,43 @@ func arenaOpponentCollection(pool []*Card, minimum int) CardCollection {
 	slices.SortStableFunc(colors, func(a, b string) int { return weights[b] - weights[a] })
 	chosen := colors[:2]
 	collection := NewCardCollection()
-	spells := 0
+	var spells, openedLands []*Card
 	mana := map[string]int{}
 	for _, card := range pool {
 		if !arenaColorsFit(card, chosen) {
 			continue
 		}
-		collection.AddCardToDeck(card, 0, 1)
-		if card.CardType != CardTypeLand {
-			spells++
-			for _, c := range card.ColorIdentity {
-				mana[c]++
-			}
+		if card.CardType == CardTypeLand {
+			openedLands = append(openedLands, card)
+		} else {
+			spells = append(spells, card)
 		}
 	}
-	size := max(minimum, (spells*5+2)/3)
-	lands := size - collection.NumCards()
+	rank := func(a, b *Card) int {
+		if score := arenaCardScore(b) - arenaCardScore(a); score != 0 {
+			return score
+		}
+		return strings.Compare(a.CardName, b.CardName)
+	}
+	slices.SortStableFunc(spells, rank)
+	slices.SortStableFunc(openedLands, rank)
+	selectedSpells := spells[:0]
+	for count := min(len(spells), minimum-1); count > 0; count-- {
+		if count+arenaLandCount(minimum, spells[:count]) <= minimum {
+			selectedSpells = spells[:count]
+			break
+		}
+	}
+	for _, card := range selectedSpells {
+		collection.AddCardToDeck(card, 0, 1)
+		for _, c := range card.ColorIdentity {
+			mana[c]++
+		}
+	}
+	for _, card := range openedLands[:min(len(openedLands), minimum-collection.NumCards())] {
+		collection.AddCardToDeck(card, 0, 1)
+	}
+	lands := minimum - collection.NumCards()
 	manaTotal := max(1, mana[chosen[0]]+mana[chosen[1]])
 	for i := range lands {
 		c := chosen[0]
@@ -158,6 +177,56 @@ func arenaOpponentCollection(pool []*Card, minimum int) CardCollection {
 		}
 	}
 	return collection
+}
+
+func arenaCardScore(card *Card) int {
+	tier, ok := CardTierForName(card.CardName)
+	if !ok {
+		tier = TierF
+	}
+	score := int(TierF-tier) + 1
+	if card.CardType == CardTypeCreature {
+		score++
+	}
+	return score
+}
+
+var arenaDrawPattern = regexp.MustCompile(`(?i)\bdraws? (?:a|one|two|three|\d+) cards?\b`)
+
+func arenaCheapManaSupport(card *Card) bool {
+	if card.CardType == CardTypeLand || card.ManaValue() > 2 {
+		return false
+	}
+	if len(card.ManaProduction) > 0 {
+		return true
+	}
+	return (card.CardType == CardTypeInstant || card.CardType == CardTypeSorcery) && arenaDrawPattern.MatchString(card.Text)
+}
+
+func arenaLandCount(size int, spells []*Card) int {
+	if len(spells) == 0 {
+		return size
+	}
+	manaTotal, highestMana, support := 0, 0, 0
+	for _, card := range spells {
+		value := card.ManaValue()
+		manaTotal += value
+		highestMana = max(highestMana, value)
+		if arenaCheapManaSupport(card) {
+			support++
+		}
+	}
+	averageMana := float64(manaTotal) / float64(len(spells))
+	ratio := 0.3265 + 0.0317*averageMana
+	aggressive := averageMana <= 1.2 && highestMana <= 2
+	if aggressive {
+		ratio = min(ratio, 0.33)
+	}
+	lands := float64(size)*ratio - 0.28*float64(support)
+	if aggressive {
+		lands = max(lands, float64(size)*0.30)
+	}
+	return min(size, max(1, int(math.Round(lands))))
 }
 
 func arenaColorsFit(card *Card, colors []string) bool {
