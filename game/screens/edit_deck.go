@@ -411,8 +411,9 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	// Draw helper text above collection area
 	helpText := "[A] Add to Deck\n[D] Remove from Deck\n[S] Sell Card"
 	if s.DisableSelling {
-		helpText = "[A] Add to Deck\n[D] Remove from Deck"
+		helpText = fmt.Sprintf("[A] Add to Deck\n[D] Remove from Deck\nMin deck: %d cards", s.Player.MinDeckSize)
 	}
+
 	helpY := float64(collectionY) - 130
 	helpOpts := &ebiten.DrawImageOptions{}
 	elements.NewText(14, helpText, int(10*scale), int(helpY*scale)).Draw(screen, helpOpts, 1.0)
@@ -475,17 +476,8 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	s.refreshCollectionImages()
 	s.refreshDeckImages()
 
-	// Combine collection and deck draggable items
-	allDraggables := make([]dragdrop.Draggable, 0, len(s.draggableItems)+len(s.deckDraggableItems))
-	for _, item := range s.draggableItems {
-		allDraggables = append(allDraggables, item)
-	}
-	for _, item := range s.deckDraggableItems {
-		allDraggables = append(allDraggables, item)
-	}
-
 	if drag, started := ui.DragStart(); started {
-		s.dragManager.Start(drag, allDraggables)
+		s.dragManager.Start(drag, s.visibleDraggables())
 	}
 	if drag, dragging := ui.Dragging(); dragging {
 		s.dragManager.Move(drag)
@@ -555,6 +547,27 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	}
 
 	return screenui.EditDeckScr, nil, nil
+}
+
+func (s *EditDeckScreen) visibleDraggables() []dragdrop.Draggable {
+	buttons := s.CollectionList.GetItems()
+	start := s.CollectionList.GetCurrentOffset()
+	end := min(start+s.CollectionList.GetVisibleCount(), len(buttons))
+	visible := make(map[*elements.Button]bool, end-start)
+	for _, button := range buttons[start:end] {
+		visible[button] = true
+	}
+
+	items := make([]dragdrop.Draggable, 0, len(visible)+len(s.deckDraggableItems))
+	for _, item := range s.draggableItems {
+		if visible[item.Button] {
+			items = append(items, item)
+		}
+	}
+	for _, item := range s.deckDraggableItems {
+		items = append(items, item)
+	}
+	return items
 }
 
 func (s *EditDeckScreen) sellHoveredCard() {
