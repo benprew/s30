@@ -35,9 +35,11 @@ func TestArenaSaveKeepsCampaignAndRestartsEncounter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loaded.World.Player.CardCollection.NumCards() != 2 || loaded.World.Player.Gold != 250 || loaded.World.Player.MinDeckSize != 36 {
-		t.Fatal("save contains arena cards or lost earned campaign rewards")
+	expectedGold := 500 - domain.ArenaEntryCost + 50
+	if loaded.World.Player.CardCollection.NumCards() != 2 || loaded.World.Player.Gold != expectedGold || loaded.World.Player.MinDeckSize != 36 {
+		t.Fatalf("save contains arena cards or lost earned campaign rewards (got gold %d, want %d)", loaded.World.Player.Gold, expectedGold)
 	}
+
 	loaded.World.UpdateEncounters()
 	encounter, ok := loaded.World.TakeRandomEncounterDetails()
 	if !ok || encounter.Type != world.EncounterArena {

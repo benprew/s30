@@ -2,8 +2,10 @@ package duel
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"math/rand"
+
 
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
@@ -16,7 +18,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
+
 
 type DuelAnteScreen struct {
 	background     *ebiten.Image
@@ -90,6 +94,14 @@ func newDuelAnteScreen(player *domain.Player, enemy *domain.Enemy, level *world.
 	bribeW, _ := elements.TextButtonSize(bribeText, fontFace)
 
 	btnY := 500
+	buttonW := duelW
+	if arenaRound > 0 {
+		editText := "3. Edit Deck"
+		editW, _ := elements.TextButtonSize(editText, fontFace)
+		buttonW = max(duelW, bribeW, editW, 260)
+	}
+
+	btnX := 512 - buttonW/2
 	s.duelBtn = *elements.NewButtonFromConfig(elements.ButtonConfig{
 		Normal:  btnSprites[0][0],
 		Hover:   btnSprites[0][1],
@@ -97,11 +109,22 @@ func newDuelAnteScreen(player *domain.Player, enemy *domain.Enemy, level *world.
 		Text:    duelText,
 		Font:    fontFace,
 		ID:      "duel",
-		X:       512 - duelW/2,
+		X:       btnX,
 		Y:       btnY,
 	})
+	if arenaRound > 0 && s.duelBtn.Bounds.Dx() != buttonW {
+		scaleX := float64(buttonW) / float64(s.duelBtn.Bounds.Dx())
+		s.duelBtn.Normal = imageutil.ScaleImageInd(s.duelBtn.Normal, scaleX, 1.0)
+		s.duelBtn.Hover = imageutil.ScaleImageInd(s.duelBtn.Hover, scaleX, 1.0)
+		s.duelBtn.Pressed = imageutil.ScaleImageInd(s.duelBtn.Pressed, scaleX, 1.0)
+		s.duelBtn.Bounds = image.Rect(btnX, btnY, btnX+buttonW, btnY+duelH)
+	}
 
 	if arenaRound > 0 || canBribe(s) {
+		bribeX := 512 - bribeW/2
+		if arenaRound > 0 {
+			bribeX = btnX
+		}
 		s.bribeBtn = *elements.NewButtonFromConfig(elements.ButtonConfig{
 			Normal:  btnSprites[0][0],
 			Hover:   btnSprites[0][1],
@@ -109,19 +132,33 @@ func newDuelAnteScreen(player *domain.Player, enemy *domain.Enemy, level *world.
 			Text:    bribeText,
 			Font:    fontFace,
 			ID:      "bribe",
-			X:       512 - bribeW/2,
+			X:       bribeX,
 			Y:       btnY + duelH + 10,
 		})
+		if arenaRound > 0 && s.bribeBtn.Bounds.Dx() != buttonW {
+			scaleX := float64(buttonW) / float64(s.bribeBtn.Bounds.Dx())
+			s.bribeBtn.Normal = imageutil.ScaleImageInd(s.bribeBtn.Normal, scaleX, 1.0)
+			s.bribeBtn.Hover = imageutil.ScaleImageInd(s.bribeBtn.Hover, scaleX, 1.0)
+			s.bribeBtn.Pressed = imageutil.ScaleImageInd(s.bribeBtn.Pressed, scaleX, 1.0)
+			s.bribeBtn.Bounds = image.Rect(btnX, btnY+duelH+10, btnX+buttonW, btnY+2*duelH+10)
+		}
 	}
 	if arenaRound > 0 {
 		editText := "3. Edit Deck"
-		editW, _ := elements.TextButtonSize(editText, fontFace)
 		s.editBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
 			Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
 			Text: editText, Font: fontFace, ID: "edit",
-			X: 512 - editW/2, Y: btnY + 2*(duelH+10),
+			X: btnX, Y: btnY + 2*(duelH+10),
 		})
+		if s.editBtn.Bounds.Dx() != buttonW {
+			scaleX := float64(buttonW) / float64(s.editBtn.Bounds.Dx())
+			s.editBtn.Normal = imageutil.ScaleImageInd(s.editBtn.Normal, scaleX, 1.0)
+			s.editBtn.Hover = imageutil.ScaleImageInd(s.editBtn.Hover, scaleX, 1.0)
+			s.editBtn.Pressed = imageutil.ScaleImageInd(s.editBtn.Pressed, scaleX, 1.0)
+			s.editBtn.Bounds = image.Rect(btnX, btnY+2*(duelH+10), btnX+buttonW, btnY+3*duelH+20)
+		}
 	}
+
 
 	s.background = loadBackgroundForEnemy(enemy)
 
@@ -250,26 +287,57 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	borderOpts.GeoM.Translate(hCenter(screen, s.enemyVisage), YPos)
 	screen.DrawImage(s.enemyVisage, borderOpts)
 
-	// Main description text - centered, positioned better
-	duelText := "Those who enter the stronghold of the Mighty Wizard\n will be met with the firmest resistance. You must..."
 	if s.arenaRound > 0 {
-		duelText = fmt.Sprintf("Arena round %d of %d. Win to advance!\nYour deck needs %d cards. There is no ante.",
-			s.arenaRound, domain.ArenaRounds, s.player.MinDeckSize)
+		panelW, panelH := 580, 115
+		panelX := (W - panelW) / 2
+		panelY := 365
+		vector.FillRect(screen, float32(panelX), float32(panelY), float32(panelW), float32(panelH), color.RGBA{14, 10, 22, 225}, false)
+		vector.StrokeRect(screen, float32(panelX), float32(panelY), float32(panelW), float32(panelH), 1, color.RGBA{135, 115, 80, 200}, false)
+
+		roundText := fmt.Sprintf("Arena Round %d of %d — Win to advance!", s.arenaRound, domain.ArenaRounds)
+		rt := elements.NewText(22, roundText, 0, panelY+12)
+		rt.Color = color.RGBA{R: 255, G: 230, B: 150, A: 255}
+		rt.HAlign, rt.BoundsW = elements.AlignCenter, float64(W)
+		rt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+
+		life := fmt.Sprintf("Your Life: %d          Opponent Life: %d", s.player.Life, s.enemy.Character.Life)
+		lt := elements.NewText(20, life, 0, panelY+44)
+		lt.Color = color.RGBA{R: 220, G: 240, B: 220, A: 255}
+		lt.HAlign, lt.BoundsW = elements.AlignCenter, float64(W)
+		lt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+
+
+		deckCount := 0
+		for _, count := range s.player.GetActiveDeck() {
+			deckCount += count
+		}
+
+		var dt *elements.Text
+		if deckCount >= s.player.MinDeckSize {
+			deckMsg := fmt.Sprintf("Deck: %d / %d cards (Ready)  •  No ante", deckCount, s.player.MinDeckSize)
+			dt = elements.NewText(18, deckMsg, 0, panelY+76)
+			dt.Color = color.RGBA{R: 200, G: 220, B: 255, A: 255}
+		} else {
+			deckMsg := fmt.Sprintf("Deck: %d / %d cards (Shortfall filled with lands)  •  No ante", deckCount, s.player.MinDeckSize)
+			dt = elements.NewText(18, deckMsg, 0, panelY+76)
+			dt.Color = color.RGBA{R: 255, G: 200, B: 120, A: 255}
+		}
+		dt.HAlign, dt.BoundsW = elements.AlignCenter, float64(W)
+		dt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
+	} else {
+		// Main description text - centered, positioned better
+		duelText := "Those who enter the stronghold of the Mighty Wizard\n will be met with the firmest resistance. You must..."
+		textElement := elements.NewText(24, duelText, W/2-250, 450)
+		textElement.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 	}
-	textElement := elements.NewText(24, duelText, W/2-250, 450)
-	if s.arenaRound > 0 {
-		textElement.Y = 430
-	}
-	textElement.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 	btnOpts := &ebiten.DrawImageOptions{}
 	s.duelBtn.Draw(screen, btnOpts, scale)
 	s.bribeBtn.Draw(screen, btnOpts, scale)
 	if s.editBtn != nil {
 		s.editBtn.Draw(screen, btnOpts, scale)
-		life := fmt.Sprintf("Your life: %d     Opponent life: %d", s.player.Life, s.enemy.Character.Life)
-		elements.NewText(22, life, W/2-220, 390).Draw(screen, &ebiten.DrawImageOptions{}, 1)
 	}
+
 
 	// Player stats UI background in lower-left
 	if s.arenaRound == 0 && len(s.playerStatsUI) > 0 && s.playerStatsUI[0] != nil {

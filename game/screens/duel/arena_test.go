@@ -10,6 +10,8 @@ import (
 	"github.com/benprew/s30/game/ui/elements"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
+	"github.com/hajimehoshi/ebiten/v2"
+
 )
 
 func TestArenaRewardContinueLabel(t *testing.T) {
@@ -104,3 +106,26 @@ func TestArenaDuelUsesStartingLifeAndNoAnte(t *testing.T) {
 		t.Fatal("arena consumed pending campaign bonuses")
 	}
 }
+
+func TestArenaDuelAnteUniformButtonWidthsAndAlignment(t *testing.T) {
+	player := &domain.Player{Character: domain.Character{Life: 10, CardCollection: domain.NewCardCollection()}}
+	enemy := &domain.Enemy{Character: &domain.Character{Name: "Test Enemy", Life: 10, Visage: ebiten.NewImage(10, 10)}}
+	ante := NewArenaDuelAnteScreen(player, enemy, 1, nil, nil, nil)
+
+	if ante.editBtn == nil {
+		t.Fatal("expected edit button in arena ante")
+	}
+	w1 := ante.duelBtn.Bounds.Dx()
+	w2 := ante.bribeBtn.Bounds.Dx()
+	w3 := ante.editBtn.Bounds.Dx()
+	if w1 != w2 || w2 != w3 {
+		t.Errorf("buttons should have uniform width: duel=%d, bribe=%d, edit=%d", w1, w2, w3)
+	}
+	x1 := ante.duelBtn.Bounds.Min.X
+	x2 := ante.bribeBtn.Bounds.Min.X
+	x3 := ante.editBtn.Bounds.Min.X
+	if x1 != x2 || x2 != x3 {
+		t.Errorf("buttons should have same X alignment: duel=%d, bribe=%d, edit=%d", x1, x2, x3)
+	}
+}
+

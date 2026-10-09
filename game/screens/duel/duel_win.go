@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"strings"
 
 	"github.com/benprew/s30/assets"
 	"github.com/benprew/s30/game/domain"
@@ -17,6 +16,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // DuelWinScreen displays the cards, gold, and amulets awarded to the player
@@ -26,7 +26,7 @@ const (
 	winCardW        = domain.CardFullWidth
 	winCardH        = 342
 	winChoiceGap    = 30
-	winChoiceY      = 130
+	winChoiceY      = 120
 	winBonusGap     = 20
 	winCardsPerPage = 3
 	winBonusPerPage = 5
@@ -46,12 +46,22 @@ type DuelWinScreen struct {
 	bonusImgs    []*ebiten.Image
 	page         int
 	textbox      *elements.Button
-	rewardText   *elements.Text
+	rewardPanel  *ebiten.Image
+	rewardPanelX int
+	rewardPanelY int
 	doneBtn      *elements.Button
+	btnSprites   [3]*ebiten.Image
 	continueText string
 	Background   *ebiten.Image
 	ReturnScr    screenui.ScreenName
 	ReturnScreen screenui.Screen
+}
+
+func winFont(size float64) *text.GoTextFace {
+	return &text.GoTextFace{
+		Source: fonts.MtgFont,
+		Size:   size,
+	}
 }
 
 func (s *DuelWinScreen) IsFramed() bool { return false }
@@ -59,12 +69,9 @@ func (s *DuelWinScreen) IsFramed() bool { return false }
 func (s *DuelWinScreen) IsOverlay() bool { return false }
 
 func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCards []*domain.Card) *DuelWinScreen {
-	fontFace := &text.GoTextFace{
-		Source: fonts.MtgFont,
-		Size:   40,
-	}
+	fontFace := winFont(40)
 
-	textContent := "Cards Won"
+	textContent := "Rewards"
 
 	textWidth, textHeight := text.Measure(textContent, fontFace, 0)
 
@@ -94,42 +101,23 @@ func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCard
 
 	cards := layoutCards(reward.Cards)
 
+	rewardPanel, rewardPanelX, rewardPanelY := createRewardPanel(reward)
+
+	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
+	var sprites [3]*ebiten.Image
+	if err == nil && len(btnSprites) > 0 && len(btnSprites[0]) >= 3 {
+		sprites = [3]*ebiten.Image{btnSprites[0][0], btnSprites[0][1], btnSprites[0][2]}
+	}
+
+	btnFont := winFont(22)
 	doneBtn := elements.NewButtonFromConfig(elements.ButtonConfig{
-		Normal: scaledBg,
-		Text:   "Done",
-		Font:   fontFace,
-		ID:     "done",
+		Normal:  sprites[0],
+		Hover:   sprites[1],
+		Pressed: sprites[2],
+		Text:    "Done",
+		Font:    btnFont,
+		ID:      "done",
 	})
-	doneW := doneBtn.Bounds.Dx()
-	doneBtn.MoveTo((winLogicalW-doneW)/2, winChoiceY+winCardH+20)
-
-	var rewardParts []string
-	if reward.Gold > 0 {
-		rewardParts = append(rewardParts, fmt.Sprintf("+%d Gold", reward.Gold))
-	}
-	if len(reward.Amulets) > 0 {
-		counts := make(map[string]int)
-		for _, a := range reward.Amulets {
-			colorStr := domain.ColorMaskToString(a.Color)
-			counts[colorStr]++
-		}
-		for colorStr, count := range counts {
-			if count == 1 {
-				rewardParts = append(rewardParts, fmt.Sprintf("+1 %s Amulet", colorStr))
-			} else {
-				rewardParts = append(rewardParts, fmt.Sprintf("+%d %s Amulets", count, colorStr))
-			}
-		}
-	}
-
-	var rewardLabel *elements.Text
-	if len(rewardParts) > 0 {
-		rewardStr := strings.Join(rewardParts, "   ")
-		rewardLabel = elements.NewText(24, rewardStr, 0, winChoiceY-35)
-		rewardLabel.Color = color.RGBA{R: 255, G: 230, B: 150, A: 255}
-		rewardLabel.HAlign = elements.AlignCenter
-		rewardLabel.BoundsW = winLogicalW
-	}
 
 	bonusImgs := make([]*ebiten.Image, 0, len(bonusCards))
 	for _, c := range bonusCards {
@@ -141,15 +129,18 @@ func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCard
 	}
 
 	screen := &DuelWinScreen{
-		player:     player,
-		reward:     reward,
-		cards:      cards,
-		bonusImgs:  bonusImgs,
-		Background: bgImg,
-		textbox:    tb,
-		rewardText: rewardLabel,
-		doneBtn:    doneBtn,
-		ReturnScr:  screenui.WorldScr,
+		player:       player,
+		reward:       reward,
+		cards:        cards,
+		bonusImgs:    bonusImgs,
+		Background:   bgImg,
+		textbox:      tb,
+		rewardPanel:  rewardPanel,
+		rewardPanelX: rewardPanelX,
+		rewardPanelY: rewardPanelY,
+		doneBtn:      doneBtn,
+		btnSprites:   sprites,
+		ReturnScr:    screenui.WorldScr,
 	}
 	screen.updatePageLabels()
 	return screen
@@ -159,6 +150,147 @@ func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCard
 // with a list of cards and default zero gold/amulets.
 func NewWinDuelScreenFromCards(player *domain.Player, cards []*domain.Card, bonusCards []*domain.Card) *DuelWinScreen {
 	return NewWinDuelScreen(player, domain.DuelReward{Cards: cards}, bonusCards)
+}
+
+type rewardItem struct {
+	sprite *ebiten.Image
+	text   string
+	color  color.Color
+}
+
+type measuredRewardItem struct {
+	item    rewardItem
+	width   float64
+	textW   float64
+	textH   float64
+	spriteW float64
+	spriteH float64
+}
+
+func createRewardPanel(reward domain.DuelReward) (*ebiten.Image, int, int) {
+	var items []rewardItem
+
+	if reward.Gold > 0 {
+		items = append(items, rewardItem{
+			text:  fmt.Sprintf("+%d Gold", reward.Gold),
+			color: color.RGBA{R: 255, G: 215, B: 50, A: 255},
+		})
+	}
+
+	if len(reward.Amulets) > 0 {
+		amuletSprs, _ := imageutil.LoadSpriteSheet(5, 1, assets.Amsprite_png)
+		amuletColors := []struct {
+			mask  domain.ColorMask
+			name  string
+			index int
+			col   color.Color
+		}{
+			{domain.ColorWhite, "White", 0, color.RGBA{R: 245, G: 245, B: 230, A: 255}},
+			{domain.ColorBlue, "Blue", 1, color.RGBA{R: 120, G: 190, B: 255, A: 255}},
+			{domain.ColorBlack, "Black", 2, color.RGBA{R: 210, G: 190, B: 230, A: 255}},
+			{domain.ColorRed, "Red", 3, color.RGBA{R: 255, G: 130, B: 120, A: 255}},
+			{domain.ColorGreen, "Green", 4, color.RGBA{R: 130, G: 240, B: 130, A: 255}},
+		}
+
+		counts := make(map[domain.ColorMask]int)
+		for _, a := range reward.Amulets {
+			counts[a.Color]++
+		}
+
+		for _, ac := range amuletColors {
+			count := counts[ac.mask]
+			if count <= 0 {
+				continue
+			}
+			var label string
+			if count == 1 {
+				label = fmt.Sprintf("+1 %s Amulet", ac.name)
+			} else {
+				label = fmt.Sprintf("+%d %s Amulets", count, ac.name)
+			}
+			var spr *ebiten.Image
+			if len(amuletSprs) > 0 && ac.index < len(amuletSprs[0]) {
+				spr = imageutil.ScaleImage(amuletSprs[0][ac.index], 1.25)
+			}
+			items = append(items, rewardItem{
+				sprite: spr,
+				text:   label,
+				color:  ac.col,
+			})
+		}
+	}
+
+	if len(items) == 0 {
+		return nil, 0, 0
+	}
+
+	fontFace := winFont(20)
+	itemGap := 28.0
+	totalContentW := 0.0
+
+	measured := make([]measuredRewardItem, len(items))
+	for i, item := range items {
+		tW, tH := text.Measure(item.text, fontFace, 0)
+		sW, sH := 0.0, 0.0
+		if item.sprite != nil {
+			sW = float64(item.sprite.Bounds().Dx())
+			sH = float64(item.sprite.Bounds().Dy())
+		}
+		w := tW
+		if sW > 0 {
+			w += sW + 8.0
+		}
+		measured[i] = measuredRewardItem{
+			item:    item,
+			width:   w,
+			textW:   tW,
+			textH:   tH,
+			spriteW: sW,
+			spriteH: sH,
+		}
+		totalContentW += w
+		if i > 0 {
+			totalContentW += itemGap
+		}
+	}
+
+	panelW := max(340, int(totalContentW+56.0))
+	panelH := 46
+	panelX := (winLogicalW - panelW) / 2
+	panelY := winChoiceY + winCardH + 18
+
+	panelBg := ebiten.NewImage(panelW, panelH)
+	panelBg.Fill(color.RGBA{R: 20, G: 18, B: 28, A: 230})
+	vector.StrokeRect(panelBg, 1, 1, float32(panelW-2), float32(panelH-2), 1.5, color.RGBA{R: 190, G: 165, B: 95, A: 220}, false)
+	vector.StrokeRect(panelBg, 4, 4, float32(panelW-8), float32(panelH-8), 1, color.RGBA{R: 95, G: 80, B: 50, A: 160}, false)
+
+	startX := (float64(panelW) - totalContentW) / 2
+	currX := startX
+
+	for _, m := range measured {
+		if m.spriteW > 0 {
+			sprY := (float64(panelH) - m.spriteH) / 2
+			sOpts := &ebiten.DrawImageOptions{}
+			sOpts.GeoM.Translate(currX, sprY)
+			panelBg.DrawImage(m.item.sprite, sOpts)
+			currX += m.spriteW + 8.0
+		}
+		textY := (float64(panelH) - m.textH) / 2
+
+		shOpts := &text.DrawOptions{}
+		shOpts.GeoM.Translate(currX+1, textY+1)
+		shOpts.ColorScale.ScaleWithColor(color.RGBA{R: 0, G: 0, B: 0, A: 200})
+		text.Draw(panelBg, m.item.text, fontFace, shOpts)
+
+		tOpts := &text.DrawOptions{}
+		tOpts.GeoM.Translate(currX, textY)
+		tOpts.ColorScale.ScaleWithColor(m.item.color)
+		text.Draw(panelBg, m.item.text, fontFace, tOpts)
+
+		currX += m.textW + itemGap
+	}
+
+	return panelBg, panelX, panelY
 }
 
 // layoutCards keeps the full card size on each reward page.
@@ -189,17 +321,52 @@ func (s *DuelWinScreen) SetContinueText(label string) {
 }
 
 func (s *DuelWinScreen) updatePageLabels() {
-	s.doneBtn.ButtonText.Text = "Done"
+	if s.doneBtn == nil {
+		return
+	}
+	label := "Done"
 	if s.continueText != "" {
-		s.doneBtn.ButtonText.Text = s.continueText
+		label = s.continueText
 	}
 	if s.page+1 < s.pageCount() {
-		s.doneBtn.ButtonText.Text = "Next"
+		label = "Next"
 	}
-	s.textbox.ButtonText.Text = "Cards Won"
-	if s.page >= s.cardPageCount() && len(s.bonusImgs) > 0 {
-		s.textbox.ButtonText.Text = "Bonus Cards"
+	s.doneBtn.ButtonText.Text = label
+	if s.textbox != nil {
+		s.textbox.ButtonText.Text = "Rewards"
+		if s.page >= s.cardPageCount() && len(s.bonusImgs) > 0 {
+			s.textbox.ButtonText.Text = "Bonus Cards"
+		}
 	}
+	s.updateDoneButton()
+}
+
+func (s *DuelWinScreen) updateDoneButton() {
+	if s.doneBtn == nil || s.btnSprites[0] == nil {
+		return
+	}
+	fontFace := winFont(22)
+	textW, _ := text.Measure(s.doneBtn.ButtonText.Text, fontFace, 0)
+	buttonW := max(260, int(textW+70))
+	buttonH := 42
+
+	scaleX := float64(buttonW) / float64(s.btnSprites[0].Bounds().Dx())
+	scaleY := float64(buttonH) / float64(s.btnSprites[0].Bounds().Dy())
+
+	s.doneBtn.Normal = imageutil.ScaleImageInd(s.btnSprites[0], scaleX, scaleY)
+	s.doneBtn.Hover = imageutil.ScaleImageInd(s.btnSprites[1], scaleX, scaleY)
+	s.doneBtn.Pressed = imageutil.ScaleImageInd(s.btnSprites[2], scaleX, scaleY)
+
+	btnX := (winLogicalW - buttonW) / 2
+	btnY := winChoiceY + winCardH + 40
+	if s.rewardPanel != nil {
+		btnY = s.rewardPanelY + s.rewardPanel.Bounds().Dy() + 32
+	}
+	s.doneBtn.Bounds = image.Rect(btnX, btnY, btnX+buttonW, btnY+buttonH)
+	s.doneBtn.ButtonText.Font = fontFace
+	s.doneBtn.ButtonText.TextColor = color.White
+	s.doneBtn.ButtonText.HAlign = elements.AlignCenter
+	s.doneBtn.ButtonText.VAlign = elements.AlignMiddle
 }
 
 func (s *DuelWinScreen) nextPage() bool {
@@ -214,10 +381,14 @@ func (s *DuelWinScreen) nextPage() bool {
 func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	screen.DrawImage(s.Background, &ebiten.DrawImageOptions{})
 
-	s.textbox.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+	if s.textbox != nil {
+		s.textbox.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+	}
 
-	if s.rewardText != nil {
-		s.rewardText.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+	if s.rewardPanel != nil {
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(s.rewardPanelX), float64(s.rewardPanelY))
+		screen.DrawImage(s.rewardPanel, opts)
 	}
 
 	mp := ui.Position()
@@ -236,7 +407,9 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		screen.DrawImage(img, opts)
 	}
 
-	s.doneBtn.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+	if s.doneBtn != nil {
+		s.doneBtn.Draw(screen, &ebiten.DrawImageOptions{}, scale)
+	}
 
 	s.drawBonus(screen)
 }
@@ -259,8 +432,11 @@ func (s *DuelWinScreen) drawBonus(screen *ebiten.Image) {
 }
 
 func (s *DuelWinScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
-	s.doneBtn.Update(&ebiten.DrawImageOptions{}, scale, W, H)
-	if s.doneBtn.IsClicked() ||
+	if s.doneBtn != nil {
+		s.doneBtn.Update(&ebiten.DrawImageOptions{}, scale, W, H)
+	}
+	if (s.doneBtn != nil && s.doneBtn.IsClicked()) ||
+		inpututil.IsKeyJustPressed(ebiten.Key1) ||
 		inpututil.IsKeyJustPressed(ebiten.KeyEscape) ||
 		inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
 		inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||

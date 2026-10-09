@@ -7,13 +7,14 @@ import (
 
 func TestArenaEntryAndPoolIsolation(t *testing.T) {
 	bolt := FindCardByName("Lightning Bolt")
-	campaign := &Player{Character: Character{Life: 13, CardCollection: NewCardCollection()}, Gold: 299, MinDeckSize: 36, ActiveDeck: 2, BonusDuelLife: 5}
+	campaign := &Player{Character: Character{Life: 13, CardCollection: NewCardCollection()}, Gold: ArenaEntryCost - 1, MinDeckSize: 36, ActiveDeck: 2, BonusDuelLife: 5}
 	campaign.CardCollection.AddCardToDeck(bolt, 2, 1)
-	if _, err := NewArenaRun(campaign, rand.New(rand.NewSource(1))); err == nil || campaign.Gold != 299 {
-		t.Fatal("entry must require 300 gold")
+	if _, err := NewArenaRun(campaign, rand.New(rand.NewSource(1))); err == nil || campaign.Gold != ArenaEntryCost-1 {
+		t.Fatalf("entry must require %d gold", ArenaEntryCost)
 	}
-	campaign.Gold = 300
+	campaign.Gold = ArenaEntryCost
 	run, err := NewArenaRun(campaign, rand.New(rand.NewSource(1)))
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,8 +52,9 @@ func TestArenaBoosterDistribution(t *testing.T) {
 }
 
 func TestArenaRoundsRewardsAndChampion(t *testing.T) {
-	campaign := &Player{Character: Character{Life: 10, CardCollection: NewCardCollection()}, Gold: 300}
+	campaign := &Player{Character: Character{Life: 10, CardCollection: NewCardCollection()}, Gold: ArenaEntryCost}
 	run, err := NewArenaRun(campaign, rand.New(rand.NewSource(9)))
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,9 +114,11 @@ func TestArenaFinishRetainsOnlyEarnedRewards(t *testing.T) {
 	}
 	run.Win()
 	run.Finish()
-	if !run.Finished || run.Champion || campaign.Gold != 150 || campaign.CardCollection.NumCards() != 1 {
-		t.Fatal("leaving must preserve earned rewards without arena cards")
+	expectedGold := 400 - ArenaEntryCost + 50
+	if !run.Finished || run.Champion || campaign.Gold != expectedGold || campaign.CardCollection.NumCards() != 1 {
+		t.Fatalf("leaving must preserve earned rewards without arena cards (got gold %d, want %d)", campaign.Gold, expectedGold)
 	}
+
 	if reward := run.Win(); reward.Gold != 0 {
 		t.Fatal("left arena granted a reward")
 	}

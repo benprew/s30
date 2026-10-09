@@ -18,7 +18,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
+
 
 type ArenaEntryScreen struct {
 	level      *world.Level
@@ -36,32 +38,61 @@ func NewArenaEntryScreen(level *world.Level, encounter world.RandomEncounter) *A
 	return s
 }
 
+// NewArenaChampionScreen shows the victory celebration after winning 7 rounds.
+func NewArenaChampionScreen() *ArenaEntryScreen {
+	return newArenaMessageScreen(true)
+}
+
+
 func newArenaMessageScreen(champion bool) *ArenaEntryScreen {
 	background, _ := imageutil.LoadImage(assets.DuelWinBg_png)
-	panel := ebiten.NewImage(924, 230)
-	panel.Fill(color.RGBA{R: 12, G: 8, B: 20, A: 220})
+	panelW, panelH := 820, 310
+	if champion {
+		panelW, panelH = 740, 230
+	}
+	panel := ebiten.NewImage(panelW, panelH)
+	panel.Fill(color.RGBA{R: 14, G: 10, B: 24, A: 235})
 	s := &ArenaEntryScreen{champion: champion, background: background, panel: panel}
-	labels := []string{"Enter Arena (300 gold)", "Leave Quietly"}
+	labels := []string{fmt.Sprintf("1. Enter Arena (%d gold)", domain.ArenaEntryCost), "2. Leave Quietly"}
 	if champion {
 		labels = []string{"Return to the Overworld"}
 	}
+
+	face := &text.GoTextFace{Source: fonts.MtgFont, Size: 20}
+	maxWidth := 0
+	for _, label := range labels {
+		w, _ := elements.TextButtonSize(label, face)
+		if w > maxWidth {
+			maxWidth = w
+		}
+	}
+	buttonW := max(maxWidth, 280)
+	btnX := (1024 - buttonW) / 2
+	btnY := 440
+
 	for i, label := range labels {
-		s.buttons = append(s.buttons, arenaButton(label, i, 500+70*i))
+		s.buttons = append(s.buttons, arenaButton(label, i, btnX, btnY+58*i, buttonW, face))
 	}
 	return s
 }
 
-func arenaButton(label string, index, y int) *elements.Button {
+func arenaButton(label string, index, x, y, width int, face *text.GoTextFace) *elements.Button {
 	sprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
 	if err != nil {
 		panic(err)
 	}
-	face := &text.GoTextFace{Source: fonts.MtgFont, Size: 24}
-	width, _ := elements.TextButtonSize(label, face)
-	return elements.NewButtonFromConfig(elements.ButtonConfig{
+	btn := elements.NewButtonFromConfig(elements.ButtonConfig{
 		Normal: sprites[0][0], Hover: sprites[0][1], Pressed: sprites[0][2],
-		Text: label, Font: face, ID: fmt.Sprintf("arena-%d", index), X: 512 - width/2, Y: y,
+		Text: label, Font: face, ID: fmt.Sprintf("arena-%d", index), X: x, Y: y,
 	})
+	if btn.Bounds.Dx() != width {
+		scaleX := float64(width) / float64(btn.Bounds.Dx())
+		btn.Normal = imageutil.ScaleImageInd(btn.Normal, scaleX, 1.0)
+		btn.Hover = imageutil.ScaleImageInd(btn.Hover, scaleX, 1.0)
+		btn.Pressed = imageutil.ScaleImageInd(btn.Pressed, scaleX, 1.0)
+		btn.Bounds = image.Rect(x, y, x+width, btn.Bounds.Max.Y)
+	}
+	return btn
 }
 
 func (s *ArenaEntryScreen) IsFramed() bool  { return false }
@@ -94,13 +125,13 @@ func (s *ArenaEntryScreen) Update(W, H int, scale float64) (screenui.ScreenName,
 		(s.champion && inpututil.IsKeyJustPressed(ebiten.KeySpace)) {
 		return s.leave()
 	}
-	if !s.champion && inpututil.IsKeyJustPressed(ebiten.Key1) {
+	if !s.champion && inpututil.IsKeyJustPressed(ebiten.Key1) && s.level.Player.Gold >= domain.ArenaEntryCost {
 		return s.enter(W, H)
 	}
 	for i, button := range s.buttons {
 		if !s.champion && i == 0 && s.level.Player.Gold < domain.ArenaEntryCost {
 			button.State = elements.StateDisabled
-			button.ButtonText.TextColor = color.RGBA{R: 150, G: 150, B: 150, A: 255}
+			button.ButtonText.TextColor = color.RGBA{R: 140, G: 140, B: 140, A: 255}
 			continue
 		}
 		button.ButtonText.TextColor = color.White
@@ -119,30 +150,60 @@ func (s *ArenaEntryScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Scale(float64(W)/float64(s.background.Bounds().Dx()), float64(H)/float64(s.background.Bounds().Dy()))
 	screen.DrawImage(s.background, opts)
+
+	panelW, panelH := s.panel.Bounds().Dx(), s.panel.Bounds().Dy()
+	panelX := (W - panelW) / 2
+	panelY := 85
+	if s.champion {
+		panelY = 145
+	}
+
 	panelOpts := &ebiten.DrawImageOptions{}
-	panelOpts.GeoM.Translate(50, 100)
+	panelOpts.GeoM.Translate(float64(panelX), float64(panelY))
 	screen.DrawImage(s.panel, panelOpts)
+	vector.StrokeRect(screen, float32(panelX), float32(panelY), float32(panelW), float32(panelH), 2, color.RGBA{135, 115, 80, 220}, false)
+
 	title := "Welcome to the Arena"
 	body := "Challenge all comers and hear the roar of the crowd!\nBuild a deck from a booster and basic lands. Each win brings\nnew cards and prizes. Win seven rounds to become champion.\nYour arena deck stays here; your earned prizes go with you."
 	if s.champion {
 		title = "Champion of the Arena"
 		body = "Seven victories! The crowd cheers your triumph.\nYou leave with the prizes from every round."
 	}
-	titleText := elements.NewText(44, title, 0, 110)
+
+	titleText := elements.NewText(38, title, 0, panelY+28)
+	titleText.Color = color.RGBA{R: 255, G: 230, B: 150, A: 255}
 	titleText.HAlign, titleText.BoundsW = elements.AlignCenter, float64(W)
 	titleText.Draw(screen, &ebiten.DrawImageOptions{}, 1)
-	elements.NewText(24, body, 80, 190).Draw(screen, &ebiten.DrawImageOptions{}, 1)
-	if !s.champion {
-		info := fmt.Sprintf("Entry: %d gold. You have %d gold.", domain.ArenaEntryCost, s.level.Player.Gold)
-		if s.level.Player.Gold < domain.ArenaEntryCost {
-			info += " You need more gold to enter."
+
+	if s.champion {
+		bodyText := elements.NewText(24, body, 0, panelY+105)
+		bodyText.Color = color.RGBA{R: 230, G: 230, B: 240, A: 255}
+		bodyText.HAlign, bodyText.BoundsW = elements.AlignCenter, float64(W)
+		bodyText.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+	} else {
+		bodyText := elements.NewText(22, body, panelX+45, panelY+95)
+		bodyText.Color = color.RGBA{R: 230, G: 230, B: 240, A: 255}
+		bodyText.Draw(screen, &ebiten.DrawImageOptions{}, 1)
+
+		var infoText *elements.Text
+		if s.level.Player.Gold >= domain.ArenaEntryCost {
+			msg := fmt.Sprintf("Entry Fee: %d gold      Your Gold: %d", domain.ArenaEntryCost, s.level.Player.Gold)
+			infoText = elements.NewText(20, msg, 0, panelY+245)
+			infoText.Color = color.RGBA{R: 255, G: 230, B: 150, A: 255}
+		} else {
+			msg := fmt.Sprintf("Entry Fee: %d gold      Your Gold: %d (Need %d more gold)", domain.ArenaEntryCost, s.level.Player.Gold, domain.ArenaEntryCost-s.level.Player.Gold)
+			infoText = elements.NewText(20, msg, 0, panelY+245)
+			infoText.Color = color.RGBA{R: 255, G: 120, B: 120, A: 255}
 		}
-		elements.NewText(22, info, 80, 400).Draw(screen, &ebiten.DrawImageOptions{}, 1)
+		infoText.HAlign, infoText.BoundsW = elements.AlignCenter, float64(W)
+		infoText.Draw(screen, &ebiten.DrawImageOptions{}, 1)
 	}
+
 	for _, button := range s.buttons {
 		button.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 	}
 }
+
 
 type arenaSession struct {
 	run   *domain.ArenaRun

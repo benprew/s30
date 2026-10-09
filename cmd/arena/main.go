@@ -69,9 +69,11 @@ func (g *arenaGame) Close() {
 
 func main() {
 	life := flag.Int("life", 10, "player starting life for each arena duel")
-	gold := flag.Int("gold", 1000, "player starting gold (entry costs 300)")
+	gold := flag.Int("gold", 1000, fmt.Sprintf("player starting gold (entry costs %d)", domain.ArenaEntryCost))
+
 	showOpponentHand := flag.Bool("show-opponent-hand", false, "reveal the opponent's hand (debug)")
 	duelLog := flag.Bool("duel-log", false, "enable verbose duel logging")
+	champion := flag.Bool("champion", false, "launch directly to the champion screen (debug)")
 	flag.Parse()
 	if *life < 1 || *gold < 0 || flag.NArg() != 0 {
 		log.Fatal("-life must be positive, -gold must be nonnegative, and no positional arguments are accepted")
@@ -92,9 +94,14 @@ func main() {
 	encounter := world.RandomEncounter{Tile: image.Pt(0, 0), Type: world.EncounterArena}
 	level := &world.Level{Player: player, W: 1, H: 1,
 		Tiles: [][]*world.Tile{{{}}}, RandomEncounters: []world.RandomEncounter{encounter}}
+	initialScreen := screenui.Screen(screens.NewArenaEntryScreen(level, encounter))
+	if *champion {
+		initialScreen = screens.NewArenaChampionScreen()
+	}
 	g := &arenaGame{screens: map[screenui.ScreenName]screenui.Screen{
-		screenui.RandomEncounterScr: screens.NewArenaEntryScreen(level, encounter),
+		screenui.RandomEncounterScr: initialScreen,
 	}, current: screenui.RandomEncounterScr, updatePointer: ui.UpdatePointer}
+
 	defer g.Close()
 	ebiten.SetWindowSize(arenaScreenWidth, arenaScreenHeight)
 	ebiten.SetWindowTitle("Arena Test")

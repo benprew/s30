@@ -76,3 +76,28 @@ func TestArenaLossCompletesEncounter(t *testing.T) {
 		t.Fatal("loss retained temporary cards")
 	}
 }
+
+func TestArenaEntryScreenButtonsAndUniformWidth(t *testing.T) {
+	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}, Gold: domain.ArenaEntryCost}
+	level := &world.Level{Player: player}
+	encounter := world.RandomEncounter{Tile: image.Pt(0, 0), Type: world.EncounterArena}
+	s := NewArenaEntryScreen(level, encounter)
+	if len(s.buttons) != 2 {
+		t.Fatalf("expected 2 buttons, got %d", len(s.buttons))
+	}
+	expectedLabel0 := "1. Enter Arena (150 gold)"
+	expectedLabel1 := "2. Leave Quietly"
+	if s.buttons[0].ButtonText.Text != expectedLabel0 {
+		t.Errorf("button 0 text = %q, want %q", s.buttons[0].ButtonText.Text, expectedLabel0)
+	}
+	if s.buttons[1].ButtonText.Text != expectedLabel1 {
+		t.Errorf("button 1 text = %q, want %q", s.buttons[1].ButtonText.Text, expectedLabel1)
+	}
+	if s.buttons[0].Bounds.Dx() != s.buttons[1].Bounds.Dx() {
+		t.Errorf("buttons should have uniform width: b0=%d, b1=%d", s.buttons[0].Bounds.Dx(), s.buttons[1].Bounds.Dx())
+	}
+	if s.buttons[0].Bounds.Min.X != s.buttons[1].Bounds.Min.X {
+		t.Errorf("buttons should have same X alignment: b0=%d, b1=%d", s.buttons[0].Bounds.Min.X, s.buttons[1].Bounds.Min.X)
+	}
+}
+

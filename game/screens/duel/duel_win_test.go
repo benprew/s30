@@ -7,6 +7,7 @@ import (
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 func TestHandleWinRegularEnemyDoesNotResolvePendingCastle(t *testing.T) {
@@ -451,3 +452,70 @@ func TestDuelWinBonusUsesMiniPresetAndSeparatePage(t *testing.T) {
 		t.Fatal("bonus page navigation failed")
 	}
 }
+
+func TestDuelWinScreen_RewardLayoutAndDoneButton(t *testing.T) {
+	player := &domain.Player{
+		Character: domain.Character{CardCollection: domain.NewCardCollection()},
+	}
+	reward := domain.DuelReward{
+		Cards:   []*domain.Card{domain.CARDS[0]},
+		Gold:    50,
+		Amulets: []domain.Amulet{domain.NewAmulet(domain.ColorRed), domain.NewAmulet(domain.ColorBlue)},
+	}
+	s := NewWinDuelScreen(player, reward, nil)
+	s.SetContinueText("Go to Round 2")
+
+	if s.rewardPanel == nil {
+		t.Fatal("expected rewardPanel to be non-nil when gold and amulets are awarded")
+	}
+	if s.rewardPanelY < winChoiceY+winCardH {
+		t.Fatalf("rewardPanelY = %d, want >= %d (below cards)", s.rewardPanelY, winChoiceY+winCardH)
+	}
+
+	if s.doneBtn.Bounds.Min.Y <= s.rewardPanelY+s.rewardPanel.Bounds().Dy() {
+		t.Fatalf("doneBtn Y = %d, want > rewardPanel bottom (%d)", s.doneBtn.Bounds.Min.Y, s.rewardPanelY+s.rewardPanel.Bounds().Dy())
+	}
+
+	textW, _ := text.Measure(s.doneBtn.ButtonText.Text, s.doneBtn.ButtonText.Font, 0)
+	if float64(s.doneBtn.Bounds.Dx()) < textW+20 {
+		t.Fatalf("button width %d cannot fit text %q of width %f", s.doneBtn.Bounds.Dx(), s.doneBtn.ButtonText.Text, textW)
+	}
+
+	expectedX := (winLogicalW - s.doneBtn.Bounds.Dx()) / 2
+	if s.doneBtn.Bounds.Min.X != expectedX {
+		t.Fatalf("doneBtn X = %d, want centered at %d", s.doneBtn.Bounds.Min.X, expectedX)
+	}
+}
+
+func TestDuelWinScreen_NoCurrenciesHasNoRewardPanel(t *testing.T) {
+	player := &domain.Player{
+		Character: domain.Character{CardCollection: domain.NewCardCollection()},
+	}
+	reward := domain.DuelReward{
+		Cards: []*domain.Card{domain.CARDS[0]},
+	}
+	s := NewWinDuelScreen(player, reward, nil)
+
+	if s.rewardPanel != nil {
+		t.Fatal("expected rewardPanel to be nil when no gold or amulets are awarded")
+	}
+	if s.doneBtn.Bounds.Min.Y < winChoiceY+winCardH {
+		t.Fatalf("doneBtn Y = %d, want >= %d (below cards)", s.doneBtn.Bounds.Min.Y, winChoiceY+winCardH)
+	}
+}
+
+func TestDuelWinScreen_TitleIsRewards(t *testing.T) {
+	player := &domain.Player{
+		Character: domain.Character{CardCollection: domain.NewCardCollection()},
+	}
+	reward := domain.DuelReward{
+		Cards: []*domain.Card{domain.CARDS[0]},
+		Gold:  50,
+	}
+	s := NewWinDuelScreen(player, reward, nil)
+	if s.textbox.ButtonText.Text != "Rewards" {
+		t.Fatalf("expected title %q, got %q", "Rewards", s.textbox.ButtonText.Text)
+	}
+}
+
+

@@ -12,7 +12,7 @@ import (
 	mage "github.com/benprew/mage-go/pkg/mage"
 )
 
-const ArenaEntryCost = 300
+const ArenaEntryCost = 150
 const ArenaRounds = 7
 
 // ArenaRun keeps the temporary card pool separate from campaign resources.
