@@ -12,6 +12,7 @@ from utils.update_cards_json import (
     DEFAULT_EXCLUDED_NAMES,
     VersionExclusion,
     iter_json_records,
+    normalize_type_line,
     parse_version_exclusion,
     process_card_records,
     save_json_and_zst,
@@ -83,19 +84,63 @@ class UpdateCardsJsonTest(unittest.TestCase):
             "https://cards.scryfall.io/border_crop/front/4/a/4a2e428c.jpg",
         )
 
+    def test_normalize_type_line(self) -> None:
+        self.assertEqual(normalize_type_line("Summon Knights"), "Creature Knights")
+        self.assertEqual(normalize_type_line("Summon Dragon"), "Creature Dragon")
+        self.assertEqual(normalize_type_line("Summon Jaguar"), "Creature Jaguar")
+        self.assertEqual(normalize_type_line("Summon Goblin"), "Creature Goblin")
+        self.assertEqual(normalize_type_line("Summon"), "Creature")
+        self.assertEqual(
+            normalize_type_line("Creature — Human Soldier"),
+            "Creature — Human Soldier",
+        )
+        self.assertEqual(normalize_type_line("Instant"), "Instant")
+        self.assertEqual(normalize_type_line("Artifact"), "Artifact")
+        self.assertIsNone(normalize_type_line(None))
+
+    def test_transform_raw_card_astral_creature(self) -> None:
+        raw: dict[str, Any] = {
+            "name": "Rainbow Knights",
+            "mana_cost": "{W}{W}",
+            "type_line": "Summon Knights",
+            "set": "past",
+            "collector_number": "9",
+        }
+        transformed = transform_raw_card(raw)
+        self.assertEqual(transformed["CardName"], "Rainbow Knights")
+        self.assertEqual(transformed["TypeLine"], "Creature Knights")
+
+    def test_process_card_records_normalizes_existing_astral_cards(self) -> None:
+        records: list[dict[str, Any]] = [
+            {
+                "CardName": "Rainbow Knights",
+                "SetID": "past",
+                "TypeLine": "Summon Knights",
+            }
+        ]
+        processed = list(
+            process_card_records(
+                records=iter(records),
+                allowed_sets=DEFAULT_ALLOWED_SETS,
+                excluded_names=DEFAULT_EXCLUDED_NAMES,
+            )
+        )
+        self.assertEqual(len(processed), 1)
+        self.assertEqual(processed[0]["TypeLine"], "Creature Knights")
+
     def test_process_card_records_filtering(self) -> None:
         records: list[dict[str, Any]] = [
-            # Included: Black Lotus (2ed)
+            # Included: Black Lotus (leb)
             {
                 "name": "Black Lotus",
-                "set": "2ed",
+                "set": "leb",
                 "collector_number": "233",
                 "lang": "en",
             },
             # Excluded by name: Chaos Orb
             {
                 "name": "Chaos Orb",
-                "set": "2ed",
+                "set": "leb",
                 "collector_number": "236",
                 "lang": "en",
             },
@@ -128,7 +173,7 @@ class UpdateCardsJsonTest(unittest.TestCase):
         names_and_sets = [(c["CardName"], c["SetID"]) for c in processed]
         self.assertEqual(
             names_and_sets,
-            [("Black Lotus", "2ed"), ("El-Hajjâj", "arn")],
+            [("Black Lotus", "leb"), ("El-Hajjâj", "arn")],
         )
 
     def test_iter_json_records_array_and_jsonl(self) -> None:

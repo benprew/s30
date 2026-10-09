@@ -10,6 +10,7 @@ import gzip
 import io
 import json
 import logging
+import re
 import sys
 import urllib.request
 from collections.abc import Collection
@@ -53,6 +54,13 @@ def parse_version_exclusion(spec: str) -> VersionExclusion:
     )
 
 
+def normalize_type_line(type_line: str | None) -> str | None:
+    """Normalize old card typelines (e.g. 'Summon Knights' -> 'Creature Knights')."""
+    if not type_line:
+        return type_line
+    return re.sub(r"^Summon\b", "Creature", type_line)
+
+
 def transform_raw_card(raw: dict[str, Any]) -> dict[str, Any]:
     """Transform a Scryfall card object into the s30 CardJSON schema."""
     prices = raw.get("prices") or {}
@@ -71,7 +79,7 @@ def transform_raw_card(raw: dict[str, Any]) -> dict[str, Any]:
         "Colors": raw.get("colors") or [],
         "ColorIdentity": raw.get("color_identity") or [],
         "Keywords": raw.get("keywords") or [],
-        "TypeLine": raw.get("type_line"),
+        "TypeLine": normalize_type_line(raw.get("type_line")),
         "Text": raw.get("oracle_text"),
         "Power": raw.get("power"),
         "Toughness": raw.get("toughness"),
@@ -167,7 +175,9 @@ def process_card_records(
         if is_already_transformed:
             name = str(raw.get("CardName", ""))
             set_id = str(raw.get("SetID", ""))
-            transformed = raw
+            transformed = dict(raw)
+            if "TypeLine" in transformed:
+                transformed["TypeLine"] = normalize_type_line(transformed["TypeLine"])
         else:
             name = str(raw.get("name", ""))
             set_id = str(raw.get("set", ""))
