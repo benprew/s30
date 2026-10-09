@@ -16,9 +16,6 @@ var (
 	//go:embed card_info/scryfall_cards.json.zst
 	Cards_json []byte
 
-	//go:embed card_info/parsed_cards.json
-	ParsedCards_json []byte
-
 	//go:embed card_info/token_cards.json
 	TokenCards_json []byte
 
