@@ -34,6 +34,14 @@ func NewLandArtSelection() *LandArtSelection {
 	return newLandArtSelection(LandArt(), rand.New(rand.NewSource(rand.Int63())))
 }
 
+// NewLandArtSelectionFor begins a context over a specific library and random
+// source, rather than the art found at startup. Screens want
+// NewLandArtSelection; this is for callers that need repeatable rolls over art
+// they supply themselves.
+func NewLandArtSelectionFor(lib *LandArtLibrary, rng *rand.Rand) *LandArtSelection {
+	return newLandArtSelection(lib, rng)
+}
+
 func newLandArtSelection(lib *LandArtLibrary, rng *rand.Rand) *LandArtSelection {
 	return &LandArtSelection{lib: lib, rng: rng, chosen: make(map[landArtKey]string)}
 }

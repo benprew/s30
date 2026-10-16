@@ -1,10 +1,17 @@
 package duel
 
 import (
+	"bytes"
+	"image"
+	"image/color"
+	"image/png"
+	"math/rand"
 	"testing"
+	"testing/fstest"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/s30/game/domain"
+	"github.com/google/uuid"
 )
 
 func TestPermanentArtName_ChangedBasicLandSubtype(t *testing.T) {
@@ -132,5 +139,124 @@ func TestPermanentArtName_DualLandTurnedIntoMountain(t *testing.T) {
 
 	if got := permanentArtName(perm, printed); got != "Mountain" {
 		t.Fatalf("permanentArtName() = %q, want %q", got, "Mountain")
+	}
+}
+
+func landArtFixture(t *testing.T, names ...string) *domain.LandArtLibrary {
+	t.Helper()
+	files := fstest.MapFS{}
+	for i, name := range names {
+		img := image.NewRGBA(image.Rect(0, 0, 490, 684))
+		img.Set(0, 0, color.RGBA{R: uint8(i + 1), A: 0xff})
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			t.Fatalf("failed to encode %s: %v", name, err)
+		}
+		files[name] = &fstest.MapFile{Data: buf.Bytes()}
+	}
+	return domain.ScanLandArt(files)
+}
+
+func landArtDuelScreen(t *testing.T, lib *domain.LandArtLibrary, seed int64) (*DuelScreen, *domain.Card) {
+	t.Helper()
+	// Real cards, with their art pre-cached so nothing reaches for the network.
+	forest := domain.FindCardByName("Forest")
+	bolt := domain.FindCardByName("Lightning Bolt")
+	if forest == nil || bolt == nil {
+		t.Fatal("Forest or Lightning Bolt is missing from the card database")
+	}
+	for _, c := range []*domain.Card{forest, bolt} {
+		domain.CacheCardImage(c.CardID(), image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, 342)))
+	}
+
+	var sel *domain.LandArtSelection
+	if lib != nil {
+		sel = domain.NewLandArtSelectionFor(lib, rand.New(rand.NewSource(seed)))
+	}
+	return &DuelScreen{
+		cardImageMap: map[string]*domain.Card{"Forest": forest, "Lightning Bolt": bolt},
+		landArt:      sel,
+	}, forest
+}
+
+func forestPermanent(id uuid.UUID) interactive.PermanentState {
+	return interactive.PermanentState{ID: id, Name: "Forest", IsLand: true, SubTypes: "Forest"}
+}
+
+// CardViewFull hands back the source image itself, so these comparisons are
+// over the art file each draw actually used.
+func TestDuelPreviewShowsTheSameLandArtAsTheBattlefield(t *testing.T) {
+	t.Cleanup(domain.ClearCardImageCache)
+	lib := landArtFixture(t, "forest1.png", "forest2.png", "forest3.png", "forest4.png")
+	s, forest := landArtDuelScreen(t, lib, 7)
+
+	permID := uuid.New()
+	perm := forestPermanent(permID)
+	battlefield := s.getCardArtImg("Forest", permID.String(), domain.CardViewFull)
+	if battlefield == nil {
+		t.Fatal("battlefield draw produced no art")
+	}
+
+	s.preview = &cardPreview{Card: forest, Permanent: &perm}
+	if got := s.previewImage(); got != battlefield {
+		t.Error("the magnified preview shows different land art than the battlefield card")
+	}
+
+	// Other permanents roll independently. Any one of them may land on the same
+	// art by chance, so the control is that they are not all forced to match.
+	sawDifferent := false
+	for range 5 {
+		otherPerm := forestPermanent(uuid.New())
+		s.preview = &cardPreview{Card: forest, Permanent: &otherPerm}
+		if s.previewImage() != battlefield {
+			sawDifferent = true
+			break
+		}
+	}
+	if !sawDifferent {
+		t.Error("every permanent previewed the first permanent's art, so the key is being ignored")
+	}
+}
+
+func TestDuelLandArtIsStableForOneInstance(t *testing.T) {
+	t.Cleanup(domain.ClearCardImageCache)
+	s, _ := landArtDuelScreen(t, landArtFixture(t, "forest1.png", "forest2.png", "forest3.png"), 3)
+
+	key := uuid.New().String()
+	first := s.getCardArtImg("Forest", key, domain.CardViewFull)
+	second := s.getCardArtImg("Forest", key, domain.CardViewFull)
+
+	if first == nil {
+		t.Fatal("no art was drawn")
+	}
+	if first != second {
+		t.Error("one land was given different art on a second draw")
+	}
+}
+
+func TestDuelWithoutLandArtDrawsPrintedArt(t *testing.T) {
+	t.Cleanup(domain.ClearCardImageCache)
+	s, forest := landArtDuelScreen(t, nil, 1)
+
+	want, err := forest.CardImage(domain.CardViewArtMini)
+	if err != nil {
+		t.Fatalf("CardImage returned an error: %v", err)
+	}
+	if got := s.getCardArtImg("Forest", uuid.New().String(), domain.CardViewArtMini); got != want {
+		t.Error("with no land art installed, a Forest did not draw its printed art")
+	}
+}
+
+func TestDuelLandArtLeavesNonLandsAlone(t *testing.T) {
+	t.Cleanup(domain.ClearCardImageCache)
+	s, _ := landArtDuelScreen(t, landArtFixture(t, "forest1.png", "forest2.png"), 1)
+
+	bolt := s.cardImageMap["Lightning Bolt"]
+	want, err := bolt.CardImage(domain.CardViewArtOnly)
+	if err != nil {
+		t.Fatalf("CardImage returned an error: %v", err)
+	}
+	if got := s.getCardArtImg("Lightning Bolt", uuid.New().String(), domain.CardViewArtOnly); got != want {
+		t.Error("a non-land card did not draw its printed art")
 	}
 }
