@@ -28,6 +28,8 @@ hood.
 - **AI opponents** — heuristic-based today, with a MinMax-with-search AI in
   progress.
 - **Sound** (press <kbd>M</kbd> to mute).
+- **Alternate basic land art** — drop your own images in a `landArt` folder and
+  the game uses them for basic lands. See [alt_land.md](alt_land.md).
 - **Cross-platform**: Linux, Windows (x64 + ARM), macOS (Intel + Apple
   Silicon), WebAssembly, and a WIP Android build.
 

@@ -171,6 +171,7 @@ type DuelScreen struct {
 	abilityButtons         []*elements.Button
 
 	cardImageMap map[string]*domain.Card
+	landArt      *domain.LandArtSelection
 
 	warningMsg   string
 	lastMsgTime  time.Time
@@ -254,6 +255,7 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		spellAnimations:  make(map[uuid.UUID]*spellCastAnimation),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
+		landArt:          domain.NewLandArtSelection(),
 	}
 
 	s.initGameState()
@@ -2475,12 +2477,19 @@ func (s *DuelScreen) isPlayerBoardClick(mx, my int, dp *duelPlayer) bool {
 	return my >= duelOpponentBoardY && my < duelMsgY
 }
 
-func (s *DuelScreen) getCardArtImg(name string, view domain.CardView) *ebiten.Image {
-	domainCard := s.getDomainCard(name)
-	if domainCard == nil {
+func (s *DuelScreen) getCardArtImg(name, key string, view domain.CardView) *ebiten.Image {
+	return s.cardArtImg(s.getDomainCard(name), key, view)
+}
+
+// cardArtImg draws a card using whatever alternate land art this duel assigned
+// to the instance named by key. Keys are engine card and permanent IDs, which
+// stay the same across zones, so a land keeps its art from hand to battlefield
+// to graveyard. Cards with no alternate art fall back to their printed art.
+func (s *DuelScreen) cardArtImg(card *domain.Card, key string, view domain.CardView) *ebiten.Image {
+	if card == nil {
 		return nil
 	}
-	img, err := domainCard.CardImage(view)
+	img, err := s.landArt.CardImage(card, key, view)
 	if err != nil {
 		return nil
 	}
@@ -2694,12 +2703,7 @@ func (s *DuelScreen) initChoiceUI() {
 	}
 
 	s.choiceCardName = req.Reason
-	domainCard := s.getDomainCard(req.Reason)
-	if domainCard != nil {
-		s.choiceCardImg, _ = domainCard.CardImage(domain.CardViewFull)
-	} else {
-		s.choiceCardImg = nil
-	}
+	s.choiceCardImg = s.cardArtImg(s.getDomainCard(req.Reason), req.Reason, domain.CardViewFull)
 }
 
 func (s *DuelScreen) updateChoiceUI() {
@@ -2843,17 +2847,14 @@ func (s *DuelScreen) previewImage() *ebiten.Image {
 		return nil
 	}
 	card := s.preview.Card
+	// Previewing a permanent borrows that permanent's key so the magnified
+	// card shows the same land art as the one on the battlefield.
+	key := card.CardName
 	if perm := s.preview.Permanent; perm != nil {
 		card = s.getDomainCard(permanentArtName(*perm, card))
+		key = perm.ID.String()
 	}
-	if card == nil {
-		return nil
-	}
-	img, err := card.CardImage(domain.CardViewFull)
-	if err != nil {
-		return nil
-	}
-	return img
+	return s.cardArtImg(card, key, domain.CardViewFull)
 }
 
 func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
@@ -3090,12 +3091,8 @@ func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {
 		titleTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
 		for _, gc := range sec.Cards {
-			domainCard := s.getDomainCard(gc.Card.Name)
-			if domainCard == nil {
-				continue
-			}
-			img, err := domainCard.CardImage(domain.CardViewArtOnly)
-			if err != nil || img == nil {
+			img := s.getCardArtImg(gc.Card.Name, gc.Card.ID.String(), domain.CardViewArtOnly)
+			if img == nil {
 				continue
 			}
 			opts := &ebiten.DrawImageOptions{}
@@ -3356,7 +3353,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 			// reverse order so it draws correctly on the screen
 			for j, aura := range slices.Backward(auras) {
 				auraY := pos.Y - (j+1)*14
-				auraImg := s.getCardArtImg(aura.Name, domain.CardViewArtMini)
+				auraImg := s.getCardArtImg(aura.Name, aura.ID.String(), domain.CardViewArtMini)
 				if auraImg != nil {
 					auraOpts := &ebiten.DrawImageOptions{}
 					auraOpts.GeoM.Translate(float64(pos.X), float64(auraY))
@@ -3371,7 +3368,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 			}
 
 			artName := permanentArtName(perm, s.getDomainCard(perm.Name))
-			cardImg := s.getCardArtImg(artName, domain.CardViewArtMini)
+			cardImg := s.getCardArtImg(artName, perm.ID.String(), domain.CardViewArtMini)
 			if cardImg != nil {
 				cardOpts := &ebiten.DrawImageOptions{}
 				if perm.Tapped {
@@ -3727,7 +3724,7 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps *int
 	handCards := handDisplayOrder(ps.Hand)
 	for i, card := range handCards {
 		y := dp.handY + handBgH + i*handCardOverlap
-		cardImg := s.getCardArtImg(card.Name, domain.CardViewArtOnly)
+		cardImg := s.getCardArtImg(card.Name, card.ID.String(), domain.CardViewArtOnly)
 		if cardImg != nil {
 			cardOpts := &ebiten.DrawImageOptions{}
 			cardOpts.GeoM.Translate(float64(dp.handX), float64(y))
@@ -3752,7 +3749,7 @@ func (s *DuelScreen) drawHandPanel(screen *ebiten.Image, dp *duelPlayer, ps *int
 		y := dp.handY + handBgH + i*handCardOverlap
 		cardH := handCardOverlap
 		if i == len(handCards)-1 {
-			if cardImg := s.getCardArtImg(card.Name, domain.CardViewArtOnly); cardImg != nil {
+			if cardImg := s.getCardArtImg(card.Name, card.ID.String(), domain.CardViewArtOnly); cardImg != nil {
 				cardH = cardImg.Bounds().Dy()
 			}
 		}
@@ -3829,7 +3826,7 @@ func (s *DuelScreen) drawGraveyard(screen *ebiten.Image, dp *duelPlayer) {
 		return
 	}
 	top := ps.Graveyard[graveyardIndex]
-	art := s.getCardArtImg(top.Name, domain.CardViewArtMini)
+	art := s.getCardArtImg(top.Name, top.ID.String(), domain.CardViewArtMini)
 	if art == nil {
 		return
 	}
@@ -4306,15 +4303,8 @@ func (s *DuelScreen) updateMulliganPreview(rects []image.Rectangle, mx, my int) 
 
 	card := mulliganDisplayOrder(s.human.Hand())[idx]
 
-	domainCard := s.getDomainCard(card.Name())
-	if domainCard == nil {
-		s.mulliganPreviewImg = nil
-		s.mulliganPreviewIdx = -1
-		s.mulliganPreviewName = ""
-		return
-	}
-	img, err := domainCard.CardImage(domain.CardViewFull)
-	if err != nil || img == nil {
+	img := s.getCardArtImg(card.Name(), card.ID().String(), domain.CardViewFull)
+	if img == nil {
 		s.mulliganPreviewImg = nil
 		s.mulliganPreviewIdx = -1
 		s.mulliganPreviewName = ""
@@ -4353,15 +4343,12 @@ func (s *DuelScreen) drawMulliganUI(screen *ebiten.Image, W, H int) {
 	rects := s.mulliganCardRects(W, H)
 	for i, c := range hand {
 		r := rects[i]
-		domainCard := s.getDomainCard(c.Name())
 		drawn := false
-		if domainCard != nil {
-			if img, err := domainCard.CardImage(domain.CardViewFullMini); err == nil && img != nil {
-				opts := &ebiten.DrawImageOptions{}
-				opts.GeoM.Translate(float64(r.Min.X), float64(r.Min.Y))
-				screen.DrawImage(img, opts)
-				drawn = true
-			}
+		if img := s.getCardArtImg(c.Name(), c.ID().String(), domain.CardViewFullMini); img != nil {
+			opts := &ebiten.DrawImageOptions{}
+			opts.GeoM.Translate(float64(r.Min.X), float64(r.Min.Y))
+			screen.DrawImage(img, opts)
+			drawn = true
 		}
 		if !drawn {
 			vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y),
