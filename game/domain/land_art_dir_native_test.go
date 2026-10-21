@@ -48,6 +48,8 @@ func TestLandArtFSInSearchesEveryDirInOrder(t *testing.T) {
 	}
 }
 
+// This one's a little confusing but it's testing that multiple different landArt
+// folders aren't merged, only the first one is used.
 func TestLandArtFSInPrefersEarlierDir(t *testing.T) {
 	first := t.TempDir()
 	second := t.TempDir()

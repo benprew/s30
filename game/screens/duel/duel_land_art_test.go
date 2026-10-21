@@ -202,8 +202,11 @@ func TestDuelPreviewShowsTheSameLandArtAsTheBattlefield(t *testing.T) {
 		t.Error("the magnified preview shows different land art than the battlefield card")
 	}
 
-	// Other permanents roll independently. Any one of them may land on the same
-	// art by chance, so the control is that they are not all forced to match.
+	// Other permanents roll independently. Rolls come from a fixed seed, so this
+	// is deterministic, but a single comparison would be hostage to that seed:
+	// seed 7 happens to give the first other permanent the same art as the
+	// battlefield. Sampling several keeps the check meaningful if the seed or
+	// the fixture changes.
 	sawDifferent := false
 	for range 5 {
 		otherPerm := forestPermanent(uuid.New())
