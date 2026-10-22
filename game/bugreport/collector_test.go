@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -85,7 +84,12 @@ func TestWorkerSubmitter(t *testing.T) {
 			http.Error(w, "bad method", http.StatusBadRequest)
 			return
 		}
-		if err := json.NewDecoder(r.Body).Decode(&receivedBody); err != nil {
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		defer r.MultipartForm.RemoveAll()
+		if err := json.Unmarshal([]byte(r.FormValue("metadata")), &receivedBody); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -100,9 +104,9 @@ func TestWorkerSubmitter(t *testing.T) {
 
 	submitter := NewWorkerSubmitter(server.URL)
 	report := &BugReport{
-		ID:        "rep_123",
-		Timestamp: time.Now(),
-		UserNotes: "Testing worker submission",
+		ID:           "rep_123",
+		Timestamp:    time.Now(),
+		UserNotes:    "Testing worker submission",
 		ActiveScreen: "World",
 	}
 
@@ -144,10 +148,7 @@ func TestLocalFileSubmitter(t *testing.T) {
 		t.Errorf("LocalFilePath is not absolute: %s", result.LocalFilePath)
 	}
 
-	content, err := os.ReadFile(result.LocalFilePath)
-	if err != nil {
-		t.Fatalf("Failed to read saved file: %v", err)
-	}
+	content := readCompressedReport(t, result.LocalFilePath)
 
 	if !strings.Contains(string(content), "Local file test") {
 		t.Errorf("Saved content missing UserNotes: %s", string(content))

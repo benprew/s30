@@ -224,6 +224,18 @@ func (g *Game) menuVisible() bool {
 		g.currentScreen != screenui.LoadGameScr
 }
 
+func (g *Game) openBugReport() {
+	var lvl *world.Level
+	if g.screenMap[screenui.WorldScr] != nil {
+		lvl = g.Level()
+	}
+	if g.gameMenu != nil {
+		g.gameMenu.Close()
+	}
+	g.screenMap[screenui.BugReportScr] = screens.NewBugReportScreen(lvl, g.currentScreen, g.CurrentScreen())
+	g.navigate(screenui.BugReportScr)
+}
+
 func (g *Game) Update() error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -266,6 +278,9 @@ func (g *Game) Update() error {
 		if menuName == screenui.LoadGameScr || menuName == screenui.MiniMapScr {
 			g.navigate(menuName)
 		}
+		if menuName == screenui.BugReportScr {
+			g.openBugReport()
+		}
 		if menuOpenBefore || g.gameMenu.IsOpen() {
 			return nil
 		}
@@ -273,12 +288,7 @@ func (g *Game) Update() error {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF8) {
 		if g.currentScreen != screenui.BugReportScr {
-			var lvl *world.Level
-			if g.screenMap != nil && g.screenMap[screenui.WorldScr] != nil {
-				lvl = g.Level()
-			}
-			g.screenMap[screenui.BugReportScr] = screens.NewBugReportScreen(lvl, g.currentScreen, g.CurrentScreen())
-			g.navigate(screenui.BugReportScr)
+			g.openBugReport()
 			return nil
 		}
 	}

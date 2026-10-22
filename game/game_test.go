@@ -1,9 +1,12 @@
 package game
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	gameaudio "github.com/benprew/s30/game/audio"
+	"github.com/benprew/s30/game/bugreport"
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/screens"
 	"github.com/benprew/s30/game/ui/screenui"
@@ -15,6 +18,32 @@ type stubScreen struct {
 	next     screenui.ScreenName
 	err      error
 	onUpdate func()
+}
+
+func TestOpenBugReportPreservesActiveScreen(t *testing.T) {
+	previous := &stubScreen{}
+	g := &Game{
+		currentScreen: screenui.CityScr,
+		screenMap: map[screenui.ScreenName]screenui.Screen{
+			screenui.CityScr: previous,
+		},
+		gameMenu: screens.NewGameMenuScreen(),
+	}
+	g.gameMenu.Open()
+	g.openBugReport()
+	if g.gameMenu.IsOpen() {
+		t.Error("menu is still open")
+	}
+	if g.currentScreen != screenui.BugReportScr {
+		t.Fatalf("current screen = %v, want BugReportScr", g.currentScreen)
+	}
+	if _, ok := g.CurrentScreen().(*screens.BugReportScreen); !ok {
+		t.Fatalf("current screen type = %T, want BugReportScreen", g.CurrentScreen())
+	}
+	g.navigate(screenui.PopScr)
+	if g.currentScreen != screenui.CityScr || g.CurrentScreen() != previous {
+		t.Error("Cancel did not return to the active screen")
+	}
 }
 
 type closableStubScreen struct {
@@ -218,6 +247,11 @@ func (s *panickingScreen) Update(W, H int, scale float64) (screenui.ScreenName, 
 }
 
 func TestGameUpdateRecoversAndReportsPanic(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"success":true,"issue_url":"https://github.test/issues/42"}`))
+	}))
+	defer server.Close()
+	t.Setenv(bugreport.EnvWorkerURL, server.URL+"/api/bug-reports")
 	g := newTestGame()
 	g.screenMap[screenui.WorldScr] = &panickingScreen{}
 
@@ -328,4 +362,3 @@ func TestGameMenuUpdateProcessedFirstWhenOpen(t *testing.T) {
 		t.Error("CurrentScreen().Update() should NOT be called when gameMenu is open")
 	}
 }
-

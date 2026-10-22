@@ -55,6 +55,17 @@ func findGameMenuRow(t *testing.T, label string) int {
 	return -1
 }
 
+func TestGameMenuReportBugChoice(t *testing.T) {
+	const W = 1024
+	index := findGameMenuRow(t, "Report a Bug")
+	menu := NewGameMenuScreen()
+	point := gameMenuRowBounds(index, W).Min.Add(image.Pt(5, 5))
+	name, screen := menu.handleChoice(point, true, W)
+	if name != screenui.BugReportScr || screen != nil {
+		t.Fatalf("report choice = (%v, %v), want BugReportScr with no screen", name, screen)
+	}
+}
+
 // Every row of the list has to lead somewhere: Quit exits the game (QuitScr),
 // See Map opens the minimap, Load opens the load overlay, and Save saves and continues (PopScr).
 func TestGameMenuRowsLeadToOtherScreens(t *testing.T) {

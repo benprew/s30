@@ -56,6 +56,7 @@ var gameMenuRows = []gameMenuRow{
 	{"Load", screenui.LoadGameScr, false},
 	{"Quit", screenui.QuitScr, true},
 	{"See Map", screenui.MiniMapScr, false},
+	{"Report a Bug", screenui.BugReportScr, false},
 }
 
 // The answers behind Quit, in the original's wording and order (Advstrings.txt
@@ -219,7 +220,7 @@ func (s *GameMenuScreen) UpdateMenu(W, H int, scale float64, allowEscapeOpen boo
 		s.Close()
 		return screenui.QuitScr, nil, ebiten.Termination
 	}
-	if name == screenui.PopScr || name == screenui.LoadGameScr || name == screenui.MiniMapScr {
+	if name == screenui.PopScr || name == screenui.LoadGameScr || name == screenui.MiniMapScr || name == screenui.BugReportScr {
 		s.Close()
 	}
 	return name, scr, nil

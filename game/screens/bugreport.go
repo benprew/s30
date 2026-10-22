@@ -1,8 +1,10 @@
 package screens
 
 import (
+	"encoding/json"
 	"fmt"
 	"image/color"
+	"os"
 	"time"
 
 	"github.com/benprew/s30/assets"
@@ -34,13 +36,19 @@ type BugReportScreen struct {
 	buttons        []*elements.Button
 	submitBtn      *elements.Button
 	copyBtn        *elements.Button
-	closeBtn       *elements.Button
+	cancelBtn      *elements.Button
 	panelBg        *ebiten.Image
 	submitter      bugreport.Submitter
 	statusMsg      string
 	statusColor    color.Color
 	submitting     bool
 	submittedAt    time.Time
+	submitResults  chan bugSubmissionResult
+}
+
+type bugSubmissionResult struct {
+	result *bugreport.SubmitResult
+	err    error
 }
 
 // NewBugReportScreen creates a new BugReportScreen overlay.
@@ -78,10 +86,10 @@ func (s *BugReportScreen) setupButtons() {
 	btnY := bugPanelY + bugPanelH - 70
 	submitW, _ := elements.TextButtonSize("Submit", fontFace)
 	copyW, _ := elements.TextButtonSize("Copy & Save", fontFace)
-	closeW, _ := elements.TextButtonSize("Close", fontFace)
+	cancelW, _ := elements.TextButtonSize("Cancel", fontFace)
 
 	gap := 16
-	totalW := submitW + gap + copyW + gap + closeW
+	totalW := submitW + gap + copyW + gap + cancelW
 	startX := bugPanelX + (bugPanelW-totalW)/2
 
 	s.submitBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
@@ -96,16 +104,27 @@ func (s *BugReportScreen) setupButtons() {
 		X: startX + submitW + gap, Y: btnY,
 	})
 
-	s.closeBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
+	s.cancelBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
 		Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
-		Text: "Close", Font: fontFace, ID: "close",
+		Text: "Cancel", Font: fontFace, ID: "cancel",
 		X: startX + submitW + gap + copyW + gap, Y: btnY,
 	})
 
-	s.buttons = []*elements.Button{s.submitBtn, s.copyBtn, s.closeBtn}
+	s.buttons = []*elements.Button{s.submitBtn, s.copyBtn, s.cancelBtn}
 }
 
 func (s *BugReportScreen) SubmitSync() (*bugreport.SubmitResult, error) {
+	report, err := s.beginSubmission()
+	if err != nil {
+		s.finishSubmission(nil, err)
+		return nil, err
+	}
+	result, err := s.submitter.Submit(report)
+	s.finishSubmission(result, err)
+	return result, err
+}
+
+func (s *BugReportScreen) beginSubmission() (*bugreport.BugReport, error) {
 	s.submitting = true
 	s.statusMsg = "Submitting report..."
 	s.statusColor = color.RGBA{220, 200, 100, 255}
@@ -117,14 +136,26 @@ func (s *BugReportScreen) SubmitSync() (*bugreport.SubmitResult, error) {
 		s.textInput.Text(),
 	)
 
-	result, err := s.submitter.Submit(report)
+	data, err := report.ToJSON()
+	if err != nil {
+		return nil, err
+	}
+	var snapshot bugreport.BugReport
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		return nil, err
+	}
+	return &snapshot, nil
+}
+
+func (s *BugReportScreen) finishSubmission(result *bugreport.SubmitResult, err error) {
 	s.submitting = false
 	s.submittedAt = time.Now()
 
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Bug report submission failed: %v\n", err)
 		s.statusMsg = fmt.Sprintf("Submission failed: %v", err)
 		s.statusColor = color.RGBA{240, 100, 100, 255}
-		return nil, err
+		return
 	}
 
 	if result.IssueURL != "" {
@@ -137,17 +168,33 @@ func (s *BugReportScreen) SubmitSync() (*bugreport.SubmitResult, error) {
 		s.statusMsg = result.Message
 		s.statusColor = color.RGBA{100, 240, 120, 255}
 	}
-
-	return result, nil
 }
 
 func (s *BugReportScreen) triggerSubmit() {
 	if s.submitting {
 		return
 	}
+	report, err := s.beginSubmission()
+	if err != nil {
+		s.finishSubmission(nil, err)
+		return
+	}
+	results := make(chan bugSubmissionResult, 1)
+	s.submitResults = results
+	submitter := s.submitter
 	go func() {
-		_, _ = s.SubmitSync()
+		result, err := submitter.Submit(report)
+		results <- bugSubmissionResult{result: result, err: err}
 	}()
+}
+
+func (s *BugReportScreen) updateSubmission() {
+	select {
+	case outcome := <-s.submitResults:
+		s.finishSubmission(outcome.result, outcome.err)
+		s.submitResults = nil
+	default:
+	}
 }
 
 func (s *BugReportScreen) triggerCopyAndSave() {
@@ -171,6 +218,7 @@ func (s *BugReportScreen) triggerCopyAndSave() {
 }
 
 func (s *BugReportScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
+	s.updateSubmission()
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return screenui.PopScr, nil, nil
 	}
@@ -188,7 +236,7 @@ func (s *BugReportScreen) Update(W, H int, scale float64) (screenui.ScreenName, 
 			s.triggerSubmit()
 		case "copy_save":
 			s.triggerCopyAndSave()
-		case "close":
+		case "cancel":
 			return screenui.PopScr, nil, nil
 		}
 	}
@@ -236,7 +284,9 @@ func (s *BugReportScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		text.Draw(screen, s.statusMsg, statusFace, stOpts)
 	}
 
+	buttonOpts := &ebiten.DrawImageOptions{}
+	buttonOpts.GeoM.Scale(scale, scale)
 	for _, b := range s.buttons {
-		b.Draw(screen, opts, scale)
+		b.Draw(screen, buttonOpts, scale)
 	}
 }
