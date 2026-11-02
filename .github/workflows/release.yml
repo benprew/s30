@@ -112,6 +112,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
           VERSION=${{ inputs.version || github.ref_name }}
           ASSETS=(
             artifacts/s30_linux/s30_linux
@@ -127,7 +128,7 @@ jobs:
             artifacts/s30_ios.xcarchive.zip/s30_ios.xcarchive.zip
           )
           sha256sum "${ASSETS[@]}" | sed 's|  .*/|  |' > checksums.txt
-          gh release create $VERSION \
+          gh release create "$VERSION" \
             --title "$VERSION" \
             --generate-notes \
             checksums.txt \
