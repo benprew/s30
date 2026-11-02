@@ -430,8 +430,8 @@ func (s *DuelScreen) initGameState() {
 	logging.Printf(logging.Duel, "Game init: IsGameOver=%v Winner=%q\n", s.game.IsGameOver(), s.game.Winner())
 }
 
-func addDeckToLibrary(player mage.Player, deck domain.Deck, anteCard *domain.Card) []mage.Card {
-	var ante []mage.Card
+func addDeckToLibrary(player mage.Player, deck domain.Deck, anteCard *domain.Card) []*mage.Card {
+	var ante []*mage.Card
 	for card, count := range deck {
 		for range count {
 			c, err := mage.CreateCard(card.CardName)
@@ -441,7 +441,7 @@ func addDeckToLibrary(player mage.Player, deck domain.Deck, anteCard *domain.Car
 			}
 			player.AddToLibrary(c)
 			if anteCard != nil && len(ante) == 0 && card.CardName == anteCard.CardName {
-				ante = []mage.Card{c}
+				ante = []*mage.Card{c}
 			}
 		}
 	}
@@ -1634,10 +1634,10 @@ func cardStateSortKey(c interactive.CardState) cardSortKey {
 // mulliganDisplayOrder returns a sorted copy of the mulligan hand using the same
 // ordering as the duel hand. Every mulligan UI site that maps a card index back
 // to a card must use this so positions, selection, and preview stay consistent.
-func mulliganDisplayOrder(hand []mage.Card) []mage.Card {
-	sorted := make([]mage.Card, len(hand))
+func mulliganDisplayOrder(hand []*mage.Card) []*mage.Card {
+	sorted := make([]*mage.Card, len(hand))
 	copy(sorted, hand)
-	slices.SortFunc(sorted, func(a, b mage.Card) int {
+	slices.SortFunc(sorted, func(a, b *mage.Card) int {
 		ka := mageCardSortKey(a)
 		kb := mageCardSortKey(b)
 		if lessCardSortKey(ka, kb) {
@@ -1651,7 +1651,7 @@ func mulliganDisplayOrder(hand []mage.Card) []mage.Card {
 	return sorted
 }
 
-func mageCardSortKey(c mage.Card) cardSortKey {
+func mageCardSortKey(c *mage.Card) cardSortKey {
 	mc := c.ManaCost()
 	return cardSortKey{isLand: c.HasType(core.TypeLand), name: c.Name(), colorRank: manaCostColorRank(mc), cmc: mc.CMC()}
 }
