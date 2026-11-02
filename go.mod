@@ -1,10 +1,10 @@
 module github.com/benprew/s30
 
-go 1.26.7
+go 1.27.3
 
 require (
 	github.com/BurntSushi/toml v1.5.0
-	github.com/benprew/mage-go v1.1.0
+	github.com/benprew/mage-go v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/hajimehoshi/ebiten/v2 v2.10.2
 	github.com/klauspost/compress v1.18.7
@@ -22,7 +22,7 @@ require (
 	github.com/jfreymuth/pulse v0.1.3 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 )
