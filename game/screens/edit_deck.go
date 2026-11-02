@@ -48,6 +48,7 @@ type EditDeckScreen struct {
 	DeckButtons        []*elements.Button // Buttons for cards currently in the deck
 	MagnifierImage     *ebiten.Image      // Image to display in the magnifier
 	MagnifiedCard      *domain.Card       // Currently magnified card
+	landArt            *domain.LandArtSelection
 	dragManager        *dragdrop.DragManager
 	deckDropArea       *dragdrop.DropArea
 	collectionDropArea *dragdrop.DropArea
@@ -122,6 +123,7 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 		hoveredCollectionIdx: -1,
 		hoveredDeckIdx:       -1,
 		filter:               newCollectionFilter(),
+		landArt:              domain.NewLandArtSelection(),
 	}
 
 	filterButtons, err := createFilterButtons()
@@ -249,7 +251,7 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 	// Create a button for each card group
 	for _, group := range groupList {
 		representativeCard := group.cards[0]
-		cardImg, err := representativeCard.CardImage(domain.CardViewArtOnly)
+		cardImg, err := s.cardArt(representativeCard, domain.CardViewArtOnly)
 		if err != nil {
 			fmt.Printf("WARN: Unable to load card image for %s: %v\n", group.name, err)
 			continue
@@ -281,7 +283,7 @@ func (s *EditDeckScreen) refreshCollectionImages() {
 		if !card.ImageLoaded() {
 			continue
 		}
-		cardImg, err := card.CardImage(domain.CardViewArtOnly)
+		cardImg, err := s.cardArt(card, domain.CardViewArtOnly)
 		if err != nil {
 			continue
 		}
@@ -290,10 +292,21 @@ func (s *EditDeckScreen) refreshCollectionImages() {
 	}
 }
 
+// cardArt draws a card using this editing session's alternate land art. The
+// editor shows one tile per distinct card, so the card's name is the instance:
+// every Forest here shares one art, the magnifier matches the tile under the
+// cursor, and opening the editor again rolls a new one.
+func (s *EditDeckScreen) cardArt(card *domain.Card, view domain.CardView) (*ebiten.Image, error) {
+	if card == nil {
+		return nil, fmt.Errorf("no card to draw art for")
+	}
+	return s.landArt.CardImage(card, card.Name(), view)
+}
+
 func (s *EditDeckScreen) refreshDeckImages() {
 	for i := range s.deckCardDisplays {
 		display := &s.deckCardDisplays[i]
-		img, err := display.Card.CardImage(domain.CardViewArtMini)
+		img, err := s.cardArt(display.Card, domain.CardViewArtMini)
 		if err != nil || img == display.Image {
 			continue
 		}
@@ -496,7 +509,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 				fmt.Println("Error finding card for Button:", btn.ID)
 			}
 			if card != nil {
-				img, err := card.CardImage(domain.CardViewFull)
+				img, err := s.cardArt(card, domain.CardViewFull)
 				if err == nil {
 					s.MagnifierImage = img
 					s.MagnifiedCard = card
@@ -519,7 +532,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 			scaledMY >= display.Y && scaledMY < display.Y+cardHeight {
 			s.hoveredDeckIdx = i
 			s.hoveredCollectionIdx = -1
-			img, err := display.Card.CardImage(domain.CardViewFull)
+			img, err := s.cardArt(display.Card, domain.CardViewFull)
 			if err == nil {
 				s.MagnifierImage = img
 				s.MagnifiedCard = display.Card
@@ -876,7 +889,7 @@ func (s *EditDeckScreen) loadDeckCards() error {
 		// Use first card in group for image
 		representativeCard := group.cards[0]
 
-		cachedImg, err := representativeCard.CardImage(domain.CardViewArtMini)
+		cachedImg, err := s.cardArt(representativeCard, domain.CardViewArtMini)
 		if err != nil {
 			return err
 		}

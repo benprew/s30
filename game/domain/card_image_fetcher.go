@@ -28,9 +28,10 @@ var labeledBlankCards sync.Map
 var blankCardOnce sync.Once
 var blankCardImage *ebiten.Image
 
-// CardImageCacheStats reports retained full-card and generated placeholder
-// images. Profiling harnesses use these counts alongside heap and RSS samples.
-func CardImageCacheStats() (cards, labeledPlaceholders int) {
+// CardImageCacheStats reports retained full-card images, generated
+// placeholders, and decoded alternate land art. Profiling harnesses use these
+// counts alongside heap and RSS samples.
+func CardImageCacheStats() (cards, labeledPlaceholders, landArt int) {
 	cardImages.Range(func(_, _ any) bool {
 		cards++
 		return true
@@ -39,7 +40,7 @@ func CardImageCacheStats() (cards, labeledPlaceholders int) {
 		labeledPlaceholders++
 		return true
 	})
-	return cards, labeledPlaceholders
+	return cards, labeledPlaceholders, LandArt().cachedImages()
 }
 
 func blankCard() *ebiten.Image {

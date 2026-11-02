@@ -141,10 +141,10 @@ func residentSetBytes() uint64 {
 func printMemoryStats(frame, duel int) {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
-	cardImages, labeledCards := domain.CardImageCacheStats()
-	fmt.Printf("MEM frame=%d duels=%d heap_alloc=%d heap_inuse=%d total_alloc=%d mallocs=%d frees=%d live_objects=%d sys=%d rss=%d gc=%d image_registry=%d card_images=%d labeled_cards=%d\n",
+	cardImages, labeledCards, landArt := domain.CardImageCacheStats()
+	fmt.Printf("MEM frame=%d duels=%d heap_alloc=%d heap_inuse=%d total_alloc=%d mallocs=%d frees=%d live_objects=%d sys=%d rss=%d gc=%d image_registry=%d card_images=%d labeled_cards=%d land_art=%d\n",
 		frame, duel, stats.HeapAlloc, stats.HeapInuse, stats.TotalAlloc, stats.Mallocs, stats.Frees, stats.Mallocs-stats.Frees,
-		stats.Sys, residentSetBytes(), stats.NumGC, imageutil.RegistryLen(), cardImages, labeledCards)
+		stats.Sys, residentSetBytes(), stats.NumGC, imageutil.RegistryLen(), cardImages, labeledCards, landArt)
 }
 
 func writeProfile(name, profileName string, gc bool) error {

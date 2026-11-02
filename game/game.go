@@ -122,6 +122,7 @@ func NewGameWithOptions(options Options) (*Game, error) {
 	if loadedCardImages > 0 {
 		fmt.Printf("Loaded %d embedded card images\n", loadedCardImages)
 	}
+	reportLandArt(domain.InitLandArt())
 
 	scale := 1.0
 	screenW := int(1024 * scale)
@@ -150,6 +151,21 @@ func NewGameWithOptions(options Options) (*Game, error) {
 	ebiten.SetWindowSize(g.ScreenW, g.ScreenH)
 	ebiten.SetWindowClosingHandled(true)
 	return g, nil
+}
+
+// reportLandArt tells the player what became of their landArt folder. A folder
+// that yielded nothing is worth saying out loud: it almost always means the
+// filenames do not start with a basic land name.
+func reportLandArt(lib *domain.LandArtLibrary, foundFolder bool) {
+	switch {
+	case !foundFolder:
+		return
+	case lib.Total() == 0:
+		fmt.Println("Found a landArt folder but no usable images: " +
+			"filenames must start with a basic land name, e.g. Forest.full.jpg")
+	default:
+		fmt.Printf("Loaded %d alternate land art images for %d lands\n", lib.Total(), lib.Lands())
+	}
 }
 
 func (g *Game) initWorld(level *world.Level) error {
