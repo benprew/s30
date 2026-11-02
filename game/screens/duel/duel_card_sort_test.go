@@ -3,10 +3,10 @@ package duel
 import (
 	"image"
 	"testing"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/core"
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 )
 
 func TestManaCostColorRank_WUBRGThenMulticolorThenColorless(t *testing.T) {

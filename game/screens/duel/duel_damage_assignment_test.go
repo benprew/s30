@@ -2,9 +2,9 @@ package duel
 
 import (
 	"testing"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 )
 
 func TestSuggestedDamageAssignmentKillsMostBlockers(t *testing.T) {

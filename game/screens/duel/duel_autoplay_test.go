@@ -2,11 +2,11 @@ package duel
 
 import (
 	"testing"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage"
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai"
-	"github.com/google/uuid"
 )
 
 type autoplayStrategy struct {

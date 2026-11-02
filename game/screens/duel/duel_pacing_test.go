@@ -2,11 +2,11 @@ package duel
 
 import (
 	"testing"
+	"uuid"
 
 	mage "github.com/benprew/mage-go/pkg/mage"
 	"github.com/benprew/mage-go/pkg/mage/core"
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 )
 
 func pacingMsg(active string, youLife, oppLife int) *interactive.GameMsg {

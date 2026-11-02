@@ -4,8 +4,7 @@ import (
 	"image"
 	"strings"
 	"testing"
-
-	"github.com/google/uuid"
+	"uuid"
 
 	mage "github.com/benprew/mage-go/pkg/mage"
 	"github.com/benprew/mage-go/pkg/mage/interactive"

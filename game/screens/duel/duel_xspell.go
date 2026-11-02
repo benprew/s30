@@ -3,6 +3,7 @@ package duel
 import (
 	"fmt"
 	"image/color"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/s30/game/ui/elements"
@@ -11,7 +12,6 @@ import (
 	"github.com/benprew/s30/logging"
 
 	"github.com/benprew/s30/assets"
-	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"

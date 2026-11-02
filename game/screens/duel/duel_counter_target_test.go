@@ -2,10 +2,10 @@ package duel
 
 import (
 	"testing"
+	"uuid"
 
 	mage "github.com/benprew/mage-go/pkg/mage"
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 )
 
 func newTestHuman() (*interactive.HumanPlayer, chan interactive.PriorityAction) {
@@ -49,7 +49,7 @@ func TestCounterAutoTargetsSingleOpponentSpell(t *testing.T) {
 
 	s.performCardAction(counterID, "Counterspell")
 
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		t.Fatal("should not enter targeting mode when only one opponent spell is on the stack")
 	}
 
@@ -127,7 +127,7 @@ func TestXCounterAutoTargetsSingleOpponentSpell(t *testing.T) {
 
 	s.selectXValue(2)
 
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		t.Fatal("should not enter targeting mode when only one opponent spell is on the stack")
 	}
 

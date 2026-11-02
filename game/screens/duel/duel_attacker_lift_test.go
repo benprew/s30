@@ -4,9 +4,9 @@ import (
 	"image"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 )
 
 func newLiftScreen() *DuelScreen {

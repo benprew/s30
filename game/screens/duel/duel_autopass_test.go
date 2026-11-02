@@ -3,9 +3,9 @@ package duel
 import (
 	"image"
 	"testing"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 )
 
 func TestRefreshCardActions_PopulatesFromOptions(t *testing.T) {

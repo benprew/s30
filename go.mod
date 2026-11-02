@@ -4,8 +4,7 @@ go 1.27.3
 
 require (
 	github.com/BurntSushi/toml v1.5.0
-	github.com/benprew/mage-go v1.2.0
-	github.com/google/uuid v1.6.0
+	github.com/benprew/mage-go v1.2.1
 	github.com/hajimehoshi/ebiten/v2 v2.10.2
 	github.com/klauspost/compress v1.18.7
 	github.com/tanema/gween v0.0.0-20250522035225-e874ee3ae01a

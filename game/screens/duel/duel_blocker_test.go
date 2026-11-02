@@ -4,9 +4,9 @@ import (
 	"image"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 )
 
 func setupBlockerTest() (*DuelScreen, interactive.PermanentState, interactive.PermanentState) {
@@ -124,7 +124,7 @@ func TestClickingLiftedSelectedBlockerLowersIt(t *testing.T) {
 
 	s.handleBlockerClick(liftedPos.X+fieldCardW/2, liftedPos.Y+fieldCardH-2)
 
-	if s.selectedBlocker != uuid.Nil {
+	if s.selectedBlocker != uuid.Nil() {
 		t.Fatal("expected lifted selected blocker to be deselected")
 	}
 	if got := s.attackerLifts[blocker.ID].to; got != 0 {
@@ -150,7 +150,7 @@ func TestPendingBlockers_AssignBlocker(t *testing.T) {
 	if assignedTo != attacker.ID {
 		t.Errorf("expected blocker assigned to attacker %v, got %v", attacker.ID, assignedTo)
 	}
-	if s.selectedBlocker != uuid.Nil {
+	if s.selectedBlocker != uuid.Nil() {
 		t.Error("expected selectedBlocker to be cleared after assignment")
 	}
 	if got := s.attackerLifts[blocker.ID].to; got != -attackerLiftOffset {
@@ -192,7 +192,7 @@ func TestAssignedBlockerStaysLiftedUntilCombatEnds(t *testing.T) {
 	}
 
 	s.lastMsg.State.Step = "Postcombat Main"
-	s.lastMsg.State.You.Battlefield[0].Blocking = uuid.Nil
+	s.lastMsg.State.You.Battlefield[0].Blocking = uuid.Nil()
 	s.refreshCardActions()
 
 	if got := s.attackerLifts[blocker.ID].to; got != 0 {
@@ -361,7 +361,7 @@ func TestPendingBlockers_ClearedWhenLeavingPhase(t *testing.T) {
 	if len(s.pendingBlockers) != 0 {
 		t.Error("pendingBlockers should be cleared when leaving declare blockers step")
 	}
-	if s.selectedBlocker != uuid.Nil {
+	if s.selectedBlocker != uuid.Nil() {
 		t.Error("selectedBlocker should be cleared when leaving declare blockers step")
 	}
 }
