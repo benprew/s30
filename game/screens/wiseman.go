@@ -86,6 +86,15 @@ func NewWisemanScreen(city *domain.City, player *domain.Player, level *world.Lev
 // boon. Quest completion, reward, and expiry are handled outside the Wiseman
 // now (rewards are claimed by walking into any town).
 func (s *WisemanScreen) determineState() {
+	if s.City.WisemanBoon == domain.BoonQuest && !s.City.BoonGranted {
+		if !s.Player.CanAcceptQuest() {
+			s.loadStory()
+			return
+		}
+		s.generateQuest()
+		return
+	}
+
 	if s.maybeOfferDeckQuest() {
 		return
 	}
@@ -95,20 +104,10 @@ func (s *WisemanScreen) determineState() {
 		return
 	}
 
-	if s.City.WisemanBoon == domain.BoonQuest && !s.Player.CanAcceptQuest() {
+	if rand.Float32() < 0.5 {
+		s.grantBoon()
+	} else {
 		s.loadStory()
-		return
-	}
-
-	switch s.City.WisemanBoon {
-	case domain.BoonQuest:
-		s.generateQuest()
-	default:
-		if rand.Float32() < 0.5 {
-			s.grantBoon()
-		} else {
-			s.loadStory()
-		}
 	}
 }
 

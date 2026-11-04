@@ -41,7 +41,7 @@ type ButtonConfig struct {
 
 func NewCityScreen(city *domain.City, player *domain.Player, level *world.Level) *CityScreen {
 	if city.WisemanBoon == domain.BoonNone {
-		city.WisemanBoon = pickBoon(city, player, level)
+		city.WisemanBoon = pickBoon(city, level)
 	}
 	return &CityScreen{
 		Buttons: mkButtons(SCALE-0.4, city),
@@ -51,14 +51,10 @@ func NewCityScreen(city *domain.City, player *domain.Player, level *world.Level)
 	}
 }
 
-func pickBoon(city *domain.City, player *domain.Player, level *world.Level) domain.BoonType {
-	allowQuest := player.CanAcceptQuest()
-
+func pickBoon(city *domain.City, level *world.Level) domain.BoonType {
 	var options []domain.BoonType
-	if allowQuest {
-		for range 5 {
-			options = append(options, domain.BoonQuest)
-		}
+	for range 5 {
+		options = append(options, domain.BoonQuest)
 	}
 	for range 2 {
 		options = append(options, domain.BoonBonusLife)
