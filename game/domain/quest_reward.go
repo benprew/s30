@@ -118,11 +118,15 @@ func (d *Quest) buildReward(progression int) QuestReward {
 			CardColor: d.rewardColor(),
 		}
 	case TierChallenge:
-		return QuestReward{
+		reward := QuestReward{
 			Gold:      rewardGoldChallengeBase + progression*rewardGoldChallengeScale,
 			Cards:     1,
 			CardColor: d.rewardColor(),
 		}
+		if rand.Float32() < 0.25 {
+			reward.ManaLinks = 1
+		}
+		return reward
 	default: // TierStandard
 		return QuestReward{Gold: rewardGoldStandardBase + progression*rewardGoldStandardScale}
 	}

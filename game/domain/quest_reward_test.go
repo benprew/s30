@@ -40,6 +40,21 @@ func TestGenerateQuestRewardTiers(t *testing.T) {
 	}
 }
 
+func TestChallengeRewardCanGrantManaLink(t *testing.T) {
+	def := &Quest{ID: "c", Type: QuestTypeDeckConstraint, Constraint: ConstraintMonoColor, Color: ColorGreen, DeadlineDays: 20, RewardTier: TierChallenge}
+	gotManaLink := false
+	for range 100 {
+		q := def.GenerateQuest(0)
+		if q.Reward.ManaLinks > 0 {
+			gotManaLink = true
+			break
+		}
+	}
+	if !gotManaLink {
+		t.Error("expected challenge quest reward to occasionally roll a mana link")
+	}
+}
+
 func TestGenerateQuestScalesWithProgression(t *testing.T) {
 	def := &Quest{ID: "x", Type: QuestTypeActionTracker, Metric: MetricPlayLands, Target: 10, DeadlineDays: 20, RewardTier: TierStandard}
 	low := def.GenerateQuest(0).Reward.Gold
