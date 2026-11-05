@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui/fonts"
+	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 func TestWisemanStoryClickUsesViewport(t *testing.T) {
@@ -34,12 +37,63 @@ func disableDeckQuestOffers(t *testing.T) {
 	t.Cleanup(func() { deckQuestOfferChance = prev })
 }
 
-func TestPaginateText(t *testing.T) {
-	// Placeholder
+func TestWisemanStoryLinesFitOnScreen(t *testing.T) {
+	fontFace := &text.GoTextFace{
+		Source: fonts.MtgFont,
+		Size:   24,
+	}
+	stories := LoadStories()
+	for i, story := range stories {
+		pages := PaginateText(story, fontFace, 290, wisemanMaxStoryHeight)
+		for p, page := range pages {
+			lines := strings.Split(page, "\n")
+			maxY := wisemanTextStartY + (len(lines)-1)*wisemanLineSpacing + 27
+			if maxY > 768 {
+				t.Errorf("story %d page %d has %d lines reaching Y=%d (> 768)", i, p, len(lines), maxY)
+			}
+		}
+	}
+}
+
+func TestWisemanStoryMultiPageNavigation(t *testing.T) {
+	s := &WisemanScreen{
+		State: WisemanStateStory,
+		Pages: [][]string{
+			{"Line 1", "Line 2"},
+			{"Line 3", "Line 4"},
+		},
+		Page:      0,
+		TextLines: []string{"Line 1", "Line 2"},
+	}
+
+	nextScreen, _, err := s.advanceStory()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if nextScreen != screenui.WisemanScr {
+		t.Errorf("expected to stay on WisemanScr on page 1, got %v", nextScreen)
+	}
+	if s.Page != 1 {
+		t.Errorf("expected Page=1, got %d", s.Page)
+	}
+	if len(s.TextLines) != 2 || s.TextLines[0] != "Line 3" {
+		t.Errorf("expected TextLines updated to page 1, got %v", s.TextLines)
+	}
+
+	nextScreen, _, err = s.advanceStory()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s.Page != 1 {
+		t.Errorf("expected Page to remain 1 on close, got %d", s.Page)
+	}
+	if nextScreen != screenui.CityScr {
+		t.Errorf("expected to return to CityScr on last page, got %v", nextScreen)
+	}
 }
 
 func TestLoadStories(t *testing.T) {
-	stories := loadStories()
+	stories := LoadStories()
 	if len(stories) == 0 {
 		t.Errorf("Expected stories, got none")
 	}
