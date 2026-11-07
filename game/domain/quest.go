@@ -72,6 +72,7 @@ const (
 
 type Quest struct {
 	Type          QuestType
+	OriginCity    string
 	TargetCity    *City  // delivery only: the city the message must reach
 	EnemyName     string // defeat-enemy only: display name of the target enemy
 	DaysRemaining int

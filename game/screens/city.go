@@ -40,26 +40,23 @@ type ButtonConfig struct {
 }
 
 func NewCityScreen(city *domain.City, player *domain.Player, level *world.Level) *CityScreen {
+	if city.WisemanBoon == domain.BoonQuest {
+		city.WisemanBoon = domain.BoonNone
+		city.BoonGranted = false
+	}
 	if city.WisemanBoon == domain.BoonNone {
-		city.WisemanBoon = pickBoon(city, player, level)
+		city.WisemanBoon = pickBoon(city, level)
 	}
 	return &CityScreen{
-		Buttons: mkButtons(SCALE-0.4, city),
+		Buttons: mkButtons(SCALE-0.4, city, player),
 		City:    city,
 		Player:  player,
 		Level:   level,
 	}
 }
 
-func pickBoon(city *domain.City, player *domain.Player, level *world.Level) domain.BoonType {
-	allowQuest := player.CanAcceptQuest()
-
+func pickBoon(city *domain.City, level *world.Level) domain.BoonType {
 	var options []domain.BoonType
-	if allowQuest {
-		for range 5 {
-			options = append(options, domain.BoonQuest)
-		}
-	}
 	for range 2 {
 		options = append(options, domain.BoonBonusLife)
 	}
@@ -175,7 +172,7 @@ func (c *CityScreen) drawCityName(screen *ebiten.Image) {
 
 // Make buttons for City screen
 // Iconb and Icons "b" stands for border
-func mkButtons(scale float64, city *domain.City) []*elements.Button {
+func mkButtons(scale float64, city *domain.City, player *domain.Player) []*elements.Button {
 	Icons, err := imageutil.LoadSpriteSheet(12, 2, assets.Icons_png)
 	if err != nil {
 		panic(fmt.Errorf("failed to load icons sprite sheet: %w", err))
@@ -192,7 +189,7 @@ func mkButtons(scale float64, city *domain.City) []*elements.Button {
 	}
 
 	questText := "Talk to Wiseman"
-	if city.WisemanBoon.IsQuest() && !city.BoonGranted {
+	if city.CanOfferQuest(player) {
 		questText = "Begin Quest"
 	}
 

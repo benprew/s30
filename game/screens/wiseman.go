@@ -95,6 +95,11 @@ func NewWisemanScreen(city *domain.City, player *domain.Player, level *world.Lev
 // boon. Quest completion, reward, and expiry are handled outside the Wiseman
 // now (rewards are claimed by walking into any town).
 func (s *WisemanScreen) determineState() {
+	if s.City.CanOfferQuest(s.Player) {
+		s.generateQuest()
+		return
+	}
+
 	if s.maybeOfferDeckQuest() {
 		return
 	}
@@ -104,25 +109,15 @@ func (s *WisemanScreen) determineState() {
 		return
 	}
 
-	if s.City.WisemanBoon == domain.BoonQuest && !s.Player.CanAcceptQuest() {
+	if rand.Float32() < 0.5 {
+		s.grantBoon()
+	} else {
 		s.loadStory()
-		return
-	}
-
-	switch s.City.WisemanBoon {
-	case domain.BoonQuest:
-		s.generateQuest()
-	default:
-		if rand.Float32() < 0.5 {
-			s.grantBoon()
-		} else {
-			s.loadStory()
-		}
 	}
 }
 
 // deckQuestOfferChance is the probability the Wiseman offers a deck-changing
-// quest (when the player has a free slot) instead of a boon / delivery quest.
+// quest when no city quest is available and the player has a free slot.
 // It is a var so tests can make the offer deterministic.
 var deckQuestOfferChance float32 = 0.5
 
@@ -569,29 +564,35 @@ func (s *WisemanScreen) updateOffer(W, H int, scale float64) (screenui.ScreenNam
 			if b.ID == "yes" {
 				s.acceptQuest()
 			}
-			return screenui.CityScr, nil, nil
+			return screenui.CityScr, NewCityScreen(s.City, s.Player, s.Level), nil
 		}
 	}
 	return screenui.WisemanScr, nil, nil
 }
 
 func (s *WisemanScreen) acceptQuest() {
+	if s.ProposedQuest == nil {
+		return
+	}
 	if !s.Player.AddQuest(s.ProposedQuest) {
 		return
 	}
 	switch s.ProposedQuest.Type {
 	case domain.QuestTypeDefeatEnemy:
 		s.spawnQuestEnemy(s.ProposedQuest.EnemyName)
-		s.consumeCityQuestBoon()
+		s.startCityQuestCooldown()
 	case domain.QuestTypeDelivery:
-		s.consumeCityQuestBoon()
+		s.startCityQuestCooldown()
 	}
 }
 
-// consumeCityQuestBoon marks this city's quest boon as spent once its
-// delivery/defeat quest is taken, so the Wiseman won't re-offer it.
-func (s *WisemanScreen) consumeCityQuestBoon() {
-	s.City.BoonGranted = true
+func (s *WisemanScreen) startCityQuestCooldown() {
+	difficulty := domain.DifficultyEasy
+	if s.Level != nil {
+		difficulty = s.Level.Difficulty
+	}
+	s.ProposedQuest.OriginCity = s.City.Name
+	s.City.QuestAvailableDay = s.Player.Days + 3 + int(difficulty)
 	s.City.ProposedQuest = nil
 }
 
