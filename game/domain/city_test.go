@@ -4,6 +4,30 @@ import (
 	"testing"
 )
 
+func TestCityCanOfferQuest(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		city   City
+		player Player
+		want   bool
+	}{
+		{name: "new city", city: City{Name: "Home"}, want: true},
+		{name: "spent gift", city: City{Name: "Home", WisemanBoon: BoonBonusLife, BoonGranted: true}, want: true},
+		{name: "cooldown", city: City{Name: "Home", QuestAvailableDay: 5}, player: Player{Days: 4}},
+		{name: "cooldown complete", city: City{Name: "Home", QuestAvailableDay: 5}, player: Player{Days: 5}, want: true},
+		{name: "active quest", city: City{Name: "Home"}, player: Player{ActiveQuests: []*Quest{{OriginCity: "Home"}}}},
+		{name: "unclaimed reward", city: City{Name: "Home"}, player: Player{ActiveQuests: []*Quest{{OriginCity: "Home", IsCompleted: true}}}},
+		{name: "other city quest", city: City{Name: "Home"}, player: Player{ActiveQuests: []*Quest{{OriginCity: "Away"}}}, want: true},
+		{name: "full slots", city: City{Name: "Home"}, player: Player{ActiveQuests: make([]*Quest, MaxActiveQuests)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.city.CanOfferQuest(&tc.player); got != tc.want {
+				t.Fatalf("CanOfferQuest = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestCityTierEnum(t *testing.T) {
 	tests := []struct {
 		tier     CityTier
