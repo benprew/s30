@@ -8,6 +8,7 @@ import (
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
@@ -406,39 +407,48 @@ func TestAcceptDeliveryConsumesCityQuestBoon(t *testing.T) {
 	}
 }
 
-func TestPickBoonNoQuestAtCapacity(t *testing.T) {
-	city := &domain.City{Name: "TestCity"}
+func TestWisemanBoonQuestTakesPrecedenceOverDeckQuest(t *testing.T) {
+	prev := deckQuestOfferChance
+	deckQuestOfferChance = 1.0
+	t.Cleanup(func() { deckQuestOfferChance = prev })
+
 	player := &domain.Player{}
-	for range domain.MaxActiveQuests {
-		player.AddQuest(&domain.Quest{Type: domain.QuestTypeActionTracker})
+	level, err := world.NewLevelWithSeed(player, 42)
+	if err != nil {
+		t.Fatalf("failed to create level: %v", err)
 	}
 
-	for range 100 {
-		if pickBoon(city, player, nil) == domain.BoonQuest {
-			t.Fatal("pickBoon should never return BoonQuest when at quest capacity")
-		}
+	city := &domain.City{
+		Name:        "QuestCity",
+		WisemanBoon: domain.BoonQuest,
+	}
+	s := &WisemanScreen{City: city, Player: player, Level: level}
+
+	s.determineState()
+
+	if s.State != WisemanStateOffer {
+		t.Fatalf("expected WisemanStateOffer, got %d", s.State)
+	}
+	if s.ProposedQuest == nil {
+		t.Fatal("expected ProposedQuest to be set")
+	}
+	if s.ProposedQuest.Type != domain.QuestTypeDelivery && s.ProposedQuest.Type != domain.QuestTypeDefeatEnemy {
+		t.Fatalf("expected city quest (delivery/defeat), got deck quest type %v", s.ProposedQuest.Type)
 	}
 }
 
-func TestPickBoonAllowsQuestWithFreeSlot(t *testing.T) {
+func TestPickBoonAllowsQuest(t *testing.T) {
 	city := &domain.City{Name: "TestCity"}
-	player := &domain.Player{
-		ActiveQuests: []*domain.Quest{{
-			Type:          domain.QuestTypeDelivery,
-			TargetCity:    &domain.City{Name: "Target"},
-			DaysRemaining: 10,
-		}},
-	}
 
 	offered := false
 	for range 100 {
-		if pickBoon(city, player, nil) == domain.BoonQuest {
+		if pickBoon(city, nil) == domain.BoonQuest {
 			offered = true
 			break
 		}
 	}
 	if !offered {
-		t.Error("pickBoon should be able to offer a quest when a slot is free")
+		t.Error("pickBoon should be able to roll BoonQuest")
 	}
 }
 
