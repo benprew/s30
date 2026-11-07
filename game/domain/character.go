@@ -54,10 +54,10 @@ type Character struct {
 	Level                 int    `toml:"level"`
 	PrimaryColor          string
 	ColorIdentity         []string
-	Visage                *ebiten.Image     // rogues headshot, seen at start of duel
+	Visage                *ebiten.Image     `json:"-"` // rogues headshot, seen at start of duel
 	VisageFn              string            `toml:"face"` // filename only, lazy-loaded later
-	WalkingSprite         [][]*ebiten.Image // sprites for walking animation
-	ShadowSprite          [][]*ebiten.Image // sprites for shadow animation
+	WalkingSprite         [][]*ebiten.Image `json:"-"` // sprites for walking animation
+	ShadowSprite          [][]*ebiten.Image `json:"-"` // sprites for shadow animation
 	WalkingSpriteFn       string            `toml:"walking_sprite"`        // filename only, lazy-loaded later
 	WalkingShadowSpriteFn string            `toml:"walking_shadow_sprite"` // filename only, lazy-loaded later
 	Life                  int               `toml:"life"`
