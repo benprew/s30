@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -2088,10 +2089,31 @@ func actionOptionToPriorityAction(opt interactive.ActionOption) interactive.Prio
 	}
 }
 
-// autoCounterTarget returns the single valid target for a spell that targets a
-// spell on the stack (e.g. Counterspell) when the opponent has exactly one such
-// spell there. This spares the player from manually picking the only sensible
-// target when countering a lone opposing spell.
+func isOwnSpellOnStackTarget(opt interactive.ActionOption) bool {
+	if opt.CardName == "Goblin Artisans" {
+		return true
+	}
+	if opt.TargetType == nil {
+		return false
+	}
+	val := reflect.ValueOf(opt.TargetType)
+	if val.Kind() == reflect.Pointer {
+		val = val.Elem()
+	}
+	if val.Kind() == reflect.Struct {
+		field := val.FieldByName("controlledByYou")
+		if field.IsValid() && field.Kind() == reflect.Bool {
+			return field.Bool()
+		}
+	}
+	return false
+}
+
+// autoCounterTarget returns the single valid target for a spell or ability that targets a
+// spell on the stack (e.g. Counterspell, Fork, Goblin Artisans) when there is exactly one
+// appropriate target on the stack. Spells targeting own spells (Goblin Artisans) or copy
+// spells (Fork) can target own spells, whereas counterspells only auto-target opponent spells
+// to prevent accidental self-counters.
 func (s *DuelScreen) autoCounterTarget(opt interactive.ActionOption) (uuid.UUID, bool) {
 	if _, ok := opt.TargetType.(*mage.SpellOnStackTarget); !ok {
 		return uuid.Nil(), false
@@ -2106,12 +2128,22 @@ func (s *DuelScreen) autoCounterTarget(opt interactive.ActionOption) (uuid.UUID,
 	}
 
 	oppName := s.lastMsg.State.Opponent.Name
+	isOwn := isOwnSpellOnStackTarget(opt)
+	isCopy := opt.CardName == "Fork"
+
 	var found uuid.UUID
 	count := 0
 	for _, item := range s.lastMsg.State.StackItems {
-		if item.Controller != oppName {
-			continue
+		if isOwn {
+			if item.Controller == oppName || (s.lastMsg.State.You.Name != "" && item.Controller != s.lastMsg.State.You.Name) {
+				continue
+			}
+		} else if !isCopy {
+			if item.Controller != oppName {
+				continue
+			}
 		}
+
 		id, err := uuid.Parse(item.ID)
 		if err != nil || !valid[id] {
 			continue
