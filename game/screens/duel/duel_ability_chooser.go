@@ -97,7 +97,7 @@ func (s *DuelScreen) selectAbility(index int) {
 	s.exitAbilityChoosingMode()
 
 	if action.NeedsTarget {
-		if tid, ok := s.autoCounterTarget(action); ok {
+		if tid, ok := s.autoTargetStackSpell(action); ok {
 			pa := actionOptionToPriorityAction(action)
 			pa.Targets = []uuid.UUID{tid}
 			select {

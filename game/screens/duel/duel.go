@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/color"
 	"math"
-	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -192,6 +191,7 @@ type DuelScreen struct {
 	selfLifeAnimation     lifeCounterAnimation
 	opponentLifeAnimation lifeCounterAnimation
 
+	stackTargetPage      int
 	viewingGraveyard     *duelPlayer
 	viewingAllGraveyards bool
 	concedeConfirm       bool
@@ -1246,6 +1246,11 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	mx, my := pointerPosition.X, pointerPosition.Y
 	clicked := ui.Click(image.Rect(0, 0, W, H))
 
+	if s.isChoosingStackTarget() {
+		s.updateStackTargetMouse(mx, my, clicked, W, H)
+		return screenui.DuelScr, nil, nil
+	}
+
 	if clicked && s.handlePhaseClick(mx, my) {
 		return screenui.DuelScr, nil, nil
 	}
@@ -2057,7 +2062,7 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 	}
 
 	if actions[0].NeedsTarget {
-		if tid, ok := s.autoCounterTarget(actions[0]); ok {
+		if tid, ok := s.autoTargetStackSpell(actions[0]); ok {
 			pa := actionOptionToPriorityAction(actions[0])
 			pa.Targets = []uuid.UUID{tid}
 			select {
@@ -2089,72 +2094,12 @@ func actionOptionToPriorityAction(opt interactive.ActionOption) interactive.Prio
 	}
 }
 
-func isOwnSpellOnStackTarget(opt interactive.ActionOption) bool {
-	if opt.CardName == "Goblin Artisans" {
-		return true
-	}
-	if opt.TargetType == nil {
-		return false
-	}
-	val := reflect.ValueOf(opt.TargetType)
-	if val.Kind() == reflect.Pointer {
-		val = val.Elem()
-	}
-	if val.Kind() == reflect.Struct {
-		field := val.FieldByName("controlledByYou")
-		if field.IsValid() && field.Kind() == reflect.Bool {
-			return field.Bool()
-		}
-	}
-	return false
-}
-
-// autoCounterTarget returns the single valid target for a spell or ability that targets a
-// spell on the stack (e.g. Counterspell, Fork, Goblin Artisans) when there is exactly one
-// appropriate target on the stack. Spells targeting own spells (Goblin Artisans) or copy
-// spells (Fork) can target own spells, whereas counterspells only auto-target opponent spells
-// to prevent accidental self-counters.
-func (s *DuelScreen) autoCounterTarget(opt interactive.ActionOption) (uuid.UUID, bool) {
-	if _, ok := opt.TargetType.(*mage.SpellOnStackTarget); !ok {
+// autoTargetStackSpell uses the legal targets supplied by the engine.
+func (s *DuelScreen) autoTargetStackSpell(opt interactive.ActionOption) (uuid.UUID, bool) {
+	if _, ok := opt.TargetType.(*mage.SpellOnStackTarget); !ok || len(opt.ValidTargets) != 1 {
 		return uuid.Nil(), false
 	}
-	if s.lastMsg == nil || s.lastMsg.State == nil {
-		return uuid.Nil(), false
-	}
-
-	valid := make(map[uuid.UUID]bool, len(opt.ValidTargets))
-	for _, tid := range opt.ValidTargets {
-		valid[tid] = true
-	}
-
-	oppName := s.lastMsg.State.Opponent.Name
-	isOwn := isOwnSpellOnStackTarget(opt)
-	isCopy := opt.CardName == "Fork"
-
-	var found uuid.UUID
-	count := 0
-	for _, item := range s.lastMsg.State.StackItems {
-		if isOwn {
-			if item.Controller == oppName || (s.lastMsg.State.You.Name != "" && item.Controller != s.lastMsg.State.You.Name) {
-				continue
-			}
-		} else if !isCopy {
-			if item.Controller != oppName {
-				continue
-			}
-		}
-
-		id, err := uuid.Parse(item.ID)
-		if err != nil || !valid[id] {
-			continue
-		}
-		found = id
-		count++
-	}
-	if count != 1 {
-		return uuid.Nil(), false
-	}
-	return found, true
+	return opt.ValidTargets[0], true
 }
 
 func (s *DuelScreen) isViewingGraveyard() bool {
@@ -2257,6 +2202,7 @@ func (s *DuelScreen) graveyardViewLayout(W int) []graveyardViewSection {
 }
 
 func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []interactive.ActionOption) {
+	s.stackTargetPage = 0
 	s.targetingCardID = id
 	s.targetingAction = interactive.ActionOption{}
 	s.targetingActions = make(map[uuid.UUID]interactive.ActionOption)
@@ -2313,6 +2259,7 @@ func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []int
 
 func (s *DuelScreen) exitTargetingMode() {
 	s.targetingCardID = uuid.Nil()
+	s.xChosenValue = 0
 	s.targetingAction = interactive.ActionOption{}
 	s.targetingActions = nil
 	s.selectedTargetIDs = nil
@@ -3005,6 +2952,7 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawDiceNotice(screen, W)
 	s.drawSpellAnimations(screen, W, H)
 	s.drawGraveyardView(screen, W, H)
+	s.drawStackTargetView(screen, W, H)
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
 	s.drawAbilityChoosingUI(screen, W, H)

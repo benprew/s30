@@ -276,8 +276,8 @@ func TestGoblinArtisansAutoTargetsSingleOwnArtifact(t *testing.T) {
 	}
 }
 
-func TestCounterspellDoesNotAutoCounterOwnSpell(t *testing.T) {
-	human, _ := newTestHuman()
+func TestCounterspellAutoTargetsSingleOwnSpell(t *testing.T) {
+	human, fromTUI := newTestHuman()
 	boltID := uuid.New()
 	counterID := uuid.New()
 
@@ -306,8 +306,16 @@ func TestCounterspellDoesNotAutoCounterOwnSpell(t *testing.T) {
 
 	s.performCardAction(counterID, "Counterspell")
 
-	if s.targetingCardID != counterID {
-		t.Fatal("Counterspell should not auto-counter own lone spell without explicit choice")
+	if s.targetingCardID != uuid.Nil() {
+		t.Fatal("a single legal stack target should be selected automatically")
+	}
+	select {
+	case pa := <-fromTUI:
+		if len(pa.Targets) != 1 || pa.Targets[0] != boltID {
+			t.Fatalf("targets = %v, want [%v]", pa.Targets, boltID)
+		}
+	default:
+		t.Fatal("expected a cast action")
 	}
 }
 
