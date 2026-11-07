@@ -20,12 +20,14 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 const (
 	COLLECTION_WIDTH     = 1024
 	COLLECTION_HEIGHT    = 180
 	deckCardDragIDPrefix = "deck:"
+	deckVisibleRows      = 4
 )
 
 type cardGroup struct {
@@ -55,6 +57,7 @@ type EditDeckScreen struct {
 	draggableItems     []*dragdrop.DraggableButton
 	deckDraggableItems []*dragdrop.DraggableButton
 	deckCardDisplays   []DeckCardDisplay // Cards currently in the deck with counts
+	deckScrollRow      int               // First visible row of cards in the deck area
 
 	// Track buttons that already have card art.
 	refreshedArt         map[string]bool
@@ -361,6 +364,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	s.drawDeckCards(screen, scale)
 	s.drawDeckStats(screen, scale)
+	s.drawDeckScrollButtons(screen, scale)
 	s.drawFilterButtons(screen, scale)
 	s.drawFilterCue(screen, W, H, scale)
 
@@ -430,7 +434,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 // drawDeckCards draws the cards in the deck area with count overlays
 func (s *EditDeckScreen) drawDeckCards(screen *ebiten.Image, scale float64) {
 	for _, display := range s.deckCardDisplays {
-		if display.Image == nil {
+		if display.Image == nil || !s.isDeckCardVisible(display) {
 			continue
 		}
 
@@ -505,12 +509,39 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		}
 	}
 
-	// Check for hover on deck cards
+	// Handle deck area scrolling (mouse wheel, navigation buttons, PageUp/PageDown)
 	pointerPosition := ui.Position()
 	scaledMX := int(float64(pointerPosition.X) / scale)
 	scaledMY := int(float64(pointerPosition.Y) / scale)
+	pointerPt := image.Point{X: scaledMX, Y: scaledMY}
+
+	deckBounds := s.deckDropArea.GetDropBounds()
+	if pointerPt.In(deckBounds) {
+		_, wheelY := ebiten.Wheel()
+		if wheelY < 0 {
+			s.scrollDeckDown()
+		} else if wheelY > 0 {
+			s.scrollDeckUp()
+		}
+	}
+
+	if s.maxDeckScrollRow() > 0 {
+		if ui.Click(deckScrollUpBounds()) {
+			s.scrollDeckUp()
+		} else if ui.Click(deckScrollDownBounds()) {
+			s.scrollDeckDown()
+		}
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyPageDown) {
+		s.scrollDeckDown()
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyPageUp) {
+		s.scrollDeckUp()
+	}
+
+	// Check for hover on deck cards (only visible ones)
 	for i, display := range s.deckCardDisplays {
-		if display.Image == nil {
+		if display.Image == nil || !s.isDeckCardVisible(display) {
 			continue
 		}
 		cardWidth := display.Image.Bounds().Dx()
@@ -564,8 +595,15 @@ func (s *EditDeckScreen) visibleDraggables() []dragdrop.Draggable {
 			items = append(items, item)
 		}
 	}
+	bounds := defaultDeckAreaBounds()
+	if s.deckDropArea != nil {
+		bounds = s.deckDropArea.GetDropBounds()
+	}
+	cardHeight := domain.CardArtMiniHeight
 	for _, item := range s.deckDraggableItems {
-		items = append(items, item)
+		if item.Button.Bounds.Empty() || (item.Button.Bounds.Min.Y >= bounds.Min.Y+55 && item.Button.Bounds.Min.Y+cardHeight <= bounds.Max.Y) {
+			items = append(items, item)
+		}
 	}
 	return items
 }
@@ -898,13 +936,156 @@ func (s *EditDeckScreen) loadDeckCards() error {
 	return nil
 }
 
+func defaultDeckAreaBounds() image.Rectangle {
+	return image.Rect(300, 0, 1024, 540)
+}
+
+// maxDeckScrollRow returns the maximum scroll row index
+func (s *EditDeckScreen) maxDeckScrollRow() int {
+	if len(s.deckCardDisplays) == 0 {
+		return 0
+	}
+	bounds := defaultDeckAreaBounds()
+	if s.deckDropArea != nil {
+		bounds = s.deckDropArea.GetDropBounds()
+	}
+	cardWidth := domain.CardArtMiniWidth
+	horizontalGap := 8
+	areaWidth := bounds.Dx() - 20
+	cols := (areaWidth + horizontalGap) / (cardWidth + horizontalGap)
+	if cols == 0 {
+		cols = 1
+	}
+	totalRows := (len(s.deckCardDisplays) + cols - 1) / cols
+	return max(0, totalRows-deckVisibleRows)
+}
+
+func (s *EditDeckScreen) isDeckCardVisible(display DeckCardDisplay) bool {
+	bounds := defaultDeckAreaBounds()
+	if s.deckDropArea != nil {
+		bounds = s.deckDropArea.GetDropBounds()
+	}
+	cardHeight := domain.CardArtMiniHeight
+	return display.Y >= bounds.Min.Y+55 && display.Y+cardHeight <= bounds.Max.Y
+}
+
+func (s *EditDeckScreen) scrollDeckDown() {
+	if s.deckScrollRow < s.maxDeckScrollRow() {
+		s.deckScrollRow++
+		s.calculateDeckCardPositions()
+		s.updateDeckDraggablePositions()
+	}
+}
+
+func (s *EditDeckScreen) scrollDeckUp() {
+	if s.deckScrollRow > 0 {
+		s.deckScrollRow--
+		s.calculateDeckCardPositions()
+		s.updateDeckDraggablePositions()
+	}
+}
+
+func (s *EditDeckScreen) updateDeckDraggablePositions() {
+	for i, display := range s.deckCardDisplays {
+		if i < len(s.deckDraggableItems) {
+			btn := s.deckDraggableItems[i].Button
+			cardWidth := domain.CardArtMiniWidth
+			cardHeight := domain.CardArtMiniHeight
+			if display.Image != nil {
+				cardWidth = display.Image.Bounds().Dx()
+				cardHeight = display.Image.Bounds().Dy()
+			}
+			btn.Bounds = image.Rect(display.X, display.Y, display.X+cardWidth, display.Y+cardHeight)
+		}
+	}
+}
+
+func deckScrollUpBounds() image.Rectangle {
+	return image.Rect(590, 485, 626, 515)
+}
+
+func deckScrollDownBounds() image.Rectangle {
+	return image.Rect(710, 485, 746, 515)
+}
+
+func (s *EditDeckScreen) drawDeckScrollButtons(screen *ebiten.Image, scale float64) {
+	if s.maxDeckScrollRow() == 0 {
+		return
+	}
+
+	upBounds := deckScrollUpBounds()
+	downBounds := deckScrollDownBounds()
+
+	mPos := ui.Position()
+	scaledMX := int(float64(mPos.X) / scale)
+	scaledMY := int(float64(mPos.Y) / scale)
+	pointerPt := image.Point{X: scaledMX, Y: scaledMY}
+
+	upHover := pointerPt.In(upBounds)
+	downHover := pointerPt.In(downBounds)
+
+	canScrollUp := s.deckScrollRow > 0
+	canScrollDown := s.deckScrollRow < s.maxDeckScrollRow()
+
+	drawScrollButton(screen, upBounds, true, canScrollUp, upHover, scale)
+
+	rowText := fmt.Sprintf("Row %d of %d", s.deckScrollRow+1, s.maxDeckScrollRow()+1)
+	scaleOpts := &ebiten.DrawImageOptions{}
+	scaleOpts.GeoM.Scale(scale, scale)
+	txt := elements.NewText(14, rowText, 632, 492)
+	txt.Color = color.RGBA{R: 200, G: 200, B: 210, A: 240}
+	txt.Draw(screen, scaleOpts, scale)
+
+	drawScrollButton(screen, downBounds, false, canScrollDown, downHover, scale)
+}
+
+func drawScrollButton(screen *ebiten.Image, bounds image.Rectangle, isUp bool, enabled bool, hover bool, scale float64) {
+	bgColor := color.RGBA{R: 50, G: 45, B: 60, A: 240}
+	if hover && enabled {
+		bgColor = color.RGBA{R: 80, G: 70, B: 95, A: 240}
+	} else if !enabled {
+		bgColor = color.RGBA{R: 35, G: 30, B: 40, A: 180}
+	}
+	x := float32(bounds.Min.X) * float32(scale)
+	y := float32(bounds.Min.Y) * float32(scale)
+	w := float32(bounds.Dx()) * float32(scale)
+	h := float32(bounds.Dy()) * float32(scale)
+	vector.FillRect(screen, x, y, w, h, bgColor, false)
+
+	borderColor := color.RGBA{R: 120, G: 110, B: 130, A: 200}
+	if !enabled {
+		borderColor = color.RGBA{R: 70, G: 65, B: 80, A: 150}
+	}
+	vector.StrokeRect(screen, x, y, w, h, 1, borderColor, false)
+
+	arrowColor := color.RGBA{R: 240, G: 240, B: 240, A: 255}
+	if !enabled {
+		arrowColor = color.RGBA{R: 100, G: 100, B: 110, A: 180}
+	}
+
+	centerX := float32(bounds.Min.X+bounds.Dx()/2) * float32(scale)
+	centerY := float32(bounds.Min.Y+bounds.Dy()/2) * float32(scale)
+	arm := float32(5) * float32(scale)
+
+	if isUp {
+		vector.StrokeLine(screen, centerX-arm, centerY+arm*0.5, centerX, centerY-arm*0.5, 2, arrowColor, false)
+		vector.StrokeLine(screen, centerX, centerY-arm*0.5, centerX+arm, centerY+arm*0.5, 2, arrowColor, false)
+	} else {
+		vector.StrokeLine(screen, centerX-arm, centerY-arm*0.5, centerX, centerY+arm*0.5, 2, arrowColor, false)
+		vector.StrokeLine(screen, centerX, centerY+arm*0.5, centerX+arm, centerY-arm*0.5, 2, arrowColor, false)
+	}
+}
+
 // calculateDeckCardPositions calculates grid positions for deck cards
 func (s *EditDeckScreen) calculateDeckCardPositions() {
 	if len(s.deckCardDisplays) == 0 {
 		return
 	}
 
-	bounds := s.deckDropArea.GetDropBounds()
+	bounds := defaultDeckAreaBounds()
+	if s.deckDropArea != nil {
+		bounds = s.deckDropArea.GetDropBounds()
+	}
 
 	cardWidth := domain.CardArtMiniWidth
 	cardHeight := domain.CardArtMiniHeight
@@ -919,13 +1100,22 @@ func (s *EditDeckScreen) calculateDeckCardPositions() {
 		cols = 1
 	}
 
+	maxScroll := s.maxDeckScrollRow()
+	if s.deckScrollRow > maxScroll {
+		s.deckScrollRow = maxScroll
+	}
+	if s.deckScrollRow < 0 {
+		s.deckScrollRow = 0
+	}
+
 	// Position cards in grid
 	for i := range s.deckCardDisplays {
 		col := i % cols
 		row := i / cols
+		relRow := row - s.deckScrollRow
 
 		x := bounds.Min.X + 10 + col*(cardWidth+horizontalGap)
-		y := bounds.Min.Y + 55 + row*(cardHeight+padding)
+		y := bounds.Min.Y + 55 + relRow*(cardHeight+padding)
 
 		s.deckCardDisplays[i].X = x
 		s.deckCardDisplays[i].Y = y
