@@ -3,6 +3,7 @@ package duel
 import (
 	"fmt"
 	"image/color"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/s30/game/ui/elements"
@@ -96,6 +97,15 @@ func (s *DuelScreen) selectAbility(index int) {
 	s.exitAbilityChoosingMode()
 
 	if action.NeedsTarget {
+		if tid, ok := s.autoTargetStackSpell(action); ok {
+			pa := actionOptionToPriorityAction(action)
+			pa.Targets = []uuid.UUID{tid}
+			select {
+			case s.human.FromTUI() <- pa:
+			default:
+			}
+			return
+		}
 		s.enterTargetingMode(action.PermanentID, action.CardName, []interactive.ActionOption{action})
 		return
 	}

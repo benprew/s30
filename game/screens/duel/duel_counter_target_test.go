@@ -143,3 +143,221 @@ func TestXCounterAutoTargetsSingleOpponentSpell(t *testing.T) {
 		t.Fatal("expected a cast action to be sent")
 	}
 }
+
+func TestForkAutoTargetsSingleOwnSpell(t *testing.T) {
+	human, fromTUI := newTestHuman()
+	boltID := uuid.New()
+	forkID := uuid.New()
+
+	s := &DuelScreen{
+		human: human,
+		lastMsg: &interactive.GameMsg{
+			State: &interactive.GameState{
+				You:      interactive.PlayerState{Name: "You"},
+				Opponent: interactive.PlayerState{Name: "Enemy"},
+				StackItems: []interactive.StackItemState{
+					{ID: boltID.String(), Name: "Lightning Bolt", Controller: "You"},
+				},
+			},
+		},
+		cardActions: map[uuid.UUID][]interactive.ActionOption{
+			forkID: {{
+				Type:         interactive.ActionCastSpell,
+				CardID:       forkID,
+				CardName:     "Fork",
+				NeedsTarget:  true,
+				TargetType:   mage.TargetSpellOnStack(),
+				ValidTargets: []uuid.UUID{boltID},
+			}},
+		},
+	}
+
+	s.performCardAction(forkID, "Fork")
+
+	if s.targetingCardID != uuid.Nil() {
+		t.Fatal("should not enter targeting mode when only one own spell is on the stack for Fork")
+	}
+
+	select {
+	case pa := <-fromTUI:
+		if len(pa.Targets) != 1 || pa.Targets[0] != boltID {
+			t.Fatalf("expected auto-target %v, got %v", boltID, pa.Targets)
+		}
+	default:
+		t.Fatal("expected a cast action to be sent")
+	}
+}
+
+func TestForkAutoTargetsSingleOpponentSpell(t *testing.T) {
+	human, fromTUI := newTestHuman()
+	boltID := uuid.New()
+	forkID := uuid.New()
+
+	s := &DuelScreen{
+		human: human,
+		lastMsg: &interactive.GameMsg{
+			State: &interactive.GameState{
+				You:      interactive.PlayerState{Name: "You"},
+				Opponent: interactive.PlayerState{Name: "Enemy"},
+				StackItems: []interactive.StackItemState{
+					{ID: boltID.String(), Name: "Lightning Bolt", Controller: "Enemy"},
+				},
+			},
+		},
+		cardActions: map[uuid.UUID][]interactive.ActionOption{
+			forkID: {{
+				Type:         interactive.ActionCastSpell,
+				CardID:       forkID,
+				CardName:     "Fork",
+				NeedsTarget:  true,
+				TargetType:   mage.TargetSpellOnStack(),
+				ValidTargets: []uuid.UUID{boltID},
+			}},
+		},
+	}
+
+	s.performCardAction(forkID, "Fork")
+
+	if s.targetingCardID != uuid.Nil() {
+		t.Fatal("should not enter targeting mode when only one opponent spell is on the stack for Fork")
+	}
+
+	select {
+	case pa := <-fromTUI:
+		if len(pa.Targets) != 1 || pa.Targets[0] != boltID {
+			t.Fatalf("expected auto-target %v, got %v", boltID, pa.Targets)
+		}
+	default:
+		t.Fatal("expected a cast action to be sent")
+	}
+}
+
+func TestGoblinArtisansAutoTargetsSingleOwnArtifact(t *testing.T) {
+	human, fromTUI := newTestHuman()
+	ornithopterID := uuid.New()
+	artisansID := uuid.New()
+
+	s := &DuelScreen{
+		human: human,
+		lastMsg: &interactive.GameMsg{
+			State: &interactive.GameState{
+				You:      interactive.PlayerState{Name: "You"},
+				Opponent: interactive.PlayerState{Name: "Enemy"},
+				StackItems: []interactive.StackItemState{
+					{ID: ornithopterID.String(), Name: "Ornithopter", Controller: "You"},
+				},
+			},
+		},
+		cardActions: map[uuid.UUID][]interactive.ActionOption{
+			artisansID: {{
+				Type:         interactive.ActionActivateAbility,
+				CardID:       artisansID,
+				CardName:     "Goblin Artisans",
+				NeedsTarget:  true,
+				TargetType:   mage.TargetOwnSpellOnStack(mage.IsArtifactCard),
+				ValidTargets: []uuid.UUID{ornithopterID},
+			}},
+		},
+	}
+
+	s.performCardAction(artisansID, "Goblin Artisans")
+
+	if s.targetingCardID != uuid.Nil() {
+		t.Fatal("should not enter targeting mode when only one own artifact is on the stack for Goblin Artisans")
+	}
+
+	select {
+	case pa := <-fromTUI:
+		if len(pa.Targets) != 1 || pa.Targets[0] != ornithopterID {
+			t.Fatalf("expected auto-target %v, got %v", ornithopterID, pa.Targets)
+		}
+	default:
+		t.Fatal("expected an activate ability action to be sent")
+	}
+}
+
+func TestCounterspellAutoTargetsSingleOwnSpell(t *testing.T) {
+	human, fromTUI := newTestHuman()
+	boltID := uuid.New()
+	counterID := uuid.New()
+
+	s := &DuelScreen{
+		human: human,
+		lastMsg: &interactive.GameMsg{
+			State: &interactive.GameState{
+				You:      interactive.PlayerState{Name: "You"},
+				Opponent: interactive.PlayerState{Name: "Enemy"},
+				StackItems: []interactive.StackItemState{
+					{ID: boltID.String(), Name: "Lightning Bolt", Controller: "You"},
+				},
+			},
+		},
+		cardActions: map[uuid.UUID][]interactive.ActionOption{
+			counterID: {{
+				Type:         interactive.ActionCastSpell,
+				CardID:       counterID,
+				CardName:     "Counterspell",
+				NeedsTarget:  true,
+				TargetType:   mage.TargetSpellOnStack(),
+				ValidTargets: []uuid.UUID{boltID},
+			}},
+		},
+	}
+
+	s.performCardAction(counterID, "Counterspell")
+
+	if s.targetingCardID != uuid.Nil() {
+		t.Fatal("a single legal stack target should be selected automatically")
+	}
+	select {
+	case pa := <-fromTUI:
+		if len(pa.Targets) != 1 || pa.Targets[0] != boltID {
+			t.Fatalf("targets = %v, want [%v]", pa.Targets, boltID)
+		}
+	default:
+		t.Fatal("expected a cast action")
+	}
+}
+
+func TestAbilityChooserAutoTargetsGoblinArtisans(t *testing.T) {
+	human, fromTUI := newTestHuman()
+	ornithopterID := uuid.New()
+	artisansID := uuid.New()
+
+	s := &DuelScreen{
+		human: human,
+		lastMsg: &interactive.GameMsg{
+			State: &interactive.GameState{
+				You:      interactive.PlayerState{Name: "You"},
+				Opponent: interactive.PlayerState{Name: "Enemy"},
+				StackItems: []interactive.StackItemState{
+					{ID: ornithopterID.String(), Name: "Ornithopter", Controller: "You"},
+				},
+			},
+		},
+		abilityChoosingActions: []interactive.ActionOption{{
+			Type:         interactive.ActionActivateAbility,
+			PermanentID:  artisansID,
+			CardID:       artisansID,
+			CardName:     "Goblin Artisans",
+			NeedsTarget:  true,
+			TargetType:   mage.TargetOwnSpellOnStack(mage.IsArtifactCard),
+			ValidTargets: []uuid.UUID{ornithopterID},
+		}},
+	}
+
+	s.selectAbility(0)
+
+	if s.targetingCardID != uuid.Nil() {
+		t.Fatal("should not enter targeting mode when selecting Goblin Artisans in ability chooser")
+	}
+
+	select {
+	case pa := <-fromTUI:
+		if len(pa.Targets) != 1 || pa.Targets[0] != ornithopterID {
+			t.Fatalf("expected auto-target %v, got %v", ornithopterID, pa.Targets)
+		}
+	default:
+		t.Fatal("expected an activate ability action to be sent")
+	}
+}

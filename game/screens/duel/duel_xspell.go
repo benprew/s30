@@ -101,10 +101,8 @@ func (s *DuelScreen) selectXValue(xValue int) {
 	actions := s.xChoosingActions
 	s.exitXChoosingMode()
 
-	// Stack spells cannot be clicked as targets yet, so X counters such as
-	// Power Sink need the same auto-target as Counterspell or they get stuck.
 	if len(actions) == 1 && actions[0].NeedsTarget {
-		if tid, ok := s.autoCounterTarget(actions[0]); ok {
+		if tid, ok := s.autoTargetStackSpell(actions[0]); ok {
 			pa := actionOptionToPriorityAction(actions[0])
 			pa.Targets = []uuid.UUID{tid}
 			pa.XValue = xValue
