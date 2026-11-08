@@ -2201,6 +2201,47 @@ func (s *DuelScreen) graveyardViewLayout(W int) []graveyardViewSection {
 	return sections
 }
 
+func (s *DuelScreen) findPermanent(id uuid.UUID) *interactive.PermanentState {
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return nil
+	}
+	for i := range s.lastMsg.State.You.Battlefield {
+		if s.lastMsg.State.You.Battlefield[i].ID == id {
+			return &s.lastMsg.State.You.Battlefield[i]
+		}
+	}
+	for i := range s.lastMsg.State.Opponent.Battlefield {
+		if s.lastMsg.State.Opponent.Battlefield[i].ID == id {
+			return &s.lastMsg.State.Opponent.Battlefield[i]
+		}
+	}
+	return nil
+}
+
+func (s *DuelScreen) permanentCMC(perm *interactive.PermanentState) int {
+	if perm == nil {
+		return 0
+	}
+	if perm.ManaCost != "" {
+		return core.ParseManaCost(perm.ManaCost).CMC()
+	}
+	if dc := s.getDomainCard(perm.Name); dc != nil && dc.ManaCost != "" {
+		return core.ParseManaCost(dc.ManaCost).CMC()
+	}
+	if card, err := mage.CreateCard(perm.Name); err == nil && card != nil {
+		return card.ManaCost().CMC()
+	}
+	return 0
+}
+
+func isArtifactWithManaValueXTarget(target mage.Target) bool {
+	if target == nil {
+		return false
+	}
+	typeName := fmt.Sprintf("%T", target)
+	return typeName == "*mage.ArtifactWithManaValueXTarget" || typeName == "*mage.artifactWithManaValueXTarget"
+}
+
 func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []interactive.ActionOption) {
 	s.stackTargetPage = 0
 	s.targetingCardID = id
@@ -2217,6 +2258,12 @@ func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []int
 			targetingActionSet = true
 		}
 		for _, tid := range a.ValidTargets {
+			if isArtifactWithManaValueXTarget(a.TargetType) {
+				perm := s.findPermanent(tid)
+				if perm == nil || s.permanentCMC(perm) != s.xChosenValue {
+					continue
+				}
+			}
 			s.targetingActions[tid] = a
 		}
 	}
