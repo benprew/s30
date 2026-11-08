@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	currentSaveVersion         = 1
+	currentSaveVersion         = 3
 	legacyMovementSpeedMinimum = 5
 	legacyMovementSpeedMaximum = 11
 	legacyMovementSpeedScale   = 6
@@ -51,7 +51,7 @@ func deserializeSave(jsonData []byte) (*SaveData, error) {
 		return nil, fmt.Errorf("failed to unmarshal save data: %w", err)
 	}
 
-	if saveData.Version != currentSaveVersion {
+	if saveData.Version < 1 || saveData.Version > currentSaveVersion {
 		return nil, fmt.Errorf("unsupported save version: %d", saveData.Version)
 	}
 	normalizeMovementSpeed(&saveData)
@@ -73,7 +73,13 @@ func cleanRemovedCards(saveData *SaveData) {
 				continue
 			}
 			if tile.City != nil {
-				tile.City.CardsForSale = filterValidCards(tile.City.CardsForSale)
+				cards := tile.City.CardsForSale[:0]
+				for _, owned := range tile.City.CardsForSale {
+					if owned != nil && owned.Card != nil && owned.CardID() != "" {
+						cards = append(cards, owned)
+					}
+				}
+				tile.City.CardsForSale = cards
 			}
 		}
 	}

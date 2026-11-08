@@ -81,7 +81,7 @@ func TestArenaRoundsRewardsAndChampion(t *testing.T) {
 			t.Fatalf("opponent deck size = %d, want %d", size, run.Player.MinDeckSize)
 		}
 		reward := run.Win()
-		if reward.Gold != gold[round-1] || len(reward.Cards) != cardCounts[round-1] || len(reward.Amulets) != amulets[round-1] {
+		if reward.Gold != gold[round-1] || len(reward.Cards) != cardCounts[round-1] || len(reward.OwnedCards) != len(reward.Cards) || len(reward.Amulets) != amulets[round-1] {
 			t.Fatalf("round %d reward = %+v", round, reward)
 		}
 		for _, card := range reward.Cards {

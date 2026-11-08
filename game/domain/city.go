@@ -57,7 +57,7 @@ type City struct {
 	Y                  int
 	Population         int
 	BackgroundImage    *ebiten.Image
-	CardsForSale       []*Card
+	CardsForSale       []*OwnedCard
 	AmuletColor        ColorMask
 	AssignedWorldMagic *WorldMagic
 	IsManaLinked       bool
@@ -125,15 +125,15 @@ func (c *City) GetWorldMagic() *WorldMagic {
 	return c.AssignedWorldMagic
 }
 
-func MkCards() []*Card {
-	cards := make([]*Card, 0, 5)
+func MkCards() []*OwnedCard {
+	cards := make([]*OwnedCard, 0, 5)
 	for i := 0; i < 5; i++ {
 		card := CARDS[rand.Intn(len(CARDS))]
 		if card.VintageRestricted {
 			i--
 			continue
 		}
-		cards = append(cards, card)
+		cards = append(cards, NewOwnedCard(card))
 	}
 	return cards
 }

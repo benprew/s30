@@ -103,17 +103,22 @@ type dungeonDuelContext struct {
 }
 
 type cardPreview struct {
+	Key       string
 	Card      *domain.Card
 	Permanent *interactive.PermanentState
 }
 
 type DuelScreen struct {
-	player    *domain.Player
-	enemy     *domain.Enemy
-	lvl       *world.Level
-	idx       int
-	dungeon   *dungeonDuelContext
-	finalBoss bool
+	cardInstances  map[string]*domain.OwnedCard
+	anteOwned      *domain.OwnedCard
+	enemyAnteOwned *domain.OwnedCard
+	bonusOwned     []*domain.OwnedCard
+	player         *domain.Player
+	enemy          *domain.Enemy
+	lvl            *world.Level
+	idx            int
+	dungeon        *dungeonDuelContext
+	finalBoss      bool
 
 	game       *mage.Game
 	human      *interactive.HumanPlayer
@@ -171,7 +176,6 @@ type DuelScreen struct {
 	abilityButtons         []*elements.Button
 
 	cardImageMap map[string]*domain.Card
-	landArt      *domain.LandArtSelection
 
 	warningMsg   string
 	lastMsgTime  time.Time
@@ -256,7 +260,6 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 		spellAnimations:  make(map[uuid.UUID]*spellCastAnimation),
 		pendingBlockers:  make(map[uuid.UUID]uuid.UUID),
 		cardActions:      make(map[uuid.UUID][]interactive.ActionOption),
-		landArt:          domain.NewLandArtSelection(),
 	}
 
 	s.initGameState()
@@ -383,7 +386,9 @@ func (s *DuelScreen) initGameState() {
 	}
 	s.aiPlayer.SetLife(enemyLife)
 
-	playerAnte := addDeckToLibrary(s.human, s.player.GetDuelDeck(), s.anteCard)
+	duelDeck := s.player.GetDuelDeck()
+	playerAnte, ownedAnte := s.addOwnedDeckToLibrary(s.human, duelDeck, s.player.CardCollection, s.player.ActiveDeck, s.anteCard)
+	s.anteOwned = ownedAnte
 	for _, card := range s.player.BonusDuelCards {
 		c, err := mage.CreateCard(card.CardName)
 		if err != nil {
@@ -395,7 +400,8 @@ func (s *DuelScreen) initGameState() {
 	bonusPermanents := s.player.BonusDuelCards
 	s.player.BonusDuelLife = 0
 	s.player.BonusDuelCards = nil
-	enemyAnte := addDeckToLibrary(s.aiPlayer, s.enemy.Character.GetActiveDeck(), s.enemyAnteCard)
+	enemyAnte, enemyOwnedAnte := s.addOwnedDeckToLibrary(s.aiPlayer, s.enemy.Character.GetActiveDeck(), s.enemy.Character.CardCollection, 0, s.enemyAnteCard)
+	s.enemyAnteOwned = enemyOwnedAnte
 
 	var err error
 	s.game, err = mage.NewGameWithAnte(s.human, s.aiPlayer, playerAnte, enemyAnte)
@@ -419,7 +425,7 @@ func (s *DuelScreen) initGameState() {
 
 	s.putBonusPermanentsInPlay(bonusPermanents)
 
-	s.cardImageMap = buildCardImageMap(s.player.GetDuelDeck(), s.enemy.Character.GetActiveDeck())
+	s.cardImageMap = buildCardImageMap(duelDeck, s.enemy.Character.GetActiveDeck())
 
 	s.self = &duelPlayer{name: "You"}
 	s.opponent = &duelPlayer{name: s.enemy.Name()}
@@ -431,24 +437,6 @@ func (s *DuelScreen) initGameState() {
 		len(s.aiPlayer.Library()), len(s.aiPlayer.Hand()),
 		s.human.Life(), s.aiPlayer.Life())
 	logging.Printf(logging.Duel, "Game init: IsGameOver=%v Winner=%q\n", s.game.IsGameOver(), s.game.Winner())
-}
-
-func addDeckToLibrary(player mage.Player, deck domain.Deck, anteCard *domain.Card) []*mage.Card {
-	var ante []*mage.Card
-	for card, count := range deck {
-		for range count {
-			c, err := mage.CreateCard(card.CardName)
-			if err != nil {
-				logging.Printf(logging.Duel, "Failed to create card %s: %v\n", card.CardName, err)
-				continue
-			}
-			player.AddToLibrary(c)
-			if anteCard != nil && len(ante) == 0 && card.CardName == anteCard.CardName {
-				ante = []*mage.Card{c}
-			}
-		}
-	}
-	return ante
 }
 
 // putBonusPermanentsInPlay drops each bonus card directly onto the human
@@ -2005,7 +1993,7 @@ func (s *DuelScreen) handleRightClick(mx, my int) {
 	}
 	hand := handDisplayOrder(s.lastMsg.State.You.Hand)
 	if idx := s.handCardIdxAtPoint(mx, my, s.self.handX, s.self.handY, len(hand), s.self); idx >= 0 {
-		s.loadCardPreviewByName(hand[idx].Name)
+		s.loadCardPreviewInstance(hand[idx].Name, hand[idx].ID.String())
 		return
 	}
 
@@ -2026,7 +2014,7 @@ func (s *DuelScreen) updateHoverPreview(mx, my int) {
 	}
 	hand := handDisplayOrder(s.lastMsg.State.You.Hand)
 	if idx := s.handCardIdxAtPoint(mx, my, s.self.handX, s.self.handY, len(hand), s.self); idx >= 0 {
-		s.loadCardPreviewByName(hand[idx].Name)
+		s.loadCardPreviewInstance(hand[idx].Name, hand[idx].ID.String())
 		return
 	}
 
@@ -2042,7 +2030,7 @@ func (s *DuelScreen) updateHoverPreview(mx, my int) {
 
 	if len(s.lastMsg.State.StackItems) > 0 {
 		item := s.lastMsg.State.StackItems[len(s.lastMsg.State.StackItems)-1]
-		s.loadCardPreviewByName(item.Name)
+		s.loadCardPreviewInstance(item.Name, item.ID)
 	}
 }
 
@@ -2223,7 +2211,7 @@ func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []int
 		}
 	}
 	s.selectedTargetIDs = nil
-	s.loadCardPreviewByName(name)
+	s.loadCardPreviewInstance(name, id.String())
 
 	if s.lastMsg != nil && s.lastMsg.State != nil {
 		hasSelfGrave := false
@@ -2370,7 +2358,7 @@ func (s *DuelScreen) handleGraveyardTargetClick(mx, my, W int) bool {
 			if image.Pt(mx, my).In(gc.Rect) {
 				if _, ok := s.targetingActions[gc.Card.ID]; ok {
 					s.selectTarget(gc.Card.ID)
-					s.loadCardPreviewByName(gc.Card.Name)
+					s.loadCardPreviewInstance(gc.Card.Name, gc.Card.ID.String())
 					minTargets, maxTargets := s.targetBounds()
 					if minTargets == 1 && maxTargets == 1 && len(s.selectedTargetIDs) == 1 {
 						if s.submitTargetingAction() {
@@ -2460,15 +2448,18 @@ func (s *DuelScreen) getCardArtImg(name, key string, view domain.CardView) *ebit
 	return s.cardArtImg(s.getDomainCard(name), key, view)
 }
 
-// cardArtImg draws a card using whatever alternate land art this duel assigned
-// to the instance named by key. Keys are engine card and permanent IDs, which
-// stay the same across zones, so a land keeps its art from hand to battlefield
-// to graveyard. Cards with no alternate art fall back to their printed art.
+// cardArtImg preserves the owned artwork when the card moves between zones.
 func (s *DuelScreen) cardArtImg(card *domain.Card, key string, view domain.CardView) *ebiten.Image {
 	if card == nil {
 		return nil
 	}
-	img, err := s.landArt.CardImage(card, key, view)
+	var img *ebiten.Image
+	var err error
+	if owned := s.cardInstances[key]; owned != nil && owned.Name() == card.Name() {
+		img, err = owned.CardImage(view)
+	} else {
+		img, err = card.CardImage(view)
+	}
 	if err != nil {
 		return nil
 	}
@@ -2826,9 +2817,8 @@ func (s *DuelScreen) previewImage() *ebiten.Image {
 		return nil
 	}
 	card := s.preview.Card
-	// Previewing a permanent borrows that permanent's key so the magnified
-	// card shows the same land art as the one on the battlefield.
-	key := card.CardName
+	// The permanent ID keeps the preview artwork equal to the battlefield artwork.
+	key := s.preview.Key
 	if perm := s.preview.Permanent; perm != nil {
 		card = s.getDomainCard(permanentArtName(*perm, card))
 		key = perm.ID.String()
@@ -2854,8 +2844,15 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	s.lvl.RecordCombatWin()
 
 	reward := domain.GenerateDuelReward(s.player.GetActiveDeck(), s.enemyAnteCard, s.enemy.Character.Level, s.enemy.ColorMask())
+	anteTransferred := false
 	for _, card := range reward.Cards {
-		s.player.CardCollection.AddCard(card, 1)
+		owned := domain.NewOwnedCard(card)
+		if !anteTransferred && s.enemyAnteOwned != nil && card.Name() == s.enemyAnteOwned.Name() {
+			owned.ArtworkID = s.enemyAnteOwned.ArtworkID
+			anteTransferred = true
+		}
+		s.player.CardCollection.AddOwnedCard(owned)
+		reward.OwnedCards = append(reward.OwnedCards, owned)
 	}
 	s.player.Gold += reward.Gold
 	for _, amulet := range reward.Amulets {
@@ -2865,6 +2862,7 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	if s.dungeon != nil {
 		if s.dungeon.tile.Boss {
 			bonusCards := s.completeCastleVictory()
+			reward.OwnedBonusCards = s.bonusOwned
 			s.player.ExitDungeon()
 			winScreen := NewWinDuelScreen(s.player, reward, bonusCards)
 			if s.lvl.AllCastlesDefeated() {
@@ -2889,7 +2887,9 @@ func (s *DuelScreen) completeCastleVictory() []*domain.Card {
 	}
 	bonusCards := domain.RandomPowerfulCardsForColor(castle.Color, 5)
 	for _, card := range bonusCards {
-		s.player.CardCollection.AddCard(card, 1)
+		owned := domain.NewOwnedCard(card)
+		s.player.CardCollection.AddOwnedCard(owned)
+		s.bonusOwned = append(s.bonusOwned, owned)
 	}
 	return bonusCards
 }
@@ -2902,7 +2902,9 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 		return screenui.GameLoseScr, NewGameResultScreen(false), nil
 	}
 
-	if s.anteCard != nil {
+	if s.anteOwned != nil {
+		_ = s.player.CardCollection.RemoveOwnedCard(s.anteOwned.ID)
+	} else if s.anteCard != nil {
 		_ = s.player.RemoveCard(s.anteCard)
 	}
 	lostCards := []*domain.Card{}
@@ -2916,12 +2918,12 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 		if s.lvl != nil {
 			s.lvl.HandleCastleDuelOutcome(false)
 		}
-		return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
+		return screenui.DuelLoseScr, s.newLossScreen(lostCards), nil
 	}
 
 	s.lvl.RemoveEnemyAt(s.idx)
 
-	return screenui.DuelLoseScr, NewDuelLoseScreen(lostCards), nil
+	return screenui.DuelLoseScr, s.newLossScreen(lostCards), nil
 }
 
 func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {

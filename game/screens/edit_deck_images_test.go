@@ -9,21 +9,26 @@ import (
 	"github.com/benprew/s30/game/ui/elements"
 )
 
-func TestRefreshDeckImagesPreservesDragButton(t *testing.T) {
+func TestRefreshDeckDragImagesPreservesDragButton(t *testing.T) {
 	card := domain.CARDS[0]
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, 342)))
+	owned := domain.NewOwnedCard(card)
+	owned.ArtworkID = card.DefaultArtwork().ID
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, 342)))
 	t.Cleanup(domain.ClearCardImageCache)
 	old, err := card.CardImage(domain.CardViewArtMini)
 	if err != nil {
 		t.Fatal(err)
 	}
-	screen := &EditDeckScreen{deckCardDisplays: []DeckCardDisplay{{Card: card, Image: old}}}
+	screen := &EditDeckScreen{deckCardDisplays: []DeckCardDisplay{{Owned: owned}}}
 	screen.createDeckDraggableItems()
 	button := screen.deckDraggableItems[0]
 	button.State = elements.StatePressed
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, 342)))
-	screen.refreshDeckImages()
-	updated := screen.deckCardDisplays[0].Image
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, 342)))
+	screen.refreshDeckDragImages()
+	updated, err := owned.CardImage(domain.CardViewArtMini)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if updated == old {
 		t.Fatal("deck display retained old artwork")
 	}
@@ -37,7 +42,9 @@ func TestRefreshDeckImagesPreservesDragButton(t *testing.T) {
 
 func TestDeckCardLayoutFitsSharedCardSize(t *testing.T) {
 	card := domain.CARDS[0]
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, 342)))
+	owned := domain.NewOwnedCard(card)
+	owned.ArtworkID = card.DefaultArtwork().ID
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, 342)))
 	t.Cleanup(domain.ClearCardImageCache)
 	img, err := card.CardImage(domain.CardViewArtMini)
 	if err != nil {
@@ -51,7 +58,7 @@ func TestDeckCardLayoutFitsSharedCardSize(t *testing.T) {
 		deckCardDisplays: make([]DeckCardDisplay, 4),
 	}
 	for i := range screen.deckCardDisplays {
-		screen.deckCardDisplays[i] = DeckCardDisplay{Card: card, Image: img}
+		screen.deckCardDisplays[i] = DeckCardDisplay{Owned: owned}
 	}
 	screen.calculateDeckCardPositions()
 	for i, a := range screen.deckCardDisplays {

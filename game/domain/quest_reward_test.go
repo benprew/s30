@@ -120,6 +120,27 @@ func TestGrantQuestReward(t *testing.T) {
 	}
 }
 
+func TestRedeemFulfilledQuestsPopulatesOwnedCards(t *testing.T) {
+	p := &Player{
+		Character: Character{CardCollection: NewCardCollection(), Life: 10},
+		Amulets:   make(map[ColorMask]int),
+		ActiveQuests: []*Quest{{
+			Type:        QuestTypeDefeatEnemy,
+			IsCompleted: true,
+			Reward:      QuestReward{Cards: 2, CardColor: ColorRed},
+		}},
+	}
+	rewards := p.RedeemFulfilledQuests(nil)
+	if len(rewards) != 1 || len(rewards[0].Cards) != 2 {
+		t.Fatalf("unexpected redeemed quest rewards: %+v", rewards)
+	}
+	for i, owned := range rewards[0].Cards {
+		if owned == nil || owned.Card == nil || owned.ID == "" {
+			t.Fatalf("invalid owned quest reward card at %d: %+v", i, owned)
+		}
+	}
+}
+
 func TestRandomSingleRewardIsSingleKind(t *testing.T) {
 	// A legacy reward should always grant exactly one kind of thing.
 	for range 50 {

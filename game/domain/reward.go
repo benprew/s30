@@ -6,9 +6,11 @@ import (
 
 // DuelReward represents the complete bundle of rewards granted upon winning a duel.
 type DuelReward struct {
-	Cards   []*Card
-	Gold    int
-	Amulets []Amulet
+	Cards           []*Card
+	OwnedCards      []*OwnedCard
+	OwnedBonusCards []*OwnedCard
+	Gold            int
+	Amulets         []Amulet
 }
 
 var dualLands = map[string]ColorMask{

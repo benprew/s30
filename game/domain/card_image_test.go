@@ -8,9 +8,9 @@ import (
 func TestCardImageSharesVariantsAndRefreshesArt(t *testing.T) {
 	ClearCardImageCache()
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "variant-test", CardName: "Test"}
-	fetchingSet.Store(card.cardID, true)
-	t.Cleanup(func() { fetchingSet.Delete(card.cardID) })
+	card := &Card{CardName: "Test", Artworks: []Artwork{{ID: "variant-test", CardName: "Test"}}}
+	fetchingSet.Store(card.DefaultArtwork().ID, true)
+	t.Cleanup(func() { fetchingSet.Delete(card.DefaultArtwork().ID) })
 	placeholder, err := card.CardImage(CardViewArtMini)
 	if err != nil {
 		t.Fatal(err)
@@ -20,7 +20,7 @@ func TestCardImageSharesVariantsAndRefreshesArt(t *testing.T) {
 	if repeated != placeholder {
 		t.Fatal("placeholder was resized again")
 	}
-	CacheCardImage(card.cardID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
+	CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
 	loaded, _ := card.CardImage(CardViewArtMini)
 	if loaded == placeholder {
 		t.Fatal("placeholder was retained after art arrived")
@@ -36,7 +36,7 @@ func TestCardImageSharesVariantsAndRefreshesArt(t *testing.T) {
 	if full == loaded || full.Bounds().Dy() != 256 {
 		t.Fatal("full view was not kept separate")
 	}
-	CacheCardImage(card.cardID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
+	CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
 	replaced, _ := card.CardImage(CardViewArtMini)
 	if replaced == loaded {
 		t.Fatal("replacement art was not used")
@@ -50,10 +50,10 @@ func TestCardImageSharesVariantsAndRefreshesArt(t *testing.T) {
 
 func TestCardImageSeparatesPrintings(t *testing.T) {
 	t.Cleanup(ClearCardImageCache)
-	first := &Card{cardID: "printing-one", CardName: "Same name"}
-	second := &Card{cardID: "printing-two", CardName: "Same name"}
+	first := &Card{CardName: "Same name", Artworks: []Artwork{{ID: "printing-one", CardName: "Same name"}}}
+	second := &Card{CardName: "Same name", Artworks: []Artwork{{ID: "printing-two", CardName: "Same name"}}}
 	for _, card := range []*Card{first, second} {
-		CacheCardImage(card.cardID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
+		CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
 	}
 	a, _ := first.CardImage(CardViewArtMini)
 	b, _ := second.CardImage(CardViewArtMini)
@@ -68,24 +68,24 @@ func TestCardImageSeparatesPrintings(t *testing.T) {
 func TestCardImageVariantCacheLimit(t *testing.T) {
 	ClearCardImageCache()
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "cache-limit", CardName: "Test"}
-	CacheCardImage(card.cardID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
-	oldest, _ := card.CardImage(CardViewArtMini)
+	art := Artwork{ID: "cache-limit", CardName: "Test"}
+	CacheCardImage(art.ID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
+	oldest, _ := art.CardImage(CardViewArtMini)
 	for i := 2; i <= cardImageVariantLimit; i++ {
-		card.CardName = string(rune(i))
-		if _, err := card.CardImage(CardViewArtMini); err != nil {
+		art.CardName = string(rune(i))
+		if _, err := art.CardImage(CardViewArtMini); err != nil {
 			t.Fatal(err)
 		}
 	}
-	card.CardName = "Test"
-	retained, _ := card.CardImage(CardViewArtMini)
+	art.CardName = "Test"
+	retained, _ := art.CardImage(CardViewArtMini)
 	if retained != oldest {
 		t.Fatal("cache removed an image before reaching its limit")
 	}
-	card.CardName = "extra"
-	_, _ = card.CardImage(CardViewArtMini)
-	card.CardName = "Test"
-	retained, _ = card.CardImage(CardViewArtMini)
+	art.CardName = "extra"
+	_, _ = art.CardImage(CardViewArtMini)
+	art.CardName = "Test"
+	retained, _ = art.CardImage(CardViewArtMini)
 	if retained != oldest {
 		t.Fatal("cache removed a recently used image")
 	}
@@ -97,8 +97,8 @@ func TestCardImageVariantCacheLimit(t *testing.T) {
 func TestCardImagePresets(t *testing.T) {
 	ClearCardImageCache()
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "presets", CardName: "Presets"}
-	CacheCardImage(card.cardID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
+	card := &Card{CardName: "Presets", Artworks: []Artwork{{ID: "presets", CardName: "Presets"}}}
+	CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
 	for _, tc := range []struct {
 		view CardView
 		size image.Point

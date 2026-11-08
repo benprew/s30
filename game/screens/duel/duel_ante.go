@@ -6,7 +6,6 @@ import (
 	"image/color"
 	"math/rand"
 
-
 	"github.com/benprew/s30/assets"
 	gameaudio "github.com/benprew/s30/game/audio"
 	"github.com/benprew/s30/game/domain"
@@ -21,12 +20,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-
 type DuelAnteScreen struct {
 	background     *ebiten.Image
-	playerAnteCard *domain.Card
+	playerAnteCard *domain.OwnedCard
 	enemy          *domain.Enemy
-	enemyAnteCard  *domain.Card
+	enemyAnteCard  *domain.OwnedCard
 	enemyVisage    *ebiten.Image
 	enemyName      string
 	lvl            *world.Level
@@ -159,16 +157,15 @@ func newDuelAnteScreen(player *domain.Player, enemy *domain.Enemy, level *world.
 		}
 	}
 
-
 	s.background = loadBackgroundForEnemy(enemy)
 
 	if arenaRound == 0 {
-		s.playerAnteCard = selectPlayerAnteCard(player.GetActiveDeck())
+		s.playerAnteCard = selectPlayerAnteCard(player.CardCollection, player.ActiveDeck)
 		card, imageErr := s.playerAnteCard.CardImage(domain.CardViewFullMini)
 		if imageErr != nil || card == nil {
 			panic(fmt.Sprintf("No card image for %s\n", s.playerAnteCard.Name()))
 		}
-		s.enemyAnteCard = selectEnemyAnteCard(enemy.Character.GetActiveDeck())
+		s.enemyAnteCard = selectEnemyAnteCard(enemy.Character.CardCollection, 0)
 	}
 
 	s.visageBorder = loadVisageBorder()
@@ -306,7 +303,6 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		lt.HAlign, lt.BoundsW = elements.AlignCenter, float64(W)
 		lt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
-
 		deckCount := 0
 		for _, count := range s.player.GetActiveDeck() {
 			deckCount += count
@@ -337,7 +333,6 @@ func (s *DuelAnteScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	if s.editBtn != nil {
 		s.editBtn.Draw(screen, btnOpts, scale)
 	}
-
 
 	// Player stats UI background in lower-left
 	if s.arenaRound == 0 && len(s.playerStatsUI) > 0 && s.playerStatsUI[0] != nil {
@@ -375,7 +370,14 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, erro
 	if am := gameaudio.Get(); am != nil {
 		am.PlaySFX(gameaudio.SFXDice)
 	}
-	duel := NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, s.playerAnteCard, s.enemyAnteCard)
+	var playerAnte, enemyAnte *domain.Card
+	if s.playerAnteCard != nil {
+		playerAnte = s.playerAnteCard.Card
+	}
+	if s.enemyAnteCard != nil {
+		enemyAnte = s.enemyAnteCard.Card
+	}
+	duel := NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, playerAnte, enemyAnte)
 	duel.arenaOutcome = s.arenaOutcome
 	return screenui.DuelScr, duel, nil
 }
@@ -415,22 +417,23 @@ func loadBackgroundForEnemy(enemy *domain.Enemy) *ebiten.Image {
 	return img
 }
 
-func selectPlayerAnteCard(deck domain.Deck) *domain.Card {
-	validCards := deck.ValidAnteCards(domain.ExcludeBasicLand)
+func selectPlayerAnteCard(collection domain.CardCollection, deckIndex int) *domain.OwnedCard {
+	validCards := collection.GetDeck(deckIndex).ValidAnteCards(domain.ExcludeBasicLand)
 
 	if len(validCards) == 0 {
 		panic("No valid ante cards!!")
 	}
 
-	return validCards[rand.Intn(len(validCards))]
+	return anteOwnedCard(collection, deckIndex, validCards[rand.Intn(len(validCards))])
 }
 
-func selectEnemyAnteCard(deck domain.Deck) *domain.Card {
+func selectEnemyAnteCard(collection domain.CardCollection, deckIndex int) *domain.OwnedCard {
+	deck := collection.GetDeck(deckIndex)
 	// 5% chance to allow VintageRestricted cards as ante
 	if rand.Intn(100) >= 5 {
 		validCards := deck.ValidAnteCards(domain.ExcludeVintageRestricted)
 		if len(validCards) > 0 {
-			return validCards[rand.Intn(len(validCards))]
+			return anteOwnedCard(collection, deckIndex, validCards[rand.Intn(len(validCards))])
 		}
 	}
 
@@ -440,7 +443,7 @@ func selectEnemyAnteCard(deck domain.Deck) *domain.Card {
 		panic("No valid ante cards!!")
 	}
 
-	return validCards[rand.Intn(len(validCards))]
+	return anteOwnedCard(collection, deckIndex, validCards[rand.Intn(len(validCards))])
 }
 
 func loadVisageBorder() []*ebiten.Image {
@@ -456,7 +459,10 @@ func (s *DuelAnteScreen) WonCards() []*domain.Card {
 }
 
 func (s *DuelAnteScreen) LostCards() []*domain.Card {
-	return []*domain.Card{s.playerAnteCard}
+	if s.playerAnteCard == nil {
+		return []*domain.Card{nil}
+	}
+	return []*domain.Card{s.playerAnteCard.Card}
 }
 
 func canBribe(s *DuelAnteScreen) bool {

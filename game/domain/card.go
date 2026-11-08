@@ -44,15 +44,6 @@ const CardArtMiniHeight = 96
 
 type EntityID int
 
-// A struct representing the sets of magic
-// ex. Arabian Nights, Zendikar, etc
-type CardSet struct {
-	SetID       string
-	SetName     string
-	SetType     string
-	CollectorNo string
-}
-
 type ParsedCost struct {
 	Mana        string `json:"Mana"`
 	Tap         bool   `json:"Tap"`
@@ -105,11 +96,7 @@ type ParsedAbility struct {
 }
 
 type Card struct {
-	CardName string
-	CardSet
-	PngURL            string
-	BorderCropURL     string
-	cardID            string
+	CardName          string
 	ManaCost          string   // ex. {3}{G}{R}
 	ManaProduction    []string // This only has the possible colors of production
 	Colors            []string
@@ -126,7 +113,7 @@ type Card struct {
 	FlavorText        string
 	FrameEffects      []string
 	Watermark         string
-	Artist            string
+	Artworks          []Artwork
 	Price             int
 	VintageRestricted bool
 	ParsedAbilities   []ParsedAbility
@@ -143,8 +130,9 @@ func (c *Card) Name() string {
 	return c.CardName
 }
 
+// CardID returns the card name, independent of its artwork.
 func (c *Card) CardID() string {
-	return c.cardID
+	return c.CardName
 }
 
 // ColorMask returns the card's colors as a ColorMask (colorless = 0).
@@ -187,13 +175,10 @@ func (c *Card) IsLand() bool {
 func (c *Card) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		CardID string `json:"CardID"`
-	}{CardID: c.cardID})
+	}{CardID: c.CardID()})
 }
 
-// UnmarshalJSON looks up the card in CARDS by ID and copies its fields onto
-// the receiver. Falls back to deriving the ID from CardName/SetID/CollectorNo
-// for save files written before Card serialized only its ID, and falls back to
-// looking up by name if a specific set_id/name printing is no longer in CARDS.
+// UnmarshalJSON resolves name references and printing IDs from older saves.
 func (c *Card) UnmarshalJSON(data []byte) error {
 	var aux struct {
 		CardID      string `json:"CardID"`
@@ -207,7 +192,7 @@ func (c *Card) UnmarshalJSON(data []byte) error {
 
 	id := aux.CardID
 	if id == "" && aux.CardName != "" {
-		id = fmt.Sprintf("%s-%s-%s", aux.SetID, aux.CollectorNo, sanitizeFilename(aux.CardName))
+		id = aux.CardName
 	}
 
 	found := FindCard(id, aux.CardName)
@@ -219,8 +204,7 @@ func (c *Card) UnmarshalJSON(data []byte) error {
 }
 
 func (c *Card) ImageLoaded() bool {
-	_, ok := cardImages.Load(c.cardID)
-	return ok
+	return c.DefaultArtwork().ImageLoaded()
 }
 
 // FindCard attempts to find a card by its ID, falling back to looking up by name
@@ -268,48 +252,23 @@ func FindCardBySanitizedName(nameish string) *Card {
 	return nil
 }
 
-// FindCardByID returns the card with the given cardID, or nil if not found.
+// FindCardByID finds a definition by its card name.
 func FindCardByID(id string) *Card {
-	for _, c := range CARDS {
-		if c.cardID == id {
-			return c
-		}
-	}
-	return nil
-}
-
-// FindAllCardsByName searches for all cards with the given name
-// Returns a slice of all cards with the matching name (different sets)
-func FindAllCardsByName(name string) []*Card {
-	var result []*Card
-
-	// Find the first occurrence
-	index := sort.Search(len(CARDS), func(i int) bool {
-		return CARDS[i].CardName >= name
-	})
-
-	// Collect all cards with the same name
-	for index < len(CARDS) && CARDS[index].CardName == name {
-		result = append(result, CARDS[index])
-		index++
-	}
-
-	return result
+	return FindCardByName(id)
 }
 
 func (card *Card) fullCardImage() *ebiten.Image {
-	var fullImg *ebiten.Image
+	return card.DefaultArtwork().fullCardImage()
+}
 
-	if cached, ok := cardImages.Load(card.cardID); ok {
-		fullImg = cached.(*ebiten.Image)
-	} else {
-		if _, alreadyFetching := fetchingSet.LoadOrStore(card.cardID, true); !alreadyFetching {
-			go fetchAndCacheCardImage(card)
-		}
-		fullImg = labeledBlankCard(card.CardName)
+func (art Artwork) fullCardImage() *ebiten.Image {
+	if cached, ok := cardImages.Load(art.ID); ok {
+		return cached.(*ebiten.Image)
 	}
-
-	return fullImg
+	if _, alreadyFetching := fetchingSet.LoadOrStore(art.ID, true); !alreadyFetching {
+		go fetchAndCacheArtwork(art)
+	}
+	return labeledBlankCard(art.CardName)
 }
 
 func (c *Card) SalePrice(city *City) int {

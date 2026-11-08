@@ -46,7 +46,7 @@ func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 		s.xButtons[i] = btn
 	}
 
-	s.loadCardPreviewByName(action.CardName)
+	s.loadActionPreview(action)
 }
 
 func (s *DuelScreen) exitXChoosingMode() {

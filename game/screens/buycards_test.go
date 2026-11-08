@@ -27,7 +27,7 @@ func TestBuyCard_PurchaseLogic(t *testing.T) {
 	card.Price = 5
 
 	city := &domain.City{}
-	city.CardsForSale = []*domain.Card{card}
+	city.CardsForSale = []*domain.OwnedCard{domain.NewOwnedCard(card)}
 	player := &domain.Player{
 		Gold: 10,
 		Character: domain.Character{
@@ -65,7 +65,7 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 	card.Price = 5
 
 	city := &domain.City{}
-	city.CardsForSale = []*domain.Card{card}
+	city.CardsForSale = []*domain.OwnedCard{domain.NewOwnedCard(card)}
 	player := &domain.Player{
 		Gold: 2,
 		Character: domain.Character{
@@ -87,7 +87,7 @@ func TestBuyCard_NotEnoughGold(t *testing.T) {
 	if player.CardCollection.GetTotalCount(card) != 0 {
 		t.Errorf("Expected player to have 0 of card %s, got %d", card.Name(), player.CardCollection.GetTotalCount(card))
 	}
-	if len(city.CardsForSale) != 1 || city.CardsForSale[0] != card {
+	if len(city.CardsForSale) != 1 || city.CardsForSale[0].Card != card {
 		t.Errorf("Expected card to remain for sale")
 	}
 	if screen.PreviewIdx != 0 {
@@ -104,7 +104,7 @@ func TestBuyCardsScreen_ReplacesPlaceholderWhenImageLoads(t *testing.T) {
 
 	card := domain.FindCardByName("Mountain")
 	city := &domain.City{
-		CardsForSale: []*domain.Card{card},
+		CardsForSale: []*domain.OwnedCard{domain.NewOwnedCard(card)},
 	}
 	player := &domain.Player{
 		Gold: 10,
@@ -134,9 +134,9 @@ func TestBuyCardsScreen_ReplacesPlaceholderWhenImageLoads(t *testing.T) {
 			img.Set(x, y, color.RGBA{R: 0xff, A: 0xff})
 		}
 	}
-	domain.CacheCardImage(card.CardID(), img)
+	domain.CacheCardImage(city.CardsForSale[0].Artwork().ID, img)
 
-	if !card.ImageLoaded() {
+	if !city.CardsForSale[0].ImageLoaded() {
 		t.Fatal("Expected card image to be loaded")
 	}
 
@@ -146,7 +146,7 @@ func TestBuyCardsScreen_ReplacesPlaceholderWhenImageLoads(t *testing.T) {
 		t.Fatalf("Update failed: %v", err)
 	}
 
-	shared, err := card.CardImage(domain.CardViewArtMini)
+	shared, err := city.CardsForSale[0].CardImage(domain.CardViewArtMini)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestBuyCardsScreen_ReplacesPlaceholderWhenImageLoads(t *testing.T) {
 func TestResetCards_Success(t *testing.T) {
 	card := domain.FindCardByName("Mountain")
 	city := &domain.City{
-		CardsForSale: []*domain.Card{card},
+		CardsForSale: []*domain.OwnedCard{domain.NewOwnedCard(card)},
 	}
 	player := &domain.Player{
 		Gold: 50,
@@ -200,7 +200,7 @@ func TestResetCards_Success(t *testing.T) {
 func TestResetCards_NotEnoughGold(t *testing.T) {
 	card := domain.FindCardByName("Mountain")
 	city := &domain.City{
-		CardsForSale: []*domain.Card{card},
+		CardsForSale: []*domain.OwnedCard{domain.NewOwnedCard(card)},
 	}
 	player := &domain.Player{
 		Gold: 10,
@@ -222,7 +222,7 @@ func TestResetCards_NotEnoughGold(t *testing.T) {
 	if player.Gold != 10 {
 		t.Errorf("Expected player gold to remain 10, got %d", player.Gold)
 	}
-	if len(city.CardsForSale) != 1 || city.CardsForSale[0] != card {
+	if len(city.CardsForSale) != 1 || city.CardsForSale[0].Card != card {
 		t.Errorf("Expected cards for sale to remain unchanged")
 	}
 	if screen.ErrorMsg != "Not enough money!" {
@@ -233,7 +233,7 @@ func TestResetCards_NotEnoughGold(t *testing.T) {
 func TestBuyCardsScreen_NewCardsButtonExists(t *testing.T) {
 	card := domain.FindCardByName("Mountain")
 	city := &domain.City{
-		CardsForSale: []*domain.Card{card},
+		CardsForSale: []*domain.OwnedCard{domain.NewOwnedCard(card)},
 	}
 	player := &domain.Player{
 		Gold: 50,

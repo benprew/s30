@@ -78,11 +78,11 @@ func TestCardJSONRoundTripRestoresFullCard(t *testing.T) {
 	if restored.CardName != original.CardName {
 		t.Errorf("CardName = %q, want %q", restored.CardName, original.CardName)
 	}
-	if restored.PngURL != original.PngURL {
-		t.Errorf("PngURL = %q, want %q", restored.PngURL, original.PngURL)
+	if restored.DefaultArtwork().PngURL != original.DefaultArtwork().PngURL {
+		t.Errorf("PngURL = %q, want %q", restored.DefaultArtwork().PngURL, original.DefaultArtwork().PngURL)
 	}
-	if restored.BorderCropURL != original.BorderCropURL {
-		t.Errorf("BorderCropURL = %q, want %q", restored.BorderCropURL, original.BorderCropURL)
+	if restored.DefaultArtwork().BorderCropURL != original.DefaultArtwork().BorderCropURL {
+		t.Errorf("BorderCropURL = %q, want %q", restored.DefaultArtwork().BorderCropURL, original.DefaultArtwork().BorderCropURL)
 	}
 	if restored.ManaCost != original.ManaCost {
 		t.Errorf("ManaCost = %q, want %q", restored.ManaCost, original.ManaCost)
@@ -135,9 +135,9 @@ func TestCardUnmarshalJSONLegacySaveFormat(t *testing.T) {
 		ManaCost    string
 	}{
 		CardName:    original.CardName,
-		SetID:       original.SetID,
-		SetName:     original.SetName,
-		CollectorNo: original.CollectorNo,
+		SetID:       original.DefaultArtwork().SetID,
+		SetName:     original.DefaultArtwork().SetName,
+		CollectorNo: original.DefaultArtwork().CollectorNo,
 		PngURL:      "stale-url-from-old-save",
 		ManaCost:    "stale",
 	})
@@ -152,8 +152,8 @@ func TestCardUnmarshalJSONLegacySaveFormat(t *testing.T) {
 	if restored.CardID() != original.CardID() {
 		t.Errorf("legacy cardID = %q, want %q", restored.CardID(), original.CardID())
 	}
-	if restored.PngURL != original.PngURL {
-		t.Errorf("legacy load should overwrite stale fields with canonical data; PngURL = %q, want %q", restored.PngURL, original.PngURL)
+	if restored.DefaultArtwork().PngURL != original.DefaultArtwork().PngURL {
+		t.Errorf("legacy load should overwrite stale fields with canonical data; PngURL = %q, want %q", restored.DefaultArtwork().PngURL, original.DefaultArtwork().PngURL)
 	}
 }
 
@@ -238,4 +238,3 @@ func TestCardUnmarshalJSONRemovedCardLeavesReceiverEmpty(t *testing.T) {
 		t.Errorf("expected empty CardName for removed card, got %q", restored.CardName)
 	}
 }
-

@@ -13,8 +13,8 @@ func altArtSource() *ebiten.Image {
 
 func TestCardImageFromSeparatesArtSources(t *testing.T) {
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "alt-art-card", CardName: "Forest"}
-	CacheCardImage(card.cardID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
+	card := &Card{CardName: "Forest", Artworks: []Artwork{{ID: "alt-art-card", CardName: "Forest"}}}
+	CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
 
 	printed, err := card.CardImage(CardViewArtMini)
 	if err != nil {
@@ -22,7 +22,7 @@ func TestCardImageFromSeparatesArtSources(t *testing.T) {
 	}
 
 	alt := altArtSource()
-	fromAlt, err := card.cardImageFrom(alt, "landArt/beta/Forest.full.png", CardViewArtMini)
+	fromAlt, err := card.cardImageFrom(alt, "leb-300-forest", CardViewArtMini)
 	if err != nil {
 		t.Fatalf("cardImageFrom returned an error: %v", err)
 	}
@@ -34,14 +34,14 @@ func TestCardImageFromSeparatesArtSources(t *testing.T) {
 
 func TestCardImageFromCachesByArtID(t *testing.T) {
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "alt-art-cached", CardName: "Swamp"}
+	card := &Card{CardName: "Swamp", Artworks: []Artwork{{ID: "alt-art-cached", CardName: "Swamp"}}}
 	alt := altArtSource()
 
-	first, err := card.cardImageFrom(alt, "landArt/swamp.png", CardViewArtMini)
+	first, err := card.cardImageFrom(alt, "leb-297-swamp", CardViewArtMini)
 	if err != nil {
 		t.Fatalf("cardImageFrom returned an error: %v", err)
 	}
-	second, err := card.cardImageFrom(alt, "landArt/swamp.png", CardViewArtMini)
+	second, err := card.cardImageFrom(alt, "leb-297-swamp", CardViewArtMini)
 	if err != nil {
 		t.Fatalf("cardImageFrom returned an error: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestCardImageFromCachesByArtID(t *testing.T) {
 		t.Error("the same art and view were derived twice instead of being cached")
 	}
 
-	other, err := card.cardImageFrom(altArtSource(), "landArt/swamp2.png", CardViewArtMini)
+	other, err := card.cardImageFrom(altArtSource(), "unh-138-swamp", CardViewArtMini)
 	if err != nil {
 		t.Fatalf("cardImageFrom returned an error: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestCardImageFromCachesByArtID(t *testing.T) {
 
 func TestCardImageFromViewSizes(t *testing.T) {
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "alt-art-sizes", CardName: "Island"}
+	card := &Card{CardName: "Island", Artworks: []Artwork{{ID: "alt-art-sizes", CardName: "Island"}}}
 	alt := altArtSource()
 
 	tests := []struct {
@@ -73,7 +73,7 @@ func TestCardImageFromViewSizes(t *testing.T) {
 		{CardViewArtMini, image.Pt(CardArtMiniWidth, CardArtMiniHeight)},
 	}
 	for _, tt := range tests {
-		img, err := card.cardImageFrom(alt, "landArt/island.png", tt.view)
+		img, err := card.cardImageFrom(alt, "leb-294-island", tt.view)
 		if err != nil {
 			t.Fatalf("cardImageFrom(view %d) returned an error: %v", tt.view, err)
 		}
@@ -85,10 +85,10 @@ func TestCardImageFromViewSizes(t *testing.T) {
 
 func TestCardImageFromFullReturnsSource(t *testing.T) {
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "alt-art-full", CardName: "Mountain"}
+	card := &Card{CardName: "Mountain", Artworks: []Artwork{{ID: "alt-art-full", CardName: "Mountain"}}}
 	alt := altArtSource()
 
-	got, err := card.cardImageFrom(alt, "landArt/mountain.png", CardViewFull)
+	got, err := card.cardImageFrom(alt, "leb-299-mountain", CardViewFull)
 	if err != nil {
 		t.Fatalf("cardImageFrom returned an error: %v", err)
 	}
@@ -99,10 +99,10 @@ func TestCardImageFromFullReturnsSource(t *testing.T) {
 
 func TestCardImageFromNilSourceUsesPrintedArt(t *testing.T) {
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "alt-art-nil-source", CardName: "Plains"}
-	CacheCardImage(card.cardID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
+	card := &Card{CardName: "Plains", Artworks: []Artwork{{ID: "alt-art-nil-source", CardName: "Plains"}}}
+	CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, CardFullWidth, 342)))
 
-	viaNil, err := card.cardImageFrom(nil, card.cardID, CardViewArtMini)
+	viaNil, err := card.cardImageFrom(nil, card.DefaultArtwork().ID, CardViewArtMini)
 	if err != nil {
 		t.Fatalf("cardImageFrom returned an error: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestCardImageFromNilSourceUsesPrintedArt(t *testing.T) {
 		t.Error("a nil source did not fall back to the card's printed art")
 	}
 
-	full, err := card.cardImageFrom(nil, card.cardID, CardViewFull)
+	full, err := card.cardImageFrom(nil, card.DefaultArtwork().ID, CardViewFull)
 	if err != nil {
 		t.Fatalf("cardImageFrom returned an error: %v", err)
 	}
@@ -126,9 +126,9 @@ func TestCardImageFromNilSourceUsesPrintedArt(t *testing.T) {
 
 func TestCardImageFromRejectsUnknownView(t *testing.T) {
 	t.Cleanup(ClearCardImageCache)
-	card := &Card{cardID: "alt-art-bad-view", CardName: "Forest"}
+	card := &Card{CardName: "Forest", Artworks: []Artwork{{ID: "alt-art-bad-view", CardName: "Forest"}}}
 
-	if _, err := card.cardImageFrom(altArtSource(), "landArt/forest.png", CardView(-1)); err == nil {
+	if _, err := card.cardImageFrom(altArtSource(), "leb-300-forest", CardView(-1)); err == nil {
 		t.Error("cardImageFrom accepted an unknown view")
 	}
 }

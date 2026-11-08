@@ -266,7 +266,7 @@ func (s *BuyCardsScreen) buyCard() {
 	if s.Player.Gold >= card.Price {
 		fmt.Println("Buying card:", s.PreviewIdx, "name:", card.Name(), "for", card.Price, "gold")
 		s.Player.Gold -= card.Price
-		s.Player.CardCollection.AddCard(card, 1)
+		s.Player.CardCollection.AddOwnedCard(card)
 		if am := gameaudio.Get(); am != nil {
 			am.PlaySFX(gameaudio.SFXTreasure)
 		}

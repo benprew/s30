@@ -246,7 +246,9 @@ func (a *ArenaRun) Win() DuelReward {
 	reward := arenaReward(a.Round, a.rng)
 	a.Campaign.Gold += reward.Gold
 	for _, card := range reward.Cards {
-		a.Campaign.CardCollection.AddCard(card, 1)
+		owned := NewOwnedCard(card)
+		a.Campaign.CardCollection.AddOwnedCard(owned)
+		reward.OwnedCards = append(reward.OwnedCards, owned)
 	}
 	for _, amulet := range reward.Amulets {
 		a.Campaign.AddAmulet(amulet)

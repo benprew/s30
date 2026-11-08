@@ -21,6 +21,167 @@ from utils.update_cards_json import (
 
 
 class UpdateCardsJsonTest(unittest.TestCase):
+    def test_art_sets_add_images_without_adding_playable_cards(self) -> None:
+        records: list[dict[str, Any]] = [
+            {
+                "name": "Lightning Bolt",
+                "set": "m10",
+                "collector_number": "146",
+                "image_uris": {"border_crop": "https://example.test/m10.jpg"},
+            },
+            {
+                "name": "New Card",
+                "set": "m10",
+                "collector_number": "1",
+                "image_uris": {"border_crop": "https://example.test/new.jpg"},
+            },
+            {
+                "name": "Lightning Bolt",
+                "set": "leb",
+                "collector_number": "161",
+                "image_uris": {"border_crop": "https://example.test/leb.jpg"},
+            },
+            {
+                "name": "Lightning Bolt",
+                "set": "4ed",
+                "collector_number": "208",
+                "image_uris": {"border_crop": "https://example.test/4ed.jpg"},
+            },
+            {
+                "name": "Lightning Bolt",
+                "set": "m10",
+                "collector_number": "146",
+                "lang": "de",
+                "image_uris": {"border_crop": "https://example.test/german.jpg"},
+            },
+        ]
+        cards = list(
+            process_card_records(iter(records), ["leb", "4ed"], set(), art_sets=["m10"])
+        )
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0]["Artworks"][0]["SetID"], "leb")
+        self.assertEqual(
+            [art["SetID"] for art in cards[0]["Artworks"][1:]], ["4ed", "m10"]
+        )
+        self.assertEqual(
+            cards[0]["Artworks"][1:][1]["BorderCropURL"], "https://example.test/m10.jpg"
+        )
+        reversed_cards = list(
+            process_card_records(
+                iter(reversed(records)), ["leb", "4ed"], set(), art_sets=["m10"]
+            )
+        )
+        self.assertEqual(cards, reversed_cards)
+
+    def test_alternate_art_survives_processing_transformed_data(self) -> None:
+        record: dict[str, Any] = {
+            "CardName": "Forest",
+            "SetID": "leb",
+            "CollectorNo": "300",
+            "BorderCropURL": "https://example.test/leb.jpg",
+            "AlternateArt": [
+                {
+                    "SetID": "unh",
+                    "CollectorNo": "140",
+                    "BorderCropURL": "https://example.test/unh.jpg",
+                }
+            ],
+        }
+        cards = list(process_card_records(iter([record]), ["leb"], set()))
+        self.assertEqual(cards[0]["Artworks"][1:], record["AlternateArt"])
+
+    def test_multiple_artworks_from_one_set_are_retained(self) -> None:
+        records = [
+            {
+                "CardName": "Forest",
+                "SetID": "leb",
+                "CollectorNo": number,
+                "BorderCropURL": f"https://example.test/{number}.jpg",
+            }
+            for number in ["300", "301", "302", "301"]
+        ]
+        cards = list(process_card_records(iter(records), ["leb"], set()))
+        self.assertEqual(cards[0]["Artworks"][0]["CollectorNo"], "300")
+        self.assertEqual(
+            [art["CollectorNo"] for art in cards[0]["Artworks"][1:]], ["301", "302"]
+        )
+
+    def test_excluded_artwork_is_not_reintroduced(self) -> None:
+        records = [
+            {
+                "CardName": "Forest",
+                "SetID": set_id,
+                "CollectorNo": "1",
+                "BorderCropURL": f"https://example.test/{set_id}.jpg",
+            }
+            for set_id in ["leb", "4ed", "unh"]
+        ]
+        cards = list(
+            process_card_records(
+                iter(records),
+                ["leb", "4ed"],
+                set(),
+                art_sets=["unh"],
+                excluded_versions=[
+                    VersionExclusion("Forest", "4ed"),
+                    VersionExclusion("Forest", "unh"),
+                ],
+            )
+        )
+        self.assertEqual(len(cards[0]["Artworks"]), 1)
+
+    def test_unified_card_json_keeps_urls_inside_artworks(self) -> None:
+        records: list[dict[str, Any]] = [
+            {
+                "CardName": "Lightning Bolt",
+                "ManaCost": "{R}",
+                "Artworks": [
+                    {
+                        "SetID": "leb",
+                        "CollectorNo": "162",
+                        "PngURL": "https://example.test/leb.png",
+                        "ArtURL": "https://example.test/leb-crop.jpg",
+                    },
+                    {
+                        "SetID": "m10",
+                        "CollectorNo": "146",
+                        "BorderCropURL": "https://example.test/m10.jpg",
+                    },
+                ],
+            }
+        ]
+        cards = list(process_card_records(iter(records), ["leb"], set()))
+        self.assertEqual(cards, records)
+        self.assertNotIn("SetID", cards[0])
+        self.assertNotIn("PngURL", cards[0])
+        self.assertEqual(
+            cards[0]["Artworks"][0]["ArtURL"], "https://example.test/leb-crop.jpg"
+        )
+
+    def test_unified_card_json_skips_card_when_all_artworks_excluded(self) -> None:
+        records: list[dict[str, Any]] = [
+            {
+                "CardName": "Lightning Bolt",
+                "ManaCost": "{R}",
+                "Artworks": [
+                    {
+                        "SetID": "leb",
+                        "CollectorNo": "162",
+                        "PngURL": "https://example.test/leb.png",
+                    }
+                ],
+            }
+        ]
+        cards = list(
+            process_card_records(
+                iter(records),
+                ["leb"],
+                set(),
+                excluded_versions=[VersionExclusion("Lightning Bolt", "leb")],
+            )
+        )
+        self.assertEqual(cards, [])
+
     def test_parse_version_exclusion(self) -> None:
         self.assertEqual(
             parse_version_exclusion("El-Hajjâj:4ed"),
@@ -170,7 +331,7 @@ class UpdateCardsJsonTest(unittest.TestCase):
             excluded_names=DEFAULT_EXCLUDED_NAMES,
         )
 
-        names_and_sets = [(c["CardName"], c["SetID"]) for c in processed]
+        names_and_sets = [(c["CardName"], c["Artworks"][0]["SetID"]) for c in processed]
         self.assertEqual(
             names_and_sets,
             [("Black Lotus", "leb"), ("El-Hajjâj", "arn")],

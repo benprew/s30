@@ -37,12 +37,7 @@ func newEditorCollection(rogueName string) (domain.CardCollection, error) {
 		slices.Sort(names)
 		return nil, fmt.Errorf("unknown rogue %q; available rogues: %s", rogueName, strings.Join(names, ", "))
 	}
-	for card, item := range rogue.CardCollection {
-		cloned := *item
-		cloned.DeckCounts = slices.Clone(item.DeckCounts)
-		collection[card] = &cloned
-	}
-	return collection, nil
+	return rogue.CardCollection.Clone(), nil
 }
 
 type editorGame struct {

@@ -24,5 +24,4 @@ game/domain/testdata/
 vendor/
 mtg-ranker/
 __debug_bin*
-landArt/
 *.pprof

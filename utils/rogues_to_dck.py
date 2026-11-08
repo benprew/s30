@@ -16,6 +16,7 @@ import tomllib
 import unicodedata
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 import zstandard
 
@@ -33,12 +34,13 @@ def normalize_name(name: str) -> str:
     return stripped.lower().strip()
 
 
-def build_card_index(cards: list[dict]) -> dict[str, list[dict]]:
+def build_card_index(cards: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """Index cards by normalized name. Each value is a list of printings."""
-    index: dict[str, list[dict]] = defaultdict(list)
+    index: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for card in cards:
         key = normalize_name(card["CardName"])
-        index[key].append(card)
+        for artwork in card.get("Artworks", [card]):
+            index[key].append({**artwork, "CardName": card["CardName"]})
     return index
 
 

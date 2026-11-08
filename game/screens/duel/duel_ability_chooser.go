@@ -42,7 +42,7 @@ func (s *DuelScreen) enterAbilityChoosingMode(actions []interactive.ActionOption
 		s.abilityButtons[i] = btn
 	}
 
-	s.loadCardPreviewByName(actions[0].CardName)
+	s.loadActionPreview(actions[0])
 }
 
 func (s *DuelScreen) exitAbilityChoosingMode() {

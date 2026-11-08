@@ -440,9 +440,58 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 	}
 }
 
+func TestHandleWinMintsNewOwnedIDForEnemyAnteAndPreservesEnemyDeck(t *testing.T) {
+	bolt := domain.FindCardByName("Lightning Bolt")
+	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}}
+	enemyCollection := domain.NewCardCollection()
+	enemyOwned := domain.NewOwnedCard(bolt)
+	enemyOwned.ArtworkID = "m10-146-lightning-bolt"
+	enemyOwned.DeckIndex = 0
+	enemyCollection.AddOwnedCard(enemyOwned)
+	enemyChar := &domain.Character{
+		Name:           "Repeat Enemy",
+		Level:          1,
+		CardCollection: enemyCollection,
+	}
+
+	for round := range 2 {
+		lvl := &world.Level{Enemies: []domain.Enemy{{Character: enemyChar}}}
+		s := &DuelScreen{
+			player:         player,
+			enemy:          lvl.GetEnemyAt(0),
+			lvl:            lvl,
+			idx:            0,
+			enemyAnteCard:  bolt,
+			enemyAnteOwned: enemyOwned,
+		}
+		_, screen, err := s.handleWin()
+		if err != nil {
+			t.Fatalf("round %d handleWin error: %v", round, err)
+		}
+		winScreen := screen.(*DuelWinScreen)
+		wonAnte := winScreen.cards[0].owned
+		if wonAnte == nil {
+			t.Fatalf("round %d expected owned ante card on win screen", round)
+		}
+		if wonAnte.ID == enemyOwned.ID {
+			t.Fatalf("round %d won ante reused enemy OwnedCard.ID %q", round, wonAnte.ID)
+		}
+		if wonAnte.ArtworkID != enemyOwned.ArtworkID {
+			t.Fatalf("round %d won ante ArtworkID = %q, want %q", round, wonAnte.ArtworkID, enemyOwned.ArtworkID)
+		}
+	}
+
+	if got := enemyChar.CardCollection.GetDeckCount(bolt, 0); got != 1 {
+		t.Fatalf("enemy deck count for %s = %d, want 1", bolt.Name(), got)
+	}
+	if got := len(player.CardCollection.AvailableCards(bolt)); got < 2 {
+		t.Fatalf("player available copies of %s = %d, want >= 2 after winning ante twice", bolt.Name(), got)
+	}
+}
+
 func TestDuelWinBonusUsesMiniPresetAndSeparatePage(t *testing.T) {
 	card := domain.CARDS[0]
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	t.Cleanup(domain.ClearCardImageCache)
 	s := NewWinDuelScreen(nil, domain.DuelReward{Cards: []*domain.Card{card}}, []*domain.Card{card})
 	if s.bonusImgs[0].Bounds().Size() != image.Pt(183, 256) {
@@ -517,5 +566,3 @@ func TestDuelWinScreen_TitleIsRewards(t *testing.T) {
 		t.Fatalf("expected title %q, got %q", "Rewards", s.textbox.ButtonText.Text)
 	}
 }
-
-

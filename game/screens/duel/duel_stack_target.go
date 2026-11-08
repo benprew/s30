@@ -104,7 +104,7 @@ func (s *DuelScreen) drawStackTargetView(screen *ebiten.Image, W, H int) {
 	for _, card := range cards {
 		r := card.Rect
 		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), color.RGBA{40, 40, 40, 255}, false)
-		if img := s.getCardArtImg(card.Item.Name, domain.CardViewArtOnly); img != nil {
+		if img := s.getCardArtImg(card.Item.Name, card.Item.ID, domain.CardViewArtOnly); img != nil {
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Translate(float64(r.Min.X+(r.Dx()-domain.CardArtWidth)/2), float64(r.Min.Y))
 			screen.DrawImage(img, opts)
