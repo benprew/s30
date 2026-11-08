@@ -3,10 +3,10 @@ package duel
 import (
 	"image"
 	"testing"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage"
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -181,7 +181,7 @@ func TestTargetingRaiseDead_AutoOpensGraveyardAndSelectsGraveyardCreature(t *tes
 	if s.viewingGraveyard != nil {
 		t.Fatalf("expected viewingGraveyard to close after selecting single target, got %v", s.viewingGraveyard)
 	}
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		t.Fatalf("expected targeting mode to exit after single target selection")
 	}
 
@@ -361,7 +361,7 @@ func TestTargetingAnimateDead_ShowsCreaturesInAllGraveyards(t *testing.T) {
 	if s.isViewingGraveyard() {
 		t.Fatalf("expected graveyard view to close after submitting single target, got isViewingGraveyard=true")
 	}
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		t.Fatalf("expected targeting mode to exit after single target selection")
 	}
 

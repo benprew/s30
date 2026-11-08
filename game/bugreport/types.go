@@ -1,6 +1,8 @@
 package bugreport
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -56,9 +58,26 @@ type BugReport struct {
 	DuelState    *DuelReportState `json:"duel_state,omitempty"`
 }
 
-// ToJSON serializes the BugReport into formatted JSON.
+// ToJSON serializes the BugReport into compact JSON.
 func (r *BugReport) ToJSON() ([]byte, error) {
-	return json.MarshalIndent(r, "", "  ")
+	return json.Marshal(r)
+}
+
+// ToGzip compresses the compact report JSON for storage and upload.
+func (r *BugReport) ToGzip() ([]byte, error) {
+	data, err := r.ToJSON()
+	if err != nil {
+		return nil, err
+	}
+	var compressed bytes.Buffer
+	writer := gzip.NewWriter(&compressed)
+	if _, err := writer.Write(data); err != nil {
+		return nil, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+	return compressed.Bytes(), nil
 }
 
 // IssueTitle generates a descriptive GitHub issue title.
@@ -85,12 +104,21 @@ func (r *BugReport) IssueTitle() string {
 
 // ToMarkdown formats the report as a comprehensive GitHub Issue Markdown body.
 func (r *BugReport) ToMarkdown() string {
+	return r.toMarkdown(true)
+}
+
+// ToSummaryMarkdown formats the issue summary without the full diagnostics.
+func (r *BugReport) ToSummaryMarkdown() string {
+	return r.toMarkdown(false)
+}
+
+func (r *BugReport) toMarkdown(includeDetails bool) string {
 	var b strings.Builder
 
 	if r.IsCrash {
 		b.WriteString("## 🚨 CRASH REPORT\n\n")
 		fmt.Fprintf(&b, "**Error:** `%s`\n\n", r.CrashMessage)
-		if r.StackTrace != "" {
+		if includeDetails && r.StackTrace != "" {
 			b.WriteString("### Stack Trace\n```\n")
 			b.WriteString(r.StackTrace)
 			b.WriteString("\n```\n\n")
@@ -123,7 +151,7 @@ func (r *BugReport) ToMarkdown() string {
 		if r.DuelState.DiceNotice != "" {
 			fmt.Fprintf(&b, "- **Dice:** %s\n", r.DuelState.DiceNotice)
 		}
-		if len(r.DuelState.History) > 0 {
+		if includeDetails && len(r.DuelState.History) > 0 {
 			b.WriteString("\n<details><summary><b>Recent Duel History (click to expand)</b></summary>\n\n```\n")
 			for _, line := range r.DuelState.History {
 				b.WriteString(line)
@@ -133,6 +161,9 @@ func (r *BugReport) ToMarkdown() string {
 		}
 	}
 
+	if !includeDetails {
+		return b.String()
+	}
 	jsonData, err := r.ToJSON()
 	if err == nil {
 		b.WriteString("<details><summary><b>Full State JSON (click to expand)</b></summary>\n\n```json\n")

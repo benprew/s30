@@ -39,7 +39,7 @@ jobs:
       - name: Build XCFramework with ebitenmobile
         run: |
           mkdir -p ./mobile/ios/s30
-          go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind \
+          go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.10.2 bind \
             -target ios \
             -tags embedded_card_images \
             -o ./mobile/ios/s30/Mobile.xcframework \

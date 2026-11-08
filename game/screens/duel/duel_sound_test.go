@@ -3,10 +3,10 @@ package duel
 import (
 	"slices"
 	"testing"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	gameaudio "github.com/benprew/s30/game/audio"
-	"github.com/google/uuid"
 )
 
 func TestSoundEffectsForDuelTransition(t *testing.T) {
@@ -28,7 +28,7 @@ func TestSoundEffectsForDuelTransition(t *testing.T) {
 			Battlefield: []interactive.PermanentState{{ID: land, IsLand: true}, {ID: creature, IsCreature: true}},
 		},
 		Opponent:   interactive.PlayerState{Life: 20},
-		StackItems: []interactive.StackItemState{{ID: uuid.NewString(), Name: "Giant Growth"}},
+		StackItems: []interactive.StackItemState{{ID: uuid.New().String(), Name: "Giant Growth"}},
 	}}
 
 	want := []gameaudio.SFX{
@@ -60,8 +60,8 @@ func TestSoundEffectsDetectCounteredSpell(t *testing.T) {
 		You:      interactive.PlayerState{Life: 20},
 		Opponent: interactive.PlayerState{Life: 20},
 		StackItems: []interactive.StackItemState{
-			{ID: uuid.NewString(), Name: "Lightning Bolt"},
-			{ID: uuid.NewString(), Name: "Counterspell"},
+			{ID: uuid.New().String(), Name: "Lightning Bolt"},
+			{ID: uuid.New().String(), Name: "Counterspell"},
 		},
 	}}
 	cur := &interactive.GameMsg{State: &interactive.GameState{

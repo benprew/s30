@@ -1,6 +1,7 @@
 package bugreport
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -37,6 +38,13 @@ func TestBugReportSerialization(t *testing.T) {
 	data, err := report.ToJSON()
 	if err != nil {
 		t.Fatalf("ToJSON failed: %v", err)
+	}
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, data); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, compact.Bytes()) {
+		t.Error("report JSON contains formatting whitespace")
 	}
 
 	var parsed BugReport
@@ -126,5 +134,25 @@ func TestCrashReportMarkdownFormatting(t *testing.T) {
 	title := report.IssueTitle()
 	if !strings.HasPrefix(title, "[Crash]") {
 		t.Errorf("Crash title = %q, want prefix [Crash]", title)
+	}
+}
+
+func TestReportSummaryOmitsFullDiagnostics(t *testing.T) {
+	report := &BugReport{
+		UserNotes: "Game froze", IsCrash: true, CrashMessage: "test crash",
+		StackTrace: "private stack trace", ActiveScreen: "Duel",
+		Environment: EnvironmentInfo{OS: "darwin", Arch: "arm64"},
+		DuelState:   &DuelReportState{OpponentName: "Sea Troll", History: []string{"full duel history"}},
+	}
+	summary := report.ToSummaryMarkdown()
+	for _, want := range []string{"test crash", "darwin/arm64", "Duel", "Sea Troll"} {
+		if !strings.Contains(summary, want) {
+			t.Errorf("summary is missing %q", want)
+		}
+	}
+	for _, omitted := range []string{"private stack trace", "full duel history", "Full State JSON"} {
+		if strings.Contains(summary, omitted) {
+			t.Errorf("summary contains %q", omitted)
+		}
 	}
 }

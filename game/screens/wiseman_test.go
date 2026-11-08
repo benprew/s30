@@ -6,6 +6,10 @@ import (
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
+	"github.com/benprew/s30/game/ui/fonts"
+	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/benprew/s30/game/world"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 func TestWisemanStoryClickUsesViewport(t *testing.T) {
@@ -34,12 +38,63 @@ func disableDeckQuestOffers(t *testing.T) {
 	t.Cleanup(func() { deckQuestOfferChance = prev })
 }
 
-func TestPaginateText(t *testing.T) {
-	// Placeholder
+func TestWisemanStoryLinesFitOnScreen(t *testing.T) {
+	fontFace := &text.GoTextFace{
+		Source: fonts.MtgFont,
+		Size:   24,
+	}
+	stories := LoadStories()
+	for i, story := range stories {
+		pages := PaginateText(story, fontFace, 290, wisemanMaxStoryHeight)
+		for p, page := range pages {
+			lines := strings.Split(page, "\n")
+			maxY := wisemanTextStartY + (len(lines)-1)*wisemanLineSpacing + 27
+			if maxY > 768 {
+				t.Errorf("story %d page %d has %d lines reaching Y=%d (> 768)", i, p, len(lines), maxY)
+			}
+		}
+	}
+}
+
+func TestWisemanStoryMultiPageNavigation(t *testing.T) {
+	s := &WisemanScreen{
+		State: WisemanStateStory,
+		Pages: [][]string{
+			{"Line 1", "Line 2"},
+			{"Line 3", "Line 4"},
+		},
+		Page:      0,
+		TextLines: []string{"Line 1", "Line 2"},
+	}
+
+	nextScreen, _, err := s.advanceStory()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if nextScreen != screenui.WisemanScr {
+		t.Errorf("expected to stay on WisemanScr on page 1, got %v", nextScreen)
+	}
+	if s.Page != 1 {
+		t.Errorf("expected Page=1, got %d", s.Page)
+	}
+	if len(s.TextLines) != 2 || s.TextLines[0] != "Line 3" {
+		t.Errorf("expected TextLines updated to page 1, got %v", s.TextLines)
+	}
+
+	nextScreen, _, err = s.advanceStory()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s.Page != 1 {
+		t.Errorf("expected Page to remain 1 on close, got %d", s.Page)
+	}
+	if nextScreen != screenui.CityScr {
+		t.Errorf("expected to return to CityScr on last page, got %v", nextScreen)
+	}
 }
 
 func TestLoadStories(t *testing.T) {
-	stories := loadStories()
+	stories := LoadStories()
 	if len(stories) == 0 {
 		t.Errorf("Expected stories, got none")
 	}
@@ -114,8 +169,9 @@ func TestGrantBoonEnemyDeckInfo(t *testing.T) {
 func TestBoonGrantedShowsStory(t *testing.T) {
 	disableDeckQuestOffers(t)
 	city := &domain.City{
-		WisemanBoon: domain.BoonBonusLife,
-		BoonGranted: true,
+		WisemanBoon:       domain.BoonBonusLife,
+		BoonGranted:       true,
+		QuestAvailableDay: 1,
 	}
 	player := &domain.Player{}
 	s := &WisemanScreen{City: city, Player: player}
@@ -171,8 +227,9 @@ func TestBoonTypeIsQuest(t *testing.T) {
 func TestActiveQuestUnrelatedCityGrantsBoon(t *testing.T) {
 	disableDeckQuestOffers(t)
 	otherCity := &domain.City{
-		Name:        "OtherTown",
-		WisemanBoon: domain.BoonBonusLife,
+		Name:              "OtherTown",
+		WisemanBoon:       domain.BoonBonusLife,
+		QuestAvailableDay: 1,
 	}
 	player := &domain.Player{
 		ActiveQuests: []*domain.Quest{{
@@ -335,7 +392,7 @@ func TestRandomRogueNameFallsBackBelowLowestLevel(t *testing.T) {
 	}
 }
 
-func TestAcceptDeliveryConsumesCityQuestBoon(t *testing.T) {
+func TestAcceptDeliveryStartsCityQuestCooldown(t *testing.T) {
 	city := &domain.City{Name: "QuestTown", WisemanBoon: domain.BoonQuest}
 	proposed := &domain.Quest{Type: domain.QuestTypeDelivery, TargetCity: &domain.City{Name: "Target"}}
 	city.ProposedQuest = proposed
@@ -347,44 +404,88 @@ func TestAcceptDeliveryConsumesCityQuestBoon(t *testing.T) {
 	if len(player.ActiveQuests) != 1 || player.ActiveQuests[0] != proposed {
 		t.Fatalf("expected delivery quest to be added, have %d", len(player.ActiveQuests))
 	}
-	if !city.BoonGranted || city.ProposedQuest != nil {
-		t.Error("accepting a city quest should mark its boon spent and clear the proposal")
+	if city.BoonGranted || city.ProposedQuest != nil || city.QuestAvailableDay != 3 {
+		t.Error("accepting a city quest should start its cooldown without consuming a gift")
 	}
 }
 
-func TestPickBoonNoQuestAtCapacity(t *testing.T) {
+func TestCityQuestTakesPrecedenceOverDeckQuest(t *testing.T) {
+	prev := deckQuestOfferChance
+	deckQuestOfferChance = 1.0
+	t.Cleanup(func() { deckQuestOfferChance = prev })
+
+	player := &domain.Player{}
+	level, err := world.NewLevelWithSeed(player, 42)
+	if err != nil {
+		t.Fatalf("failed to create level: %v", err)
+	}
+
+	city := &domain.City{
+		Name:        "QuestCity",
+		WisemanBoon: domain.BoonQuest,
+	}
+	s := &WisemanScreen{City: city, Player: player, Level: level}
+
+	s.determineState()
+
+	if s.State != WisemanStateOffer {
+		t.Fatalf("expected WisemanStateOffer, got %d", s.State)
+	}
+	if s.ProposedQuest == nil {
+		t.Fatal("expected ProposedQuest to be set")
+	}
+	if s.ProposedQuest.Type != domain.QuestTypeDelivery && s.ProposedQuest.Type != domain.QuestTypeDefeatEnemy {
+		t.Fatalf("expected city quest (delivery/defeat), got deck quest type %v", s.ProposedQuest.Type)
+	}
+}
+
+func TestPickBoonExcludesCityQuests(t *testing.T) {
 	city := &domain.City{Name: "TestCity"}
+	for range 100 {
+		if pickBoon(city, nil) == domain.BoonQuest {
+			t.Fatal("city quests must be independent of Wiseman gifts")
+		}
+	}
+}
+
+func TestCityQuestSurvivesFullQuestSlots(t *testing.T) {
+	disableDeckQuestOffers(t)
 	player := &domain.Player{}
 	for range domain.MaxActiveQuests {
-		player.AddQuest(&domain.Quest{Type: domain.QuestTypeActionTracker})
-	}
-
-	for range 100 {
-		if pickBoon(city, player, nil) == domain.BoonQuest {
-			t.Fatal("pickBoon should never return BoonQuest when at quest capacity")
+		if !player.AddQuest(&domain.Quest{Type: domain.QuestTypeActionTracker}) {
+			t.Fatal("failed to fill quest slots")
 		}
 	}
-}
-
-func TestPickBoonAllowsQuestWithFreeSlot(t *testing.T) {
-	city := &domain.City{Name: "TestCity"}
-	player := &domain.Player{
-		ActiveQuests: []*domain.Quest{{
-			Type:          domain.QuestTypeDelivery,
-			TargetCity:    &domain.City{Name: "Target"},
-			DaysRemaining: 10,
-		}},
+	level, err := world.NewLevelWithSeed(player, 42)
+	if err != nil {
+		t.Fatalf("failed to create level: %v", err)
 	}
 
-	offered := false
-	for range 100 {
-		if pickBoon(city, player, nil) == domain.BoonQuest {
-			offered = true
-			break
-		}
+	city := &domain.City{Name: "QuestCity"}
+	NewCityScreen(city, player, level)
+	city.BoonGranted = true
+
+	s := &WisemanScreen{City: city, Player: player, Level: level}
+	s.determineState()
+	if s.State != WisemanStateStory || s.ProposedQuest != nil {
+		t.Fatal("expected a story without a quest offer while quest slots are full")
 	}
-	if !offered {
-		t.Error("pickBoon should be able to offer a quest when a slot is free")
+	if city.QuestAvailableDay != 0 {
+		t.Fatal("full quest slots must not start the city quest cooldown")
+	}
+
+	player.RemoveQuest(player.ActiveQuests[0])
+	NewCityScreen(city, player, level)
+	s = &WisemanScreen{City: city, Player: player, Level: level}
+	s.determineState()
+	if s.State != WisemanStateOffer || s.ProposedQuest == nil {
+		t.Fatal("expected a city quest offer after a quest slot becomes free")
+	}
+	if s.ProposedQuest.Type != domain.QuestTypeDelivery && s.ProposedQuest.Type != domain.QuestTypeDefeatEnemy {
+		t.Fatalf("expected a city quest, got type %v", s.ProposedQuest.Type)
+	}
+	if !city.BoonGranted {
+		t.Fatal("offering a quest must preserve the spent gift state")
 	}
 }
 

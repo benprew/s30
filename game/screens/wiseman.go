@@ -28,6 +28,14 @@ const (
 	WisemanStateOffer
 )
 
+const (
+	wisemanTextStartX     = 50
+	wisemanTextStartY     = 50
+	wisemanLineSpacing    = 35
+	wisemanStoryMaxWidth  = 290
+	wisemanMaxStoryHeight = 595
+)
+
 type WisemanScreen struct {
 	BgImage       *ebiten.Image
 	City          *domain.City
@@ -36,6 +44,7 @@ type WisemanScreen struct {
 	State         WisemanState
 	TextLines     []string
 	Page          int
+	Pages         [][]string
 	ProposedQuest *domain.Quest
 	Buttons       []*elements.Button
 }
@@ -86,6 +95,11 @@ func NewWisemanScreen(city *domain.City, player *domain.Player, level *world.Lev
 // boon. Quest completion, reward, and expiry are handled outside the Wiseman
 // now (rewards are claimed by walking into any town).
 func (s *WisemanScreen) determineState() {
+	if s.City.CanOfferQuest(s.Player) {
+		s.generateQuest()
+		return
+	}
+
 	if s.maybeOfferDeckQuest() {
 		return
 	}
@@ -95,25 +109,15 @@ func (s *WisemanScreen) determineState() {
 		return
 	}
 
-	if s.City.WisemanBoon == domain.BoonQuest && !s.Player.CanAcceptQuest() {
+	if rand.Float32() < 0.5 {
+		s.grantBoon()
+	} else {
 		s.loadStory()
-		return
-	}
-
-	switch s.City.WisemanBoon {
-	case domain.BoonQuest:
-		s.generateQuest()
-	default:
-		if rand.Float32() < 0.5 {
-			s.grantBoon()
-		} else {
-			s.loadStory()
-		}
 	}
 }
 
 // deckQuestOfferChance is the probability the Wiseman offers a deck-changing
-// quest (when the player has a free slot) instead of a boon / delivery quest.
+// quest when no city quest is available and the player has a free slot.
 // It is a var so tests can make the offer deterministic.
 var deckQuestOfferChance float32 = 0.5
 
@@ -529,11 +533,23 @@ func (s *WisemanScreen) Update(W, H int, scale float64) (screenui.ScreenName, sc
 		return s.updateOffer(W, H, scale)
 	default:
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) || s.storyClicked(W, H, ui.Click) {
-			return screenui.CityScr, nil, nil
+			return s.advanceStory()
 		}
 	}
 
 	return screenui.WisemanScr, nil, nil
+}
+
+func (s *WisemanScreen) advanceStory() (screenui.ScreenName, screenui.Screen, error) {
+	if s.Page+1 < len(s.Pages) {
+		s.Page++
+		s.TextLines = s.Pages[s.Page]
+		if am := gameaudio.Get(); am != nil {
+			am.PlaySFX(gameaudio.SFXScroll)
+		}
+		return screenui.WisemanScr, nil, nil
+	}
+	return screenui.CityScr, nil, nil
 }
 
 func (s *WisemanScreen) storyClicked(W, H int, clicked func(image.Rectangle) bool) bool {
@@ -548,29 +564,35 @@ func (s *WisemanScreen) updateOffer(W, H int, scale float64) (screenui.ScreenNam
 			if b.ID == "yes" {
 				s.acceptQuest()
 			}
-			return screenui.CityScr, nil, nil
+			return screenui.CityScr, NewCityScreen(s.City, s.Player, s.Level), nil
 		}
 	}
 	return screenui.WisemanScr, nil, nil
 }
 
 func (s *WisemanScreen) acceptQuest() {
+	if s.ProposedQuest == nil {
+		return
+	}
 	if !s.Player.AddQuest(s.ProposedQuest) {
 		return
 	}
 	switch s.ProposedQuest.Type {
 	case domain.QuestTypeDefeatEnemy:
 		s.spawnQuestEnemy(s.ProposedQuest.EnemyName)
-		s.consumeCityQuestBoon()
+		s.startCityQuestCooldown()
 	case domain.QuestTypeDelivery:
-		s.consumeCityQuestBoon()
+		s.startCityQuestCooldown()
 	}
 }
 
-// consumeCityQuestBoon marks this city's quest boon as spent once its
-// delivery/defeat quest is taken, so the Wiseman won't re-offer it.
-func (s *WisemanScreen) consumeCityQuestBoon() {
-	s.City.BoonGranted = true
+func (s *WisemanScreen) startCityQuestCooldown() {
+	difficulty := domain.DifficultyEasy
+	if s.Level != nil {
+		difficulty = s.Level.Difficulty
+	}
+	s.ProposedQuest.OriginCity = s.City.Name
+	s.City.QuestAvailableDay = s.Player.Days + 3 + int(difficulty)
 	s.City.ProposedQuest = nil
 }
 
@@ -583,12 +605,24 @@ func (s *WisemanScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	bgOpts.GeoM.Scale(scale, scale)
 	screen.DrawImage(s.BgImage, bgOpts)
 
-	y := 50
+	y := wisemanTextStartY
 	for _, line := range s.TextLines {
-		txt := elements.NewText(24, line, 50, y)
+		txt := elements.NewText(24, line, wisemanTextStartX, y)
 		txt.Color = color.White
 		txt.Draw(screen, &ebiten.DrawImageOptions{}, scale)
-		y += 35
+		y += wisemanLineSpacing
+	}
+
+	if s.State == WisemanStateStory && len(s.Pages) > 1 {
+		var prompt string
+		if s.Page+1 < len(s.Pages) {
+			prompt = fmt.Sprintf("Click to continue (%d/%d)", s.Page+1, len(s.Pages))
+		} else {
+			prompt = "Click to close"
+		}
+		pTxt := elements.NewText(18, prompt, wisemanTextStartX, 690)
+		pTxt.Color = color.RGBA{180, 180, 180, 255}
+		pTxt.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 	}
 
 	if s.State == WisemanStateOffer {
@@ -714,7 +748,8 @@ func (s *WisemanScreen) giveBonusCard() {
 
 // --- Story text ---
 
-func loadStories() []string {
+// LoadStories loads and parses story vignettes from the adventure text blocks.
+func LoadStories() []string {
 	content := string(assets.Advblocks_txt)
 	var stories []string
 
@@ -736,7 +771,7 @@ func (s *WisemanScreen) loadStory() {
 	if am := gameaudio.Get(); am != nil {
 		am.PlaySFX(gameaudio.SFXScroll)
 	}
-	stories := loadStories()
+	stories := LoadStories()
 	story := "No stories found."
 	if len(stories) > 0 {
 		story = stories[rand.Intn(len(stories))]
@@ -746,15 +781,24 @@ func (s *WisemanScreen) loadStory() {
 		Source: fonts.MtgFont,
 		Size:   24,
 	}
-	pages := paginateText(story, fontFace, 290, 768)
+	pages := PaginateText(story, fontFace, wisemanStoryMaxWidth, wisemanMaxStoryHeight)
 	if len(pages) > 0 {
-		s.TextLines = strings.Split(pages[0], "\n")
+		s.Pages = make([][]string, len(pages))
+		for i, page := range pages {
+			s.Pages[i] = strings.Split(page, "\n")
+		}
+		s.Page = 0
+		s.TextLines = s.Pages[0]
 	} else {
-		s.TextLines = []string{"I have no quests for you today.", "Travel safely."}
+		fallback := []string{"I have no quests for you today.", "Travel safely."}
+		s.Pages = [][]string{fallback}
+		s.Page = 0
+		s.TextLines = fallback
 	}
 }
 
-func paginateText(textStr string, face *text.GoTextFace, maxWidth, maxHeight float64) []string {
+// PaginateText wraps words to maxWidth and splits them into pages bounded by maxHeight.
+func PaginateText(textStr string, face *text.GoTextFace, maxWidth, maxHeight float64) []string {
 	var pages []string
 
 	words := strings.Fields(textStr)
@@ -779,10 +823,10 @@ func paginateText(textStr string, face *text.GoTextFace, maxWidth, maxHeight flo
 
 	var currentPageLines []string
 	currentHeight := 0.0
-	lineHeight := 30.0
+	lineHeight := float64(wisemanLineSpacing)
 
 	for _, line := range lines {
-		if currentHeight+lineHeight > maxHeight-40 {
+		if currentHeight+lineHeight > maxHeight {
 			if len(currentPageLines) > 0 {
 				currentPageLines[len(currentPageLines)-1] += "..."
 			}

@@ -5,10 +5,10 @@ import (
 	"math"
 	"sort"
 	"time"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/s30/game/domain"
-	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/tanema/gween"
 	"github.com/tanema/gween/ease"
@@ -236,7 +236,7 @@ func (s *DuelScreen) spellBattlefieldDestination(state *interactive.GameState, i
 			}
 		}
 		for _, perm := range entry.state.Battlefield {
-			if perm.ID != id || perm.AttachedTo == uuid.Nil {
+			if perm.ID != id || perm.AttachedTo == uuid.Nil() {
 				continue
 			}
 			if host, ok := s.cardPositions[perm.AttachedTo]; ok {

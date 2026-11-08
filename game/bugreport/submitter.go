@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,8 +14,8 @@ import (
 // EnvWorkerURL is the environment variable used to configure the worker endpoint.
 const EnvWorkerURL = "S30_BUG_WORKER_URL"
 
-// DefaultWorkerURL is the default GitHub issues worker endpoint URL.
-var DefaultWorkerURL = ""
+// DefaultWorkerURL is the default bug report API endpoint.
+var DefaultWorkerURL = "https://s30.throwingbones.com/api/bug-reports"
 
 // SubmitResult summarizes the outcome of filing a bug or crash report.
 type SubmitResult struct {
@@ -49,23 +50,41 @@ func (s *WorkerSubmitter) Submit(report *BugReport) (*SubmitResult, error) {
 		return nil, fmt.Errorf("worker URL not configured")
 	}
 
-	payload := map[string]any{
+	metadata := map[string]any{
 		"title":    report.IssueTitle(),
-		"body":     report.ToMarkdown(),
+		"body":     report.ToSummaryMarkdown(),
 		"is_crash": report.IsCrash,
-		"report":   report,
 	}
 
-	bodyBytes, err := json.Marshal(payload)
+	metadataBytes, err := json.Marshal(metadata)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal worker payload: %w", err)
 	}
+	compressed, err := report.ToGzip()
+	if err != nil {
+		return nil, fmt.Errorf("failed to compress report: %w", err)
+	}
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	if err = form.WriteField("metadata", string(metadataBytes)); err != nil {
+		return nil, fmt.Errorf("failed to write report metadata: %w", err)
+	}
+	file, err := form.CreateFormFile("report", report.ID+".json.gz")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create report file: %w", err)
+	}
+	if _, err = file.Write(compressed); err != nil {
+		return nil, fmt.Errorf("failed to write report file: %w", err)
+	}
+	if err = form.Close(); err != nil {
+		return nil, fmt.Errorf("failed to finish report upload: %w", err)
+	}
 
-	req, err := http.NewRequest(http.MethodPost, s.WorkerURL, bytes.NewReader(bodyBytes))
+	req, err := http.NewRequest(http.MethodPost, s.WorkerURL, &body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create worker request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", form.FormDataContentType())
 	req.Header.Set("User-Agent", "s30-game-client/"+GameVersion)
 
 	resp, err := s.Client.Do(req)
@@ -127,13 +146,13 @@ func (s *LocalFileSubmitter) Submit(report *BugReport) (*SubmitResult, error) {
 		return nil, fmt.Errorf("failed to create report directory: %w", err)
 	}
 
-	filePath := filepath.Join(dir, fmt.Sprintf("%s.json", report.ID))
-	jsonData, err := report.ToJSON()
+	filePath := filepath.Join(dir, fmt.Sprintf("%s.json.gz", report.ID))
+	compressed, err := report.ToGzip()
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize report: %w", err)
 	}
 
-	if err := os.WriteFile(filePath, jsonData, 0644); err != nil {
+	if err := os.WriteFile(filePath, compressed, 0644); err != nil {
 		return nil, fmt.Errorf("failed to write report file: %w", err)
 	}
 
@@ -187,8 +206,7 @@ func (c *CompositeSubmitter) Submit(report *BugReport) (*SubmitResult, error) {
 
 	workerRes, workerErr := c.Worker.Submit(report)
 	if workerErr != nil {
-		localRes.Message = fmt.Sprintf("Saved locally to %s (worker error: %v)", localRes.LocalFilePath, workerErr)
-		return localRes, nil
+		return localRes, fmt.Errorf("report saved locally to %s, but could not send: %w", localRes.LocalFilePath, workerErr)
 	}
 
 	workerRes.LocalFilePath = localRes.LocalFilePath

@@ -243,24 +243,36 @@ func (l *Level) RebuildSprites() error {
 	return nil
 }
 
-// rebuildDungeonEnemies re-links each dungeon enemy tile to the shared rogue
-// Character from the registry. JSON unmarshalling produces a detached copy per
-// tile; re-linking restores the canonical character (with its deck) and lets
-// the sprites load lazily when the dungeon is entered.
+// rebuildDungeonEnemies restores shared enemies in all saved dungeon copies.
+// JSON creates separate copies for world tiles, the list, and the active dungeon.
 func (l *Level) rebuildDungeonEnemies() {
 	for _, d := range l.Dungeons {
-		if d == nil {
-			continue
+		rebuildDungeonEnemyReferences(d)
+	}
+	for _, row := range l.Tiles {
+		for _, tile := range row {
+			if tile != nil {
+				rebuildDungeonEnemyReferences(tile.Dungeon)
+			}
 		}
-		for y := range d.Grid {
-			for x := range d.Grid[y] {
-				tile := &d.Grid[y][x]
-				if tile.Type != domain.DungeonTileEnemy || tile.Enemy == nil {
-					continue
-				}
-				if rogue, ok := domain.Rogues[tile.Enemy.Name]; ok {
-					tile.Enemy = rogue
-				}
+	}
+	if l.Player != nil && l.Player.DungeonState != nil {
+		rebuildDungeonEnemyReferences(l.Player.DungeonState.CurrentDungeon)
+	}
+}
+
+func rebuildDungeonEnemyReferences(d *domain.Dungeon) {
+	if d == nil {
+		return
+	}
+	for y := range d.Grid {
+		for x := range d.Grid[y] {
+			tile := &d.Grid[y][x]
+			if tile.Type != domain.DungeonTileEnemy || tile.Enemy == nil {
+				continue
+			}
+			if rogue, ok := domain.Rogues[tile.Enemy.Name]; ok {
+				tile.Enemy = rogue
 			}
 		}
 	}

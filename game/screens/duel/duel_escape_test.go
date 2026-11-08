@@ -2,9 +2,9 @@ package duel
 
 import (
 	"testing"
+	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
-	"github.com/google/uuid"
 )
 
 func TestDuelEscapeWithoutOverlayRequestsConcede(t *testing.T) {
@@ -24,7 +24,7 @@ func TestDuelEscapeWithoutOverlayRequestsConcede(t *testing.T) {
 	if s.isChoosingX() {
 		t.Fatal("escape should not enter X choosing mode")
 	}
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		t.Fatal("escape should not enter targeting mode")
 	}
 }
@@ -102,7 +102,7 @@ func TestDuelEscapeClosesActiveOverlay(t *testing.T) {
 			targetingActions: map[uuid.UUID]interactive.ActionOption{uuid.New(): {}},
 		}
 		s.handleEscape()
-		if s.targetingCardID != uuid.Nil {
+		if s.targetingCardID != uuid.Nil() {
 			t.Fatal("escape should close targeting mode")
 		}
 		if s.targetingActions != nil {

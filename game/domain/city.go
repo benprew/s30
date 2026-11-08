@@ -64,6 +64,20 @@ type City struct {
 	WisemanBoon        BoonType
 	BoonGranted        bool
 	ProposedQuest      *Quest
+	QuestAvailableDay  int
+}
+
+// CanOfferQuest reports whether the player can take a new quest from this city.
+func (c *City) CanOfferQuest(player *Player) bool {
+	if !player.CanAcceptQuest() || player.Days < c.QuestAvailableDay {
+		return false
+	}
+	for _, q := range player.ActiveQuests {
+		if q.OriginCity != "" && q.OriginCity == c.Name {
+			return false
+		}
+	}
+	return true
 }
 
 // ==============================================================================

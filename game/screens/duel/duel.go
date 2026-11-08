@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"uuid"
 
 	"runtime/debug"
 
@@ -32,7 +33,6 @@ import (
 	"github.com/benprew/s30/game/ui/screenui"
 	"github.com/benprew/s30/game/world"
 	"github.com/benprew/s30/logging"
-	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -192,6 +192,7 @@ type DuelScreen struct {
 	selfLifeAnimation     lifeCounterAnimation
 	opponentLifeAnimation lifeCounterAnimation
 
+	stackTargetPage      int
 	viewingGraveyard     *duelPlayer
 	viewingAllGraveyards bool
 	concedeConfirm       bool
@@ -432,8 +433,8 @@ func (s *DuelScreen) initGameState() {
 	logging.Printf(logging.Duel, "Game init: IsGameOver=%v Winner=%q\n", s.game.IsGameOver(), s.game.Winner())
 }
 
-func addDeckToLibrary(player mage.Player, deck domain.Deck, anteCard *domain.Card) []mage.Card {
-	var ante []mage.Card
+func addDeckToLibrary(player mage.Player, deck domain.Deck, anteCard *domain.Card) []*mage.Card {
+	var ante []*mage.Card
 	for card, count := range deck {
 		for range count {
 			c, err := mage.CreateCard(card.CardName)
@@ -443,7 +444,7 @@ func addDeckToLibrary(player mage.Player, deck domain.Deck, anteCard *domain.Car
 			}
 			player.AddToLibrary(c)
 			if anteCard != nil && len(ante) == 0 && card.CardName == anteCard.CardName {
-				ante = []mage.Card{c}
+				ante = []*mage.Card{c}
 			}
 		}
 	}
@@ -752,19 +753,19 @@ func (s *DuelScreen) attackerLiftTargets() map[uuid.UUID]float64 {
 		return targets
 	}
 	for _, perm := range state.You.Battlefield {
-		if perm.Attacking || perm.Blocking != uuid.Nil {
+		if perm.Attacking || perm.Blocking != uuid.Nil() {
 			targets[perm.ID] = -attackerLiftOffset
 		}
 	}
 	for _, perm := range state.Opponent.Battlefield {
-		if perm.Attacking || perm.Blocking != uuid.Nil {
+		if perm.Attacking || perm.Blocking != uuid.Nil() {
 			targets[perm.ID] = attackerLiftOffset
 		}
 	}
 	for blockerID := range s.pendingBlockers {
 		targets[blockerID] = -attackerLiftOffset
 	}
-	if s.isInDeclareBlockers() && s.selectedBlocker != uuid.Nil {
+	if s.isInDeclareBlockers() && s.selectedBlocker != uuid.Nil() {
 		targets[s.selectedBlocker] = -attackerLiftOffset
 	}
 	if state.Step == stepEndOfCombat {
@@ -840,7 +841,7 @@ func (s *DuelScreen) lastLog() []string {
 func (s *DuelScreen) refreshDamageAssignmentPrompt(msg *interactive.GameMsg) {
 	if msg == nil || msg.Prompt != interactive.PromptAssignCombatDamage || len(msg.Options) == 0 {
 		s.damageAssignment = nil
-		s.damageAttackerID = uuid.Nil
+		s.damageAttackerID = uuid.Nil()
 		s.damageTotal = 0
 		return
 	}
@@ -1203,7 +1204,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		s.updateAutoPlay()
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil && !s.isChoosingAbility() {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil() && !s.isChoosingAbility() {
 		s.submitPendingAndPass()
 	}
 
@@ -1237,7 +1238,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 
 	s.refreshCardActions()
 
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		if _, ok := s.cardActions[s.targetingCardID]; !ok {
 			s.exitTargetingMode()
 		}
@@ -1247,11 +1248,16 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	mx, my := pointerPosition.X, pointerPosition.Y
 	clicked := ui.Click(image.Rect(0, 0, W, H))
 
+	if s.isChoosingStackTarget() {
+		s.updateStackTargetMouse(mx, my, clicked, W, H)
+		return screenui.DuelScr, nil, nil
+	}
+
 	if clicked && s.handlePhaseClick(mx, my) {
 		return screenui.DuelScr, nil, nil
 	}
 
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		s.updateTargetingMouse(mx, my, clicked, W)
 	} else {
 		s.updateMouse(mx, my, clicked)
@@ -1394,7 +1400,7 @@ func (s *DuelScreen) handleEscape() {
 		s.exitXChoosingMode()
 		return
 	}
-	if s.targetingCardID == uuid.Nil {
+	if s.targetingCardID == uuid.Nil() {
 		s.concedeConfirm = true
 		return
 	}
@@ -1406,7 +1412,7 @@ func (s *DuelScreen) handleEscape() {
 }
 
 func (s *DuelScreen) canCancel() bool {
-	return s.isViewingGraveyard() || s.isChoosingAbility() || s.isChoosingX() || s.targetingCardID != uuid.Nil
+	return s.isViewingGraveyard() || s.isChoosingAbility() || s.isChoosingX() || s.targetingCardID != uuid.Nil()
 }
 
 func (s *DuelScreen) canConcede() bool {
@@ -1531,7 +1537,7 @@ func (s *DuelScreen) fieldPerms(ps *interactive.PlayerState, row permRow) []inte
 	}
 	var perms []interactive.PermanentState
 	for _, perm := range ps.Battlefield {
-		if perm.AttachedTo != uuid.Nil {
+		if perm.AttachedTo != uuid.Nil() {
 			continue
 		}
 		if permRowFor(perm) == row {
@@ -1636,10 +1642,10 @@ func cardStateSortKey(c interactive.CardState) cardSortKey {
 // mulliganDisplayOrder returns a sorted copy of the mulligan hand using the same
 // ordering as the duel hand. Every mulligan UI site that maps a card index back
 // to a card must use this so positions, selection, and preview stay consistent.
-func mulliganDisplayOrder(hand []mage.Card) []mage.Card {
-	sorted := make([]mage.Card, len(hand))
+func mulliganDisplayOrder(hand []*mage.Card) []*mage.Card {
+	sorted := make([]*mage.Card, len(hand))
 	copy(sorted, hand)
-	slices.SortFunc(sorted, func(a, b mage.Card) int {
+	slices.SortFunc(sorted, func(a, b *mage.Card) int {
 		ka := mageCardSortKey(a)
 		kb := mageCardSortKey(b)
 		if lessCardSortKey(ka, kb) {
@@ -1653,7 +1659,7 @@ func mulliganDisplayOrder(hand []mage.Card) []mage.Card {
 	return sorted
 }
 
-func mageCardSortKey(c mage.Card) cardSortKey {
+func mageCardSortKey(c *mage.Card) cardSortKey {
 	mc := c.ManaCost()
 	return cardSortKey{isLand: c.HasType(core.TypeLand), name: c.Name(), colorRank: manaCostColorRank(mc), cmc: mc.CMC()}
 }
@@ -1728,17 +1734,17 @@ func (s *DuelScreen) refreshCardActions() {
 	if !inDeclareAttackers && len(s.pendingAttackers) > 0 {
 		s.pendingAttackers = make(map[uuid.UUID]bool)
 	}
-	if !s.isInDeclareBlockers() && (len(s.pendingBlockers) > 0 || s.selectedBlocker != uuid.Nil) {
+	if !s.isInDeclareBlockers() && (len(s.pendingBlockers) > 0 || s.selectedBlocker != uuid.Nil()) {
 		s.pendingBlockers = make(map[uuid.UUID]uuid.UUID)
-		s.setSelectedBlocker(uuid.Nil)
+		s.setSelectedBlocker(uuid.Nil())
 	}
 	s.cardActions = make(map[uuid.UUID][]interactive.ActionOption)
 	for _, opt := range s.lastMsg.Options {
 		id := opt.CardID
-		if id == uuid.Nil {
+		if id == uuid.Nil() {
 			id = opt.PermanentID
 		}
-		if id == uuid.Nil {
+		if id == uuid.Nil() {
 			continue
 		}
 		s.cardActions[id] = append(s.cardActions[id], opt)
@@ -1852,7 +1858,7 @@ func (s *DuelScreen) handleBlockerClick(mx, my int) {
 			return
 		}
 		if s.selectedBlocker == perm.ID {
-			s.setSelectedBlocker(uuid.Nil)
+			s.setSelectedBlocker(uuid.Nil())
 			return
 		}
 		if s.canBlockAnything(perm.ID) {
@@ -1863,9 +1869,9 @@ func (s *DuelScreen) handleBlockerClick(mx, my int) {
 
 	if perm := s.fieldPermAtPoint(mx, my, s.opponent); perm != nil {
 		s.loadCardPreview(perm.Name, perm)
-		if s.selectedBlocker != uuid.Nil && perm.Attacking && s.isValidBlock(s.selectedBlocker, perm.ID) {
+		if s.selectedBlocker != uuid.Nil() && perm.Attacking && s.isValidBlock(s.selectedBlocker, perm.ID) {
 			s.pendingBlockers[s.selectedBlocker] = perm.ID
-			s.setSelectedBlocker(uuid.Nil)
+			s.setSelectedBlocker(uuid.Nil())
 		}
 		return
 	}
@@ -1873,7 +1879,7 @@ func (s *DuelScreen) handleBlockerClick(mx, my int) {
 
 func (s *DuelScreen) setSelectedBlocker(id uuid.UUID) {
 	now := time.Now()
-	if s.selectedBlocker != uuid.Nil && s.selectedBlocker != id {
+	if s.selectedBlocker != uuid.Nil() && s.selectedBlocker != id {
 		target := 0.0
 		if _, assigned := s.pendingBlockers[s.selectedBlocker]; assigned {
 			target = -attackerLiftOffset
@@ -1881,7 +1887,7 @@ func (s *DuelScreen) setSelectedBlocker(id uuid.UUID) {
 		s.startAttackerLift(s.selectedBlocker, target, now)
 	}
 	s.selectedBlocker = id
-	if id != uuid.Nil {
+	if id != uuid.Nil() {
 		s.startAttackerLift(id, -attackerLiftOffset, now)
 	}
 }
@@ -1931,7 +1937,7 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 
 func (s *DuelScreen) handleDamageAssignmentClick(mx, my int) {
 	blockerID, delta := s.damageControlAt(mx, my)
-	if blockerID == uuid.Nil || delta == 0 {
+	if blockerID == uuid.Nil() || delta == 0 {
 		return
 	}
 	if delta > 0 {
@@ -1943,7 +1949,7 @@ func (s *DuelScreen) handleDamageAssignmentClick(mx, my int) {
 
 func (s *DuelScreen) damageControlAt(mx, my int) (uuid.UUID, int) {
 	if s.damageAssignment == nil || s.lastMsg == nil || s.lastMsg.State == nil {
-		return uuid.Nil, 0
+		return uuid.Nil(), 0
 	}
 	for _, perm := range s.lastMsg.State.Opponent.Battlefield {
 		if _, ok := s.damageAssignment[perm.ID]; !ok {
@@ -1961,7 +1967,7 @@ func (s *DuelScreen) damageControlAt(mx, my int) (uuid.UUID, int) {
 			return perm.ID, 1
 		}
 	}
-	return uuid.Nil, 0
+	return uuid.Nil(), 0
 }
 
 func damageControlBounds(pos image.Point) (image.Rectangle, image.Rectangle) {
@@ -2058,7 +2064,7 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 	}
 
 	if actions[0].NeedsTarget {
-		if tid, ok := s.autoCounterTarget(actions[0]); ok {
+		if tid, ok := s.autoTargetStackSpell(actions[0]); ok {
 			pa := actionOptionToPriorityAction(actions[0])
 			pa.Targets = []uuid.UUID{tid}
 			select {
@@ -2090,41 +2096,12 @@ func actionOptionToPriorityAction(opt interactive.ActionOption) interactive.Prio
 	}
 }
 
-// autoCounterTarget returns the single valid target for a spell that targets a
-// spell on the stack (e.g. Counterspell) when the opponent has exactly one such
-// spell there. This spares the player from manually picking the only sensible
-// target when countering a lone opposing spell.
-func (s *DuelScreen) autoCounterTarget(opt interactive.ActionOption) (uuid.UUID, bool) {
-	if _, ok := opt.TargetType.(*mage.SpellOnStackTarget); !ok {
-		return uuid.Nil, false
+// autoTargetStackSpell uses the legal targets supplied by the engine.
+func (s *DuelScreen) autoTargetStackSpell(opt interactive.ActionOption) (uuid.UUID, bool) {
+	if _, ok := opt.TargetType.(*mage.SpellOnStackTarget); !ok || len(opt.ValidTargets) != 1 {
+		return uuid.Nil(), false
 	}
-	if s.lastMsg == nil || s.lastMsg.State == nil {
-		return uuid.Nil, false
-	}
-
-	valid := make(map[uuid.UUID]bool, len(opt.ValidTargets))
-	for _, tid := range opt.ValidTargets {
-		valid[tid] = true
-	}
-
-	oppName := s.lastMsg.State.Opponent.Name
-	var found uuid.UUID
-	count := 0
-	for _, item := range s.lastMsg.State.StackItems {
-		if item.Controller != oppName {
-			continue
-		}
-		id, err := uuid.Parse(item.ID)
-		if err != nil || !valid[id] {
-			continue
-		}
-		found = id
-		count++
-	}
-	if count != 1 {
-		return uuid.Nil, false
-	}
-	return found, true
+	return opt.ValidTargets[0], true
 }
 
 func (s *DuelScreen) isViewingGraveyard() bool {
@@ -2227,6 +2204,7 @@ func (s *DuelScreen) graveyardViewLayout(W int) []graveyardViewSection {
 }
 
 func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []interactive.ActionOption) {
+	s.stackTargetPage = 0
 	s.targetingCardID = id
 	s.targetingAction = interactive.ActionOption{}
 	s.targetingActions = make(map[uuid.UUID]interactive.ActionOption)
@@ -2282,7 +2260,8 @@ func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []int
 }
 
 func (s *DuelScreen) exitTargetingMode() {
-	s.targetingCardID = uuid.Nil
+	s.targetingCardID = uuid.Nil()
+	s.xChosenValue = 0
 	s.targetingAction = interactive.ActionOption{}
 	s.targetingActions = nil
 	s.selectedTargetIDs = nil
@@ -2597,7 +2576,7 @@ func (s *DuelScreen) submitPendingAndPass() {
 				AttackerID: attackerID,
 			})
 		}
-		s.setSelectedBlocker(uuid.Nil)
+		s.setSelectedBlocker(uuid.Nil())
 		s.pendingBlockers = make(map[uuid.UUID]uuid.UUID)
 		select {
 		case s.human.FromTUI() <- interactive.PriorityAction{
@@ -2974,6 +2953,7 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawDiceNotice(screen, W)
 	s.drawSpellAnimations(screen, W, H)
 	s.drawGraveyardView(screen, W, H)
+	s.drawStackTargetView(screen, W, H)
 	s.drawChoiceUI(screen, W, H)
 	s.drawXChoosingUI(screen, W, H)
 	s.drawAbilityChoosingUI(screen, W, H)
@@ -3099,7 +3079,7 @@ func (s *DuelScreen) drawGraveyardView(screen *ebiten.Image, W, H int) {
 			opts.GeoM.Translate(float64(gc.Rect.Min.X), float64(gc.Rect.Min.Y))
 			screen.DrawImage(img, opts)
 
-			if s.targetingCardID != uuid.Nil {
+			if s.targetingCardID != uuid.Nil() {
 				if _, isTarget := s.targetingActions[gc.Card.ID]; isTarget {
 					borderColor := color.RGBA{255, 255, 0, 255}
 					strokeW := float32(2)
@@ -3234,7 +3214,7 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, ps *interac
 		}
 	}
 
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		if _, isTarget := s.targetingActions[ps.ID]; isTarget {
 			borderColor := color.RGBA{255, 255, 0, 255}
 			strokeW := float32(2)
@@ -3278,7 +3258,7 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 	if s.warningMsg != "" {
 		msg = s.warningMsg
 		msgColor = color.RGBA{255, 100, 100, 255}
-	} else if s.targetingCardID != uuid.Nil && len(s.selectedTargetIDs) > 0 {
+	} else if s.targetingCardID != uuid.Nil() && len(s.selectedTargetIDs) > 0 {
 		_, maxTargets := s.targetBounds()
 		if maxTargets == 1 {
 			msg = fmt.Sprintf("targeting %s (Cancel)", s.targetNameByID(s.selectedTargetIDs[0]))
@@ -3286,7 +3266,7 @@ func (s *DuelScreen) drawMessageBar(screen *ebiten.Image) {
 			msg = fmt.Sprintf("Selected %d of %d targets (Cancel)", len(s.selectedTargetIDs), maxTargets)
 		}
 		msgColor = color.RGBA{255, 255, 255, 255}
-	} else if s.targetingCardID != uuid.Nil {
+	} else if s.targetingCardID != uuid.Nil() {
 		cardName := s.cardNameByID(s.targetingCardID)
 		msg = s.targetingPrompt(cardName)
 		msgColor = color.RGBA{255, 255, 255, 255}
@@ -3451,7 +3431,7 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 		}
 	}
 
-	if actions, hasAction := s.cardActions[perm.ID]; hasAction && dp == s.self && s.targetingCardID == uuid.Nil {
+	if actions, hasAction := s.cardActions[perm.ID]; hasAction && dp == s.self && s.targetingCardID == uuid.Nil() {
 		if hasActionType(actions, interactive.ActionSelectAttackers) {
 			borderColor := color.RGBA{255, 255, 0, 255}
 			if s.pendingAttackers[perm.ID] {
@@ -3469,13 +3449,13 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 		}
 	}
 
-	if dp == s.self && s.isInDeclareBlockers() && s.targetingCardID == uuid.Nil {
+	if dp == s.self && s.isInDeclareBlockers() && s.targetingCardID == uuid.Nil() {
 		if s.selectedBlocker == perm.ID {
 			vector.StrokeRect(screen,
 				float32(pos.X), float32(pos.Y),
 				float32(fieldCardW), float32(fieldCardH),
 				2, color.RGBA{0, 255, 0, 255}, false)
-		} else if s.pendingBlockers[perm.ID] != uuid.Nil {
+		} else if s.pendingBlockers[perm.ID] != uuid.Nil() {
 			vector.StrokeRect(screen,
 				float32(pos.X), float32(pos.Y),
 				float32(fieldCardW), float32(fieldCardH),
@@ -3493,7 +3473,7 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 		if hasKeyword(perm.Keywords, "Menace") {
 			borderColor = color.RGBA{255, 140, 0, 255}
 		}
-		if s.selectedBlocker != uuid.Nil && s.isValidBlock(s.selectedBlocker, perm.ID) {
+		if s.selectedBlocker != uuid.Nil() && s.isValidBlock(s.selectedBlocker, perm.ID) {
 			borderColor = color.RGBA{0, 255, 0, 255}
 		}
 		vector.StrokeRect(screen,
@@ -3502,7 +3482,7 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 			2, borderColor, false)
 	}
 
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		if _, isTarget := s.targetingActions[perm.ID]; isTarget {
 			borderColor := color.RGBA{255, 255, 0, 255}
 			strokeW := float32(2)
@@ -3579,7 +3559,7 @@ func (s *DuelScreen) getAIBlockerArrows() map[uuid.UUID]uuid.UUID {
 		return arrows
 	}
 	for _, perm := range s.lastMsg.State.Opponent.Battlefield {
-		if perm.Blocking != uuid.Nil {
+		if perm.Blocking != uuid.Nil() {
 			arrows[perm.ID] = perm.Blocking
 		}
 	}
@@ -3594,7 +3574,7 @@ func (s *DuelScreen) drawBlockerArrows(screen *ebiten.Image) {
 	showAIArrows := step == stepDeclareBlockers || step == stepFirstStrikeDamage
 	if showAIArrows && s.lastMsg != nil && s.lastMsg.State != nil {
 		for _, perm := range s.lastMsg.State.Opponent.Battlefield {
-			if perm.Blocking != uuid.Nil {
+			if perm.Blocking != uuid.Nil() {
 				s.drawArrow(screen, perm.ID, perm.Blocking)
 			}
 		}
@@ -3836,7 +3816,7 @@ func (s *DuelScreen) drawGraveyard(screen *ebiten.Image, dp *duelPlayer) {
 	opts.GeoM.Translate(float64(bounds.Min.X), float64(offsetY))
 	screen.DrawImage(art, opts)
 
-	if s.targetingCardID != uuid.Nil {
+	if s.targetingCardID != uuid.Nil() {
 		hasTargetInGraveyard := false
 		for _, c := range ps.Graveyard {
 			if _, isTarget := s.targetingActions[c.ID]; isTarget {

@@ -2,7 +2,6 @@ package bugreport
 
 import (
 	"bytes"
-	"os"
 	"strings"
 	"testing"
 )
@@ -24,10 +23,7 @@ func TestHandleCrashOutputsDiagnostics(t *testing.T) {
 		t.Errorf("Expected crash prefix in filename: %s", res.LocalFilePath)
 	}
 
-	content, err := os.ReadFile(res.LocalFilePath)
-	if err != nil {
-		t.Fatalf("Failed to read crash file: %v", err)
-	}
+	content := readCompressedReport(t, res.LocalFilePath)
 
 	if !bytes.Contains(content, []byte("test panic")) {
 		t.Errorf("Crash file content missing panic message")
