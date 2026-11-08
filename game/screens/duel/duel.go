@@ -163,8 +163,10 @@ type DuelScreen struct {
 	selectedTargetIDs []uuid.UUID
 
 	xChoosingActions []interactive.ActionOption
-	xButtons         []*elements.Button
+	xConfirmBtn      *elements.Button
 	xMaxValue        int
+	xCurrentValue    int
+	xTyped           bool
 	xChosenValue     int
 
 	abilityChoosingActions []interactive.ActionOption
@@ -1202,7 +1204,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		s.updateAutoPlay()
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil() && !s.isChoosingAbility() {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil() && !s.isChoosingAbility() && !s.isChoosingX() {
 		s.submitPendingAndPass()
 	}
 
@@ -1230,7 +1232,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	if s.isChoosingX() {
-		s.updateXChoosingUI()
+		s.updateXChoosingUI(W, H)
 		return screenui.DuelScr, nil, nil
 	}
 
