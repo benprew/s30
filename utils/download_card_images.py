@@ -77,6 +77,19 @@ def image_filename(card_data: Dict[str, Any]) -> str:
     return f"{set_code}-{collector_number}-200-{sanitized_name}.jpg"
 
 
+def artwork_records(cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Expand card artwork into one download per printing ID."""
+    images: Dict[str, Dict[str, Any]] = {}
+    for card in cards:
+        variants = card.get("Artworks")
+        if variants is None:
+            variants = [card] + (card.get("AlternateArt") or [])
+        for artwork in variants:
+            printing = {**artwork, "CardName": card["CardName"]}
+            images.setdefault(image_filename(printing), printing)
+    return list(images.values())
+
+
 def download_and_process_card(
     card_data: Dict[str, Any], existing_files: Set[str], output_dir: Path
 ) -> tuple[bool, str]:
@@ -85,10 +98,10 @@ def download_and_process_card(
     try:
         set_code = card_data.get("SetID", "")
         collector_number = card_data.get("CollectorNo", "")
-        border_crop_url = card_data.get("BorderCropURL")
+        border_crop_url = card_data.get("BorderCropURL") or card_data.get("PngURL")
 
         if not border_crop_url:
-            logger.error(f"No border crop URL found for {card_name}")
+            logger.error(f"No image URL found for {card_name}")
             return False, ""
 
         resized_filename = image_filename(card_data)
@@ -182,7 +195,8 @@ def main() -> None:
         logger.error("Card data is empty")
         sys.exit(1)
 
-    logger.info(f"Processing {len(cards_data)} cards...")
+    cards_data = artwork_records(cards_data)
+    logger.info(f"Processing {len(cards_data)} artwork images...")
 
     success_count: int = 0
     max_workers: int = min(8, len(cards_data))

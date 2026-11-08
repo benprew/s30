@@ -21,30 +21,33 @@ const (
 type DeckQuestReward struct {
 	Quest  *Quest
 	Reward QuestReward
-	Cards  []*Card
+	Cards  []*OwnedCard
 }
 
 // GrantQuestReward applies a reward to the player and returns any cards added
 // (so the reward screen can display them). Every quest type funnels its payout
 // through here.
-func GrantQuestReward(p *Player, r QuestReward) []*Card {
+func GrantQuestReward(p *Player, r QuestReward) []*OwnedCard {
 	p.Gold += r.Gold
 	p.Life += r.ManaLinks
 	for range r.Amulets {
 		p.AddAmulet(NewAmulet(r.AmuletColor))
 	}
-	var cards []*Card
+	var ownedCards []*OwnedCard
 	if r.Cards > 0 {
 		color := r.CardColor
 		if color == ColorColorless {
 			color = ColorAny
 		}
-		cards = RandomQuestCardsForColor(color, r.Cards)
+		cards := RandomQuestCardsForColor(color, r.Cards)
+		ownedCards = make([]*OwnedCard, 0, len(cards))
 		for _, c := range cards {
-			p.CardCollection.AddCard(c, 1)
+			owned := NewOwnedCard(c)
+			p.CardCollection.AddOwnedCard(owned)
+			ownedCards = append(ownedCards, owned)
 		}
 	}
-	return cards
+	return ownedCards
 }
 
 // Description renders a human-readable summary like "120 gold and a card".

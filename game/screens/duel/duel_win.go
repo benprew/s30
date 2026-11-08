@@ -35,8 +35,9 @@ const (
 )
 
 type winCard struct {
-	card *domain.Card
-	rect image.Rectangle
+	card  *domain.Card
+	owned *domain.OwnedCard
+	rect  image.Rectangle
 }
 
 type DuelWinScreen struct {
@@ -100,6 +101,11 @@ func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCard
 	bgImg = imageutil.ScaleImage(bgImg, 1.6)
 
 	cards := layoutCards(reward.Cards)
+	for i := range cards {
+		if i < len(reward.OwnedCards) {
+			cards[i].owned = reward.OwnedCards[i]
+		}
+	}
 
 	rewardPanel, rewardPanelX, rewardPanelY := createRewardPanel(reward)
 
@@ -120,8 +126,14 @@ func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCard
 	})
 
 	bonusImgs := make([]*ebiten.Image, 0, len(bonusCards))
-	for _, c := range bonusCards {
-		img, err := c.CardImage(domain.CardViewFullMini)
+	for i, c := range bonusCards {
+		var img *ebiten.Image
+		var err error
+		if i < len(reward.OwnedBonusCards) {
+			img, err = reward.OwnedBonusCards[i].CardImage(domain.CardViewFullMini)
+		} else {
+			img, err = c.CardImage(domain.CardViewFullMini)
+		}
 		if err != nil {
 			continue
 		}
@@ -395,7 +407,13 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	start := min(s.page*winCardsPerPage, len(s.cards))
 	for _, c := range s.cards[start:min(start+winCardsPerPage, len(s.cards))] {
-		img, err := c.card.CardImage(domain.CardViewFull)
+		var img *ebiten.Image
+		var err error
+		if c.owned != nil {
+			img, err = c.owned.CardImage(domain.CardViewFull)
+		} else {
+			img, err = c.card.CardImage(domain.CardViewFull)
+		}
 		if err != nil {
 			continue
 		}

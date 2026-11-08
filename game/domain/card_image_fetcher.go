@@ -28,8 +28,7 @@ var labeledBlankCards sync.Map
 var blankCardOnce sync.Once
 var blankCardImage *ebiten.Image
 
-// CardImageCacheStats reports retained full-card and generated placeholder
-// images. Profiling harnesses use these counts alongside heap and RSS samples.
+// CardImageCacheStats counts cached artwork images and generated placeholders.
 func CardImageCacheStats() (cards, labeledPlaceholders int) {
 	cardImages.Range(func(_, _ any) bool {
 		cards++
@@ -100,7 +99,7 @@ func cacheCardImage(id string, img image.Image) {
 	cardImages.Store(id, ebiten.NewImageFromImage(img))
 }
 
-// CacheCardImage stores a decoded image for a given card ID in the cache.
+// CacheCardImage stores a decoded image under its artwork ID.
 func CacheCardImage(id string, img image.Image) {
 	cacheCardImage(id, img)
 }
@@ -170,15 +169,19 @@ func LoadEmbeddedCardImages() (int, error) {
 	return loadCardImagesFromArchive(assets.CardImagesZip)
 }
 
-func fetchAndCacheCardImage(card *Card) {
-	id := card.cardID
-	if card.BorderCropURL == "" {
-		fmt.Printf("WARN: No BorderCropURL for card: %s\n", card.CardName)
+func fetchAndCacheArtwork(card Artwork) {
+	id := card.ID
+	url := card.BorderCropURL
+	if url == "" {
+		url = card.PngURL
+	}
+	if url == "" {
+		fmt.Printf("WARN: No image URL for card: %s\n", card.CardName)
 		cardImages.Store(id, labeledBlankCard(card.CardName))
 		return
 	}
 
-	resp, err := http.Get(card.BorderCropURL)
+	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Printf("WARN: Failed to fetch card image for %s: %v\n", card.CardName, err)
 		cardImages.Store(id, blankCard())
@@ -202,60 +205,66 @@ func fetchAndCacheCardImage(card *Card) {
 	cacheCardImage(id, img)
 }
 
-// CollectPriorityCards returns all unique cards in the player's card collection
-// and bonus duel cards for upfront preloading.
-func CollectPriorityCards(player *Player) []*Card {
+// CollectPriorityCards returns the selected artwork for owned and bonus cards.
+func CollectPriorityCards(player *Player) []Artwork {
 	if player == nil {
 		return nil
 	}
 
 	seen := make(map[string]bool)
-	var priority []*Card
+	var priority []Artwork
 
-	for card := range player.CardCollection {
-		if card != nil && !seen[card.cardID] {
-			seen[card.cardID] = true
-			priority = append(priority, card)
+	for _, item := range player.CardCollection {
+		for _, owned := range item.Instances {
+			card := owned.Artwork()
+			if !seen[card.ID] {
+				seen[card.ID] = true
+				priority = append(priority, card)
+			}
 		}
 	}
 
-	for _, card := range player.BonusDuelCards {
-		if card != nil && !seen[card.cardID] {
-			seen[card.cardID] = true
-			priority = append(priority, card)
+	for _, definition := range player.BonusDuelCards {
+		if definition == nil {
+			continue
+		}
+		art := definition.DefaultArtwork()
+		if !seen[art.ID] {
+			seen[art.ID] = true
+			priority = append(priority, art)
 		}
 	}
 
 	return priority
 }
 
-func PreloadCardImages(priorityCards []*Card) {
+func PreloadCardImages(priorityCards []Artwork) {
 	if len(priorityCards) == 0 {
 		return
 	}
 
 	const numWorkers = 4
-	ch := make(chan *Card, len(priorityCards))
+	ch := make(chan Artwork, len(priorityCards))
 
 	var wg sync.WaitGroup
 	workers := min(numWorkers, len(priorityCards))
 	for range workers {
 		wg.Go(func() {
 			for card := range ch {
-				if _, loaded := cardImages.Load(card.cardID); loaded {
+				if _, loaded := cardImages.Load(card.ID); loaded {
 					continue
 				}
-				fetchAndCacheCardImage(card)
+				fetchAndCacheArtwork(card)
 			}
 		})
 	}
 
 	seen := make(map[string]bool, len(priorityCards))
 	for _, card := range priorityCards {
-		if card == nil || seen[card.cardID] {
+		if seen[card.ID] {
 			continue
 		}
-		seen[card.cardID] = true
+		seen[card.ID] = true
 		ch <- card
 	}
 

@@ -42,9 +42,11 @@ func TestQuestRewardSound(t *testing.T) {
 
 func TestQuestRewardsPaginateMiniCards(t *testing.T) {
 	card := domain.CARDS[0]
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	owned := domain.NewOwnedCard(card)
+	owned.ArtworkID = card.DefaultArtwork().ID
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	t.Cleanup(domain.ClearCardImageCache)
-	s := NewQuestRewardScreen([]domain.DeckQuestReward{{Quest: &domain.Quest{Title: "Reward"}, Cards: []*domain.Card{card, card, card, card}}}, nil, nil, nil)
+	s := NewQuestRewardScreen([]domain.DeckQuestReward{{Quest: &domain.Quest{Title: "Reward"}, Cards: []*domain.OwnedCard{owned, owned, owned, owned}}}, nil, nil, nil)
 	if len(s.rewards) != 2 {
 		t.Fatalf("pages = %d, want 2", len(s.rewards))
 	}

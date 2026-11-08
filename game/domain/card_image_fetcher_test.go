@@ -62,17 +62,17 @@ func TestFetchAndCacheCardImageUsesURLWhenImageIsMissing(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	card := &Card{
+	card := Artwork{
 		CardName:      "Remote Card",
 		BorderCropURL: server.URL,
-		cardID:        "tst-3-remote-card",
+		ID:            "tst-3-remote-card",
 	}
-	fetchAndCacheCardImage(card)
+	fetchAndCacheArtwork(card)
 
 	if requests.Load() != 1 {
 		t.Fatalf("HTTP requests = %d, want 1", requests.Load())
 	}
-	if _, ok := cardImages.Load(card.cardID); !ok {
+	if _, ok := cardImages.Load(card.ID); !ok {
 		t.Fatal("downloaded card image was not cached")
 	}
 }
@@ -91,16 +91,16 @@ func TestPreloadCardImagesOnlyFetchesPriorityCards(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	priority := []*Card{
+	priority := []Artwork{
 		{
 			CardName:      "Priority 1",
 			BorderCropURL: server.URL,
-			cardID:        "tst-p1",
+			ID:            "tst-p1",
 		},
 		{
 			CardName:      "Priority 2",
 			BorderCropURL: server.URL,
-			cardID:        "tst-p2",
+			ID:            "tst-p2",
 		},
 	}
 
@@ -118,9 +118,9 @@ func TestPreloadCardImagesOnlyFetchesPriorityCards(t *testing.T) {
 }
 
 func TestCollectPriorityCardsOnlyIncludesPlayerCards(t *testing.T) {
-	playerCard1 := &Card{cardID: "player-card-1", CardName: "Player Card 1"}
-	playerCard2 := &Card{cardID: "player-card-2", CardName: "Player Card 2"}
-	bonusCard := &Card{cardID: "bonus-card", CardName: "Bonus Card"}
+	playerCard1 := &Card{CardName: "Player Card 1", Artworks: []Artwork{{ID: "player-card-1", CardName: "Player Card 1"}}}
+	playerCard2 := &Card{CardName: "Player Card 2", Artworks: []Artwork{{ID: "player-card-2", CardName: "Player Card 2"}}}
+	bonusCard := &Card{CardName: "Bonus Card", Artworks: []Artwork{{ID: "bonus-card", CardName: "Bonus Card"}}}
 
 	collection := NewCardCollection()
 	collection.AddCardToDeck(playerCard1, 0, 4)
@@ -141,7 +141,7 @@ func TestCollectPriorityCardsOnlyIncludesPlayerCards(t *testing.T) {
 
 	seen := make(map[string]bool)
 	for _, c := range priority {
-		seen[c.cardID] = true
+		seen[c.ID] = true
 	}
 
 	for _, wantID := range []string{"player-card-1", "player-card-2", "bonus-card"} {

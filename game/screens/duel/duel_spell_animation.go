@@ -278,8 +278,8 @@ func (s *DuelScreen) drawSpellAnimations(screen *ebiten.Image, W, H int) {
 		if card == nil {
 			continue
 		}
-		img, err := card.CardImage(domain.CardViewFull)
-		if err != nil || img == nil {
+		img := s.cardArtImg(card, animation.id.String(), domain.CardViewFull)
+		if img == nil {
 			continue
 		}
 		bounds := frame.bounds

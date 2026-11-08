@@ -28,6 +28,9 @@ hood.
 - **AI opponents** — heuristic-based today, with a MinMax-with-search AI in
   progress.
 - **Sound** (press <kbd>M</kbd> to mute).
+- **Collectible alternate art** — each owned card keeps its artwork across
+  decks, duels, trading, and saves. Add Scryfall artwork by set in the card
+  data.
 - **Cross-platform**: Linux, Windows (x64 + ARM), macOS (Intel + Apple
   Silicon), WebAssembly, and a WIP Android build.
 

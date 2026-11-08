@@ -37,8 +37,11 @@ type CardJSON struct {
 	Artist            string
 	PriceUSD          string
 	PngURL            string
+	ArtURL            string
 	BorderCropURL     string
 	VintageRestricted bool
+	AlternateArt      []ArtworkJSON
+	Artworks          []ArtworkJSON
 }
 
 type ParsedCardJSON struct {
@@ -174,16 +177,7 @@ func (cj *CardJSON) ToCard() *Card {
 	toughness := convertPowerToughness(cj.Toughness)
 	price := CalculateCardPrice(cj.CardName, cj.TypeLine, toFloat(cj.PriceUSD))
 
-	return &Card{
-		CardSet: CardSet{
-			SetID:       cj.SetID,
-			SetName:     cj.SetName,
-			CollectorNo: cj.CollectorNo,
-		},
-		PngURL:        cj.PngURL,
-		BorderCropURL: cj.BorderCropURL,
-		cardID: fmt.Sprintf("%s-%s-%s",
-			cj.SetID, cj.CollectorNo, sanitizeFilename(cj.CardName)),
+	card := &Card{
 		CardName:          cj.CardName,
 		ManaCost:          cj.ManaCost,
 		ManaProduction:    cj.ManaProduction,
@@ -201,10 +195,24 @@ func (cj *CardJSON) ToCard() *Card {
 		FlavorText:        cj.FlavorText,
 		FrameEffects:      cj.FrameEffects,
 		Watermark:         cj.Watermark,
-		Artist:            cj.Artist,
 		Price:             price,
 		VintageRestricted: cj.VintageRestricted,
 	}
+	inputs := cj.Artworks
+	if len(inputs) == 0 {
+		inputs = append([]ArtworkJSON{{SetID: cj.SetID, SetName: cj.SetName, CollectorNo: cj.CollectorNo, Artist: cj.Artist, PngURL: cj.PngURL, ArtURL: cj.ArtURL, BorderCropURL: cj.BorderCropURL}}, cj.AlternateArt...)
+	}
+	seen := make(map[string]bool)
+	for _, input := range inputs {
+		art := input.toArtwork(cj.CardName)
+		if seen[art.ID] {
+			continue
+		}
+		seen[art.ID] = true
+		card.Artworks = append(card.Artworks, art)
+	}
+
+	return card
 }
 
 func toFloat(str string) float64 {

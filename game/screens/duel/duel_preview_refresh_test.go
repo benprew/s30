@@ -11,12 +11,12 @@ import (
 func TestCardPreviewRefreshesWithoutChangingSelection(t *testing.T) {
 	card := domain.CARDS[0]
 	t.Cleanup(domain.ClearCardImageCache)
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	s := &DuelScreen{cardImageMap: map[string]*domain.Card{card.Name(): card}}
 	perm := &interactive.PermanentState{Name: card.Name(), Power: 7, Toughness: 8}
 	s.loadCardPreview(card.Name(), perm)
 	initial := s.previewImage()
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	expected, _ := card.CardImage(domain.CardViewFull)
 	if got := s.previewImage(); got == initial || got != expected {
 		t.Fatal("preview retained old image")
@@ -31,12 +31,12 @@ func TestMulliganPreviewRefreshesWhileHoveringSameCard(t *testing.T) {
 	card := domain.FindCardByName("Forest")
 	s.cardImageMap = map[string]*domain.Card{card.Name(): card}
 	t.Cleanup(domain.ClearCardImageCache)
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	rects := s.mulliganCardRects(1024, 768)
 	point := rects[0].Min.Add(image.Pt(5, 5))
 	s.updateMulliganPreview(rects, point.X, point.Y)
 	initial := s.mulliganPreviewImg
-	domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	s.updateMulliganPreview(rects, point.X, point.Y)
 	expected, _ := card.CardImage(domain.CardViewFull)
 	if s.mulliganPreviewImg == initial || s.mulliganPreviewImg != expected {
@@ -49,7 +49,7 @@ func TestCardPreviewUsesCurrentLandArt(t *testing.T) {
 	island := domain.FindCardByName("Island")
 	t.Cleanup(domain.ClearCardImageCache)
 	for _, card := range []*domain.Card{forest, island} {
-		domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+		domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	}
 	s := &DuelScreen{cardImageMap: map[string]*domain.Card{"Forest": forest, "Island": island}}
 	perm := &interactive.PermanentState{Name: "Forest", IsLand: true, SubTypes: "Forest"}

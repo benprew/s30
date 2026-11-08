@@ -54,34 +54,34 @@ func TestCardCollectionMarshalJSONEmpty(t *testing.T) {
 	}
 }
 
-func TestCardCollectionMarshalJSONMultiplePrintings(t *testing.T) {
-	forests := FindAllCardsByName("Forest")
-	if len(forests) < 2 {
-		t.Skipf("need at least 2 Forest printings, got %d", len(forests))
-	}
-
+func TestCardCollectionMarshalJSONMultipleArtworks(t *testing.T) {
+	card := FindCardByName("Forest")
 	cc := NewCardCollection()
-	cc.AddCardToDeck(forests[0], 0, 5)
-	cc.AddCardToDeck(forests[1], 0, 8)
-
+	cc.AddCardToDeck(card, 0, 13)
+	for i, owned := range cc[card].Instances {
+		if i < 5 {
+			owned.ArtworkID = card.DefaultArtwork().ID
+		} else {
+			owned.ArtworkID = "unh-140-forest"
+		}
+	}
 	data, err := json.Marshal(cc)
 	if err != nil {
-		t.Fatalf("Failed to marshal CardCollection: %v", err)
+		t.Fatal(err)
 	}
-
-	cc2 := NewCardCollection()
-	if err := json.Unmarshal(data, &cc2); err != nil {
-		t.Fatalf("Failed to unmarshal CardCollection: %v", err)
+	var restored CardCollection
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatal(err)
 	}
-
-	total := cc2.GetTotalCount(forests[0]) + cc2.GetTotalCount(forests[1])
-	if total != 13 {
-		t.Errorf("Expected 13 total Forests across printings, got %d", total)
+	if len(restored) != 1 || restored.GetDeckCount(card, 0) != 13 {
+		t.Fatal("artwork split the card definition or changed its count")
 	}
-
-	deckTotal := cc2.GetDeckCount(forests[0], 0) + cc2.GetDeckCount(forests[1], 0)
-	if deckTotal != 13 {
-		t.Errorf("Expected 13 Forests in deck 0 across printings, got %d", deckTotal)
+	counts := make(map[string]int)
+	for _, owned := range restored[card].Instances {
+		counts[owned.ArtworkID]++
+	}
+	if counts[card.DefaultArtwork().ID] != 5 || counts["unh-140-forest"] != 8 {
+		t.Fatalf("artwork counts changed: %v", counts)
 	}
 }
 
@@ -171,5 +171,3 @@ func TestCardCollectionUnmarshalJSONSkipsRemovedCards(t *testing.T) {
 		t.Errorf("Expected bolt count 4, got %d", cc.GetTotalCount(bolt))
 	}
 }
-
-

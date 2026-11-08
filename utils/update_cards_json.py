@@ -156,52 +156,122 @@ def open_input_stream(source: str) -> io.IOBase | gzip.GzipFile:
     return raw_stream
 
 
+ARTWORK_FIELDS: tuple[str, ...] = (
+    "SetID",
+    "SetName",
+    "CollectorNo",
+    "Artist",
+    "PngURL",
+    "ArtURL",
+    "BorderCropURL",
+)
+
+
 def process_card_records(
     records: Iterator[dict[str, Any]],
     allowed_sets: list[str],
     excluded_names: set[str],
+    art_sets: list[str] | None = None,
+    excluded_versions: Collection[VersionExclusion] = (),
 ) -> Collection[dict[str, Any]]:
-    """Filter and transform card records."""
-    print(f"allowed_set: {allowed_sets}")
-    allowed_sets_lower = [s.lower() for s in allowed_sets]
-    excluded_names_lower = {n.lower() for n in excluded_names}
+    """Keep one rules definition per name and retain its artwork printings."""
+    allowed = list(dict.fromkeys(s.lower() for s in allowed_sets))
+    artwork_sets = list(dict.fromkeys(allowed + [s.lower() for s in art_sets or []]))
+    excluded = {n.lower() for n in excluded_names}
+    definitions: dict[str, dict[str, Any]] = {}
+    printings: dict[str, dict[tuple[str, str], dict[str, Any]]] = {}
 
-    results: dict[str, dict[str, Any]] = {}
+    def excluded_printing(card: dict[str, Any]) -> bool:
+        return any(
+            version.name.casefold() == str(card.get("CardName", "")).casefold()
+            and (version.set_id is None or version.set_id == card.get("SetID"))
+            and (
+                version.collector_number is None
+                or version.collector_number == card.get("CollectorNo")
+            )
+            for version in excluded_versions
+        )
+
+    def add_artwork(card: dict[str, Any]) -> None:
+        if excluded_printing(card):
+            return
+        key = (str(card.get("SetID", "")).lower(), str(card.get("CollectorNo", "")))
+        if not all(key):
+            return
+        artwork = {field: card[field] for field in ARTWORK_FIELDS if field in card}
+        artwork["SetID"] = key[0]
+        printings.setdefault(str(card["CardName"]), {})[key] = artwork
+
+    def rank(card: dict[str, Any]) -> tuple[int, str]:
+        return (allowed.index(str(card["SetID"])), str(card.get("CollectorNo", "")))
 
     for raw in records:
-        # Detect if record is already transformed or raw Scryfall
-        is_already_transformed = "CardName" in raw and "SetID" in raw
-
-        if is_already_transformed:
-            name = str(raw.get("CardName", ""))
-            set_id = str(raw.get("SetID", ""))
-            transformed = dict(raw)
-            if "TypeLine" in transformed:
-                transformed["TypeLine"] = normalize_type_line(transformed["TypeLine"])
-        else:
-            name = str(raw.get("name", ""))
-            set_id = str(raw.get("set", ""))
-            transformed = transform_raw_card(raw)
-
-        if set_id.lower() not in allowed_sets_lower:
+        if "CardName" in raw and "Artworks" in raw:
+            name = str(raw["CardName"])
+            if name.lower() in excluded:
+                continue
+            artworks = [
+                {**art, "CardName": name, "SetID": str(art.get("SetID", "")).lower()}
+                for art in raw["Artworks"]
+            ]
+            artworks = [art for art in artworks if not excluded_printing(art)]
+            if not artworks:
+                continue
+            definition = dict(raw)
+            definition.pop("Artworks")
+            definition.update(
+                {
+                    key: value
+                    for key, value in artworks[0].items()
+                    if key in ARTWORK_FIELDS
+                }
+            )
+            definitions[name] = definition
+            for art in artworks:
+                add_artwork(art)
             continue
-
-        if name.lower() in excluded_names_lower:
+        if raw.get("lang", "en") != "en":
             continue
-
-        if name in results:
-            results_set = results[name]["SetID"]
-            results_set_idx = allowed_sets_lower.index(results_set)
-        set_idx = allowed_sets_lower.index(set_id)
-
-        if name in results and set_idx > results_set_idx:
-            print(f"skipping {name} for {set_id}), curr{results_set}")
+        transformed = (
+            dict(raw)
+            if "CardName" in raw and "SetID" in raw
+            else transform_raw_card(raw)
+        )
+        name = str(transformed.get("CardName", ""))
+        set_id = str(transformed.get("SetID", "")).lower()
+        transformed["SetID"] = set_id
+        if not name or name.lower() in excluded or set_id not in artwork_sets:
             continue
+        if excluded_printing(transformed):
+            continue
+        if "TypeLine" in transformed:
+            transformed["TypeLine"] = normalize_type_line(transformed["TypeLine"])
+        for artwork in transformed.pop("AlternateArt", []) or []:
+            add_artwork({**artwork, "CardName": name})
+        add_artwork(transformed)
+        if set_id in allowed and (
+            name not in definitions or rank(transformed) < rank(definitions[name])
+        ):
+            definitions[name] = transformed
 
-        print(f"adding {name} (for {set_id}), new:{set_idx}")
-        results[name] = transformed
-
-    return results.values()
+    for name, card in definitions.items():
+        default_key = (str(card.get("SetID", "")), str(card.get("CollectorNo", "")))
+        variants = printings.get(name, {})
+        alternate_keys = sorted(
+            (key for key in variants if key != default_key),
+            key=lambda key: (
+                artwork_sets.index(key[0])
+                if key[0] in artwork_sets
+                else len(artwork_sets),
+                key,
+            ),
+        )
+        images = [variants[default_key]] if default_key in variants else []
+        images.extend(variants[key] for key in alternate_keys)
+        for field in ARTWORK_FIELDS:
+            card.pop(field, None)
+        card["Artworks"] = images
+    return [definitions[name] for name in sorted(definitions)]
 
 
 def save_json_and_zst(
@@ -239,6 +309,12 @@ def main() -> None:
         default=",".join(DEFAULT_ALLOWED_SETS),
         help="Comma-separated list of allowed set codes (default: %(default)s), "
         "overlapping cards prefer the set given first",
+    )
+    parser.add_argument(
+        "--art-sets",
+        default="",
+        help="Comma-separated sets to use for existing cards' artwork, "
+        "without adding new playable cards",
     )
     parser.add_argument(
         "--exclude-name",
@@ -299,6 +375,10 @@ def main() -> None:
             records=records,
             allowed_sets=allowed_sets,
             excluded_names=excluded_names,
+            art_sets=[s.strip().lower() for s in args.art_sets.split(",") if s.strip()],
+            excluded_versions=[
+                parse_version_exclusion(spec) for spec in args.exclude_version
+            ],
         )
 
     print(f"Processed {len(cards)} matching cards")

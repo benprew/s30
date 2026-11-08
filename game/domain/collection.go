@@ -3,24 +3,149 @@ package domain
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
+	"sort"
 )
 
 type CollectionItem struct {
 	Card       *Card
-	Count      int   // total number of cards in the collection
-	DeckCounts []int // count of this card in each deck (index = deck number)
+	Count      int
+	DeckCounts []int
+	Instances  []*OwnedCard
 }
 
 type CardCollection map[*Card]*CollectionItem
 
-func NewCardCollection() CardCollection {
-	return make(CardCollection)
+func NewCardCollection() CardCollection { return make(CardCollection) }
+
+// Clone copies the collection without sharing owned copies or deck counts.
+func (cc CardCollection) Clone() CardCollection {
+	cloned := NewCardCollection()
+	for _, item := range cc {
+		for _, owned := range item.Instances {
+			copy := *owned
+			cloned.AddOwnedCard(&copy)
+		}
+		if copy := cloned[item.Card]; copy != nil {
+			copy.ensureDeckSlots(len(item.DeckCounts))
+		}
+	}
+	return cloned
+}
+
+func (item *CollectionItem) ensureDeckSlots(count int) {
+	if len(item.DeckCounts) < count {
+		item.DeckCounts = append(item.DeckCounts, make([]int, count-len(item.DeckCounts))...)
+	}
+}
+
+func (item *CollectionItem) updateCounts() {
+	item.Count = len(item.Instances)
+	clear(item.DeckCounts)
+	for _, owned := range item.Instances {
+		if owned.DeckIndex < 0 {
+			continue
+		}
+		for len(item.DeckCounts) <= owned.DeckIndex {
+			item.DeckCounts = append(item.DeckCounts, 0)
+		}
+		item.DeckCounts[owned.DeckIndex]++
+	}
+}
+
+// AddOwnedCard transfers a specific copy into the collection.
+func (cc CardCollection) AddOwnedCard(owned *OwnedCard) {
+	if owned == nil || owned.Card == nil {
+		return
+	}
+	if _, _, existing := cc.findOwned(owned.ID); existing != nil {
+		return
+	}
+	card := owned.Card
+	item := cc[card]
+	if item == nil {
+		item = &CollectionItem{Card: card}
+		cc[card] = item
+	}
+	item.Instances = append(item.Instances, owned)
+	item.updateCounts()
+}
+
+func (cc CardCollection) findOwned(id string) (*CollectionItem, int, *OwnedCard) {
+	for _, item := range cc {
+		for i, owned := range item.Instances {
+			if owned.ID == id {
+				return item, i, owned
+			}
+		}
+	}
+	return nil, 0, nil
+}
+
+// MoveOwnedCard changes the deck of one copy. Use -1 to return it to the collection.
+func (cc CardCollection) MoveOwnedCard(id string, deckIndex int) error {
+	item, _, owned := cc.findOwned(id)
+	if owned == nil {
+		return fmt.Errorf("owned card %s not found", id)
+	}
+	if deckIndex < -1 {
+		return fmt.Errorf("invalid deck index %d", deckIndex)
+	}
+	owned.DeckIndex = deckIndex
+	item.updateCounts()
+	return nil
+}
+
+// RemoveOwnedCard removes the specified copy and its deck membership.
+func (cc CardCollection) RemoveOwnedCard(id string) error {
+	item, i, owned := cc.findOwned(id)
+	if owned == nil {
+		return fmt.Errorf("owned card %s not found", id)
+	}
+	item.Instances = slices.Delete(item.Instances, i, i+1)
+	item.updateCounts()
+	if item.Count == 0 {
+		delete(cc, item.Card)
+	}
+	return nil
+}
+
+// CardsInDeck returns specific copies in a stable order.
+func (cc CardCollection) CardsInDeck(deckIndex int) []*OwnedCard {
+	var cards []*OwnedCard
+	for _, item := range cc {
+		for _, owned := range item.Instances {
+			if owned.DeckIndex == deckIndex {
+				cards = append(cards, owned)
+			}
+		}
+	}
+	sort.Slice(cards, func(i, j int) bool {
+		if cards[i].CardID() != cards[j].CardID() {
+			return cards[i].CardID() < cards[j].CardID()
+		}
+		return cards[i].ID < cards[j].ID
+	})
+	return cards
+}
+
+// AvailableCards returns copies that are not assigned to a deck.
+func (cc CardCollection) AvailableCards(card *Card) []*OwnedCard {
+	var cards []*OwnedCard
+	if item := cc[card]; item != nil {
+		for _, owned := range item.Instances {
+			if owned.DeckIndex == -1 {
+				cards = append(cards, owned)
+			}
+		}
+	}
+	return cards
 }
 
 func (cc CardCollection) GetDeck(deckIndex int) Deck {
 	deck := make(Deck)
 	for card, item := range cc {
-		if deckIndex < len(item.DeckCounts) && item.DeckCounts[deckIndex] > 0 {
+		if deckIndex >= 0 && deckIndex < len(item.DeckCounts) && item.DeckCounts[deckIndex] > 0 {
 			deck[card] = item.DeckCounts[deckIndex]
 		}
 	}
@@ -28,183 +153,109 @@ func (cc CardCollection) GetDeck(deckIndex int) Deck {
 }
 
 func (cc CardCollection) AddCardToDeck(card *Card, deckIndex int, count int) {
-	item := cc[card]
-	if item == nil {
-		item = &CollectionItem{
-			Card:       card,
-			Count:      0,
-			DeckCounts: make([]int, deckIndex+1),
-		}
-		cc[card] = item
+	if deckIndex < 0 {
+		return
 	}
-
-	// Extend DeckCounts if necessary
-	if deckIndex >= len(item.DeckCounts) {
-		newDeckCounts := make([]int, deckIndex+1)
-		copy(newDeckCounts, item.DeckCounts)
-		item.DeckCounts = newDeckCounts
+	for range count {
+		owned := NewOwnedCard(card)
+		owned.DeckIndex = deckIndex
+		cc.AddOwnedCard(owned)
 	}
-
-	item.DeckCounts[deckIndex] += count
-	item.Count += count
 }
 
 func (cc CardCollection) MoveCardToDeck(card *Card, deckIndex int, count int) error {
-	item := cc[card]
-	if item == nil {
-		return fmt.Errorf("card %s not found in collection", card.Name())
+	cards := cc.AvailableCards(card)
+	if count < 0 || deckIndex < 0 || len(cards) < count {
+		return fmt.Errorf("insufficient available cards for %s", card.Name())
 	}
-
-	totalInDecks := 0
-	for _, deckCount := range item.DeckCounts {
-		totalInDecks += deckCount
+	for _, owned := range cards[:count] {
+		owned.DeckIndex = deckIndex
 	}
-
-	availableCount := item.Count - totalInDecks
-	if availableCount < count {
-		return fmt.Errorf("insufficient available cards for %s (have %d available, need %d)",
-			card.Name(), availableCount, count)
+	if item := cc[card]; item != nil {
+		item.updateCounts()
 	}
-
-	if deckIndex >= len(item.DeckCounts) {
-		newDeckCounts := make([]int, deckIndex+1)
-		copy(newDeckCounts, item.DeckCounts)
-		item.DeckCounts = newDeckCounts
-	}
-
-	item.DeckCounts[deckIndex] += count
-
 	return nil
 }
 
 func (cc CardCollection) MoveCardFromDeck(card *Card, deckIndex int, count int) error {
-	item := cc[card]
-	if item == nil {
-		return fmt.Errorf("card %s not found in collection", card.Name())
+	var cards []*OwnedCard
+	if item := cc[card]; item != nil {
+		for _, owned := range item.Instances {
+			if owned.DeckIndex == deckIndex {
+				cards = append(cards, owned)
+			}
+		}
 	}
-
-	if deckIndex >= len(item.DeckCounts) {
-		return fmt.Errorf("deck %d does not exist for card %s", deckIndex, card.Name())
+	if count < 0 || deckIndex < 0 || len(cards) < count {
+		return fmt.Errorf("insufficient cards in deck %d for %s", deckIndex, card.Name())
 	}
-
-	if item.DeckCounts[deckIndex] < count {
-		return fmt.Errorf("insufficient cards in deck %d for card %s (have %d, need %d)",
-			deckIndex, card.Name(), item.DeckCounts[deckIndex], count)
+	for _, owned := range cards[:count] {
+		owned.DeckIndex = -1
 	}
-
-	item.DeckCounts[deckIndex] -= count
-
+	if item := cc[card]; item != nil {
+		item.updateCounts()
+	}
 	return nil
 }
 
 func (cc CardCollection) RemoveCardFromDeck(card *Card, deckIndex int, count int) error {
-	item := cc[card]
-	if item == nil {
-		return fmt.Errorf("card %s not found in collection", card.Name())
+	var cards []*OwnedCard
+	if item := cc[card]; item != nil {
+		for _, owned := range item.Instances {
+			if owned.DeckIndex == deckIndex {
+				cards = append(cards, owned)
+			}
+		}
 	}
-
-	if deckIndex >= len(item.DeckCounts) {
-		return fmt.Errorf("deck %d does not exist for card %s", deckIndex, card.Name())
+	if count < 0 || deckIndex < 0 || len(cards) < count {
+		return fmt.Errorf("insufficient cards in deck %d for %s", deckIndex, card.Name())
 	}
-
-	if item.DeckCounts[deckIndex] < count {
-		return fmt.Errorf("insufficient cards in deck %d for card %s (have %d, need %d)",
-			deckIndex, card.Name(), item.DeckCounts[deckIndex], count)
+	for _, owned := range cards[:count] {
+		_ = cc.RemoveOwnedCard(owned.ID)
 	}
-
-	item.DeckCounts[deckIndex] -= count
-	item.Count -= count
-
-	// Remove item if no cards left
-	if item.Count <= 0 {
-		delete(cc, card)
-	}
-
 	return nil
 }
 
 func (cc CardCollection) GetTotalCount(card *Card) int {
-	item := cc[card]
-	if item == nil {
-		return 0
+	if item := cc[card]; item != nil {
+		return item.Count
 	}
-	return item.Count
+	return 0
 }
 
 func (cc CardCollection) GetDeckCount(card *Card, deckIndex int) int {
-	item := cc[card]
-	if item == nil || deckIndex >= len(item.DeckCounts) {
-		return 0
+	if item := cc[card]; item != nil && deckIndex >= 0 && deckIndex < len(item.DeckCounts) {
+		return item.DeckCounts[deckIndex]
 	}
-	return item.DeckCounts[deckIndex]
+	return 0
 }
 
-func (cc CardCollection) DecrementCardCount(card *Card) error {
-	item := cc[card]
-	if item == nil {
-		return fmt.Errorf("card %s not found in collection", card.Name())
-	}
-
-	if item.Count <= 0 {
-		return fmt.Errorf("no cards left to decrement for %s", card.Name())
-	}
-
-	// Decrement total count
-	item.Count--
-
-	// Update all deck counts to not exceed total count
-	for i := range item.DeckCounts {
-		if item.DeckCounts[i] > item.Count {
-			item.DeckCounts[i] = item.Count
-		}
-	}
-
-	// Remove item if no cards left
-	if item.Count <= 0 {
-		delete(cc, card)
-	}
-
-	return nil
-}
+func (cc CardCollection) DecrementCardCount(card *Card) error { return cc.RemoveCard(card, 1) }
 
 func (cc CardCollection) AddCard(card *Card, count int) {
-	item := cc[card]
-	if item == nil {
-		item = &CollectionItem{
-			Card:       card,
-			Count:      0,
-			DeckCounts: make([]int, 0),
-		}
-		cc[card] = item
+	for range count {
+		cc.AddOwnedCard(NewOwnedCard(card))
 	}
-	item.Count += count
 }
 
 func (cc CardCollection) RemoveCard(card *Card, count int) error {
 	item := cc[card]
-	if item == nil {
-		return fmt.Errorf("card %s not found in collection", card.Name())
+	if count < 0 || item == nil || item.Count < count {
+		return fmt.Errorf("insufficient cards in collection for %s", card.Name())
 	}
-
-	if item.Count < count {
-		return fmt.Errorf("insufficient cards in collection for %s (have %d, need %d)",
-			card.Name(), item.Count, count)
-	}
-
-	item.Count -= count
-
-	// Update deck counts to not exceed total count
-	for i := range item.DeckCounts {
-		if item.DeckCounts[i] > item.Count {
-			item.DeckCounts[i] = item.Count
+	cards := slices.Clone(item.Instances)
+	slices.SortStableFunc(cards, func(a, b *OwnedCard) int {
+		if a.DeckIndex == -1 && b.DeckIndex != -1 {
+			return -1
 		}
+		if b.DeckIndex == -1 && a.DeckIndex != -1 {
+			return 1
+		}
+		return 0
+	})
+	for _, owned := range cards[:count] {
+		_ = cc.RemoveOwnedCard(owned.ID)
 	}
-
-	// Remove item if no cards left
-	if item.Count <= 0 {
-		delete(cc, card)
-	}
-
 	return nil
 }
 
@@ -225,22 +276,27 @@ func (cc CardCollection) NumCards() int {
 }
 
 type collectionItemJSON struct {
-	CardID     string `json:"card_id"`
-	CardName   string `json:"card_name"`
-	Count      int    `json:"count"`
-	DeckCounts []int  `json:"deck_counts"`
+	CardID     string       `json:"card_id"`
+	CardName   string       `json:"card_name"`
+	Count      int          `json:"count"`
+	DeckCounts []int        `json:"deck_counts"`
+	Instances  []*OwnedCard `json:"instances,omitempty"`
 }
 
 func (cc CardCollection) MarshalJSON() ([]byte, error) {
 	items := make([]collectionItemJSON, 0, len(cc))
 	for card, item := range cc {
-		items = append(items, collectionItemJSON{
-			CardID:     card.cardID,
-			CardName:   card.CardName,
-			Count:      item.Count,
-			DeckCounts: item.DeckCounts,
-		})
+		items = append(items, collectionItemJSON{CardID: card.CardID(), CardName: card.CardName, Count: item.Count, DeckCounts: item.DeckCounts, Instances: item.Instances})
 	}
+	slices.SortFunc(items, func(a, b collectionItemJSON) int {
+		if a.CardID < b.CardID {
+			return -1
+		}
+		if a.CardID > b.CardID {
+			return 1
+		}
+		return 0
+	})
 	return json.Marshal(items)
 }
 
@@ -249,31 +305,54 @@ func (cc *CardCollection) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &items); err != nil {
 		return err
 	}
-
-	if *cc == nil {
-		*cc = make(CardCollection)
-	}
-
+	restored := NewCardCollection()
 	for _, item := range items {
 		card := FindCard(item.CardID, item.CardName)
 		if card == nil {
 			continue
 		}
-		if existing, ok := (*cc)[card]; ok {
-			existing.Count += item.Count
-			for i, n := range item.DeckCounts {
-				if i >= len(existing.DeckCounts) {
-					existing.DeckCounts = append(existing.DeckCounts, 0)
+		if item.Instances != nil {
+			for _, owned := range item.Instances {
+				if owned == nil {
+					continue
 				}
-				existing.DeckCounts[i] += n
+				owned.Card = card
+				if owned.ID == "" {
+					owned.ID = newDefaultOwnedCard(card).ID
+				}
+				if owned.ArtworkID == "" {
+					owned.ArtworkID = card.DefaultArtwork().ID
+				}
+				restored.AddOwnedCard(owned)
+			}
+			if loaded := restored[card]; loaded != nil {
+				loaded.ensureDeckSlots(len(item.DeckCounts))
 			}
 			continue
 		}
-		(*cc)[card] = &CollectionItem{
-			Card:       card,
-			Count:      item.Count,
-			DeckCounts: item.DeckCounts,
+		remaining := max(item.Count, 0)
+		for deckIndex, count := range item.DeckCounts {
+			for range min(max(count, 0), remaining) {
+				owned := newDefaultOwnedCard(card)
+				if item.CardID != "" && item.CardID != card.Name() {
+					owned.ArtworkID = item.CardID
+				}
+				owned.DeckIndex = deckIndex
+				restored.AddOwnedCard(owned)
+				remaining--
+			}
+		}
+		for range remaining {
+			owned := newDefaultOwnedCard(card)
+			if item.CardID != "" && item.CardID != card.Name() {
+				owned.ArtworkID = item.CardID
+			}
+			restored.AddOwnedCard(owned)
+		}
+		if loaded := restored[card]; loaded != nil {
+			loaded.ensureDeckSlots(len(item.DeckCounts))
 		}
 	}
+	*cc = restored
 	return nil
 }

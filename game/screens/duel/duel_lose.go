@@ -23,6 +23,7 @@ import (
 
 type DuelLoseScreen struct {
 	cards      []*domain.Card
+	ownedCards []*domain.OwnedCard
 	textbox    *elements.Button
 	Background *ebiten.Image
 }
@@ -86,8 +87,14 @@ func (s *DuelLoseScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	cardOpts := &ebiten.DrawImageOptions{}
 	cardOpts.GeoM.Translate(20, 20)
-	for _, c := range s.cards {
-		img, err := c.CardImage(domain.CardViewFullMini)
+	for i, c := range s.cards {
+		var img *ebiten.Image
+		var err error
+		if i < len(s.ownedCards) {
+			img, err = s.ownedCards[i].CardImage(domain.CardViewFullMini)
+		} else {
+			img, err = c.CardImage(domain.CardViewFullMini)
+		}
 		if err != nil {
 			continue
 		}

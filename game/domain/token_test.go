@@ -16,10 +16,10 @@ func TestFetchAndCacheCardImageWithoutURLKeepsTheName(t *testing.T) {
 		labeledBlankCards.Clear()
 	})
 
-	card := &Card{CardName: "Tetravite", cardID: "tst-3-Tetravite"}
-	fetchAndCacheCardImage(card)
+	card := &Card{CardName: "Tetravite"}
+	fetchAndCacheArtwork(card.DefaultArtwork())
 
-	cached, ok := cardImages.Load(card.cardID)
+	cached, ok := cardImages.Load(card.DefaultArtwork().ID)
 	if !ok {
 		t.Fatal("card without a URL was not cached")
 	}
@@ -44,7 +44,7 @@ func TestFindTokenByNameWasp(t *testing.T) {
 	if wasp.Power != 1 || wasp.Toughness != 1 {
 		t.Errorf("Wasp = %d/%d, want 1/1", wasp.Power, wasp.Toughness)
 	}
-	if wasp.BorderCropURL == "" {
+	if wasp.DefaultArtwork().BorderCropURL == "" {
 		t.Error("Wasp has no BorderCropURL, so no art can be fetched for it")
 	}
 }
@@ -65,19 +65,18 @@ func TestTokensAreNotInCardDatabase(t *testing.T) {
 	}
 }
 
-// The image cache is keyed by cardID, so a shared id would draw one card's art
-// for the other.
-func TestTokensHaveUniqueCardIDs(t *testing.T) {
+// Tokens and playable cards must use separate artwork cache entries.
+func TestTokensHaveUniqueArtworkIDs(t *testing.T) {
 	seen := make(map[string]string, len(TOKENS))
 	for _, token := range TOKENS {
-		if other, ok := seen[token.cardID]; ok {
-			t.Errorf("tokens %q and %q share cardID %q", other, token.CardName, token.cardID)
+		if other, ok := seen[token.DefaultArtwork().ID]; ok {
+			t.Errorf("tokens %q and %q share artwork ID %q", other, token.CardName, token.DefaultArtwork().ID)
 		}
-		seen[token.cardID] = token.CardName
+		seen[token.DefaultArtwork().ID] = token.CardName
 	}
 	for _, card := range CARDS {
-		if name, ok := seen[card.cardID]; ok {
-			t.Errorf("token %q shares cardID %q with card %q", name, card.cardID, card.CardName)
+		if name, ok := seen[card.DefaultArtwork().ID]; ok {
+			t.Errorf("token %q shares artwork ID %q with card %q", name, card.DefaultArtwork().ID, card.CardName)
 		}
 	}
 }

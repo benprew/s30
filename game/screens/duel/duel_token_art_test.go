@@ -10,7 +10,7 @@ func TestBuildCardImageMapIncludesTokens(t *testing.T) {
 	if wasp == nil {
 		t.Fatal("buildCardImageMap() has no entry for the Wasp token")
 	}
-	if wasp.BorderCropURL == "" {
+	if wasp.DefaultArtwork().BorderCropURL == "" {
 		t.Error("Wasp entry has no BorderCropURL")
 	}
 }

@@ -65,7 +65,7 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 		enemy:          enemy,
 		lvl:            lvl,
 		idx:            0,
-		playerAnteCard: mountain,
+		playerAnteCard: domain.NewOwnedCard(mountain),
 	}
 
 	screen.startDuel()
@@ -94,7 +94,7 @@ func TestAnteImagesRefreshAfterArtworkArrives(t *testing.T) {
  ]`), nil)))
 	playerCard, enemyCard := *cards[0], *cards[1]
 	for _, card := range cards {
-		domain.CacheCardImage(card.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+		domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	}
 	playerPlaceholder, err := playerCard.CardImage(domain.CardViewFullMini)
 	if err != nil {
@@ -105,10 +105,10 @@ func TestAnteImagesRefreshAfterArtworkArrives(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &DuelAnteScreen{
-		playerAnteCard: &playerCard,
-		enemyAnteCard:  &enemyCard,
+		playerAnteCard: domain.NewOwnedCard(&playerCard),
+		enemyAnteCard:  domain.NewOwnedCard(&enemyCard),
 	}
-	domain.CacheCardImage(playerCard.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	domain.CacheCardImage(playerCard.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	playerImg, enemyImg := s.cardImages()
 	playerArt, _ := playerCard.CardImage(domain.CardViewFullMini)
 	if playerImg == playerPlaceholder || playerImg != playerArt {
@@ -117,7 +117,7 @@ func TestAnteImagesRefreshAfterArtworkArrives(t *testing.T) {
 	if enemyImg != enemyPlaceholder {
 		t.Fatal("enemy placeholder changed before art arrived")
 	}
-	domain.CacheCardImage(enemyCard.CardID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	domain.CacheCardImage(enemyCard.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	playerImg, enemyImg = s.cardImages()
 	enemyArt, _ := enemyCard.CardImage(domain.CardViewFullMini)
 	if enemyImg == enemyPlaceholder || enemyImg != enemyArt {

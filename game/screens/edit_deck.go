@@ -29,9 +29,8 @@ const (
 )
 
 type cardGroup struct {
-	name       string
-	cards      []*domain.Card // All printings of this card
-	totalCount int            // Total count across all printings
+	owned      *domain.OwnedCard
+	totalCount int
 }
 
 // EditDeckScreen allows players to edit their decks
@@ -73,11 +72,18 @@ type EditDeckScreen struct {
 }
 
 type DeckCardDisplay struct {
-	Card  *domain.Card
-	Count int
+	Owned *domain.OwnedCard
 	Image *ebiten.Image
+	Count int
 	X     int
 	Y     int
+}
+
+func (d *DeckCardDisplay) cardImage() *ebiten.Image {
+	if d.Image == nil && d.Owned != nil {
+		d.Image, _ = d.Owned.CardImage(domain.CardViewArtMini)
+	}
+	return d.Image
 }
 
 func (s *EditDeckScreen) IsFramed() bool {
@@ -191,10 +197,7 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 	screen.createDraggableItems(collectionButtons)
 
 	// Load deck cards for display
-	err = screen.loadDeckCards()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load deck cards: %w", err)
-	}
+	screen.loadDeckCards()
 
 	return screen, nil
 }
@@ -213,25 +216,18 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 	buttons := make([]*elements.Button, 0)
 	s.collectionGroups = make(map[string]*cardGroup)
 
-	// Group cards by name and calculate available count
-	for card, item := range s.Player.CardCollection {
-		if item.Count > 0 && s.filter.matches(card) {
-			cardName := card.Name()
-			deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
-			availableCount := item.Count - deckCount
-
-			if availableCount > 0 {
-				if group, exists := s.collectionGroups[cardName]; exists {
-					group.cards = append(group.cards, card)
-					group.totalCount += availableCount
-				} else {
-					s.collectionGroups[cardName] = &cardGroup{
-						name:       cardName,
-						cards:      []*domain.Card{card},
-						totalCount: availableCount,
-					}
-				}
-			}
+	for card := range s.Player.CardCollection {
+		if !s.filter.matches(card) {
+			continue
+		}
+		available := s.Player.CardCollection.AvailableCards(card)
+		if len(available) == 0 {
+			continue
+		}
+		if group := s.collectionGroups[card.Name()]; group != nil {
+			group.totalCount += len(available)
+		} else {
+			s.collectionGroups[card.Name()] = &cardGroup{owned: available[0], totalCount: len(available)}
 		}
 	}
 
@@ -243,20 +239,19 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 
 	// Sort groups by name
 	sort.Slice(groupList, func(i, j int) bool {
-		return groupList[i].name < groupList[j].name
+		return groupList[i].owned.Name() < groupList[j].owned.Name()
 	})
 
 	// Create a button for each card group
 	for _, group := range groupList {
-		representativeCard := group.cards[0]
-		cardImg, err := representativeCard.CardImage(domain.CardViewArtOnly)
+		cardImg, err := group.owned.CardImage(domain.CardViewArtOnly)
 		if err != nil {
-			fmt.Printf("WARN: Unable to load card image for %s: %v\n", group.name, err)
+			fmt.Printf("WARN: Unable to load card image for %s: %v\n", group.owned.Name(), err)
 			continue
 		}
 
 		btn := elements.NewButton(cardImg, cardImg, cardImg, 0, 0, 1.0)
-		btn.ID = group.name
+		btn.ID = group.owned.Name()
 
 		buttons = append(buttons, btn)
 	}
@@ -274,14 +269,13 @@ func (s *EditDeckScreen) refreshCollectionImages() {
 			continue
 		}
 		group, ok := s.collectionGroups[btn.ID]
-		if !ok || len(group.cards) == 0 {
+		if !ok || group.owned == nil {
 			continue
 		}
-		card := group.cards[0]
-		if !card.ImageLoaded() {
+		if !group.owned.ImageLoaded() {
 			continue
 		}
-		cardImg, err := card.CardImage(domain.CardViewArtOnly)
+		cardImg, err := group.owned.CardImage(domain.CardViewArtOnly)
 		if err != nil {
 			continue
 		}
@@ -290,16 +284,19 @@ func (s *EditDeckScreen) refreshCollectionImages() {
 	}
 }
 
-func (s *EditDeckScreen) refreshDeckImages() {
+func (s *EditDeckScreen) refreshDeckDragImages() {
 	for i := range s.deckCardDisplays {
 		display := &s.deckCardDisplays[i]
-		img, err := display.Card.CardImage(domain.CardViewArtMini)
-		if err != nil || img == display.Image {
+		if !display.Owned.ImageLoaded() {
+			continue
+		}
+		img, err := display.Owned.CardImage(domain.CardViewArtMini)
+		if err != nil || img == nil {
 			continue
 		}
 		display.Image = img
 		for _, btn := range s.deckDraggableItems {
-			if btn.ID == deckCardDragIDPrefix+display.Card.Name() {
+			if btn.ID == deckCardDragIDPrefix+display.Owned.Name() && btn.Normal != img {
 				btn.Normal, btn.Hover, btn.Pressed = img, img, img
 			}
 		}
@@ -310,8 +307,8 @@ func (s *EditDeckScreen) refreshDeckImages() {
 func (s *EditDeckScreen) createDraggableItems(buttons []*elements.Button) {
 	for _, btn := range buttons {
 		group, exists := s.collectionGroups[btn.ID]
-		if exists && len(group.cards) > 0 {
-			draggableBtn := dragdrop.NewDraggableButton(btn, group.cards[0])
+		if exists && group.owned != nil {
+			draggableBtn := dragdrop.NewDraggableButton(btn, group.owned.Card)
 			s.draggableItems = append(s.draggableItems, draggableBtn)
 		}
 	}
@@ -429,8 +426,10 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 // drawDeckCards draws the cards in the deck area with count overlays
 func (s *EditDeckScreen) drawDeckCards(screen *ebiten.Image, scale float64) {
-	for _, display := range s.deckCardDisplays {
-		if display.Image == nil {
+	for i := range s.deckCardDisplays {
+		display := &s.deckCardDisplays[i]
+		img := display.cardImage()
+		if img == nil {
 			continue
 		}
 
@@ -438,12 +437,12 @@ func (s *EditDeckScreen) drawDeckCards(screen *ebiten.Image, scale float64) {
 		cardOpts := &ebiten.DrawImageOptions{}
 		cardOpts.GeoM.Scale(scale, scale)
 		cardOpts.GeoM.Translate(float64(display.X)*scale, float64(display.Y)*scale)
-		screen.DrawImage(display.Image, cardOpts)
+		screen.DrawImage(img, cardOpts)
 
 		// Draw count if more than 1
 		if display.Count > 1 {
-			cardWidth := display.Image.Bounds().Dx()
-			cardHeight := display.Image.Bounds().Dy()
+			cardWidth := img.Bounds().Dx()
+			cardHeight := img.Bounds().Dy()
 			s.drawCountOverlay(screen, scale, display.X, display.Y, cardWidth, cardHeight, display.Count)
 		}
 	}
@@ -474,7 +473,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	}
 
 	s.refreshCollectionImages()
-	s.refreshDeckImages()
+	s.refreshDeckDragImages()
 
 	if drag, started := ui.DragStart(); started {
 		s.dragManager.Start(drag, s.visibleDraggables())
@@ -491,12 +490,17 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		if btn.State == elements.StateHover {
 			s.hoveredCollectionIdx = i
 			s.hoveredDeckIdx = -1
-			card := domain.FindCardByName(btn.ID)
+			var card *domain.Card
+			var owned *domain.OwnedCard
+			if group := s.collectionGroups[btn.ID]; group != nil {
+				owned = group.owned
+				card = owned.Card
+			}
 			if card == nil {
 				fmt.Println("Error finding card for Button:", btn.ID)
 			}
 			if card != nil {
-				img, err := card.CardImage(domain.CardViewFull)
+				img, err := owned.CardImage(domain.CardViewFull)
 				if err == nil {
 					s.MagnifierImage = img
 					s.MagnifiedCard = card
@@ -509,20 +513,22 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	pointerPosition := ui.Position()
 	scaledMX := int(float64(pointerPosition.X) / scale)
 	scaledMY := int(float64(pointerPosition.Y) / scale)
-	for i, display := range s.deckCardDisplays {
-		if display.Image == nil {
+	for i := range s.deckCardDisplays {
+		display := &s.deckCardDisplays[i]
+		img := display.cardImage()
+		if img == nil {
 			continue
 		}
-		cardWidth := display.Image.Bounds().Dx()
-		cardHeight := display.Image.Bounds().Dy()
+		cardWidth := img.Bounds().Dx()
+		cardHeight := img.Bounds().Dy()
 		if scaledMX >= display.X && scaledMX < display.X+cardWidth &&
 			scaledMY >= display.Y && scaledMY < display.Y+cardHeight {
 			s.hoveredDeckIdx = i
 			s.hoveredCollectionIdx = -1
-			img, err := display.Card.CardImage(domain.CardViewFull)
+			img, err := display.Owned.CardImage(domain.CardViewFull)
 			if err == nil {
 				s.MagnifierImage = img
-				s.MagnifiedCard = display.Card
+				s.MagnifiedCard = display.Owned.Card
 			}
 			break
 		}
@@ -685,12 +691,8 @@ func drawDeckActionButton(screen *ebiten.Image, bounds image.Rectangle, label st
 
 // Reload deck display and collection list
 func (s *EditDeckScreen) updateState() {
-	err := s.loadDeckCards()
-	if err != nil {
-		fmt.Printf("Error reloading deck cards: %v\n", err)
-	}
-	err = s.reloadCollectionList()
-	if err != nil {
+	s.loadDeckCards()
+	if err := s.reloadCollectionList(); err != nil {
 		fmt.Printf("Error reloading collection list: %v\n", err)
 	}
 }
@@ -698,48 +700,24 @@ func (s *EditDeckScreen) updateState() {
 // handleDeckCardAdd adds a card from collection to the deck
 func (s *EditDeckScreen) handleDeckCardAdd(cardIdx int) {
 	items := s.CollectionList.GetItems()
-	if cardIdx >= len(items) {
+	if cardIdx < 0 || cardIdx >= len(items) {
 		return
 	}
-
-	btn := items[cardIdx]
-	// Get the card group for this button
-	group, exists := s.collectionGroups[btn.ID]
-	if !exists || len(group.cards) == 0 {
-		fmt.Printf("No card group found for %s\n", btn.ID)
-		return
+	if s.addCollectionCardToDeck(items[cardIdx].ID) {
+		s.updateState()
 	}
+}
 
-	// Find an available card from the group to add to deck
-	var cardToAdd *domain.Card
-	for _, card := range group.cards {
-		collectionCount := s.Player.CardCollection.GetTotalCount(card)
-		if collectionCount <= 0 {
-			continue
-		}
-
-		// Check how many of this specific printing are already in deck
-		deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
-		if deckCount < collectionCount {
-			cardToAdd = card
-			break
-		}
+func (s *EditDeckScreen) addCollectionCardToDeck(name string) bool {
+	group := s.collectionGroups[name]
+	if group == nil || group.owned == nil || group.owned.DeckIndex != -1 {
+		return false
 	}
-
-	if cardToAdd == nil {
-		fmt.Printf("All copies of %s are already in deck\n", group.name)
-		return
-	}
-
-	// Move card to deck
-	err := s.Player.CardCollection.MoveCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
-	if err != nil {
+	if err := s.Player.CardCollection.MoveOwnedCard(group.owned.ID, s.Player.ActiveDeck); err != nil {
 		fmt.Printf("Error moving card to deck: %v\n", err)
-		return
+		return false
 	}
-	newCount := s.Player.CardCollection.GetDeckCount(cardToAdd, s.Player.ActiveDeck)
-	fmt.Printf("Added %s to deck (now %d copies)\n", cardToAdd.Name(), newCount)
-	s.updateState()
+	return true
 }
 
 // handleDeckCardRemove removes a card from deck back to collection
@@ -749,10 +727,9 @@ func (s *EditDeckScreen) handleDeckCardRemove(deckIdx int) {
 	}
 
 	display := s.deckCardDisplays[deckIdx]
-	cardToRemove := display.Card
+	cardToRemove := display.Owned.Card
 
-	err := s.Player.CardCollection.MoveCardFromDeck(cardToRemove, s.Player.ActiveDeck, 1)
-	if err != nil {
+	if err := s.Player.CardCollection.MoveOwnedCard(display.Owned.ID, -1); err != nil {
 		fmt.Printf("Error moving card from deck: %v\n", err)
 		return
 	}
@@ -771,17 +748,17 @@ func (s *EditDeckScreen) handleSellCard(cardIdx int, isFromCollection bool) {
 		}
 		btn := items[cardIdx]
 		group, exists := s.collectionGroups[btn.ID]
-		if !exists || len(group.cards) == 0 {
+		if !exists || group.owned == nil {
 			fmt.Printf("No card group found for %s\n", btn.ID)
 			return
 		}
-		cardToSell = group.cards[0]
+		cardToSell = group.owned.Card
 	} else {
 		if cardIdx >= len(s.deckCardDisplays) {
 			return
 		}
 		display := s.deckCardDisplays[cardIdx]
-		cardToSell = display.Card
+		cardToSell = display.Owned.Card
 	}
 
 	if s.sellCard(cardToSell, !isFromCollection) {
@@ -813,22 +790,37 @@ func (s *EditDeckScreen) sellCard(card *domain.Card, fromDeck bool) bool {
 	if s.DisableSelling {
 		return false
 	}
-	deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
+	var owned *domain.OwnedCard
 	if fromDeck {
-		if deckCount == 0 {
-			return false
+		for _, display := range s.deckCardDisplays {
+			if display.Owned.Card == card {
+				owned = display.Owned
+				break
+			}
 		}
-		if err := s.Player.CardCollection.MoveCardFromDeck(card, s.Player.ActiveDeck, 1); err != nil {
-			fmt.Printf("Error moving card from deck before selling: %v\n", err)
-			return false
+		if owned == nil {
+			for _, copy := range s.Player.CardCollection.CardsInDeck(s.Player.ActiveDeck) {
+				if copy.Card == card {
+					owned = copy
+					break
+				}
+			}
 		}
-	} else if s.Player.CardCollection.GetTotalCount(card) <= deckCount {
+	} else {
+		if group := s.collectionGroups[card.Name()]; group != nil {
+			owned = group.owned
+		}
+		if owned == nil {
+			if copies := s.Player.CardCollection.AvailableCards(card); len(copies) > 0 {
+				owned = copies[0]
+			}
+		}
+	}
+	if owned == nil {
 		return false
 	}
-
-	salePrice := card.SalePrice(s.City)
-	if err := s.Player.CardCollection.DecrementCardCount(card); err != nil {
-		fmt.Printf("Error selling card: %v\n", err)
+	salePrice := owned.SalePrice(s.City)
+	if err := s.Player.CardCollection.RemoveOwnedCard(owned.ID); err != nil {
 		return false
 	}
 	s.Player.Gold += salePrice
@@ -837,26 +829,15 @@ func (s *EditDeckScreen) sellCard(card *domain.Card, fromDeck bool) bool {
 }
 
 // loadDeckCards loads the player's deck cards for display
-func (s *EditDeckScreen) loadDeckCards() error {
+func (s *EditDeckScreen) loadDeckCards() {
 	s.deckCardDisplays = make([]DeckCardDisplay, 0)
 
-	// Group deck cards by name
 	deckGroups := make(map[string]*cardGroup)
-	for card, count := range s.Player.GetDeck(s.Player.ActiveDeck) {
-		if count > 0 {
-			cardName := card.Name()
-			if group, exists := deckGroups[cardName]; exists {
-				// Add to existing group
-				group.cards = append(group.cards, card)
-				group.totalCount += count
-			} else {
-				// Create new group
-				deckGroups[cardName] = &cardGroup{
-					name:       cardName,
-					cards:      []*domain.Card{card},
-					totalCount: count,
-				}
-			}
+	for _, owned := range s.Player.CardCollection.CardsInDeck(s.Player.ActiveDeck) {
+		if group := deckGroups[owned.Name()]; group != nil {
+			group.totalCount++
+		} else {
+			deckGroups[owned.Name()] = &cardGroup{owned: owned, totalCount: 1}
 		}
 	}
 
@@ -868,24 +849,18 @@ func (s *EditDeckScreen) loadDeckCards() error {
 
 	// Sort groups by name for consistent ordering
 	sort.Slice(groupList, func(i, j int) bool {
-		return groupList[i].name < groupList[j].name
+		return groupList[i].owned.Name() < groupList[j].owned.Name()
 	})
 
-	// Load and cache card images
 	for _, group := range groupList {
-		// Use first card in group for image
-		representativeCard := group.cards[0]
-
-		cachedImg, err := representativeCard.CardImage(domain.CardViewArtMini)
-		if err != nil {
-			return err
+		img, err := group.owned.CardImage(domain.CardViewArtMini)
+		if err != nil || img == nil {
+			continue
 		}
-
-		// Add to deck display list
 		s.deckCardDisplays = append(s.deckCardDisplays, DeckCardDisplay{
-			Card:  representativeCard,
+			Owned: group.owned,
+			Image: img,
 			Count: group.totalCount,
-			Image: cachedImg,
 		})
 	}
 
@@ -894,8 +869,6 @@ func (s *EditDeckScreen) loadDeckCards() error {
 
 	// Create draggable items for deck cards
 	s.createDeckDraggableItems()
-
-	return nil
 }
 
 // calculateDeckCardPositions calculates grid positions for deck cards
@@ -936,15 +909,17 @@ func (s *EditDeckScreen) calculateDeckCardPositions() {
 func (s *EditDeckScreen) createDeckDraggableItems() {
 	s.deckDraggableItems = make([]*dragdrop.DraggableButton, 0)
 
-	for _, display := range s.deckCardDisplays {
-		if display.Image == nil {
+	for i := range s.deckCardDisplays {
+		display := &s.deckCardDisplays[i]
+		img := display.cardImage()
+		if img == nil {
 			continue
 		}
 
-		btn := elements.NewButton(display.Image, display.Image, display.Image, display.X, display.Y, 1.0)
-		btn.ID = deckCardDragIDPrefix + display.Card.Name()
+		btn := elements.NewButton(img, img, img, display.X, display.Y, 1.0)
+		btn.ID = deckCardDragIDPrefix + display.Owned.Name()
 
-		draggableBtn := dragdrop.NewDraggableButton(btn, display.Card)
+		draggableBtn := dragdrop.NewDraggableButton(btn, display.Owned.Card)
 		s.deckDraggableItems = append(s.deckDraggableItems, draggableBtn)
 	}
 }
@@ -973,40 +948,7 @@ func (s *EditDeckScreen) addDroppedCardToDeck(data dragdrop.DragData) bool {
 		return false
 	}
 
-	group, exists := s.collectionGroups[droppedCard.Name()]
-	if !exists || len(group.cards) == 0 {
-		fmt.Printf("No card group found for %s\n", droppedCard.Name())
-		return false
-	}
-
-	var cardToAdd *domain.Card
-	for _, card := range group.cards {
-		collectionCount := s.Player.CardCollection.GetTotalCount(card)
-		if collectionCount <= 0 {
-			continue
-		}
-
-		deckCount := s.Player.CardCollection.GetDeckCount(card, s.Player.ActiveDeck)
-		if deckCount < collectionCount {
-			cardToAdd = card
-			break
-		}
-	}
-
-	if cardToAdd == nil {
-		fmt.Printf("All copies of %s are already in deck\n", group.name)
-		return false
-	}
-
-	err := s.Player.CardCollection.MoveCardToDeck(cardToAdd, s.Player.ActiveDeck, 1)
-	if err != nil {
-		fmt.Printf("Error moving card to deck: %v\n", err)
-		return false
-	}
-	newCount := s.Player.CardCollection.GetDeckCount(cardToAdd, s.Player.ActiveDeck)
-	fmt.Printf("Added %s to deck via drag (now %d copies)\n", cardToAdd.Name(), newCount)
-
-	return true
+	return s.addCollectionCardToDeck(droppedCard.Name())
 }
 
 // handleCardDropToCollection handles when a card is dropped in the collection area
@@ -1033,7 +975,19 @@ func (s *EditDeckScreen) removeDroppedCardFromDeck(data dragdrop.DragData) bool 
 		return false
 	}
 
-	err := s.Player.CardCollection.MoveCardFromDeck(droppedCard, s.Player.ActiveDeck, 1)
+	var err error
+	var owned *domain.OwnedCard
+	for _, display := range s.deckCardDisplays {
+		if display.Owned.Card == droppedCard {
+			owned = display.Owned
+			break
+		}
+	}
+	if owned != nil {
+		err = s.Player.CardCollection.MoveOwnedCard(owned.ID, -1)
+	} else {
+		err = s.Player.CardCollection.MoveCardFromDeck(droppedCard, s.Player.ActiveDeck, 1)
+	}
 	if err != nil {
 		fmt.Printf("Error moving card from deck: %v\n", err)
 		return false
@@ -1150,16 +1104,16 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 	for _, display := range s.deckCardDisplays {
 		totalCards += display.Count
 
-		if display.Card.ManaCost != "" {
-			cmc := min(parseCMC(display.Card.ManaCost), 7)
+		if display.Owned.ManaCost != "" {
+			cmc := min(parseCMC(display.Owned.ManaCost), 7)
 			cmcCounts[cmc] += display.Count
 		}
 
-		for _, c := range display.Card.Colors {
+		for _, c := range display.Owned.Colors {
 			colorCounts[c] += display.Count
 		}
 
-		switch display.Card.CardType {
+		switch display.Owned.CardType {
 		case domain.CardTypeLand:
 			landCount += display.Count
 		case domain.CardTypeCreature:

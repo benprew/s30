@@ -79,8 +79,10 @@ type RandomEncounterScreen struct {
 
 func NewRandomEncounterScreen(player *domain.Player, landName string, terrainType int) *RandomEncounterScreen {
 	card := domain.FindCardByName(landName)
+	var owned *domain.OwnedCard
 	if card != nil {
-		player.CardCollection.AddCard(card, 1)
+		owned = domain.NewOwnedCard(card)
+		player.CardCollection.AddOwnedCard(owned)
 		if am := gameaudio.Get(); am != nil {
 			am.PlaySFX(gameaudio.SFXFindCard)
 		}
@@ -104,8 +106,8 @@ func NewRandomEncounterScreen(player *domain.Player, landName string, terrainTyp
 	}
 
 	var cardImg *ebiten.Image
-	if card != nil {
-		cardImg, _ = card.CardImage(domain.CardViewFullMini)
+	if owned != nil {
+		cardImg, _ = owned.CardImage(domain.CardViewFullMini)
 	}
 
 	bgFile := encounterBgFiles[terrainType]
