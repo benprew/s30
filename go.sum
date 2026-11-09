@@ -2,8 +2,8 @@ github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg
 github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
-github.com/benprew/mage-go v1.2.1 h1:Eu7F3QxV1G6g521yC4Spv8THVpJaLrhDhrEb1K4O1fU=
-github.com/benprew/mage-go v1.2.1/go.mod h1:bxijIDveNK/lC2ddPfnAX4McOYmF+MmLJCGMVkAEYQo=
+github.com/benprew/mage-go v1.2.2 h1:U8K+Jz4XSFrmgLnpONucgQX7H5Vbf0GoSSOzkatLuW8=
+github.com/benprew/mage-go v1.2.2/go.mod h1:bxijIDveNK/lC2ddPfnAX4McOYmF+MmLJCGMVkAEYQo=
 github.com/charmbracelet/bubbletea v1.3.10 h1:otUDHWMMzQSB0Pkc87rm691KZ3SWa4KUlvF9nRvCICw=
 github.com/charmbracelet/bubbletea v1.3.10/go.mod h1:ORQfo0fk8U+po9VaNvnV95UPWA1BitP1E0N6xJPlHr4=
 github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc h1:4pZI35227imm7yK2bGPcfpFEmuY1gc2YSTShr4iJBfs=
