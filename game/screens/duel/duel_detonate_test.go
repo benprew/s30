@@ -33,7 +33,8 @@ func TestDetonateTargetingFiltersArtifactsByChosenX(t *testing.T) {
 		ValidTargets: []uuid.UUID{ornithopterID, tomeID},
 	}
 
-	s := &DuelScreen{lastMsg: &interactive.GameMsg{State: state}}
+	human, fromTUI := newTestHuman()
+	s := &DuelScreen{human: human, lastMsg: &interactive.GameMsg{State: state}}
 
 	s.enterXChoosingMode([]interactive.ActionOption{action})
 	s.selectXValue(4)
@@ -42,6 +43,22 @@ func TestDetonateTargetingFiltersArtifactsByChosenX(t *testing.T) {
 	}
 	if _, ok := s.targetingActions[ornithopterID]; ok {
 		t.Fatal("did not expect Ornithopter (CMC 0) to be targetable when X = 4")
+	}
+
+	s.selectTarget(tomeID)
+	if !s.submitTargetingAction() {
+		t.Fatal("expected submitTargetingAction to succeed")
+	}
+	select {
+	case pa := <-fromTUI:
+		if pa.XValue != 4 {
+			t.Fatalf("expected XValue 4, got %d", pa.XValue)
+		}
+		if len(pa.Targets) != 1 || pa.Targets[0] != tomeID {
+			t.Fatalf("expected target %v, got %v", tomeID, pa.Targets)
+		}
+	default:
+		t.Fatal("expected priority action to be sent")
 	}
 
 	s.exitTargetingMode()

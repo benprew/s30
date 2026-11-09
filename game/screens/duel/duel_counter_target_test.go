@@ -232,6 +232,83 @@ func TestForkAutoTargetsSingleOpponentSpell(t *testing.T) {
 	}
 }
 
+func TestForkIlluminatedAndAutoTargetsOpponentDisintegrate(t *testing.T) {
+	human, fromTUI := newTestHuman()
+	disintegrateID := uuid.New()
+	forkID := uuid.New()
+
+	s := &DuelScreen{
+		human: human,
+		self: &duelPlayer{
+			name: "You",
+		},
+		lastMsg: &interactive.GameMsg{
+			Prompt: interactive.PromptPriority,
+			State: &interactive.GameState{
+				Turn:         2,
+				Step:         "PrecombatMain",
+				ActivePlayer: "Enemy",
+				You: interactive.PlayerState{
+					Name: "You",
+					Hand: []interactive.CardState{
+						{ID: forkID, Name: "Fork", ManaCost: "{R}{R}"},
+					},
+				},
+				Opponent: interactive.PlayerState{Name: "Enemy"},
+				StackItems: []interactive.StackItemState{
+					{
+						ID:         disintegrateID.String(),
+						Name:       "Disintegrate",
+						Controller: "Enemy",
+						XValue:     3,
+					},
+				},
+			},
+			Options: []interactive.ActionOption{
+				{
+					Type:         interactive.ActionCastSpell,
+					CardID:       forkID,
+					CardName:     "Fork",
+					NeedsTarget:  true,
+					TargetType:   mage.TargetSpellOnStack(),
+					ValidTargets: []uuid.UUID{disintegrateID},
+				},
+				{
+					Type:  interactive.ActionPass,
+					Label: "Pass",
+				},
+			},
+		},
+	}
+
+	// 1. refreshCardActions populates cardActions from Options
+	s.refreshCardActions()
+
+	actions, hasAction := s.cardActions[forkID]
+	if !hasAction || len(actions) == 0 {
+		t.Fatalf("Fork (ID %v) must be present in cardActions to be illuminated in hand, got none", forkID)
+	}
+
+	// 2. Perform card action -> should auto-target single spell on stack without opening target picker
+	s.performCardAction(forkID, "Fork")
+
+	if s.targetingCardID != uuid.Nil() {
+		t.Fatal("Fork should not enter manual targeting mode when Disintegrate is the only spell on the stack")
+	}
+
+	select {
+	case pa := <-fromTUI:
+		if len(pa.Targets) != 1 || pa.Targets[0] != disintegrateID {
+			t.Fatalf("expected Fork to target Disintegrate (%v), got %v", disintegrateID, pa.Targets)
+		}
+		if pa.CardID != forkID {
+			t.Fatalf("expected Fork cardID %v, got %v", forkID, pa.CardID)
+		}
+	default:
+		t.Fatal("expected Fork cast action to be sent to game engine")
+	}
+}
+
 func TestGoblinArtisansAutoTargetsSingleOwnArtifact(t *testing.T) {
 	human, fromTUI := newTestHuman()
 	ornithopterID := uuid.New()

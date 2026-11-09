@@ -33,10 +33,32 @@ func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 	action := actions[0]
 	mx := action.MaxXValue
 
+	if len(s.xChosenTargets) > 1 && action.CardName == "Fireball" {
+		extraCost := len(s.xChosenTargets) - 1
+		mx = max(0, mx-extraCost)
+	}
+
 	s.xChoosingActions = actions
 	s.xMaxValue = mx
 	s.xCurrentValue = mx
 	s.xTyped = false
+
+	if action.NeedsTarget && isArtifactWithManaValueXTarget(action.TargetType) {
+		bestCMC := -1
+		for _, tid := range action.ValidTargets {
+			perm := s.findPermanent(tid)
+			if perm == nil {
+				continue
+			}
+			cmc := s.permanentCMC(perm)
+			if cmc <= mx && cmc > bestCMC {
+				bestCMC = cmc
+			}
+		}
+		if bestCMC >= 0 {
+			s.xCurrentValue = bestCMC
+		}
+	}
 
 	btnSprites, err := imageutil.LoadSpriteSheet(3, 1, assets.Tradbut1_png)
 	if err != nil {
@@ -58,8 +80,14 @@ func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 	s.loadCardPreviewByName(action.CardName)
 }
 
+func (s *DuelScreen) enterXChoosingModeWithTargets(actions []interactive.ActionOption, targets []uuid.UUID) {
+	s.xChosenTargets = targets
+	s.enterXChoosingMode(actions)
+}
+
 func (s *DuelScreen) exitXChoosingMode() {
 	s.xChoosingActions = nil
+	s.xChosenTargets = nil
 	s.xConfirmBtn = nil
 	s.xMaxValue = 0
 	s.xCurrentValue = 0
@@ -215,7 +243,21 @@ func (s *DuelScreen) updateXChoosingMouse(mx, my int, clicked bool, W, H int) {
 
 func (s *DuelScreen) selectXValue(xValue int) {
 	actions := s.xChoosingActions
+	targets := s.xChosenTargets
 	s.exitXChoosingMode()
+
+	if len(targets) > 0 {
+		action := actions[0]
+		pa := actionOptionToPriorityAction(action)
+		pa.Targets = targets
+		pa.XValue = xValue
+		logging.Printf(logging.Duel, "CLICK: %s -> X=%d, Targets=%v\n", action.CardName, xValue, targets)
+		select {
+		case s.human.FromTUI() <- pa:
+		default:
+		}
+		return
+	}
 
 	if len(actions) == 1 && actions[0].NeedsTarget {
 		if tid, ok := s.autoTargetStackSpell(actions[0]); ok {
@@ -260,7 +302,18 @@ func (s *DuelScreen) drawXChoosingUI(screen *ebiten.Image, W, H int) {
 	}
 	layout := s.xChooserLayout(W, H, cardH)
 
-	title := elements.NewText(24, "Choose X", 0, layout.StartY)
+	titleText := "Choose X"
+	fontSize := 24.0
+	if len(s.xChosenTargets) > 0 {
+		numTargets := len(s.xChosenTargets)
+		if numTargets == 1 {
+			titleText = fmt.Sprintf("Choose X (%d damage to 1 target)", s.xCurrentValue)
+		} else {
+			titleText = fmt.Sprintf("Choose X (%d damage each to %d targets)", s.xCurrentValue/numTargets, numTargets)
+		}
+		fontSize = 20.0
+	}
+	title := elements.NewText(fontSize, titleText, 0, layout.StartY)
 	title.HAlign = elements.AlignCenter
 	title.BoundsW = float64(W)
 	title.Color = color.White
