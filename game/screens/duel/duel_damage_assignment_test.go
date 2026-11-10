@@ -108,3 +108,70 @@ func TestDamageAssignmentOrderPutsLethalBlockersFirst(t *testing.T) {
 		t.Fatalf("order[0] = %v, want lethal blocker %v first", order[0], blockerB.ID)
 	}
 }
+
+func TestSuggestedDividedDamageAssignmentRequiresAtLeastOnePerTarget(t *testing.T) {
+	t1 := uuid.New()
+	t2 := uuid.New()
+	s := &DuelScreen{}
+
+	got := suggestedDividedDamageAssignment([]uuid.UUID{t1, t2}, 4, s)
+	if got[t1] < 1 || got[t2] < 1 {
+		t.Fatalf("expected each target to have at least 1 damage, got %v", got)
+	}
+	if got[t1]+got[t2] != 4 {
+		t.Fatalf("expected sum 4, got %v", got)
+	}
+}
+
+func TestDividedDamageControlsCannotDropBelowOne(t *testing.T) {
+	t1 := uuid.New()
+	t2 := uuid.New()
+	s := &DuelScreen{
+		lastMsg: &interactive.GameMsg{
+			Prompt: interactive.PromptAssignDamage,
+		},
+		damageAssignment: map[uuid.UUID]int{
+			t1: 3,
+			t2: 1,
+		},
+	}
+
+	// Decreasing t2 when it has 1 should be a no-op under CR 601.2d
+	s.decreaseAssignedDamage(t2)
+	if s.damageAssignment[t2] != 1 || s.damageAssignment[t1] != 3 {
+		t.Fatalf("target dropped below 1: %v", s.damageAssignment)
+	}
+
+	// Decreasing t1 from 3 to 2 should increase t2 from 1 to 2
+	s.decreaseAssignedDamage(t1)
+	if s.damageAssignment[t1] != 2 || s.damageAssignment[t2] != 2 {
+		t.Fatalf("expected 2/2, got %v", s.damageAssignment)
+	}
+}
+
+func TestSubmitDividedDamageAssignmentSendsAction(t *testing.T) {
+	fromTUI := make(chan interactive.PriorityAction, 1)
+	human := interactive.NewHumanPlayerWithChannels("You", make(chan interactive.GameMsg, 1), fromTUI, nil, nil)
+	t1 := uuid.New()
+	t2 := uuid.New()
+	s := &DuelScreen{
+		human: human,
+		lastMsg: &interactive.GameMsg{
+			Prompt: interactive.PromptAssignDamage,
+		},
+		damageAssignment: map[uuid.UUID]int{
+			t1: 2,
+			t2: 2,
+		},
+	}
+
+	s.submitPendingAndPass()
+
+	action := <-fromTUI
+	if action.Type != interactive.ActionAssignDamage {
+		t.Fatalf("action.Type = %v, want ActionAssignDamage", action.Type)
+	}
+	if action.Damage[t1] != 2 || action.Damage[t2] != 2 {
+		t.Fatalf("damage = %v, want t1=2 t2=2", action.Damage)
+	}
+}
