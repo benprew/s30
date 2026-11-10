@@ -31,9 +31,13 @@ const (
 )
 
 type qrReward struct {
-	title    string
-	gold     int
-	cardImgs []*ebiten.Image
+	title string
+	gold  int
+	cards []*domain.OwnedCard
+}
+
+func (r qrReward) cardImage(index int) (*ebiten.Image, error) {
+	return r.cards[index].CardImage(domain.CardViewFullMini)
 }
 
 type QuestRewardScreen struct {
@@ -77,23 +81,26 @@ func NewQuestRewardScreen(rewards []domain.DeckQuestReward, city *domain.City, p
 
 	qr := make([]qrReward, 0, len(rewards))
 	for _, r := range rewards {
-		imgs := make([]*ebiten.Image, 0, len(r.Cards))
+		cards := make([]*domain.OwnedCard, 0, len(r.Cards))
 		for _, c := range r.Cards {
-			img, err := c.CardImage(domain.CardViewFullMini)
-			if err != nil {
+			if c == nil || c.Card == nil {
 				continue
 			}
-			imgs = append(imgs, img)
+			cards = append(cards, c)
 		}
-		if len(imgs) == 0 {
+		if len(cards) == 0 {
 			qr = append(qr, qrReward{title: r.Quest.Title, gold: r.Reward.Gold})
 		}
-		for start := 0; start < len(imgs); start += qrCardsPerPage {
+		for start := 0; start < len(cards); start += qrCardsPerPage {
 			gold := 0
 			if start == 0 {
 				gold = r.Reward.Gold
 			}
-			qr = append(qr, qrReward{title: r.Quest.Title, gold: gold, cardImgs: imgs[start:min(start+qrCardsPerPage, len(imgs))]})
+			end := min(start+qrCardsPerPage, len(cards))
+			qr = append(qr, qrReward{
+				title: r.Quest.Title, gold: gold,
+				cards: cards[start:end],
+			})
 		}
 	}
 
@@ -151,16 +158,20 @@ func (s *QuestRewardScreen) Draw(screen *ebiten.Image, W, H int, scale float64) 
 		line.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 		y += qrLineHeight
 
-		if len(r.cardImgs) > 0 {
+		if len(r.cards) > 0 {
 			cardX := s.panelX + 60
-			for _, img := range r.cardImgs {
+			for i := range r.cards {
+				img, err := r.cardImage(i)
+				if err != nil {
+					continue
+				}
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Scale(scale, scale)
 				opts.GeoM.Translate(float64(cardX)*scale, float64(y)*scale)
 				screen.DrawImage(img, opts)
 				cardX += img.Bounds().Dx() + qrCardGap
 			}
-			y += r.cardImgs[0].Bounds().Dy() + 12
+			y += domain.CardFullMiniHeight + 12
 		}
 		y += 8
 	}

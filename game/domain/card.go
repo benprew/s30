@@ -38,6 +38,7 @@ const CardArtHeight = 129
 const CardFullMiniWidth = 183
 const CardFullMiniHeight = 256
 const CardFullWidth = 245
+const CardFullHeight = 342
 
 const CardArtMiniWidth = 110
 const CardArtMiniHeight = 96

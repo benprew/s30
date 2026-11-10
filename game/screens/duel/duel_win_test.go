@@ -1,6 +1,7 @@
 package duel
 
 import (
+	"fmt"
 	"image"
 	"testing"
 
@@ -271,7 +272,7 @@ func TestDuelWinScreen_FixedSizePages(t *testing.T) {
 
 	// Ensure all cards fit within 0..1024 bounds
 	for i, wc := range layout {
-		if wc.rect.Size() != image.Pt(245, 342) {
+		if wc.rect.Size() != image.Pt(domain.CardFullWidth, domain.CardFullHeight) {
 			t.Errorf("card %d size = %v", i, wc.rect.Size())
 		}
 		if wc.rect.Min.X < 0 || wc.rect.Max.X > winLogicalW {
@@ -430,8 +431,8 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 	if len(winScreen.cards) != 3 {
 		t.Fatalf("expected 3 reward cards, got %d", len(winScreen.cards))
 	}
-	if winScreen.cards[0].card.Name() != giantGrowth.Name() {
-		t.Errorf("expected first card to be enemy ante card %q, got %q", giantGrowth.Name(), winScreen.cards[0].card.Name())
+	if winScreen.cards[0].owned.Name() != giantGrowth.Name() {
+		t.Errorf("expected first card to be enemy ante card %q, got %q", giantGrowth.Name(), winScreen.cards[0].owned.Name())
 	}
 
 	// All reward cards should be added to player's collection
@@ -494,7 +495,11 @@ func TestDuelWinBonusUsesMiniPresetAndSeparatePage(t *testing.T) {
 	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	t.Cleanup(domain.ClearCardImageCache)
 	s := NewWinDuelScreen(nil, domain.DuelReward{Cards: []*domain.Card{card}}, []*domain.Card{card})
-	if s.bonusImgs[0].Bounds().Size() != image.Pt(183, 256) {
+	img, err := s.bonusCards[0].cardImage(domain.CardViewFullMini)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if img.Bounds().Size() != image.Pt(183, 256) {
 		t.Fatal("wrong bonus size")
 	}
 	if s.pageCount() != 2 || !s.nextPage() || s.nextPage() {
@@ -517,8 +522,8 @@ func TestDuelWinScreen_RewardLayoutAndDoneButton(t *testing.T) {
 	if s.rewardPanel == nil {
 		t.Fatal("expected rewardPanel to be non-nil when gold and amulets are awarded")
 	}
-	if s.rewardPanelY < winChoiceY+winCardH {
-		t.Fatalf("rewardPanelY = %d, want >= %d (below cards)", s.rewardPanelY, winChoiceY+winCardH)
+	if s.rewardPanelY < winChoiceY+domain.CardFullHeight {
+		t.Fatalf("rewardPanelY = %d, want >= %d (below cards)", s.rewardPanelY, winChoiceY+domain.CardFullHeight)
 	}
 
 	if s.doneBtn.Bounds.Min.Y <= s.rewardPanelY+s.rewardPanel.Bounds().Dy() {
@@ -548,8 +553,8 @@ func TestDuelWinScreen_NoCurrenciesHasNoRewardPanel(t *testing.T) {
 	if s.rewardPanel != nil {
 		t.Fatal("expected rewardPanel to be nil when no gold or amulets are awarded")
 	}
-	if s.doneBtn.Bounds.Min.Y < winChoiceY+winCardH {
-		t.Fatalf("doneBtn Y = %d, want >= %d (below cards)", s.doneBtn.Bounds.Min.Y, winChoiceY+winCardH)
+	if s.doneBtn.Bounds.Min.Y < winChoiceY+domain.CardFullHeight {
+		t.Fatalf("doneBtn Y = %d, want >= %d (below cards)", s.doneBtn.Bounds.Min.Y, winChoiceY+domain.CardFullHeight)
 	}
 }
 
@@ -564,5 +569,50 @@ func TestDuelWinScreen_TitleIsRewards(t *testing.T) {
 	s := NewWinDuelScreen(player, reward, nil)
 	if s.textbox.ButtonText.Text != "Rewards" {
 		t.Fatalf("expected title %q, got %q", "Rewards", s.textbox.ButtonText.Text)
+	}
+}
+
+func TestDuelWinRefreshesBonusArt(t *testing.T) {
+	for _, selected := range []bool{false, true} {
+		t.Run(fmt.Sprintf("selected=%t", selected), func(t *testing.T) {
+			card := *domain.CARDS[0]
+			card.Artworks = []domain.Artwork{{ID: "bonus-default", CardName: card.Name()}, {ID: "bonus-selected", CardName: card.Name()}}
+			owned := &domain.OwnedCard{Card: &card, ArtworkID: "bonus-default"}
+			reward := domain.DuelReward{}
+			if selected {
+				owned.ArtworkID = "bonus-selected"
+				reward.OwnedBonusCards = []*domain.OwnedCard{owned}
+			}
+			domain.CacheCardImage(owned.ArtworkID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
+			t.Cleanup(domain.ClearCardImageCache)
+			s := NewWinDuelScreen(nil, reward, []*domain.Card{&card})
+			old, err := s.bonusCards[0].cardImage(domain.CardViewFullMini)
+			if err != nil {
+				t.Fatal(err)
+			}
+			domain.CacheCardImage(owned.ArtworkID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
+			want, _ := owned.CardImage(domain.CardViewFullMini)
+			got, err := s.bonusCards[0].cardImage(domain.CardViewFullMini)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got == old || got != want {
+				t.Fatal("bonus retained old art or lost the selected artwork")
+			}
+		})
+	}
+}
+
+func TestDuelWinUsesOwnedCardsForPlainRewards(t *testing.T) {
+	card := *domain.CARDS[0]
+	card.Artworks = []domain.Artwork{{ID: "reward-default", CardName: card.Name()}, {ID: "reward-alternate", CardName: card.Name()}}
+	s := NewWinDuelScreen(nil, domain.DuelReward{Cards: []*domain.Card{&card}}, []*domain.Card{&card})
+	for _, display := range []winCard{s.cards[0], s.bonusCards[0]} {
+		if display.owned == nil || display.owned.Card != &card {
+			t.Fatal("plain reward has no owned card for display")
+		}
+		if display.owned.ArtworkID != card.DefaultArtwork().ID {
+			t.Fatal("plain reward did not retain default artwork")
+		}
 	}
 }

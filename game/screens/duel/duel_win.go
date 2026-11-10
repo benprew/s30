@@ -23,8 +23,6 @@ import (
 // after winning a duel. Any bonus cards (e.g. from castle defeat) are also shown.
 
 const (
-	winCardW        = domain.CardFullWidth
-	winCardH        = 342
 	winChoiceGap    = 30
 	winChoiceY      = 120
 	winBonusGap     = 20
@@ -35,16 +33,19 @@ const (
 )
 
 type winCard struct {
-	card  *domain.Card
 	owned *domain.OwnedCard
-	rect  image.Rectangle
+	rect  image.Rectangle // hover bounds
+}
+
+func (c winCard) cardImage(view domain.CardView) (*ebiten.Image, error) {
+	return c.owned.CardImage(view)
 }
 
 type DuelWinScreen struct {
 	player       *domain.Player
 	reward       domain.DuelReward
 	cards        []winCard
-	bonusImgs    []*ebiten.Image
+	bonusCards   []winCard
 	page         int
 	textbox      *elements.Button
 	rewardPanel  *ebiten.Image
@@ -125,26 +126,28 @@ func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCard
 		ID:      "done",
 	})
 
-	bonusImgs := make([]*ebiten.Image, 0, len(bonusCards))
+	bonusSources := make([]winCard, 0, len(bonusCards))
 	for i, c := range bonusCards {
-		var img *ebiten.Image
-		var err error
+		source := winCard{}
 		if i < len(reward.OwnedBonusCards) {
-			img, err = reward.OwnedBonusCards[i].CardImage(domain.CardViewFullMini)
+			source.owned = reward.OwnedBonusCards[i]
+			if source.owned == nil || source.owned.Card == nil {
+				continue
+			}
 		} else {
-			img, err = c.CardImage(domain.CardViewFullMini)
+			if c == nil {
+				continue
+			}
+			source.owned = &domain.OwnedCard{Card: c, ArtworkID: c.DefaultArtwork().ID}
 		}
-		if err != nil {
-			continue
-		}
-		bonusImgs = append(bonusImgs, img)
+		bonusSources = append(bonusSources, source)
 	}
 
 	screen := &DuelWinScreen{
 		player:       player,
 		reward:       reward,
 		cards:        cards,
-		bonusImgs:    bonusImgs,
+		bonusCards:   bonusSources,
 		Background:   bgImg,
 		textbox:      tb,
 		rewardPanel:  rewardPanel,
@@ -269,7 +272,7 @@ func createRewardPanel(reward domain.DuelReward) (*ebiten.Image, int, int) {
 	panelW := max(340, int(totalContentW+56.0))
 	panelH := 46
 	panelX := (winLogicalW - panelW) / 2
-	panelY := winChoiceY + winCardH + 18
+	panelY := winChoiceY + domain.CardFullHeight + 18
 
 	panelBg := ebiten.NewImage(panelW, panelH)
 	panelBg.Fill(color.RGBA{R: 20, G: 18, B: 28, A: 230})
@@ -311,9 +314,13 @@ func layoutCards(cards []*domain.Card) []winCard {
 	for i, card := range cards {
 		pageStart := i / winCardsPerPage * winCardsPerPage
 		count := min(winCardsPerPage, len(cards)-pageStart)
-		totalW := count*winCardW + (count-1)*winChoiceGap
-		x := (winLogicalW-totalW)/2 + (i%winCardsPerPage)*(winCardW+winChoiceGap)
-		result = append(result, winCard{card: card, rect: image.Rect(x, winChoiceY, x+winCardW, winChoiceY+winCardH)})
+		totalW := count*domain.CardFullWidth + (count-1)*winChoiceGap
+		x := (winLogicalW-totalW)/2 + (i%winCardsPerPage)*(domain.CardFullWidth+winChoiceGap)
+		var owned *domain.OwnedCard
+		if card != nil {
+			owned = &domain.OwnedCard{Card: card, ArtworkID: card.DefaultArtwork().ID}
+		}
+		result = append(result, winCard{owned: owned, rect: image.Rect(x, winChoiceY, x+domain.CardFullWidth, winChoiceY+domain.CardFullHeight)})
 	}
 	return result
 }
@@ -323,7 +330,7 @@ func (s *DuelWinScreen) cardPageCount() int {
 }
 
 func (s *DuelWinScreen) pageCount() int {
-	return max(1, s.cardPageCount()+(len(s.bonusImgs)+winBonusPerPage-1)/winBonusPerPage)
+	return max(1, s.cardPageCount()+(len(s.bonusCards)+winBonusPerPage-1)/winBonusPerPage)
 }
 
 // SetContinueText sets the button label for the final reward page.
@@ -346,7 +353,7 @@ func (s *DuelWinScreen) updatePageLabels() {
 	s.doneBtn.ButtonText.Text = label
 	if s.textbox != nil {
 		s.textbox.ButtonText.Text = "Rewards"
-		if s.page >= s.cardPageCount() && len(s.bonusImgs) > 0 {
+		if s.page >= s.cardPageCount() && len(s.bonusCards) > 0 {
 			s.textbox.ButtonText.Text = "Bonus Cards"
 		}
 	}
@@ -370,7 +377,7 @@ func (s *DuelWinScreen) updateDoneButton() {
 	s.doneBtn.Pressed = imageutil.ScaleImageInd(s.btnSprites[2], scaleX, scaleY)
 
 	btnX := (winLogicalW - buttonW) / 2
-	btnY := winChoiceY + winCardH + 40
+	btnY := winChoiceY + domain.CardFullHeight + 40
 	if s.rewardPanel != nil {
 		btnY = s.rewardPanelY + s.rewardPanel.Bounds().Dy() + 32
 	}
@@ -407,13 +414,7 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	start := min(s.page*winCardsPerPage, len(s.cards))
 	for _, c := range s.cards[start:min(start+winCardsPerPage, len(s.cards))] {
-		var img *ebiten.Image
-		var err error
-		if c.owned != nil {
-			img, err = c.owned.CardImage(domain.CardViewFull)
-		} else {
-			img, err = c.card.CardImage(domain.CardViewFull)
-		}
+		img, err := c.cardImage(domain.CardViewFull)
 		if err != nil {
 			continue
 		}
@@ -434,14 +435,18 @@ func (s *DuelWinScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 func (s *DuelWinScreen) drawBonus(screen *ebiten.Image) {
 	page := s.page - s.cardPageCount()
-	if page < 0 || len(s.bonusImgs) == 0 {
+	if page < 0 || len(s.bonusCards) == 0 {
 		return
 	}
 	start := page * winBonusPerPage
-	images := s.bonusImgs[start:min(start+winBonusPerPage, len(s.bonusImgs))]
-	totalW := len(images)*domain.CardFullMiniWidth + (len(images)-1)*winBonusGap
+	cards := s.bonusCards[start:min(start+winBonusPerPage, len(s.bonusCards))]
+	totalW := len(cards)*domain.CardFullMiniWidth + (len(cards)-1)*winBonusGap
 	x := (winLogicalW - totalW) / 2
-	for _, img := range images {
+	for _, card := range cards {
+		img, err := card.cardImage(domain.CardViewFullMini)
+		if err != nil {
+			continue
+		}
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(x), winChoiceY)
 		screen.DrawImage(img, opts)

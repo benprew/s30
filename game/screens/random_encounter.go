@@ -40,8 +40,7 @@ var landToBgFile = map[string]string{
 }
 
 type RandomEncounterScreen struct {
-	Card       *domain.Card
-	CardImg    *ebiten.Image
+	ownedCard  *domain.OwnedCard
 	Background *ebiten.Image
 	Player     *domain.Player
 	LandName   string
@@ -105,11 +104,6 @@ func NewRandomEncounterScreen(player *domain.Player, landName string, terrainTyp
 		VAlign:    elements.AlignMiddle,
 	}
 
-	var cardImg *ebiten.Image
-	if owned != nil {
-		cardImg, _ = owned.CardImage(domain.CardViewFullMini)
-	}
-
 	bgFile := encounterBgFiles[terrainType]
 	if terrainType == world.TerrainSnow {
 		bgFile = landToBgFile[landName]
@@ -123,8 +117,7 @@ func NewRandomEncounterScreen(player *domain.Player, landName string, terrainTyp
 	}
 
 	return &RandomEncounterScreen{
-		Card:       card,
-		CardImg:    cardImg,
+		ownedCard:  owned,
 		Background: bg,
 		Player:     player,
 		LandName:   landName,
@@ -147,6 +140,11 @@ func (s *RandomEncounterScreen) Update(W, H int, scale float64) (screenui.Screen
 	return screenui.RandomEncounterScr, nil, nil
 }
 
+func (s *RandomEncounterScreen) cardImage() *ebiten.Image {
+	img, _ := s.ownedCard.CardImage(domain.CardViewFullMini)
+	return img
+}
+
 func (s *RandomEncounterScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	if s.Background != nil {
 		bgOpts := &ebiten.DrawImageOptions{}
@@ -161,14 +159,14 @@ func (s *RandomEncounterScreen) Draw(screen *ebiten.Image, W, H int, scale float
 	centerX := float64(W) / 2
 	centerY := float64(H) / 2
 
-	if s.CardImg != nil {
+	if img := s.cardImage(); img != nil {
 		op := &ebiten.DrawImageOptions{}
 		cardScale := scale
 		op.GeoM.Scale(cardScale, cardScale)
-		w := float64(s.CardImg.Bounds().Dx()) * cardScale
-		h := float64(s.CardImg.Bounds().Dy()) * cardScale
+		w := float64(img.Bounds().Dx()) * cardScale
+		h := float64(img.Bounds().Dy()) * cardScale
 		op.GeoM.Translate(centerX-w/2, centerY-h/2-30*scale)
-		screen.DrawImage(s.CardImg, op)
+		screen.DrawImage(img, op)
 	}
 
 	textStr := fmt.Sprintf("You found a %s!", s.LandName)
