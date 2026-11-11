@@ -1,12 +1,12 @@
 module github.com/benprew/s30
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/benprew/mage-go v1.2.2
 	github.com/hajimehoshi/ebiten/v2 v2.10.2
-	github.com/klauspost/compress v1.18.7
+	github.com/klauspost/compress v1.20.2
 	github.com/tanema/gween v0.0.0-20250522035225-e874ee3ae01a
 	golang.org/x/image v0.45.0
 )
