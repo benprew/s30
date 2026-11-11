@@ -5,6 +5,7 @@ import (
 	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage"
+	"github.com/benprew/mage-go/pkg/mage/core"
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 	"github.com/benprew/mage-go/pkg/mage/interactive/ai"
 )
@@ -75,22 +76,54 @@ func TestAutoPlayActionDeclaresAttackers(t *testing.T) {
 	}
 }
 
-func TestAutoChoiceResponseSelectsRequestedCards(t *testing.T) {
-	first := uuid.New()
-	second := uuid.New()
-	third := uuid.New()
-	req := interactive.ChoiceRequest{
-		Type:   interactive.ChoiceCardsFromHand,
-		Amount: 2,
-		Options: []interactive.ChoiceOption{
-			{ID: first},
-			{ID: second},
-			{ID: third},
-		},
+func TestAutoChoiceDefersMayToMageAI(t *testing.T) {
+	responses := make(chan interactive.ChoiceResponse, 1)
+	human := interactive.NewHumanPlayerWithChannels("You", make(chan interactive.GameMsg, 1), make(chan interactive.PriorityAction, 1), make(chan interactive.ChoiceRequest, 1), responses)
+	game := mage.NewGame(human, mage.NewBasePlayer("Opponent"))
+	for _, tc := range []struct {
+		reason string
+		want   bool
+	}{
+		{"draw a card", true}, {"pay {2} to mill yourself", false},
+	} {
+		s := &DuelScreen{human: human, game: game, choiceRequest: &interactive.ChoiceRequest{
+			Type: interactive.ChoiceMay, Reason: tc.reason, Options: []interactive.ChoiceOption{{Label: "Yes"}, {Label: "No"}},
+		}}
+		s.respondToAutoChoice()
+		if s.choiceRequest != nil {
+			t.Fatal("choice was not sent")
+		}
+		response := <-responses
+		if response.Accepted != tc.want {
+			t.Errorf("%s: got %v, want %v", tc.reason, response.Accepted, tc.want)
+		}
 	}
+}
 
-	response := autoChoiceResponse(req)
-	if len(response.SelectedIDs) != 2 || response.SelectedIDs[0] != first || response.SelectedIDs[1] != second {
-		t.Fatalf("autoChoiceResponse() selected %v, want first two cards", response.SelectedIDs)
+func TestEnableAutoPlayUsesLondonPolicyAfterPriorMulligans(t *testing.T) {
+	s, human := newMulliganScreen(t)
+	human.SetHand(nil)
+	for i := range 7 {
+		card := mage.NewCreature("Bear", "{1}{G}", 2, 2)
+		if i < 2 {
+			card = mage.NewLand("Forest")
+		}
+		card.SetOwner(human.PlayerID())
+		human.AddToHand(card)
+	}
+	s.mulliganCount = 2
+	s.mulliganSelected[human.Hand()[0].ID()] = true
+	s.EnableAutoPlay()
+	if s.inMulligan || len(human.Hand()) != 5 {
+		t.Fatalf("mulligan=%v hand=%d", s.inMulligan, len(human.Hand()))
+	}
+	lands := 0
+	for _, card := range human.Hand() {
+		if card.HasType(core.TypeLand) {
+			lands++
+		}
+	}
+	if lands != 2 {
+		t.Fatalf("kept %d lands, want 2", lands)
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"image/color"
 	"math"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 	"uuid"
@@ -240,6 +239,9 @@ func (s *DuelScreen) EnableAutoPlay() {
 	s.autoPlay = true
 	s.autoStrategy = heuristic.NewAdaptive()
 	if s.inMulligan {
+		ai.MulliganLondon(s.human.BasePlayer, s.mulliganCount)
+		s.mulliganCount = 0
+		s.mulliganSelected = nil
 		s.finishMulligan()
 	}
 }
@@ -836,7 +838,7 @@ func (s *DuelScreen) refreshDamageAssignmentPrompt(msg *interactive.GameMsg) {
 	opt := msg.Options[0]
 	s.damageAttackerID = opt.PermanentID
 	s.damageTotal = opt.MaxXValue
-	s.damageAssignment = suggestedDamageAssignment(s.blockersForDamageOption(opt), s.damageTotal)
+	s.damageAssignment = ai.SuggestedCombatDamage(s.blockersForDamageOption(opt), s.damageTotal)
 }
 
 func (s *DuelScreen) blockersForDamageOption(opt interactive.ActionOption) []interactive.PermanentState {
@@ -854,25 +856,6 @@ func (s *DuelScreen) blockersForDamageOption(opt interactive.ActionOption) []int
 		}
 	}
 	return blockers
-}
-
-func suggestedDamageAssignment(blockers []interactive.PermanentState, total int) map[uuid.UUID]int {
-	assignment := make(map[uuid.UUID]int, len(blockers))
-	remaining := total
-	for i, blocker := range blockers {
-		if remaining <= 0 {
-			assignment[blocker.ID] = 0
-			continue
-		}
-		lethal := max(blocker.Toughness-blocker.Damage, 0)
-		amount := min(lethal, remaining)
-		if i == len(blockers)-1 {
-			amount = remaining
-		}
-		assignment[blocker.ID] = amount
-		remaining -= amount
-	}
-	return assignment
 }
 
 func (s *DuelScreen) checkSoundTriggers(prev, msg *interactive.GameMsg) {
@@ -1336,7 +1319,7 @@ func (s *DuelScreen) autoPlayAction() (interactive.PriorityAction, bool) {
 }
 
 func (s *DuelScreen) respondToAutoChoice() {
-	response := autoChoiceResponse(*s.choiceRequest)
+	response := ai.RespondToChoice(s.human.BasePlayer, s.game, *s.choiceRequest)
 	select {
 	case s.human.ChoiceResponses() <- response:
 		s.choiceRequest = nil
@@ -1345,30 +1328,6 @@ func (s *DuelScreen) respondToAutoChoice() {
 		s.choiceCardName = ""
 	default:
 	}
-}
-
-func autoChoiceResponse(req interactive.ChoiceRequest) interactive.ChoiceResponse {
-	response := interactive.ChoiceResponse{}
-	if len(req.Options) == 0 {
-		return response
-	}
-	switch req.Type {
-	case interactive.ChoiceMay:
-		response.Accepted = true
-	case interactive.ChoiceManaColor:
-		response.SelectedColor = req.Options[0].Color
-	case interactive.ChoiceMode, interactive.ChoiceNumber:
-		response.SelectedIndex = 0
-	case interactive.ChoiceCardsFromHand:
-		amount := min(req.Amount, len(req.Options))
-		response.SelectedIDs = make([]uuid.UUID, amount)
-		for i := range amount {
-			response.SelectedIDs[i] = req.Options[i].ID
-		}
-	default:
-		response.SelectedIDs = []uuid.UUID{req.Options[0].ID}
-	}
-	return response
 }
 
 func (s *DuelScreen) handleEscape() {
@@ -2590,21 +2549,7 @@ func (s *DuelScreen) damageAssignmentOrder() []uuid.UUID {
 		return nil
 	}
 	blockers := s.blockersForDamageOption(s.lastMsg.Options[0])
-	sort.SliceStable(blockers, func(i, j int) bool {
-		iAssigned := s.damageAssignment[blockers[i].ID]
-		jAssigned := s.damageAssignment[blockers[j].ID]
-		iLethal := iAssigned >= max(blockers[i].Toughness-blockers[i].Damage, 0)
-		jLethal := jAssigned >= max(blockers[j].Toughness-blockers[j].Damage, 0)
-		if iLethal != jLethal {
-			return iLethal
-		}
-		return iAssigned > jAssigned
-	})
-	order := make([]uuid.UUID, 0, len(blockers))
-	for _, blocker := range blockers {
-		order = append(order, blocker.ID)
-	}
-	return order
+	return ai.CombatDamageOrder(blockers, s.damageAssignment)
 }
 
 func (s *DuelScreen) handleClick(mx, my int) {
@@ -4077,55 +4022,6 @@ func (s *DuelScreen) initMulligan() {
 	s.concedeKeepBtn.ID = "concede_keep_playing"
 }
 
-// aiMulliganDecision runs a simple heuristic mulligan for the AI (London
-// rules): keep hands with 2-5 lands, otherwise mulligan up to 2 times. After
-// mulligans, place N cards from hand on the bottom of the library where N is
-// the number of mulligans taken.
-func (s *DuelScreen) aiMulliganDecision() {
-	mulls := 0
-	for mulls < 2 {
-		lands := 0
-		for _, c := range s.aiPlayer.Hand() {
-			if dc := s.getDomainCard(c.Name()); dc != nil && dc.CardType == domain.CardTypeLand {
-				lands++
-			}
-		}
-		if lands >= 2 && lands <= 5 {
-			break
-		}
-		for _, c := range s.aiPlayer.Hand() {
-			if _, ok := s.aiPlayer.RemoveFromHand(c.ID()); ok {
-				s.aiPlayer.AddToLibrary(c)
-			}
-		}
-		s.aiPlayer.ShuffleLibrary()
-		for range 7 {
-			s.aiPlayer.DrawCard()
-		}
-		mulls++
-	}
-	if mulls == 0 {
-		return
-	}
-	lib := s.aiPlayer.Library()
-	hand := s.aiPlayer.Hand()
-	for i := 0; i < mulls && len(hand) > 0; i++ {
-		worst := hand[len(hand)-1]
-		for _, c := range hand {
-			dc := s.getDomainCard(c.Name())
-			if dc != nil && dc.CardType == domain.CardTypeLand {
-				worst = c
-				break
-			}
-		}
-		if c, ok := s.aiPlayer.RemoveFromHand(worst.ID()); ok {
-			lib = append(lib, c)
-		}
-		hand = s.aiPlayer.Hand()
-	}
-	s.aiPlayer.SetLibrary(lib)
-}
-
 func (s *DuelScreen) doHumanMulligan() {
 	hand := s.human.Hand()
 	for _, c := range hand {
@@ -4159,7 +4055,7 @@ func (s *DuelScreen) finishMulligan() {
 		}
 		s.human.SetLibrary(lib)
 	}
-	s.aiMulliganDecision()
+	ai.MulliganLondon(s.aiPlayer.BasePlayer, 0)
 	s.inMulligan = false
 	s.mulliganSelected = nil
 	s.startGameLoop()

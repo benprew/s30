@@ -5,6 +5,7 @@ import (
 	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
+	"github.com/benprew/mage-go/pkg/mage/interactive/ai"
 )
 
 func TestSuggestedDamageAssignmentKillsMostBlockers(t *testing.T) {
@@ -12,7 +13,7 @@ func TestSuggestedDamageAssignmentKillsMostBlockers(t *testing.T) {
 	blockerB := interactive.PermanentState{ID: uuid.New(), Toughness: 2}
 	blockerC := interactive.PermanentState{ID: uuid.New(), Toughness: 4}
 
-	got := suggestedDamageAssignment([]interactive.PermanentState{blockerA, blockerB, blockerC}, 5)
+	got := ai.SuggestedCombatDamage([]interactive.PermanentState{blockerA, blockerB, blockerC}, 5)
 
 	if got[blockerA.ID] != 2 || got[blockerB.ID] != 2 || got[blockerC.ID] != 1 {
 		t.Fatalf("assignment = %v, want 2/2/1", got)
@@ -23,7 +24,7 @@ func TestSuggestedDamageAssignmentIncludesZeroDamageBlockers(t *testing.T) {
 	pumped := interactive.PermanentState{ID: uuid.New(), Toughness: 3}
 	unpumped := interactive.PermanentState{ID: uuid.New(), Toughness: 1}
 
-	got := suggestedDamageAssignment([]interactive.PermanentState{pumped, unpumped}, 2)
+	got := ai.SuggestedCombatDamage([]interactive.PermanentState{pumped, unpumped}, 2)
 
 	if _, ok := got[unpumped.ID]; !ok {
 		t.Fatalf("assignment = %v, want unpumped blocker present so it has damage controls", got)
