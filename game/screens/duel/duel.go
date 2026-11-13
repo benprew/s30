@@ -2238,8 +2238,7 @@ func isArtifactWithManaValueXTarget(target mage.Target) bool {
 	if target == nil {
 		return false
 	}
-	typeName := fmt.Sprintf("%T", target)
-	return typeName == "*mage.ArtifactWithManaValueXTarget" || typeName == "*mage.artifactWithManaValueXTarget"
+	return mage.TargetsUseX([]mage.Target{target})
 }
 
 func (s *DuelScreen) enterTargetingMode(id uuid.UUID, name string, actions []interactive.ActionOption) {
