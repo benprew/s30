@@ -112,18 +112,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
           VERSION=${{ inputs.version || github.ref_name }}
-          gh release create $VERSION \
+          ASSETS=(
+            artifacts/s30_linux/s30_linux
+            artifacts/s30_linux-arm/s30_linux-arm
+            artifacts/s30_mac-intel/s30_mac-intel
+            artifacts/s30_mac-apple-silicon/s30_mac-apple-silicon
+            artifacts/s30_windows.exe/s30_windows.exe
+            artifacts/s30_windows-arm.exe/s30_windows-arm.exe
+            artifacts/s30_android.apk/s30_android.apk
+            artifacts/s30_android.apk/s30_android.apk.idsig
+            artifacts/s30_android.aab/s30_android.aab
+            artifacts/s30_ios.ipa/s30_ios.ipa
+            artifacts/s30_ios.xcarchive.zip/s30_ios.xcarchive.zip
+          )
+          sha256sum "${ASSETS[@]}" | sed 's|  .*/|  |' > checksums.txt
+          gh release create "$VERSION" \
             --title "$VERSION" \
             --generate-notes \
-            artifacts/s30_linux/s30_linux \
-            artifacts/s30_linux-arm/s30_linux-arm \
-            artifacts/s30_mac-intel/s30_mac-intel \
-            artifacts/s30_mac-apple-silicon/s30_mac-apple-silicon \
-            artifacts/s30_windows.exe/s30_windows.exe \
-            artifacts/s30_windows-arm.exe/s30_windows-arm.exe \
-            artifacts/s30_android.apk/s30_android.apk \
-            artifacts/s30_android.apk/s30_android.apk.idsig \
-            artifacts/s30_android.aab/s30_android.aab \
-            artifacts/s30_ios.ipa/s30_ios.ipa \
-            artifacts/s30_ios.xcarchive.zip/s30_ios.xcarchive.zip
+            checksums.txt \
+            "${ASSETS[@]}"
