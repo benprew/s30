@@ -18,7 +18,7 @@ ifeq ($(OS),Windows_NT)
 	endif
 endif
 
-.PHONY: default run pprof duelprofile test test-flaky test-gui build winbuild macbuild webbuild webdeploy clean builddeps fedorabuilddeps osdeps fedoraosdeps pydeps lint
+.PHONY: default run pprof duelprofile test test-flaky test-gui build winbuild macbuild webbuild webdeploy clean builddeps fedorabuilddeps osdeps fedoraosdeps pydeps lint test-duel-memory
 
 default: build
 
@@ -43,6 +43,9 @@ test-flaky:
 
 test-gui:
 	go run ./cmd/gui_test
+
+test-duel-memory:
+	S30_DUEL_MEMORY_TEST=1 go test ./cmd/duel_test -run '^TestDuelMemoryRegression$$' -count=1 -v
 
 build:
 	$(MKDIR_DIST)

@@ -11,6 +11,10 @@ func TestSanitizeFilename(t *testing.T) {
 		input    string
 		expected string
 	}{
+		{name: "punctuation", input: "Mishra's Factory -- Winter", expected: "mishras-factory-winter"},
+		{name: "spacing", input: "  Fire\t  Elemental--- ", expected: "fire-elemental"},
+		{name: "empty", input: "!@#", expected: ""},
+		{name: "unicode", input: "Æthere １２", expected: "æthere-１２"},
 		{
 			name:     "Juzám Djinn",
 			input:    "Juzám Djinn",
@@ -236,5 +240,19 @@ func TestCardUnmarshalJSONRemovedCardLeavesReceiverEmpty(t *testing.T) {
 	}
 	if restored.CardName != "" {
 		t.Errorf("expected empty CardName for removed card, got %q", restored.CardName)
+	}
+}
+
+func TestSanitizeFilenameAllocationBudget(t *testing.T) {
+	allocations := testing.AllocsPerRun(100, func() { sanitizeFilename("Mishra's Factory -- Winter") })
+	if allocations > 12 {
+		t.Fatalf("filename allocations = %.0f, budget 12", allocations)
+	}
+}
+
+func BenchmarkSanitizeFilename(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		sanitizeFilename("Mishra's Factory -- Winter")
 	}
 }

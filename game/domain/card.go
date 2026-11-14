@@ -298,14 +298,17 @@ func (c *Card) SalePrice(city *City) int {
 	return int(float64(c.Price) * basePercentage)
 }
 
+var (
+	filenamePunctuation = regexp.MustCompile(`[^\p{L}\p{N}\s-]`)
+	filenameSeparators  = regexp.MustCompile(`[-\s]+`)
+)
+
 func sanitizeFilename(name string) string {
 	name = strings.ToLower(name)
 
-	re1 := regexp.MustCompile(`[^\p{L}\p{N}\s-]`)
-	name = re1.ReplaceAllString(name, "")
+	name = filenamePunctuation.ReplaceAllString(name, "")
 
-	re2 := regexp.MustCompile(`[-\s]+`)
-	name = re2.ReplaceAllString(name, "-")
+	name = filenameSeparators.ReplaceAllString(name, "-")
 
 	return strings.Trim(name, "-")
 }

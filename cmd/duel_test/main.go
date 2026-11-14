@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -62,14 +63,45 @@ func pickRandomRogue() string {
 }
 
 type testGame struct {
-	duelScreen   *screens.DuelScreen
-	newDuel      func() (*screens.DuelScreen, error)
-	maxFrames    int
-	frames       int
-	targetDuels  int
-	finishedDuel int
-	memstatEvery int
-	lastMemstat  int
+	duelScreen    *screens.DuelScreen
+	newDuel       func() (*screens.DuelScreen, error)
+	maxFrames     int
+	frames        int
+	targetDuels   int
+	finishedDuel  int
+	memstatEvery  int
+	lastMemstat   int
+	memoryReport  string
+	memorySamples []duelMemorySample
+	memoryStart   runtime.MemStats
+}
+
+type duelMemorySample struct {
+	Duel           int
+	AllocatedBytes uint64
+	Allocations    uint64
+	HeapBytes      uint64
+	Goroutines     int
+}
+
+func (g *testGame) beginMemorySample() {
+	runtime.GC()
+	runtime.ReadMemStats(&g.memoryStart)
+}
+
+func (g *testGame) finishMemorySample() {
+	g.duelScreen.Close()
+	g.duelScreen = nil
+	runtime.GC()
+	var stats runtime.MemStats
+	runtime.ReadMemStats(&stats)
+	g.memorySamples = append(g.memorySamples, duelMemorySample{
+		Duel:           g.finishedDuel,
+		AllocatedBytes: stats.TotalAlloc - g.memoryStart.TotalAlloc,
+		Allocations:    stats.Mallocs - g.memoryStart.Mallocs,
+		HeapBytes:      stats.HeapAlloc,
+		Goroutines:     runtime.NumGoroutine(),
+	})
 }
 
 func (g *testGame) Update() error {
@@ -94,8 +126,16 @@ func (g *testGame) Update() error {
 			fmt.Printf("Duel %d: opponent AI won\n", g.finishedDuel)
 		}
 		g.reportMemoryStats()
+		if g.memoryReport != "" {
+			g.finishMemorySample()
+		} else {
+			g.duelScreen.Close()
+		}
 		if g.finishedDuel >= g.targetDuels {
 			return ebiten.Termination
+		}
+		if g.memoryReport != "" {
+			g.beginMemorySample()
 		}
 		g.duelScreen, err = g.newDuel()
 		return err
@@ -104,6 +144,9 @@ func (g *testGame) Update() error {
 }
 
 func (g *testGame) Draw(screen *ebiten.Image) {
+	if g.duelScreen == nil { // needed for finishMemorySample
+		return
+	}
 	g.duelScreen.Draw(screen, 1024, 768, 1.0)
 }
 
@@ -181,6 +224,8 @@ func main() {
 	duelLog := flag.Bool("duel-log", false, "enable verbose duel logging (skews allocation profiles)")
 	loadCardImages := flag.Bool("load-card-images", true, "load embedded card art before profiling")
 	headless := flag.Bool("headless", false, "run without opening a visible window")
+	fast := flag.Bool("fast", false, "run up to 1000 updates per second for automated checks")
+	memoryReport := flag.String("memory-report", "", "write per-duel allocation and post-GC heap counters as JSON (forces GC between duels)")
 	flag.Parse()
 	if *duels < 1 {
 		log.Fatal("-duels must be at least 1")
@@ -258,30 +303,55 @@ func main() {
 		return duelScreen, nil
 	}
 
-	duelScreen, err := newDuel()
-	if err != nil {
-		log.Fatal(err)
-	}
 	g := &testGame{
-		duelScreen:   duelScreen,
+		memoryReport: *memoryReport,
 		newDuel:      newDuel,
 		maxFrames:    *profileFrames,
 		targetDuels:  *duels,
 		memstatEvery: *memstatFrames,
 		lastMemstat:  -1,
 	}
+	if g.memoryReport != "" {
+		g.beginMemorySample()
+	}
+	var err error
+	g.duelScreen, err = newDuel()
+	if err != nil {
+		log.Fatal(err)
+	}
 	g.reportMemoryStats()
+	defer func() {
+		if g.duelScreen != nil {
+			g.duelScreen.Close()
+		}
+	}()
 
 	ebiten.SetWindowSize(1024, 768)
 	ebiten.SetWindowTitle("Duel Test - X Spells")
 	if *headless {
 		ebiten.SetWindowVisible(false)
 	}
+	if *fast {
+		ebiten.SetTPS(1000)
+		ebiten.SetVsyncEnabled(false)
+	}
 	if err := ebiten.RunGame(g); err != nil && err != ebiten.Termination {
 		log.Fatal(err)
 	}
 
 	g.reportMemoryStats()
+	if g.memoryReport != "" {
+		data, err := json.MarshalIndent(g.memorySamples, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := os.WriteFile(g.memoryReport, data, 0o600); err != nil {
+			log.Fatal(err)
+		}
+		if g.finishedDuel != g.targetDuels {
+			log.Fatalf("completed %d of %d duels", g.finishedDuel, g.targetDuels)
+		}
+	}
 	if err := writeProfile(*allocprofile, "allocs", false); err != nil {
 		log.Fatalf("Failed to write allocation profile: %v", err)
 	}

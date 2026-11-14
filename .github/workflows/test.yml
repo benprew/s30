@@ -37,6 +37,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo make osdeps
+          sudo apt-get install -y xvfb xauth
 
       - name: Run tests
         run: make test
+
+      - name: Check graphical duel memory budgets
+        run: xvfb-run -a make test-duel-memory
