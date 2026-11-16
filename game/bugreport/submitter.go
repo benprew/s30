@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/benprew/s30/game/version"
 )
 
 // EnvWorkerURL is the environment variable used to configure the worker endpoint.
@@ -85,7 +87,7 @@ func (s *WorkerSubmitter) Submit(report *BugReport) (*SubmitResult, error) {
 		return nil, fmt.Errorf("failed to create worker request: %w", err)
 	}
 	req.Header.Set("Content-Type", form.FormDataContentType())
-	req.Header.Set("User-Agent", "s30-game-client/"+GameVersion)
+	req.Header.Set("User-Agent", "s30-game-client/"+version.Current)
 
 	resp, err := s.Client.Do(req)
 	if err != nil {

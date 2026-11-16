@@ -38,10 +38,12 @@ jobs:
             goos: linux
             goarch: amd64
             artifact: s30_linux
+            updater: s30-updater_linux-amd64
           - os: ubuntu-24.04-arm
             goos: linux
             goarch: arm64
             artifact: s30_linux-arm
+            updater: s30-updater_linux-arm64
           - os: macos-latest
             goos: darwin
             goarch: amd64
@@ -54,10 +56,12 @@ jobs:
             goos: windows
             goarch: amd64
             artifact: s30_windows.exe
+            updater: s30-updater_windows-amd64.exe
           - os: windows-latest
             goos: windows
             goarch: arm64
             artifact: s30_windows-arm.exe
+            updater: s30-updater_windows-arm64.exe
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -81,12 +85,30 @@ jobs:
           sudo apt-get install libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
 
       - name: Build
-        run: MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -tags embedded_card_images -o ${{ matrix.artifact }}
+        env:
+          S30_VERSION: ${{ inputs.version || github.ref_name }}
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+        run: |
+          test -n "$UPDATE_PUBLIC_KEY" || { echo 'Set the UPDATE_PUBLIC_KEY repository variable' >&2; exit 1; }
+          MACOSX_DEPLOYMENT_TARGET=12.0 CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath \
+            -ldflags "-X github.com/benprew/s30/game/version.Current=${S30_VERSION} -X github.com/benprew/s30/game/updates.PublicKey=${UPDATE_PUBLIC_KEY}" \
+            -tags embedded_card_images -o ${{ matrix.artifact }}
+
+      - name: Build update helper
+        if: matrix.goos != 'darwin'
+        env:
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+        run: |
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath \
+            -ldflags "-X github.com/benprew/s30/game/updates.PublicKey=${UPDATE_PUBLIC_KEY}" \
+            -o ${{ matrix.updater }} ./cmd/s30-updater
 
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}
+            ${{ matrix.updater }}
 
   android:
     uses: ./.github/workflows/android.yml
@@ -103,17 +125,30 @@ jobs:
     needs: [build, android, ios]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
+
+      - name: Sign update manifest
+        env:
+          S30_VERSION: ${{ inputs.version || github.ref_name }}
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: go run ./cmd/update-manifest -version "$S30_VERSION" -artifacts artifacts
 
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version || github.ref_name }}
         run: |
-          VERSION=${{ inputs.version || github.ref_name }}
-          gh release create $VERSION \
+          gh release create "$VERSION" \
             --title "$VERSION" \
             --generate-notes \
             artifacts/s30_linux/s30_linux \
@@ -122,8 +157,14 @@ jobs:
             artifacts/s30_mac-apple-silicon/s30_mac-apple-silicon \
             artifacts/s30_windows.exe/s30_windows.exe \
             artifacts/s30_windows-arm.exe/s30_windows-arm.exe \
+            artifacts/s30_linux/s30-updater_linux-amd64 \
+            artifacts/s30_linux-arm/s30-updater_linux-arm64 \
+            artifacts/s30_windows.exe/s30-updater_windows-amd64.exe \
+            artifacts/s30_windows-arm.exe/s30-updater_windows-arm64.exe \
             artifacts/s30_android.apk/s30_android.apk \
             artifacts/s30_android.apk/s30_android.apk.idsig \
             artifacts/s30_android.aab/s30_android.aab \
             artifacts/s30_ios.ipa/s30_ios.ipa \
-            artifacts/s30_ios.xcarchive.zip/s30_ios.xcarchive.zip
+            artifacts/s30_ios.xcarchive.zip/s30_ios.xcarchive.zip \
+            s30-update-manifest.json \
+            s30-update-manifest.json.sig

@@ -42,6 +42,7 @@ jobs:
           go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.10.2 bind \
             -target ios \
             -tags embedded_card_images \
+            -ldflags "-X github.com/benprew/s30/game/version.Current=${IOS_VERSION_NAME}" \
             -o ./mobile/ios/s30/Mobile.xcframework \
             ./mobile
 

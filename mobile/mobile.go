@@ -6,6 +6,7 @@ import (
 
 	"github.com/benprew/s30/game"
 	"github.com/benprew/s30/game/save"
+	"github.com/benprew/s30/game/updates"
 	"github.com/hajimehoshi/ebiten/v2/mobile"
 )
 
@@ -21,6 +22,16 @@ func Dummy() {}
 // SetSaveDir configures saves beneath Android's app-private files directory.
 func SetSaveDir(appFilesDir string) {
 	save.SetSaveDir(filepath.Join(appFilesDir, "saves"))
+}
+
+type UpdateInstaller interface {
+	InstallUpdate(apkPath string) error
+	OpenDownload(url string) error
+}
+
+// SetUpdateInstaller connects the Android activity to the update service.
+func SetUpdateInstaller(cacheDir string, versionCode int64, installer UpdateInstaller) {
+	updates.ConfigureAndroid(cacheDir, versionCode, installer)
 }
 
 // SaveGame persists the active Android game when the activity is paused.

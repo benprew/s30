@@ -1,4 +1,7 @@
 DIST_DIR := dist
+VERSION ?= $(shell git describe --tags --always --dirty)
+UPDATE_PUBLIC_KEY ?=
+VERSION_FLAGS := -ldflags "-X github.com/benprew/s30/game/version.Current=$(VERSION) -X github.com/benprew/s30/game/updates.PublicKey=$(UPDATE_PUBLIC_KEY)"
 GOROOT   := $(shell go env GOROOT)
 
 MKDIR_DIST      := mkdir -p $(DIST_DIR)
@@ -23,13 +26,13 @@ endif
 default: build
 
 run:
-	go run . -v mtg,duel
+	go run $(VERSION_FLAGS) . -v mtg,duel
 
 webrun: webbuild
 	$(PYTHON) -m http.server -d $(DIST_DIR) 8080
 
 pprof:
-	go run -tags pprof . -pprof 127.0.0.1:6060 -v mtg,duel
+	go run $(VERSION_FLAGS) -tags pprof . -pprof 127.0.0.1:6060 -v mtg,duel
 
 duelprofile:
 	$(MKDIR_DIST)
@@ -49,13 +52,13 @@ test-duel-memory:
 
 build:
 	$(MKDIR_DIST)
-	go build -trimpath -o $(DIST_DIR)/s30 .
+	go build -trimpath $(VERSION_FLAGS) -o $(DIST_DIR)/s30 .
 
 winbuild: export GOOS=windows
 winbuild: export GOARCH=amd64
 winbuild:
 	$(MKDIR_DIST)
-	go build -trimpath -o $(DIST_DIR)/s30.exe .
+	go build -trimpath $(VERSION_FLAGS) -o $(DIST_DIR)/s30.exe .
 
 macbuild: export MACOSX_DEPLOYMENT_TARGET=12.0
 macbuild: export CGO_ENABLED=1
@@ -63,14 +66,14 @@ macbuild: export GOOS=darwin
 macbuild: export GOARCH=arm64
 macbuild:
 	$(MKDIR_DIST)
-	go build -trimpath -o $(DIST_DIR)/s30_mac_arm .
+	go build -trimpath $(VERSION_FLAGS) -o $(DIST_DIR)/s30_mac_arm .
 
 # https://ebitengine.org/en/documents/webassembly.html
 webbuild: export GOOS=js
 webbuild: export GOARCH=wasm
 webbuild:
 	$(MKDIR_DIST)
-	go build -trimpath -o $(DIST_DIR)/s30.wasm .
+	go build -trimpath $(VERSION_FLAGS) -o $(DIST_DIR)/s30.wasm .
 	$(COPY_WEB_ASSETS)
 
 webdeploy: webbuild

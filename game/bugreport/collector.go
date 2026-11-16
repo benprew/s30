@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/benprew/s30/game/save"
+	"github.com/benprew/s30/game/version"
 	"github.com/benprew/s30/game/world"
 	"github.com/hajimehoshi/ebiten/v2"
 )
-
-const GameVersion = "1.0.0"
 
 // DuelReporter is implemented by DuelScreen to supply structured duel report data.
 type DuelReporter interface {
@@ -31,7 +30,7 @@ func CollectEnvironment(activeScreen string) EnvironmentInfo {
 		OS:           runtime.GOOS,
 		Arch:         runtime.GOARCH,
 		GoVersion:    runtime.Version(),
-		GameVersion:  GameVersion,
+		GameVersion:  version.Current,
 		ActiveScreen: activeScreen,
 		FPS:          fps,
 		TPS:          tps,

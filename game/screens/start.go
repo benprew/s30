@@ -1,6 +1,7 @@
 package screens
 
 import (
+	"context"
 	"fmt"
 	"image"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"github.com/benprew/s30/game/ui/fonts"
 	"github.com/benprew/s30/game/ui/imageutil"
 	"github.com/benprew/s30/game/ui/screenui"
+	"github.com/benprew/s30/game/updates"
+	"github.com/benprew/s30/game/version"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
@@ -26,6 +29,22 @@ const (
 )
 
 type StartScreen struct {
+	updateChecked      bool
+	updateResults      <-chan *updates.Release
+	availableUpdate    *updates.Release
+	updateActionBtn    *elements.Button
+	laterBtn           *elements.Button
+	versionLabel       *elements.Text
+	updateNoticeLabel  *elements.Text
+	updateStatusLabel  *elements.Text
+	downloadResult     chan updateResult
+	updateProgress     chan string
+	updateCancel       context.CancelFunc
+	preparedUpdate     *updates.Prepared
+	automaticUpdate    bool
+	restartAfterUpdate bool
+	updateStatus       string
+	updateError        string
 	mode               startMode
 	background         *ebiten.Image
 	menu2Bg            *ebiten.Image
@@ -172,7 +191,23 @@ func NewStartScreen() *StartScreen {
 		scale:       1.8,
 	})
 	s.difficultyLabels = difficultyLabelText
+	s.updateActionBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
+		Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
+		Text: "Update and restart", Font: fontFace, ID: "update", X: 280, Y: 655,
+	})
+	s.setAutomaticUpdate(false)
+	s.laterBtn = elements.NewButtonFromConfig(elements.ButtonConfig{
+		Normal: btnSprites[0][0], Hover: btnSprites[0][1], Pressed: btnSprites[0][2],
+		Text: "Later", Font: fontFace, ID: "update_later", X: 600, Y: 655,
+	})
 
+	s.versionLabel = elements.NewText(18, "Version "+version.Current, 20, 738)
+	s.updateNoticeLabel = elements.NewText(24, "", 0, 610)
+	s.updateNoticeLabel.BoundsW = virtScreenW
+	s.updateNoticeLabel.HAlign = elements.AlignCenter
+	s.updateStatusLabel = elements.NewText(18, "", 0, 712)
+	s.updateStatusLabel.BoundsW = virtScreenW
+	s.updateStatusLabel.HAlign = elements.AlignCenter
 	return s
 }
 
@@ -250,9 +285,17 @@ func buildIconButtons(opts iconButtonOpts) []*elements.Button {
 
 func (s *StartScreen) Update(W, H int, scale float64) (screenui.ScreenName, screenui.Screen, error) {
 	opts := &ebiten.DrawImageOptions{}
+	s.pollUpdate()
+	if s.restartAfterUpdate {
+		return screenui.StartScr, nil, ebiten.Termination
+	}
 
 	switch s.mode {
 	case startModeMenu:
+		s.updateDownload(W, H, scale)
+		if s.downloadResult != nil {
+			return screenui.StartScr, nil, nil
+		}
 		if !s.savesChecked {
 			s.refreshHasSaves()
 		}
@@ -335,6 +378,7 @@ func (s *StartScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	switch s.mode {
 	case startModeMenu:
 		screen.DrawImage(s.background, &ebiten.DrawImageOptions{})
+		s.drawUpdate(screen, scale)
 		s.newGameBtn.Draw(screen, opts, scale)
 		if s.hasSaves {
 			s.loadGameBtn.Draw(screen, opts, scale)

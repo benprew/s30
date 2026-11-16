@@ -62,12 +62,21 @@ jobs:
       - name: Ensure dependencies
         run: go mod download
 
+      - name: Set stable release version code
+        if: inputs.version_name != ''
+        run: |
+          code=$(go run ./cmd/update-manifest -android-version-code -version "$ANDROID_VERSION_NAME")
+          echo "ANDROID_VERSION_CODE=$code" >> "$GITHUB_ENV"
+
       - name: Build AAR with ebitenmobile
+        env:
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
         run: |
           mkdir -p ./mobile/android/s30
           go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.10.2 bind \
             -target android \
             -tags embedded_card_images \
+            -ldflags "-X github.com/benprew/s30/game/version.Current=${ANDROID_VERSION_NAME} -X github.com/benprew/s30/game/updates.PublicKey=${UPDATE_PUBLIC_KEY}" \
             -javapkg com.throwingbones.s30 \
             -o ./mobile/android/s30/s30.aar \
             ./mobile
@@ -136,6 +145,7 @@ jobs:
 
       - name: Prepare artifacts
         run: |
+          printf '%s\n' "$ANDROID_VERSION_CODE" > s30_android.version
           cp mobile/android/app/build/outputs/apk/release/app-release.apk s30_android.apk
           cp mobile/android/app/build/outputs/apk/release/app-release.apk.idsig s30_android.apk.idsig
           cp mobile/android/app/build/outputs/bundle/release/app-release.aab s30_android.aab
@@ -146,6 +156,7 @@ jobs:
           path: |
             s30_android.apk
             s30_android.apk.idsig
+            s30_android.version
           retention-days: 30
 
       - uses: actions/upload-artifact@v7

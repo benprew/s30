@@ -2,6 +2,7 @@ package com.throwingbones.s30;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import android.content.Intent;
 import android.util.Log;
 
 import go.Seq;
@@ -11,6 +12,7 @@ import com.throwingbones.s30.mobile.Mobile;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "S30";
+    private AndroidUpdateInstaller updateInstaller;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,6 +20,8 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate: setting Seq context");
         Seq.setContext(getApplicationContext());
         Mobile.setSaveDir(getFilesDir().getAbsolutePath());
+        updateInstaller = new AndroidUpdateInstaller(this);
+        Mobile.setUpdateInstaller(getCacheDir().getAbsolutePath(), BuildConfig.VERSION_CODE, updateInstaller);
         Log.i(TAG, "onCreate: setting content view");
         setContentView(R.layout.activity_main);
         Log.i(TAG, "onCreate: done");
@@ -25,6 +29,14 @@ public class MainActivity extends AppCompatActivity {
 
     private EbitenView getEbitenView() {
         return (EbitenView) this.findViewById(R.id.ebitenview);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == AndroidUpdateInstaller.INSTALL_PERMISSION_REQUEST) {
+            updateInstaller.onPermissionResult();
+        }
     }
 
     @Override
