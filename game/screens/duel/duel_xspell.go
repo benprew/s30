@@ -3,6 +3,7 @@ package duel
 import (
 	"fmt"
 	"image/color"
+	"slices"
 	"uuid"
 
 	"github.com/benprew/mage-go/pkg/mage/interactive"
@@ -17,6 +18,50 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
+
+func targetsDetermineX(action interactive.ActionOption) bool {
+	if !action.NeedsTarget || action.TargetType == nil || len(action.ValidTargets) == 0 {
+		return false
+	}
+	if action.TargetType.Min() != 1 || action.TargetType.Max() != 1 {
+		return false
+	}
+	for _, id := range action.ValidTargets {
+		if _, ok := uniqueXForTarget(action, id); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func uniqueXForTarget(action interactive.ActionOption, id uuid.UUID) (int, bool) {
+	xValue, found := 0, false
+	for _, option := range action.XTargetOptions {
+		if len(option.Candidates) != 1 {
+			return 0, false
+		}
+		if !slices.Contains(option.Candidates[0], id) {
+			continue
+		}
+		if found && xValue != option.XValue {
+			return 0, false
+		}
+		xValue, found = option.XValue, true
+	}
+	return xValue, found
+}
+
+func targetsForX(action interactive.ActionOption, xValue int) []uuid.UUID {
+	if action.XTargetOptions == nil {
+		return action.ValidTargets
+	}
+	for _, option := range action.XTargetOptions {
+		if option.XValue == xValue && len(option.Candidates) > 0 {
+			return option.Candidates[0]
+		}
+	}
+	return nil
+}
 
 func (s *DuelScreen) enterXChoosingMode(actions []interactive.ActionOption) {
 	action := actions[0]
@@ -98,8 +143,11 @@ func (s *DuelScreen) updateXChoosingUI() {
 }
 
 func (s *DuelScreen) selectXValue(xValue int) {
-	actions := s.xChoosingActions
+	actions := slices.Clone(s.xChoosingActions)
 	s.exitXChoosingMode()
+	for i := range actions {
+		actions[i].ValidTargets = targetsForX(actions[i], xValue)
+	}
 
 	if len(actions) == 1 && actions[0].NeedsTarget {
 		if tid, ok := s.autoTargetStackSpell(actions[0]); ok {
