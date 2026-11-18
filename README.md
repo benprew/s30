@@ -20,9 +20,12 @@ hood.
 - **Cities** (hamlets, towns, capitals) with card shops, wisemen, and quests.
 - **Rival wizards** wander the map with chase/wander AI; duel them, bribe
   them, or avoid them.
-- **Full MTG duels** powered by a rules engine based on [mage-go] (itself
+- **Full MTG duels** powered by a rules engine based on [mage-go](https://github.com/benprew/mage-go) (itself
   derived from XMage), with combat visuals, aura rendering, stack
   visualization, and targeting UI.
+- **Modern MTG rules** — duels follow modern MTG Comprehensive Rules
+  (post-M10, so classic mechanics like mana burn are absent, combat damage
+  does not use the stack, and cards follow modern Oracle text).
 - **Deck building** with drag-and-drop deck editor and a multi-deck
   collection.
 - **AI opponents** — heuristic-based today, with a MinMax-with-search AI in
