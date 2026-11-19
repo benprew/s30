@@ -2001,6 +2001,10 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 	}
 
 	if actions[0].NeedsX {
+		if len(actions) == 1 && targetsDetermineX(actions[0]) {
+			s.enterTargetingMode(id, name, actions)
+			return
+		}
 		s.enterXChoosingMode(actions)
 		return
 	}
@@ -2285,6 +2289,11 @@ func (s *DuelScreen) submitTargetingAction() bool {
 	pa := actionOptionToPriorityAction(action)
 	pa.Targets = slices.Clone(s.selectedTargetIDs)
 	pa.XValue = s.xValueForAction()
+	if action.NeedsX && len(pa.Targets) == 1 {
+		if x, ok := uniqueXForTarget(action, pa.Targets[0]); ok {
+			pa.XValue = x
+		}
+	}
 	select {
 	case s.human.FromTUI() <- pa:
 	default:
