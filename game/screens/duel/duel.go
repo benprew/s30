@@ -167,9 +167,12 @@ type DuelScreen struct {
 	selectedTargetIDs []uuid.UUID
 
 	xChoosingActions []interactive.ActionOption
-	xButtons         []*elements.Button
+	xConfirmBtn      *elements.Button
 	xMaxValue        int
+	xCurrentValue    int
+	xTyped           bool
 	xChosenValue     int
+	xChosenTargets   []uuid.UUID
 
 	abilityChoosingActions []interactive.ActionOption
 	abilityButtons         []*elements.Button
@@ -1175,7 +1178,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		s.updateAutoPlay()
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil() && !s.isChoosingAbility() {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil() && !s.isChoosingAbility() && !s.isChoosingX() {
 		s.submitPendingAndPass()
 	}
 
@@ -1203,7 +1206,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	if s.isChoosingX() {
-		s.updateXChoosingUI()
+		s.updateXChoosingUI(W, H)
 		return screenui.DuelScr, nil, nil
 	}
 
@@ -2001,7 +2004,8 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 	}
 
 	if actions[0].NeedsX {
-		if len(actions) == 1 && targetsDetermineX(actions[0]) {
+		if (len(actions) == 1 && targetsDetermineX(actions[0])) ||
+			(actions[0].NeedsTarget && actions[0].TargetType != nil && actions[0].TargetType.Max() > 1) {
 			s.enterTargetingMode(id, name, actions)
 			return
 		}
@@ -2231,7 +2235,14 @@ func (s *DuelScreen) targetBounds() (int, int) {
 	if variable, ok := target.(variableTargetBounds); ok {
 		return variable.BoundsForX(s.xChosenValue)
 	}
-	return target.Min(), target.Max()
+	minT, maxT := target.Min(), target.Max()
+	if s.targetingAction.NeedsX && s.targetingAction.CardName == "Fireball" {
+		maxAffordable := s.targetingAction.MaxXValue + 1
+		if maxAffordable < maxT {
+			maxT = maxAffordable
+		}
+	}
+	return minT, maxT
 }
 
 func (s *DuelScreen) targetSelectionComplete() bool {
@@ -2241,6 +2252,12 @@ func (s *DuelScreen) targetSelectionComplete() bool {
 
 func (s *DuelScreen) targetingPrompt(cardName string) string {
 	minTargets, maxTargets := s.targetBounds()
+	if s.targetingAction.NeedsX && cardName == "Fireball" {
+		if maxTargets > 1 {
+			return fmt.Sprintf("Choose 1-%d targets for %s (each extra target costs {1})", maxTargets, cardName)
+		}
+		return fmt.Sprintf("Choose a target for %s", cardName)
+	}
 	switch {
 	case minTargets == 1 && maxTargets == 1:
 		return fmt.Sprintf("Choose a target for %s", cardName)
@@ -2286,6 +2303,13 @@ func (s *DuelScreen) submitTargetingAction() bool {
 			return false
 		}
 	}
+
+	if action.NeedsX && s.xChosenValue == 0 && len(s.xChosenTargets) == 0 && !targetsDetermineX(action) {
+		targets := slices.Clone(s.selectedTargetIDs)
+		s.enterXChoosingModeWithTargets([]interactive.ActionOption{action}, targets)
+		return true
+	}
+
 	pa := actionOptionToPriorityAction(action)
 	pa.Targets = slices.Clone(s.selectedTargetIDs)
 	pa.XValue = s.xValueForAction()
