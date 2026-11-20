@@ -8,11 +8,23 @@ import (
 	"github.com/benprew/mage-go/pkg/mage/interactive"
 )
 
-func stackTargetScreen(count int) (*DuelScreen, chan interactive.PriorityAction) {
+func newTestHuman() (*interactive.HumanPlayer, chan interactive.PriorityAction) {
+	fromTUI := make(chan interactive.PriorityAction, 1)
+	h := interactive.NewHumanPlayerWithChannels(
+		"You",
+		make(chan interactive.GameMsg, 1),
+		fromTUI,
+		make(chan interactive.ChoiceRequest, 1),
+		make(chan interactive.ChoiceResponse, 1),
+	)
+	return h, fromTUI
+}
+
+func newStackTargetScreen(count int) (*DuelScreen, interactive.ActionOption, chan interactive.PriorityAction) {
 	human, responses := newTestHuman()
 	action := interactive.ActionOption{
 		Type: interactive.ActionCastSpell, CardID: uuid.New(),
-		CardName: "Test spell", NeedsTarget: true, TargetType: mage.TargetSpellOnStack(),
+		CardName: "Test action", NeedsTarget: true, TargetType: mage.TargetSpellOnStack(),
 	}
 	state := &interactive.GameState{}
 	for i := range count {
@@ -23,18 +35,18 @@ func stackTargetScreen(count int) (*DuelScreen, chan interactive.PriorityAction)
 			controller = "Enemy"
 		}
 		state.StackItems = append(state.StackItems, interactive.StackItemState{
-			ID: id.String(), Name: "Lightning Bolt", Controller: controller,
+			ID: id.String(), Name: "Stack spell", Controller: controller,
 		})
 	}
 	s := &DuelScreen{human: human, lastMsg: &interactive.GameMsg{State: state}}
-	s.enterTargetingMode(action.CardID, action.CardName, []interactive.ActionOption{action})
-	return s, responses
+	return s, action, responses
 }
 
 func TestStackTargetChooserSelectsLegalSpell(t *testing.T) {
-	s, responses := stackTargetScreen(2)
+	s, action, responses := newStackTargetScreen(2)
 	s.lastMsg.State.StackItems = append(s.lastMsg.State.StackItems,
 		interactive.StackItemState{ID: uuid.New().String(), Name: "Invalid target"})
+	s.enterTargetingMode(action.CardID, action.CardName, []interactive.ActionOption{action})
 	if !s.isChoosingStackTarget() {
 		t.Fatal("expected the stack target chooser")
 	}
@@ -62,7 +74,8 @@ func TestStackTargetChooserSelectsLegalSpell(t *testing.T) {
 }
 
 func TestStackTargetChooserPagesAndCancels(t *testing.T) {
-	s, responses := stackTargetScreen(50)
+	s, action, responses := newStackTargetScreen(50)
+	s.enterTargetingMode(action.CardID, action.CardName, []interactive.ActionOption{action})
 	s.xChosenValue = 3
 	first, pages := s.stackTargetLayout(1024, 768)
 	if pages < 2 {
@@ -110,45 +123,74 @@ func TestAutoTargetStackSpellUsesLegalTargetsWithoutCardNames(t *testing.T) {
 	}
 }
 
-func TestStackTargetChooserActionPaths(t *testing.T) {
-	for _, path := range []string{"cast", "ability", "X spell"} {
-		t.Run(path, func(t *testing.T) {
-			s, responses := stackTargetScreen(2)
-			action := s.targetingAction
-			s.exitTargetingMode()
-			switch path {
-			case "cast":
-				s.cardActions = map[uuid.UUID][]interactive.ActionOption{action.CardID: {action}}
-				s.performCardAction(action.CardID, action.CardName)
-			case "ability":
-				action.Type = interactive.ActionActivateAbility
-				action.PermanentID = uuid.New()
-				action.AbilityIndex = 2
-				s.abilityChoosingActions = []interactive.ActionOption{action}
-				s.selectAbility(0)
-			case "X spell":
-				action.NeedsX = true
-				s.xChoosingActions = []interactive.ActionOption{action}
-				s.selectXValue(3)
-			}
-			if !s.isChoosingStackTarget() {
-				t.Fatal("multiple legal targets should open the chooser")
-			}
-			cards, _ := s.stackTargetLayout(1024, 768)
-			s.updateStackTargetMouse(cards[0].Rect.Min.X+1, cards[0].Rect.Min.Y+1, true, 1024, 768)
-			select {
-			case got := <-responses:
-				if got.Type != action.Type || got.CardID != action.CardID ||
-					got.PermanentID != action.PermanentID || got.AbilityIndex != action.AbilityIndex ||
-					len(got.Targets) != 1 || got.Targets[0] != cards[0].ID {
-					t.Fatalf("unexpected action: %+v", got)
+func TestStackTargetActionPaths(t *testing.T) {
+	for _, targets := range []struct {
+		name       string
+		start, end int
+	}{
+		{"one legal spell you control", 0, 1},
+		{"one legal opponent spell", 1, 2},
+		{"two legal spells", 0, 2},
+	} {
+		for _, path := range []string{"cast", "activate", "choose ability", "choose X"} {
+			t.Run(path+"/"+targets.name, func(t *testing.T) {
+				s, action, responses := newStackTargetScreen(2)
+				action.ValidTargets = action.ValidTargets[targets.start:targets.end]
+				xValue := 0
+				switch path {
+				case "cast":
+					s.cardActions = map[uuid.UUID][]interactive.ActionOption{action.CardID: {action}}
+					s.performCardAction(action.CardID, action.CardName)
+				case "activate", "choose ability":
+					action.Type = interactive.ActionActivateAbility
+					action.PermanentID = uuid.New()
+					action.CardID = uuid.Nil()
+					action.AbilityIndex = 2
+					if path == "activate" {
+						s.cardActions = map[uuid.UUID][]interactive.ActionOption{action.PermanentID: {action}}
+						s.performCardAction(action.PermanentID, action.CardName)
+					} else {
+						s.abilityChoosingActions = []interactive.ActionOption{action}
+						s.selectAbility(0)
+					}
+				case "choose X":
+					action.NeedsX = true
+					s.xChoosingActions = []interactive.ActionOption{action}
+					xValue = 3
+					s.selectXValue(xValue)
 				}
-				if path == "X spell" && got.XValue != 3 {
-					t.Fatalf("X = %d, want 3", got.XValue)
+
+				want := action.ValidTargets[0]
+				if len(action.ValidTargets) > 1 {
+					if !s.isChoosingStackTarget() {
+						t.Fatal("multiple legal targets should open the chooser")
+					}
+					cards, _ := s.stackTargetLayout(1024, 768)
+					if len(cards) != len(action.ValidTargets) {
+						t.Fatalf("chooser has %d cards, want %d", len(cards), len(action.ValidTargets))
+					}
+					want = cards[0].ID
+					s.updateStackTargetMouse(cards[0].Rect.Min.X+1, cards[0].Rect.Min.Y+1, true, 1024, 768)
 				}
-			default:
-				t.Fatal("expected an action after choosing a stack target")
-			}
-		})
+				if s.targetingCardID != uuid.Nil() {
+					t.Fatal("target selection should be complete")
+				}
+				select {
+				case got := <-responses:
+					if got.Type != action.Type || got.CardID != action.CardID ||
+						got.PermanentID != action.PermanentID || got.AbilityIndex != action.AbilityIndex {
+						t.Fatalf("unexpected action: %+v", got)
+					}
+					if len(got.Targets) != 1 || got.Targets[0] != want {
+						t.Fatalf("targets = %v, want [%v]", got.Targets, want)
+					}
+					if got.XValue != xValue {
+						t.Fatalf("X = %d, want %d", got.XValue, xValue)
+					}
+				default:
+					t.Fatal("expected an action with a stack target")
+				}
+			})
+		}
 	}
 }
