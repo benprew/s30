@@ -167,9 +167,12 @@ type DuelScreen struct {
 	selectedTargetIDs []uuid.UUID
 
 	xChoosingActions []interactive.ActionOption
-	xButtons         []*elements.Button
+	xConfirmBtn      *elements.Button
 	xMaxValue        int
+	xCurrentValue    int
+	xTyped           bool
 	xChosenValue     int
+	xChosenTargets   []uuid.UUID
 
 	abilityChoosingActions []interactive.ActionOption
 	abilityButtons         []*elements.Button
@@ -828,8 +831,12 @@ func (s *DuelScreen) lastLog() []string {
 	return s.lastMsg.Log
 }
 
+func (s *DuelScreen) isDividedDamagePrompt() bool {
+	return s.lastMsg != nil && s.lastMsg.Prompt == interactive.PromptAssignDamage
+}
+
 func (s *DuelScreen) refreshDamageAssignmentPrompt(msg *interactive.GameMsg) {
-	if msg == nil || msg.Prompt != interactive.PromptAssignCombatDamage || len(msg.Options) == 0 {
+	if msg == nil || (msg.Prompt != interactive.PromptAssignCombatDamage && msg.Prompt != interactive.PromptAssignDamage) || len(msg.Options) == 0 {
 		s.damageAssignment = nil
 		s.damageAttackerID = uuid.Nil()
 		s.damageTotal = 0
@@ -838,7 +845,57 @@ func (s *DuelScreen) refreshDamageAssignmentPrompt(msg *interactive.GameMsg) {
 	opt := msg.Options[0]
 	s.damageAttackerID = opt.PermanentID
 	s.damageTotal = opt.MaxXValue
-	s.damageAssignment = ai.SuggestedCombatDamage(s.blockersForDamageOption(opt), s.damageTotal)
+	if msg.Prompt == interactive.PromptAssignCombatDamage {
+		s.damageAssignment = ai.SuggestedCombatDamage(s.blockersForDamageOption(opt), s.damageTotal)
+	} else {
+		s.damageAssignment = suggestedDividedDamageAssignment(opt.ValidTargets, s.damageTotal, s)
+	}
+}
+
+func suggestedDividedDamageAssignment(targets []uuid.UUID, total int, s *DuelScreen) map[uuid.UUID]int {
+	assignment := make(map[uuid.UUID]int, len(targets))
+	if len(targets) == 0 || total <= 0 {
+		return assignment
+	}
+	remaining := total - len(targets)
+	for _, id := range targets {
+		assignment[id] = 1
+	}
+	if remaining > 0 {
+		for _, id := range targets {
+			if remaining <= 0 {
+				break
+			}
+			perm := s.findPermanent(id)
+			if perm != nil {
+				lethalNeeded := max(0, (perm.Toughness-perm.Damage)-1)
+				give := min(lethalNeeded, remaining)
+				assignment[id] += give
+				remaining -= give
+			}
+		}
+	}
+	if remaining > 0 {
+		assignment[targets[0]] += remaining
+	}
+	return assignment
+}
+
+func (s *DuelScreen) findPermanent(id uuid.UUID) *interactive.PermanentState {
+	if s.lastMsg == nil || s.lastMsg.State == nil {
+		return nil
+	}
+	for i := range s.lastMsg.State.You.Battlefield {
+		if s.lastMsg.State.You.Battlefield[i].ID == id {
+			return &s.lastMsg.State.You.Battlefield[i]
+		}
+	}
+	for i := range s.lastMsg.State.Opponent.Battlefield {
+		if s.lastMsg.State.Opponent.Battlefield[i].ID == id {
+			return &s.lastMsg.State.Opponent.Battlefield[i]
+		}
+	}
+	return nil
 }
 
 func (s *DuelScreen) blockersForDamageOption(opt interactive.ActionOption) []interactive.PermanentState {
@@ -1175,7 +1232,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		s.updateAutoPlay()
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil() && !s.isChoosingAbility() {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && s.targetingCardID == uuid.Nil() && !s.isChoosingAbility() && !s.isChoosingX() {
 		s.submitPendingAndPass()
 	}
 
@@ -1203,7 +1260,7 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 	}
 
 	if s.isChoosingX() {
-		s.updateXChoosingUI()
+		s.updateXChoosingUI(W, H)
 		return screenui.DuelScr, nil, nil
 	}
 
@@ -1301,15 +1358,19 @@ func (s *DuelScreen) autoPlayAction() (interactive.PriorityAction, bool) {
 			Type:     interactive.ActionSelectBlockers,
 			Blockers: s.autoStrategy.Blockers(s.human.BasePlayer, s.game),
 		}, true
-	case interactive.PromptAssignCombatDamage:
+	case interactive.PromptAssignCombatDamage, interactive.PromptAssignDamage:
 		damage := make(map[uuid.UUID]int, len(s.damageAssignment))
 		for id, amount := range s.damageAssignment {
 			if amount > 0 {
 				damage[id] = amount
 			}
 		}
+		actType := interactive.ActionAssignCombatDamage
+		if s.lastMsg.Prompt == interactive.PromptAssignDamage {
+			actType = interactive.ActionAssignDamage
+		}
 		return interactive.PriorityAction{
-			Type:        interactive.ActionAssignCombatDamage,
+			Type:        actType,
 			Damage:      damage,
 			DamageOrder: s.damageAssignmentOrder(),
 		}, true
@@ -1843,7 +1904,7 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 	if s.lastMsg == nil {
 		return
 	}
-	if s.lastMsg.Prompt == interactive.PromptAssignCombatDamage {
+	if s.lastMsg.Prompt == interactive.PromptAssignCombatDamage || s.lastMsg.Prompt == interactive.PromptAssignDamage {
 		s.handleDamageAssignmentClick(mx, my)
 		return
 	}
@@ -1883,35 +1944,59 @@ func (s *DuelScreen) handleCardClick(mx, my int) {
 }
 
 func (s *DuelScreen) handleDamageAssignmentClick(mx, my int) {
-	blockerID, delta := s.damageControlAt(mx, my)
-	if blockerID == uuid.Nil() || delta == 0 {
+	targetID, delta := s.damageControlAt(mx, my)
+	if targetID == uuid.Nil() || delta == 0 {
 		return
 	}
 	if delta > 0 {
-		s.increaseAssignedDamage(blockerID)
+		s.increaseAssignedDamage(targetID)
 		return
 	}
-	s.decreaseAssignedDamage(blockerID)
+	s.decreaseAssignedDamage(targetID)
+}
+
+func (s *DuelScreen) playerDamageControlPos(dp *duelPlayer) image.Point {
+	y := duelOpponentBoardY + 28
+	if dp == s.self {
+		y = duelPlayerBoardY + 28
+	}
+	return image.Pt(duelBoardX+140, y)
 }
 
 func (s *DuelScreen) damageControlAt(mx, my int) (uuid.UUID, int) {
 	if s.damageAssignment == nil || s.lastMsg == nil || s.lastMsg.State == nil {
 		return uuid.Nil(), 0
 	}
-	for _, perm := range s.lastMsg.State.Opponent.Battlefield {
-		if _, ok := s.damageAssignment[perm.ID]; !ok {
+	for _, dp := range []*duelPlayer{s.opponent, s.self} {
+		ps := s.playerState(dp)
+		if ps == nil {
 			continue
 		}
-		pos, ok := s.cardPositions[perm.ID]
-		if !ok {
-			continue
+		for _, perm := range ps.Battlefield {
+			if _, ok := s.damageAssignment[perm.ID]; !ok {
+				continue
+			}
+			pos, ok := s.cardPositions[perm.ID]
+			if !ok {
+				continue
+			}
+			minus, plus := damageControlBounds(pos)
+			if image.Pt(mx, my).In(minus) {
+				return perm.ID, -1
+			}
+			if image.Pt(mx, my).In(plus) {
+				return perm.ID, 1
+			}
 		}
-		minus, plus := damageControlBounds(pos)
-		if image.Pt(mx, my).In(minus) {
-			return perm.ID, -1
-		}
-		if image.Pt(mx, my).In(plus) {
-			return perm.ID, 1
+		if _, ok := s.damageAssignment[ps.ID]; ok {
+			pos := s.playerDamageControlPos(dp)
+			minus, plus := damageControlBounds(pos)
+			if image.Pt(mx, my).In(minus) {
+				return ps.ID, -1
+			}
+			if image.Pt(mx, my).In(plus) {
+				return ps.ID, 1
+			}
 		}
 	}
 	return uuid.Nil(), 0
@@ -1923,23 +2008,31 @@ func damageControlBounds(pos image.Point) (image.Rectangle, image.Rectangle) {
 		image.Rect(pos.X+fieldCardW-22, y, pos.X+fieldCardW-4, y+18)
 }
 
-func (s *DuelScreen) increaseAssignedDamage(blockerID uuid.UUID) {
+func (s *DuelScreen) increaseAssignedDamage(targetID uuid.UUID) {
+	minDmg := 0
+	if s.isDividedDamagePrompt() {
+		minDmg = 1
+	}
 	for id, amount := range s.damageAssignment {
-		if id != blockerID && amount > 0 {
+		if id != targetID && amount > minDmg {
 			s.damageAssignment[id]--
-			s.damageAssignment[blockerID]++
+			s.damageAssignment[targetID]++
 			return
 		}
 	}
 }
 
-func (s *DuelScreen) decreaseAssignedDamage(blockerID uuid.UUID) {
-	if s.damageAssignment[blockerID] <= 0 {
+func (s *DuelScreen) decreaseAssignedDamage(targetID uuid.UUID) {
+	minDmg := 0
+	if s.isDividedDamagePrompt() {
+		minDmg = 1
+	}
+	if s.damageAssignment[targetID] <= minDmg {
 		return
 	}
 	for id := range s.damageAssignment {
-		if id != blockerID {
-			s.damageAssignment[blockerID]--
+		if id != targetID {
+			s.damageAssignment[targetID]--
 			s.damageAssignment[id]++
 			return
 		}
@@ -2001,7 +2094,8 @@ func (s *DuelScreen) performCardAction(id uuid.UUID, name string) {
 	}
 
 	if actions[0].NeedsX {
-		if len(actions) == 1 && targetsDetermineX(actions[0]) {
+		if (len(actions) == 1 && targetsDetermineX(actions[0])) ||
+			(actions[0].NeedsTarget && actions[0].TargetType != nil && actions[0].TargetType.Max() > 1) {
 			s.enterTargetingMode(id, name, actions)
 			return
 		}
@@ -2231,7 +2325,14 @@ func (s *DuelScreen) targetBounds() (int, int) {
 	if variable, ok := target.(variableTargetBounds); ok {
 		return variable.BoundsForX(s.xChosenValue)
 	}
-	return target.Min(), target.Max()
+	minT, maxT := target.Min(), target.Max()
+	if s.targetingAction.NeedsX && s.targetingAction.CardName == "Fireball" {
+		maxAffordable := s.targetingAction.MaxXValue + 1
+		if maxAffordable < maxT {
+			maxT = maxAffordable
+		}
+	}
+	return minT, maxT
 }
 
 func (s *DuelScreen) targetSelectionComplete() bool {
@@ -2241,6 +2342,12 @@ func (s *DuelScreen) targetSelectionComplete() bool {
 
 func (s *DuelScreen) targetingPrompt(cardName string) string {
 	minTargets, maxTargets := s.targetBounds()
+	if s.targetingAction.NeedsX && cardName == "Fireball" {
+		if maxTargets > 1 {
+			return fmt.Sprintf("Choose 1-%d targets for %s (each extra target costs {1})", maxTargets, cardName)
+		}
+		return fmt.Sprintf("Choose a target for %s", cardName)
+	}
 	switch {
 	case minTargets == 1 && maxTargets == 1:
 		return fmt.Sprintf("Choose a target for %s", cardName)
@@ -2286,6 +2393,13 @@ func (s *DuelScreen) submitTargetingAction() bool {
 			return false
 		}
 	}
+
+	if action.NeedsX && s.xChosenValue == 0 && len(s.xChosenTargets) == 0 && !targetsDetermineX(action) {
+		targets := slices.Clone(s.selectedTargetIDs)
+		s.enterXChoosingModeWithTargets([]interactive.ActionOption{action}, targets)
+		return true
+	}
+
 	pa := actionOptionToPriorityAction(action)
 	pa.Targets = slices.Clone(s.selectedTargetIDs)
 	pa.XValue = s.xValueForAction()
@@ -2493,16 +2607,20 @@ func hasKeyword(keywords []string, kw string) bool {
 }
 
 func (s *DuelScreen) submitPendingAndPass() {
-	if s.lastMsg != nil && s.lastMsg.Prompt == interactive.PromptAssignCombatDamage {
+	if s.lastMsg != nil && (s.lastMsg.Prompt == interactive.PromptAssignCombatDamage || s.lastMsg.Prompt == interactive.PromptAssignDamage) {
 		damage := make(map[uuid.UUID]int, len(s.damageAssignment))
 		for id, amount := range s.damageAssignment {
 			if amount > 0 {
 				damage[id] = amount
 			}
 		}
+		actType := interactive.ActionAssignCombatDamage
+		if s.lastMsg.Prompt == interactive.PromptAssignDamage {
+			actType = interactive.ActionAssignDamage
+		}
 		select {
 		case s.human.FromTUI() <- interactive.PriorityAction{
-			Type:        interactive.ActionAssignCombatDamage,
+			Type:        actType,
 			Damage:      damage,
 			DamageOrder: s.damageAssignmentOrder(),
 		}:
@@ -3159,6 +3277,13 @@ func (s *DuelScreen) drawBoard(screen *ebiten.Image, dp *duelPlayer, ps *interac
 	txt.Color = color.RGBA{200, 200, 200, 255}
 	txt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
 
+	if s.lastMsg != nil && s.lastMsg.Prompt == interactive.PromptAssignDamage {
+		if amount, ok := s.damageAssignment[ps.ID]; ok {
+			ctrlPos := s.playerDamageControlPos(dp)
+			s.drawDamageControls(screen, ctrlPos, amount)
+		}
+	}
+
 	if dp == s.self && s.lastMsg != nil {
 		y := startY + 68
 		for _, opt := range s.lastMsg.Options {
@@ -3376,7 +3501,7 @@ func (s *DuelScreen) abilityIconPlacements(perm interactive.PermanentState, pos 
 }
 
 func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, perm interactive.PermanentState, pos image.Point) {
-	if dp == s.opponent && s.lastMsg != nil && s.lastMsg.Prompt == interactive.PromptAssignCombatDamage {
+	if s.lastMsg != nil && (s.lastMsg.Prompt == interactive.PromptAssignCombatDamage || s.lastMsg.Prompt == interactive.PromptAssignDamage) {
 		if amount, ok := s.damageAssignment[perm.ID]; ok {
 			vector.StrokeRect(screen,
 				float32(pos.X), float32(pos.Y),
@@ -3912,6 +4037,9 @@ func (s *DuelScreen) statusMessage() string {
 	stackMsg := s.stackDescription()
 	if s.lastMsg.Prompt == interactive.PromptAssignCombatDamage {
 		return stackMsg + "Assign combat damage with +/- on blockers. Done when finished."
+	}
+	if s.lastMsg.Prompt == interactive.PromptAssignDamage {
+		return stackMsg + fmt.Sprintf("Assign %d damage with +/- on targets. Done when finished.", s.damageTotal)
 	}
 
 	if isCombatStep(step) {
