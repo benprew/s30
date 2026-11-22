@@ -1,6 +1,7 @@
 package duel
 
 import (
+	"image"
 	"strings"
 	"testing"
 
@@ -51,6 +52,33 @@ func TestPutBonusPermanentsInPlayProcessesStaticAbilities(t *testing.T) {
 	}
 	if got := bearPerm.CurrentToughness(g); got != 2 {
 		t.Errorf("expected Crusade to boost Mesa Pegasus toughness to 2, got %d", got)
+	}
+}
+
+func TestBonusPermanentUsesCardArt(t *testing.T) {
+	player, enemy := duelTestPlayers(t, nil, nil)
+	card := domain.FindCardByName("Orcish Oriflamme")
+	player.BonusDuelCards = []*domain.Card{card}
+	t.Cleanup(domain.ClearCardImageCache)
+	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, domain.CardFullHeight)))
+
+	s := &DuelScreen{player: player, enemy: enemy}
+	s.initGameState()
+	battlefield := interactive.SnapshotGameState(s.game, 0).You.Battlefield
+	if len(battlefield) != 1 || battlefield[0].Name != card.Name() {
+		t.Fatalf("expected %s on the battlefield, got %v", card.Name(), battlefield)
+	}
+	perm := &battlefield[0]
+
+	mini, _ := card.CardImage(domain.CardViewArtMini)
+	if got := s.getCardArtImg(perm.Name, perm.ID.String(), domain.CardViewArtMini); got != mini {
+		t.Errorf("battlefield did not use %s artwork", card.Name())
+	}
+
+	full, _ := card.CardImage(domain.CardViewFull)
+	s.loadCardPreview(perm.Name, perm)
+	if got := s.previewImage(); got != full {
+		t.Errorf("preview did not use %s artwork", card.Name())
 	}
 }
 

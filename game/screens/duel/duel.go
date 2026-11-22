@@ -428,6 +428,11 @@ func (s *DuelScreen) initGameState() {
 	s.putBonusPermanentsInPlay(bonusPermanents)
 
 	s.cardImageMap = buildCardImageMap(duelDeck, s.enemy.Character.GetActiveDeck())
+	for _, card := range bonusPermanents {
+		if s.cardImageMap[card.CardName] == nil {
+			s.cardImageMap[card.CardName] = card
+		}
+	}
 
 	s.self = &duelPlayer{name: "You"}
 	s.opponent = &duelPlayer{name: s.enemy.Name()}
