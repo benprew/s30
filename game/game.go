@@ -236,6 +236,13 @@ func (g *Game) openBugReport() {
 	g.navigate(screenui.BugReportScr)
 }
 
+func (g *Game) terminate() error {
+	if start, ok := g.screenMap[screenui.StartScr].(*screens.StartScreen); ok {
+		start.CancelUpdateDownload()
+	}
+	return ebiten.Termination
+}
+
 func (g *Game) Update() error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -254,7 +261,7 @@ func (g *Game) Update() error {
 				fmt.Printf("Error auto-saving: %v\n", err)
 			}
 		}
-		return ebiten.Termination
+		return g.terminate()
 	}
 
 	ui.UpdatePointer()
@@ -265,12 +272,12 @@ func (g *Game) Update() error {
 		menuName, menuScr, menuErr := g.gameMenu.UpdateMenu(g.ScreenW, g.ScreenH, g.camScale, allowEscapeOpen)
 		if menuErr != nil {
 			if errors.Is(menuErr, ebiten.Termination) {
-				return ebiten.Termination
+				return g.terminate()
 			}
 			return fmt.Errorf("err updating game menu: %w", menuErr)
 		}
 		if menuName == screenui.QuitScr {
-			return ebiten.Termination
+			return g.terminate()
 		}
 		if menuScr != nil && menuName != screenui.PopScr && menuName != screenui.NoScr {
 			g.screenMap[menuName] = menuScr
@@ -324,12 +331,12 @@ func (g *Game) Update() error {
 	name, screen, err := g.CurrentScreen().Update(g.ScreenW, g.ScreenH, g.camScale)
 	if err != nil {
 		if errors.Is(err, ebiten.Termination) {
-			return ebiten.Termination
+			return g.terminate()
 		}
 		return fmt.Errorf("err updating %s: %s", screenui.ScreenNameToString(prevScreen), err)
 	}
 	if name == screenui.QuitScr {
-		return ebiten.Termination
+		return g.terminate()
 	}
 
 	// Entering the world from the start screen builds the world first.
@@ -396,12 +403,12 @@ func (g *Game) Update() error {
 		wfName, wfScreen, wfErr := g.worldFrame.Update(g.ScreenW, g.ScreenH, g.camScale)
 		if wfErr != nil {
 			if errors.Is(wfErr, ebiten.Termination) {
-				return ebiten.Termination
+				return g.terminate()
 			}
 			return fmt.Errorf("err updating world frame: %s", wfErr)
 		}
 		if wfName == screenui.QuitScr {
-			return ebiten.Termination
+			return g.terminate()
 		}
 		if wfScreen != nil && wfName != screenui.PopScr && wfName != screenui.NoScr {
 			g.screenMap[wfName] = wfScreen

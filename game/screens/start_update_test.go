@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/benprew/s30/game/updates"
@@ -45,6 +46,58 @@ func TestDismissUpdateUnblocksMenuBeforeDownloadStops(t *testing.T) {
 	case result <- updateResult{prepared: &updates.Prepared{}}:
 	case <-time.After(time.Second):
 		t.Fatal("late download result was not collected")
+	}
+}
+
+func TestCancelUpdateDownloadWaitsForCleanup(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		dismissed bool
+	}{
+		{"active download", false},
+		{"dismissed download", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				result := make(chan updateResult, 1)
+				s := &StartScreen{updateCancel: cancel, downloadResult: result}
+				if tc.dismissed {
+					s.dismissUpdate()
+				}
+				done := make(chan struct{})
+				go func() {
+					s.CancelUpdateDownload()
+					close(done)
+				}()
+				synctest.Wait()
+				if ctx.Err() != context.Canceled {
+					t.Error("shutdown did not cancel the download")
+				}
+				select {
+				case <-done:
+					t.Error("shutdown returned before the download was cleaned up")
+				default:
+				}
+
+				result <- updateResult{err: context.Canceled}
+				<-done
+				if len(result) != 0 {
+					t.Error("shutdown did not collect the download result")
+				}
+			})
+		})
+	}
+}
+
+func TestCancelUpdateDownloadLeavesInstallerRunning(t *testing.T) {
+	result := make(chan updateResult, 1)
+	result <- updateResult{restart: true}
+	prepared := &updates.Prepared{}
+	s := &StartScreen{preparedUpdate: prepared, downloadResult: result}
+	s.CancelUpdateDownload()
+	if s.preparedUpdate != prepared || s.downloadResult != result || len(result) != 1 {
+		t.Fatal("shutdown discarded files after handing them to the installer")
 	}
 }
 

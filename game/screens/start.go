@@ -40,6 +40,7 @@ type StartScreen struct {
 	downloadResult     chan updateResult
 	updateProgress     chan string
 	updateCancel       context.CancelFunc
+	updateCleanupDone  <-chan struct{}
 	preparedUpdate     *updates.Prepared
 	automaticUpdate    bool
 	restartAfterUpdate bool

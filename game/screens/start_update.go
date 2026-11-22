@@ -120,7 +120,10 @@ func (s *StartScreen) dismissUpdate() {
 	if s.downloadResult != nil {
 		result := s.downloadResult
 		s.downloadResult = nil
+		done := make(chan struct{})
+		s.updateCleanupDone = done
 		go func() {
+			defer close(done)
 			pending := <-result
 			pending.prepared.Cleanup()
 		}()
@@ -130,6 +133,17 @@ func (s *StartScreen) dismissUpdate() {
 	s.updateProgress = nil
 	s.updateStatus = ""
 	s.updateError = ""
+}
+
+// CancelUpdateDownload cancels the download and waits for file cleanup.
+func (s *StartScreen) CancelUpdateDownload() {
+	if s.updateCancel != nil {
+		s.dismissUpdate()
+	}
+	if s.updateCleanupDone != nil {
+		<-s.updateCleanupDone
+		s.updateCleanupDone = nil
+	}
 }
 
 func (s *StartScreen) updateDownload(w, h int, scale float64) {
