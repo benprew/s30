@@ -37,7 +37,7 @@ func (s *BuyCardsScreen) IsFramed() bool {
 func (s *BuyCardsScreen) IsOverlay() bool { return false }
 
 const (
-	ResetCardsCost = 25
+	ResetCardsCost = 30
 )
 
 func NewBuyCardsScreen(city *domain.City, player *domain.Player, W, H int) *BuyCardsScreen {
@@ -334,23 +334,30 @@ func (s *BuyCardsScreen) mkCardButtons() ([]*elements.Button, map[int]bool) {
 		cards = append(cards, priceBtn)
 	}
 
-	btnWidth := float64(sprite[0].Bounds().Dx())
-	btnScaledW := int(btnWidth * SCALE)
+	rerollText := fmt.Sprintf("Reroll Cards (%dg)", ResetCardsCost)
+	rerollW, _ := elements.TextButtonSize(rerollText, btnFontFace)
+	spriteW := float64(sprite[0].Bounds().Dx())
+	doneW := int(spriteW * SCALE)
 	gap := 30
-	totalW := btnScaledW*2 + gap
-	startX := int((float64(s.W) - float64(totalW)) / 2.0)
+	startX := (s.W - rerollW - gap - doneW) / 2
+	rerollScaleX := float64(rerollW) / spriteW
 
-	newCardsBtn := elements.NewButton(sprite[0], sprite[1], sprite[2], startX, 420, SCALE)
-	newCardsBtn.ButtonText = elements.ButtonText{
-		Text:      "New Cards",
+	rerollBtn := elements.NewButton(
+		imageutil.ScaleImageInd(sprite[0], rerollScaleX, SCALE),
+		imageutil.ScaleImageInd(sprite[1], rerollScaleX, SCALE),
+		imageutil.ScaleImageInd(sprite[2], rerollScaleX, SCALE),
+		startX, 420, 1,
+	)
+	rerollBtn.ButtonText = elements.ButtonText{
+		Text:      rerollText,
 		Font:      btnFontFace,
 		TextColor: color.White,
 		HAlign:    elements.AlignCenter,
 		VAlign:    elements.AlignMiddle,
 	}
-	newCardsBtn.ID = "new_cards"
+	rerollBtn.ID = "new_cards"
 
-	doneBtn := elements.NewButton(sprite[0], sprite[1], sprite[2], startX+btnScaledW+gap, 420, SCALE)
+	doneBtn := elements.NewButton(sprite[0], sprite[1], sprite[2], rerollBtn.Bounds.Max.X+gap, 420, SCALE)
 	doneBtn.ButtonText = elements.ButtonText{
 		Text:      "Done",
 		Font:      btnFontFace,
@@ -360,7 +367,7 @@ func (s *BuyCardsScreen) mkCardButtons() ([]*elements.Button, map[int]bool) {
 	}
 	doneBtn.ID = "done"
 
-	buttons := []*elements.Button{newCardsBtn, doneBtn}
+	buttons := []*elements.Button{rerollBtn, doneBtn}
 	buttons = append(buttons, cards...)
 
 	return buttons, placeholders

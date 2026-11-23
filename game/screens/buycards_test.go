@@ -7,6 +7,7 @@ import (
 
 	"github.com/benprew/s30/game/domain"
 	"github.com/benprew/s30/game/ui/elements"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 func TestPurchaseButtonsProvideTouchConfirmation(t *testing.T) {
@@ -167,7 +168,7 @@ func TestResetCards_Success(t *testing.T) {
 		CardsForSale: []*domain.OwnedCard{domain.NewOwnedCard(card)},
 	}
 	player := &domain.Player{
-		Gold: 50,
+		Gold: 30,
 		Character: domain.Character{
 			CardCollection: domain.NewCardCollection(),
 		},
@@ -183,8 +184,8 @@ func TestResetCards_Success(t *testing.T) {
 
 	screen.resetCards()
 
-	if player.Gold != 25 {
-		t.Errorf("Expected player gold to be 25, got %d", player.Gold)
+	if player.Gold != 0 {
+		t.Errorf("Expected player gold to be 0, got %d", player.Gold)
 	}
 	if len(city.CardsForSale) != 5 {
 		t.Errorf("Expected 5 new cards for sale, got %d", len(city.CardsForSale))
@@ -203,7 +204,7 @@ func TestResetCards_NotEnoughGold(t *testing.T) {
 		CardsForSale: []*domain.OwnedCard{domain.NewOwnedCard(card)},
 	}
 	player := &domain.Player{
-		Gold: 10,
+		Gold: 29,
 		Character: domain.Character{
 			CardCollection: domain.NewCardCollection(),
 		},
@@ -219,8 +220,8 @@ func TestResetCards_NotEnoughGold(t *testing.T) {
 
 	screen.resetCards()
 
-	if player.Gold != 10 {
-		t.Errorf("Expected player gold to remain 10, got %d", player.Gold)
+	if player.Gold != 29 {
+		t.Errorf("Expected player gold to remain 29, got %d", player.Gold)
 	}
 	if len(city.CardsForSale) != 1 || city.CardsForSale[0].Card != card {
 		t.Errorf("Expected cards for sale to remain unchanged")
@@ -230,7 +231,7 @@ func TestResetCards_NotEnoughGold(t *testing.T) {
 	}
 }
 
-func TestBuyCardsScreen_NewCardsButtonExists(t *testing.T) {
+func TestBuyCardsScreen_RerollButtonShowsCost(t *testing.T) {
 	card := domain.FindCardByName("Mountain")
 	city := &domain.City{
 		CardsForSale: []*domain.OwnedCard{domain.NewOwnedCard(card)},
@@ -244,22 +245,26 @@ func TestBuyCardsScreen_NewCardsButtonExists(t *testing.T) {
 
 	screen := NewBuyCardsScreen(city, player, 1024, 768)
 
-	var newCardsBtn *elements.Button
+	var rerollBtn *elements.Button
 	var doneBtn *elements.Button
 	for _, b := range screen.Buttons {
 		if b.ID == "new_cards" {
-			newCardsBtn = b
+			rerollBtn = b
 		}
 		if b.ID == "done" {
 			doneBtn = b
 		}
 	}
 
-	if newCardsBtn == nil {
+	if rerollBtn == nil {
 		t.Fatal("Expected new_cards button to exist")
 	}
-	if newCardsBtn.ButtonText.Text != "New Cards" {
-		t.Errorf("Expected button text 'New Cards', got %q", newCardsBtn.ButtonText.Text)
+	if rerollBtn.ButtonText.Text != "Reroll Cards (30g)" {
+		t.Errorf("Expected button text 'Reroll Cards (30g)', got %q", rerollBtn.ButtonText.Text)
+	}
+	labelWidth, _ := text.Measure(rerollBtn.ButtonText.Text, rerollBtn.ButtonText.Font, 0)
+	if labelWidth > float64(rerollBtn.Bounds.Dx()) {
+		t.Errorf("Reroll button width = %d pixels, label width = %.1f pixels", rerollBtn.Bounds.Dx(), labelWidth)
 	}
 	if doneBtn == nil {
 		t.Fatal("Expected done button to exist")
