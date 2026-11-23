@@ -92,7 +92,7 @@ func TestIsInDeclareBlockers(t *testing.T) {
 func TestPendingBlockers_SelectBlocker(t *testing.T) {
 	s, blocker, _ := setupBlockerTest()
 
-	pos := s.getFieldCardPos(blocker, s.self, 0, 1, permRowCreature)
+	pos := s.fieldRowLayout(s.self, permRowCreature, s.lastMsg.State.You.Battlefield).position(0)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
@@ -105,7 +105,7 @@ func TestPendingBlockers_SelectBlocker(t *testing.T) {
 
 func TestSelectingBlockerLiftsItForward(t *testing.T) {
 	s, blocker, _ := setupBlockerTest()
-	pos := s.getFieldCardPos(blocker, s.self, 0, 1, permRowCreature)
+	pos := s.fieldRowLayout(s.self, permRowCreature, s.lastMsg.State.You.Battlefield).position(0)
 
 	s.handleBlockerClick(pos.X+fieldCardW/2, pos.Y+fieldCardH/2)
 
@@ -117,7 +117,7 @@ func TestSelectingBlockerLiftsItForward(t *testing.T) {
 func TestClickingLiftedSelectedBlockerLowersIt(t *testing.T) {
 	s, blocker, _ := setupBlockerTest()
 	base := time.Now()
-	pos := s.getFieldCardPos(blocker, s.self, 0, 1, permRowCreature)
+	pos := s.fieldRowLayout(s.self, permRowCreature, s.lastMsg.State.You.Battlefield).position(0)
 	liftedPos := image.Pt(pos.X, pos.Y-int(attackerLiftOffset))
 	s.selectedBlocker = blocker.ID
 	s.startAttackerLift(blocker.ID, -attackerLiftOffset, base.Add(-time.Hour))
@@ -137,7 +137,7 @@ func TestPendingBlockers_AssignBlocker(t *testing.T) {
 
 	s.selectedBlocker = blocker.ID
 
-	pos := s.getFieldCardPos(attacker, s.opponent, 0, 1, permRowCreature)
+	pos := s.fieldRowLayout(s.opponent, permRowCreature, s.lastMsg.State.Opponent.Battlefield).position(0)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
@@ -163,7 +163,7 @@ func TestPendingBlockers_RemoveBlocker(t *testing.T) {
 
 	s.pendingBlockers[blocker.ID] = attacker.ID
 
-	pos := s.getFieldCardPos(blocker, s.self, 0, 1, permRowCreature)
+	pos := s.fieldRowLayout(s.self, permRowCreature, s.lastMsg.State.You.Battlefield).position(0)
 	mx := pos.X + fieldCardW/2
 	my := pos.Y + fieldCardH/2
 
@@ -241,14 +241,15 @@ func TestPendingBlockers_TappedCreatureCannotBeSelected(t *testing.T) {
 		s.lastMsg.State.You.Battlefield, tappedCreature,
 	)
 
-	tappedPos := s.getFieldCardPos(tappedCreature, s.self, 1, 2, permRowCreature)
+	layout := s.fieldRowLayout(s.self, permRowCreature, s.lastMsg.State.You.Battlefield)
+	tappedPos := layout.position(1)
 	s.handleBlockerClick(tappedPos.X+fieldCardW/2, tappedPos.Y+fieldCardH/2)
 
 	if s.selectedBlocker == tappedCreature.ID {
 		t.Error("tapped creature (not in options) should not be selectable as blocker")
 	}
 
-	validPos := s.getFieldCardPos(blocker, s.self, 0, 2, permRowCreature)
+	validPos := layout.position(0)
 	s.handleBlockerClick(validPos.X+fieldCardW/2, validPos.Y+fieldCardH/2)
 
 	if s.selectedBlocker != blocker.ID {

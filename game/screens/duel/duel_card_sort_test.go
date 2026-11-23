@@ -1,7 +1,6 @@
 package duel
 
 import (
-	"image"
 	"testing"
 	"uuid"
 
@@ -116,14 +115,12 @@ func TestHandDisplayOrder_DoesNotMutateInput(t *testing.T) {
 
 func TestFieldCardPos_OpponentZonesMirrorPlayer(t *testing.T) {
 	s := &DuelScreen{
-		self:          &duelPlayer{},
-		opponent:      &duelPlayer{},
-		cardPositions: make(map[uuid.UUID]image.Point),
+		self:     &duelPlayer{},
+		opponent: &duelPlayer{},
 	}
-	perm := interactive.PermanentState{ID: uuid.New()}
 
 	rowY := func(dp *duelPlayer, row permRow) int {
-		return s.getFieldCardPos(perm, dp, 0, 1, row).Y
+		return s.fieldRowLayout(dp, row, nil).y
 	}
 
 	// Player: creatures nearest center (top of the bottom half), lands at the
@@ -179,7 +176,7 @@ func TestFieldPerms_CreaturesSortedByPowerThenToughnessDesc(t *testing.T) {
 	}
 }
 
-func TestFieldPerms_LandsSortedByNameThenTapped(t *testing.T) {
+func TestFieldPerms_LandsSortedByTappedThenName(t *testing.T) {
 	s := &DuelScreen{}
 	ps := interactive.PlayerState{
 		Battlefield: []interactive.PermanentState{
@@ -200,8 +197,8 @@ func TestFieldPerms_LandsSortedByNameThenTapped(t *testing.T) {
 		got = append(got, kv{p.Name, p.Tapped})
 	}
 	want := []kv{
-		{"Forest", false}, {"Forest", true},
-		{"Mountain", false}, {"Mountain", true},
+		{"Forest", false}, {"Mountain", false},
+		{"Forest", true}, {"Mountain", true},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %v, want %v", got, want)

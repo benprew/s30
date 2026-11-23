@@ -174,7 +174,7 @@ func (s *DuelScreen) spellAnimationSource(prev *interactive.GameMsg, item intera
 	}
 
 	width, height, panelHeight := fieldCardW, fieldCardH, 0
-	panelX, panelY := 860, 384
+	panelX, panelY := duelHandX, 384
 	if dp != nil {
 		panelX, panelY = dp.handX, dp.handY
 		if dp.handBg != nil {
@@ -228,10 +228,12 @@ func (s *DuelScreen) spellBattlefieldDestination(state *interactive.GameState, i
 	} {
 		for _, row := range allPermRows {
 			perms := s.fieldPerms(entry.state, row)
+			layout := s.fieldRowLayout(entry.dp, row, perms)
 			for index, perm := range perms {
-				pos := s.getFieldCardPos(perm, entry.dp, index, len(perms), row)
+				pos := layout.position(index)
+				s.cardPositions[perm.ID] = pos
 				if perm.ID == id {
-					return image.Rect(pos.X, pos.Y, pos.X+fieldCardW, pos.Y+fieldCardH), true
+					return fieldPermanentBounds(perm, pos), true
 				}
 			}
 		}

@@ -154,6 +154,7 @@ type DuelScreen struct {
 	attackerLifts    map[uuid.UUID]*attackerLiftAnimation
 	liftTargets      map[uuid.UUID]float64
 	spellAnimations  map[uuid.UUID]*spellCastAnimation
+	landAnimations   map[uuid.UUID]landAnimation
 	pendingBlockers  map[uuid.UUID]uuid.UUID
 	selectedBlocker  uuid.UUID
 
@@ -267,9 +268,9 @@ func NewDuelScreen(player *domain.Player, enemy *domain.Enemy, lvl *world.Level,
 	s.initGameState()
 	s.loadImages()
 
-	s.self.handX = 860
+	s.self.handX = duelHandX
 	s.self.handY = 430
-	s.opponent.handX = 860
+	s.opponent.handX = duelHandX
 	s.opponent.handY = 310
 
 	s.initMulligan()
@@ -515,6 +516,7 @@ func (s *DuelScreen) applyGameMsg(msg interactive.GameMsg) {
 	prev := s.lastMsg
 	now := time.Now()
 	s.syncSpellAnimations(prev, &msg, now)
+	s.syncLandAnimations(prev, &msg, now)
 	s.lastMsg = &msg
 	s.msgHistory = append(s.msgHistory, msg)
 	s.autoResponded = false
@@ -1134,9 +1136,11 @@ func colorNameForDeck(primaryColor string) string {
 }
 
 const (
+	duelScreenH        = 768
 	duelPhaseX         = 0
 	duelBoardX         = 293
 	duelBoardW         = 721
+	duelHandX          = 860
 	duelMsgY           = 370
 	duelPlayerBoardY   = 384
 	duelOpponentBoardY = 0
@@ -1165,7 +1169,9 @@ func (s *DuelScreen) Update(W, H int, scale float64) (screenui.ScreenName, scree
 		return screenui.DuelScr, nil, nil
 	}
 
-	s.pruneSpellAnimations(time.Now())
+	now := time.Now()
+	s.pruneSpellAnimations(now)
+	s.pruneLandAnimations(now)
 	s.drainMessages()
 	s.drainChoiceRequests()
 	if s.autoPlay && s.choiceRequest != nil {
@@ -1407,6 +1413,8 @@ const (
 	handCardOverlap              = 20
 	fieldCardW                   = domain.CardArtMiniWidth
 	fieldCardH                   = domain.CardArtMiniHeight
+	fieldRowLeft                 = duelBoardX + 30
+	landGroupGap                 = 24
 	battlefieldCreatureStatsSize = 20
 	creatureStatsRightPadding    = 3
 	creatureStatsBottomInset     = 22
@@ -1437,50 +1445,74 @@ func permRowFor(perm interactive.PermanentState) permRow {
 	return permRowOther
 }
 
-func (s *DuelScreen) getFieldCardPos(perm interactive.PermanentState, dp *duelPlayer, idx int, total int, row permRow) image.Point {
-	rowGap := 20
-	rowH := fieldCardH + rowGap
-	totalH := 3*fieldCardH + 2*rowGap
-	var baseY int
+type fieldRowLayout struct {
+	y           int
+	spacing     int
+	tappedStart int
+	tappedX     int
+}
+
+func (layout fieldRowLayout) position(index int) image.Point {
+	if index >= layout.tappedStart {
+		return image.Pt(layout.tappedX+(index-layout.tappedStart)*layout.spacing, layout.y)
+	}
+	return image.Pt(fieldRowLeft+index*layout.spacing, layout.y)
+}
+
+func (s *DuelScreen) fieldRowLayout(dp *duelPlayer, row permRow, perms []interactive.PermanentState) fieldRowLayout {
+	const (
+		rowGap = 20
+		rowH   = fieldCardH + rowGap
+		totalH = 3*fieldCardH + 2*rowGap
+	)
+	playerPad := (duelScreenH - duelPlayerBoardY - totalH) / 2
+	y := duelPlayerBoardY + playerPad + int(row)*rowH
 	if dp == s.opponent {
-		// Opponent half: 0 to duelMsgY (370px). Mirror of the player's board:
-		// lands at top (back), other middle, creatures at bottom (front, near center).
 		topPad := (duelMsgY - totalH) / 2
-		switch row {
-		case permRowLand:
-			baseY = duelOpponentBoardY + topPad
-		case permRowOther:
-			baseY = duelOpponentBoardY + topPad + rowH
-		case permRowCreature:
-			baseY = duelOpponentBoardY + topPad + 2*rowH
-		}
-	} else {
-		// Player half: duelPlayerBoardY to 768 (384px)
-		// Creatures at top (front, near center), other middle, lands at bottom (back)
-		boardH := 768 - duelPlayerBoardY
-		topPad := (boardH - totalH) / 2
-		switch row {
-		case permRowCreature:
-			baseY = duelPlayerBoardY + topPad
-		case permRowOther:
-			baseY = duelPlayerBoardY + topPad + rowH
-		case permRowLand:
-			baseY = duelPlayerBoardY + topPad + 2*rowH
-		}
+		y = duelOpponentBoardY + topPad + int(permRowLand-row)*rowH
 	}
 
+	count := len(perms)
+	layout := fieldRowLayout{y: y, tappedStart: count}
 	maxSpacing := 35
+	if row == permRowLand {
+		for i, perm := range perms {
+			if perm.Tapped {
+				layout.tappedStart = i
+				break
+			}
+		}
+		untapped := layout.tappedStart
+		tapped := count - untapped
+		untappedSteps := max(0, untapped-1)
+		tappedSteps := max(0, tapped-1)
+		const rightX = duelHandX - 16
+		availableW := rightX - fieldRowLeft
+		if untapped > 0 {
+			availableW -= fieldCardW
+		}
+		if tapped > 0 {
+			availableW -= fieldCardH
+		}
+		if untapped > 0 && tapped > 0 {
+			availableW -= landGroupGap
+		}
+		layout.spacing = min(maxSpacing, availableW/max(1, untappedSteps+tappedSteps))
+		layout.tappedX = rightX - fieldCardH - tappedSteps*layout.spacing
+		return layout
+	}
+
 	if row == permRowCreature {
 		maxSpacing = 120
 	}
-	availableW := duelBoardW - 30 - fieldCardW
-	spacing := maxSpacing
-	if total > 1 && (total-1)*spacing > availableW {
-		spacing = availableW / (total - 1)
-	}
-	pos := image.Pt(duelBoardX+30+idx*spacing, baseY)
-	s.cardPositions[perm.ID] = pos
-	return pos
+	availableW := duelBoardX + duelBoardW - fieldRowLeft - fieldCardW
+	layout.spacing = min(maxSpacing, availableW/max(1, count-1))
+	return layout
+}
+
+func fieldPermanentBounds(perm interactive.PermanentState, pos image.Point) image.Rectangle {
+	w, h := fieldCardSize(perm.Tapped && permRowFor(perm) == permRowLand)
+	return image.Rect(pos.X, pos.Y, pos.X+w, pos.Y+h)
 }
 
 func (s *DuelScreen) fieldPerms(ps *interactive.PlayerState, row permRow) []interactive.PermanentState {
@@ -1498,17 +1530,14 @@ func (s *DuelScreen) fieldPerms(ps *interactive.PlayerState, row permRow) []inte
 	}
 	switch row {
 	case permRowLand:
-		slices.SortFunc(perms, func(a, b interactive.PermanentState) int {
-			if a.Name != b.Name {
-				return cmp.Compare(a.Name, b.Name)
-			}
-			if !a.Tapped && b.Tapped {
+		slices.SortStableFunc(perms, func(a, b interactive.PermanentState) int {
+			if a.Tapped != b.Tapped {
+				if a.Tapped {
+					return 1
+				}
 				return -1
 			}
-			if a.Tapped && !b.Tapped {
-				return 1
-			}
-			return 0
+			return cmp.Compare(a.Name, b.Name)
 		})
 	case permRowCreature:
 		slices.SortFunc(perms, func(a, b interactive.PermanentState) int {
@@ -1639,24 +1668,25 @@ func (s *DuelScreen) fieldPermAtPoint(mx, my int, dp *duelPlayer) *interactive.P
 	if ps == nil {
 		return nil
 	}
+	point := image.Pt(mx, my)
 	now := time.Now()
 	for _, row := range allPermRows {
 		perms := s.fieldPerms(ps, row)
+		layout := s.fieldRowLayout(dp, row, perms)
 		for i := len(perms) - 1; i >= 0; i-- {
 			perm := perms[i]
-			pos := s.getFieldCardPos(perm, dp, i, len(perms), row)
-			pos.Y += int(math.Round(s.attackerLiftY(perm.ID, now)))
+			frame := s.fieldCardFrame(perm.ID, layout.position(i), now)
+			if frame.contains(point, perm) {
+				return &perms[i]
+			}
+			pos := frame.pos
 			if mx >= pos.X && mx < pos.X+fieldCardW {
 				auras := s.attachedPerms(perm.ID)
 				for j, auraCopy := range slices.Backward(auras) {
 					auraY := pos.Y - (j+1)*14
 					if my >= auraY && my < auraY+14 {
-
 						return &auraCopy
 					}
-				}
-				if my >= pos.Y && my < pos.Y+fieldCardH {
-					return &perms[i]
 				}
 			}
 		}
@@ -2904,8 +2934,9 @@ func (s *DuelScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	s.drawBoard(screen, s.self, &s.lastMsg.State.You, duelPlayerBoardY, H-duelPlayerBoardY)
 	s.drawMessageBar(screen)
 	s.drawSidebar(screen, W, H)
-	s.drawBattlefield(screen, s.opponent, &s.lastMsg.State.Opponent)
-	s.drawBattlefield(screen, s.self, &s.lastMsg.State.You)
+	now := time.Now()
+	s.drawBattlefield(screen, s.opponent, &s.lastMsg.State.Opponent, now)
+	s.drawBattlefield(screen, s.self, &s.lastMsg.State.You, now)
 	s.drawBlockerArrows(screen)
 	s.drawStackArrows(screen)
 	s.drawHandPanel(screen, s.opponent, &s.lastMsg.State.Opponent)
@@ -3278,13 +3309,13 @@ func (s *DuelScreen) targetNameByID(id uuid.UUID) string {
 	return ""
 }
 
-func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *interactive.PlayerState) {
-	now := time.Now()
+func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *interactive.PlayerState, now time.Time) {
 	for _, row := range allPermRows {
 		perms := s.fieldPerms(ps, row)
+		layout := s.fieldRowLayout(dp, row, perms)
 		for i, perm := range perms {
-			pos := s.getFieldCardPos(perm, dp, i, len(perms), row)
-			pos.Y += int(math.Round(s.attackerLiftY(perm.ID, now)))
+			frame := s.fieldCardFrame(perm.ID, layout.position(i), now)
+			pos := frame.pos
 			s.cardPositions[perm.ID] = pos
 			if s.spellIsAnimating(perm.ID, now) {
 				continue
@@ -3308,27 +3339,7 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 				}
 			}
 
-			artName := permanentArtName(perm, s.getDomainCard(perm.Name))
-			cardImg := s.getCardArtImg(artName, perm.ID.String(), domain.CardViewArtMini)
-			if cardImg != nil {
-				cardOpts := &ebiten.DrawImageOptions{}
-				if perm.Tapped {
-					imgH := float64(cardImg.Bounds().Dy())
-					cardOpts.GeoM.Rotate(math.Pi / 2)
-					cardOpts.GeoM.Translate(imgH, 0)
-				}
-				cardOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
-				screen.DrawImage(cardImg, cardOpts)
-			} else {
-				w, h := placeholderSize(perm.Tapped)
-				vector.FillRect(screen, float32(pos.X), float32(pos.Y),
-					float32(w), float32(h), color.RGBA{60, 60, 80, 255}, false)
-				vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
-					float32(w), float32(h), 1, color.RGBA{120, 120, 140, 255}, false)
-				nameTxt := elements.NewText(10, perm.Name, pos.X+4, pos.Y+4)
-				nameTxt.Color = color.RGBA{220, 220, 220, 255}
-				nameTxt.Draw(screen, &ebiten.DrawImageOptions{}, 1.0)
-			}
+			s.drawBattlefieldCard(screen, perm, frame)
 
 			if perm.IsCreature {
 				s.drawCreatureStats(screen, perm, pos)
@@ -3336,15 +3347,49 @@ func (s *DuelScreen) drawBattlefield(screen *ebiten.Image, dp *duelPlayer, ps *i
 
 			s.drawAbilityIcons(screen, perm, pos)
 
-			s.drawPermanentBorders(screen, dp, perm, pos)
+			s.drawPermanentBorders(screen, dp, perm, frame)
 		}
 	}
 }
 
-// placeholderSize returns the size of the frame drawn for a permanent without
-// art. A tapped one lies on its side like tapped art does, so tapping stays
-// visible for tokens and any card whose image is missing.
-func placeholderSize(tapped bool) (w, h int) {
+func (s *DuelScreen) drawBattlefieldCard(screen *ebiten.Image, perm interactive.PermanentState, frame fieldCardFrame) {
+	artName := permanentArtName(perm, s.getDomainCard(perm.Name))
+	cardImg := s.getCardArtImg(artName, perm.ID.String(), domain.CardViewArtMini)
+	if cardImg != nil {
+		opts := &ebiten.DrawImageOptions{GeoM: frame.artTransform(perm.Tapped, cardImg.Bounds().Dy())}
+		if frame.moving {
+			opts.Filter = ebiten.FilterLinear
+		}
+		screen.DrawImage(cardImg, opts)
+		return
+	}
+
+	pos := frame.pos
+	w, h := fieldCardSize(perm.Tapped)
+	fill := color.RGBA{60, 60, 80, 255}
+	if frame.moving {
+		path := frame.path()
+		opts := &vector.DrawPathOptions{AntiAlias: true}
+		opts.ColorScale.ScaleWithColor(fill)
+		vector.FillPath(screen, &path, nil, opts)
+	} else {
+		vector.FillRect(screen, float32(pos.X), float32(pos.Y), float32(w), float32(h), fill, false)
+	}
+	frame.stroke(screen, image.Rect(pos.X, pos.Y, pos.X+w, pos.Y+h), 1, color.RGBA{120, 120, 140, 255})
+
+	nameTxt := elements.NewText(10, perm.Name, 0, 0)
+	nameTxt.Color = color.RGBA{220, 220, 220, 255}
+	nameOpts := &ebiten.DrawImageOptions{}
+	nameOpts.GeoM.Translate(4, 4)
+	if permRowFor(perm) == permRowLand {
+		nameOpts.GeoM.Concat(frame.artTransform(perm.Tapped, fieldCardH))
+	} else {
+		nameOpts.GeoM.Translate(float64(pos.X), float64(pos.Y))
+	}
+	nameTxt.Draw(screen, nameOpts, 1)
+}
+
+func fieldCardSize(tapped bool) (w, h int) {
 	if tapped {
 		return fieldCardH, fieldCardW
 	}
@@ -3380,14 +3425,12 @@ func (s *DuelScreen) abilityIconPlacements(perm interactive.PermanentState, pos 
 	return placements
 }
 
-func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, perm interactive.PermanentState, pos image.Point) {
+func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, perm interactive.PermanentState, frame fieldCardFrame) {
+	bounds := fieldPermanentBounds(perm, frame.pos)
 	if dp == s.opponent && s.lastMsg != nil && s.lastMsg.Prompt == interactive.PromptAssignCombatDamage {
 		if amount, ok := s.damageAssignment[perm.ID]; ok {
-			vector.StrokeRect(screen,
-				float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH),
-				2, color.RGBA{0, 255, 0, 255}, false)
-			s.drawDamageControls(screen, pos, amount)
+			frame.stroke(screen, bounds, 2, color.RGBA{0, 255, 0, 255})
+			s.drawDamageControls(screen, frame.pos, amount)
 			return
 		}
 	}
@@ -3398,34 +3441,19 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 			if s.pendingAttackers[perm.ID] {
 				borderColor = color.RGBA{0, 255, 0, 255}
 			}
-			vector.StrokeRect(screen,
-				float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH),
-				2, borderColor, false)
+			frame.stroke(screen, bounds, 2, borderColor)
 		} else {
-			vector.StrokeRect(screen,
-				float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH),
-				2, color.RGBA{255, 140, 0, 255}, false)
+			frame.stroke(screen, bounds, 2, color.RGBA{255, 140, 0, 255})
 		}
 	}
 
 	if dp == s.self && s.isInDeclareBlockers() && s.targetingCardID == uuid.Nil() {
 		if s.selectedBlocker == perm.ID {
-			vector.StrokeRect(screen,
-				float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH),
-				2, color.RGBA{0, 255, 0, 255}, false)
+			frame.stroke(screen, bounds, 2, color.RGBA{0, 255, 0, 255})
 		} else if s.pendingBlockers[perm.ID] != uuid.Nil() {
-			vector.StrokeRect(screen,
-				float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH),
-				2, color.RGBA{0, 255, 0, 255}, false)
+			frame.stroke(screen, bounds, 2, color.RGBA{0, 255, 0, 255})
 		} else if s.canBlockAnything(perm.ID) {
-			vector.StrokeRect(screen,
-				float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH),
-				2, color.RGBA{255, 255, 0, 255}, false)
+			frame.stroke(screen, bounds, 2, color.RGBA{255, 255, 0, 255})
 		}
 	}
 
@@ -3437,10 +3465,7 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 		if s.selectedBlocker != uuid.Nil() && s.isValidBlock(s.selectedBlocker, perm.ID) {
 			borderColor = color.RGBA{0, 255, 0, 255}
 		}
-		vector.StrokeRect(screen,
-			float32(pos.X), float32(pos.Y),
-			float32(fieldCardW), float32(fieldCardH),
-			2, borderColor, false)
+		frame.stroke(screen, bounds, 2, borderColor)
 	}
 
 	if s.targetingCardID != uuid.Nil() {
@@ -3451,8 +3476,7 @@ func (s *DuelScreen) drawPermanentBorders(screen *ebiten.Image, dp *duelPlayer, 
 				borderColor = color.RGBA{0, 255, 0, 255}
 				strokeW = 3
 			}
-			vector.StrokeRect(screen, float32(pos.X), float32(pos.Y),
-				float32(fieldCardW), float32(fieldCardH), strokeW, borderColor, false)
+			frame.stroke(screen, bounds, strokeW, borderColor)
 		}
 	}
 }

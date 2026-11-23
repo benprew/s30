@@ -157,11 +157,11 @@ func TestAttackerLiftLowersAfterCombat(t *testing.T) {
 
 func TestFieldCardPositionIgnoresStaleStoredPosition(t *testing.T) {
 	s, creature := setupAttackerTest()
-	basePos := s.getFieldCardPos(creature, s.self, 0, 1, permRowCreature)
+	basePos := s.fieldRowLayout(s.self, permRowCreature, s.lastMsg.State.You.Battlefield).position(0)
 	liftedPos := image.Pt(basePos.X, basePos.Y-int(attackerLiftOffset))
 	s.cardPositions[creature.ID] = liftedPos
 
-	got := s.getFieldCardPos(creature, s.self, 0, 1, permRowCreature)
+	got := s.fieldRowLayout(s.self, permRowCreature, s.lastMsg.State.You.Battlefield).position(0)
 
 	if got != basePos {
 		t.Fatalf("expected fixed layout to use base position %v, got %v", basePos, got)
@@ -171,7 +171,7 @@ func TestFieldCardPositionIgnoresStaleStoredPosition(t *testing.T) {
 func TestClickingLiftedSelectedAttackerDeselects(t *testing.T) {
 	base := time.Now()
 	s, creature := setupAttackerTest()
-	basePos := s.getFieldCardPos(creature, s.self, 0, 1, permRowCreature)
+	basePos := s.fieldRowLayout(s.self, permRowCreature, s.lastMsg.State.You.Battlefield).position(0)
 	liftedPos := image.Pt(basePos.X, basePos.Y-int(attackerLiftOffset))
 	s.cardPositions[creature.ID] = liftedPos
 	s.pendingAttackers[creature.ID] = true
