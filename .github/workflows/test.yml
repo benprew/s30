@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: benprew/mage-go
-          ref: awesome
+          ref: main
           path: mage-go
 
       - name: Set up Go
