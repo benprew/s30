@@ -278,7 +278,7 @@ func main() {
 			enemyCharacter := *enemy.Character
 			enemyCharacter.CardCollection = domain.NewCardCollection()
 			for card, count := range xTestDeck() {
-				enemyCharacter.CardCollection.AddCardToDeck(card, 0, count)
+				enemyCharacter.CardCollection.AddCard(card, count, 0)
 			}
 			enemy.Character = &enemyCharacter
 		}
@@ -292,7 +292,7 @@ func main() {
 		}
 		player.CardCollection = domain.NewCardCollection()
 		for card, count := range xTestDeck() {
-			player.CardCollection.AddCardToDeck(card, 0, count)
+			player.CardCollection.AddCard(card, count, 0)
 		}
 
 		lvl := &world.Level{Player: player, Enemies: []domain.Enemy{enemy}}

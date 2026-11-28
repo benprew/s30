@@ -98,9 +98,9 @@ func analyzeColors(collection CardCollection) (string, []string) {
 
 	colorSet := make(map[string]bool)
 
-	for card, item := range collection {
+	for printing, item := range collection {
 		// Add colors from ColorIdentity (includes lands and mana costs)
-		for _, color := range card.ColorIdentity {
+		for _, color := range printing.Card().ColorIdentity {
 			colorCounts[color] += item.Count
 			colorSet[color] = true
 		}
@@ -178,7 +178,7 @@ func loadRogues() map[string]*Character {
 			if card == nil {
 				panic(fmt.Sprintf("Unable to find card: %s\n", name))
 			}
-			r.CardCollection.AddCardToDeck(card, 0, count)
+			r.CardCollection.AddCard(card, count, 0)
 		}
 
 		// Add sideboard cards to collection only (not to any deck)
@@ -195,7 +195,7 @@ func loadRogues() map[string]*Character {
 			if card == nil {
 				panic(fmt.Sprintf("Unable to find card: %s\n", name))
 			}
-			r.CardCollection.AddCard(card, count)
+			r.CardCollection.AddCard(card, count, -1)
 		}
 
 		// Analyze collection colors and set color fields

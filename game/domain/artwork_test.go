@@ -57,8 +57,7 @@ func TestCardDataProvidesAlternateArtwork(t *testing.T) {
 	if len(arts) != 2 || arts[1].ID != "m10-146-lightning-bolt" || arts[1].SetID != "m10" {
 		t.Fatalf("artwork not loaded from card data: %+v", arts)
 	}
-	owned := NewOwnedCard(card)
-	owned.ArtworkID = arts[1].ID
+	owned := card.Printing(arts[1].ID)
 	printing := owned.Artwork()
 	if printing.BorderCropURL != card.Artworks[1].BorderCropURL || printing.ArtURL != "https://example.test/m10-crop.jpg" {
 		t.Fatal("artwork must change the image source and retain the card rules")
@@ -76,15 +75,15 @@ func TestCardDataProvidesAlternateArtwork(t *testing.T) {
 		t.Fatal("owned card did not use its artwork image")
 	}
 	cc := NewCardCollection()
-	cc.AddOwnedCard(owned)
+	cc.AddPrinting(owned, 1)
 	priority := CollectPriorityCards(&Player{Character: Character{CardCollection: cc}})
 	if len(priority) != 1 || priority[0].ID != arts[1].ID {
 		t.Fatal("preloading ignored the owned artwork")
 	}
-	owned.ArtworkID = "removed-1-lightning-bolt"
-	fallback, _ := owned.CardImage(CardViewFull)
+	removed := card.Printing("removed-1-lightning-bolt")
+	fallback, _ := removed.CardImage(CardViewFull)
 	defaultImage, _ := card.CardImage(CardViewFull)
-	if fallback != defaultImage || owned.ArtworkID != "removed-1-lightning-bolt" {
+	if fallback != defaultImage || removed.ArtworkID() != "removed-1-lightning-bolt" {
 		t.Fatal("missing artwork must use the default image and retain its ID")
 	}
 }
@@ -104,12 +103,12 @@ func TestOwnedCardLoadsLegacyPrintingReference(t *testing.T) {
 		`{"CardName":"Lightning Bolt","SetID":"leb","CollectorNo":"162"}`,
 		`{"id":"old-copy","card":{"CardID":"leb-162-lightning-bolt"},"deck_index":0}`,
 	} {
-		var owned OwnedCard
-		if err := json.Unmarshal([]byte(data), &owned); err != nil {
+		var stock ShopStock
+		if err := json.Unmarshal([]byte("["+data+"]"), &stock); err != nil {
 			t.Fatal(err)
 		}
-		if owned.Card != card || owned.ArtworkID != "leb-162-lightning-bolt" {
-			t.Fatalf("legacy copy lost its printing: %+v", owned)
+		if len(stock) != 1 || stock[0] != card.Printing("leb-162-lightning-bolt") {
+			t.Fatalf("legacy card lost its printing: %+v", stock)
 		}
 	}
 }

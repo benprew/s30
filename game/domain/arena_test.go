@@ -8,7 +8,7 @@ import (
 func TestArenaEntryAndPoolIsolation(t *testing.T) {
 	bolt := FindCardByName("Lightning Bolt")
 	campaign := &Player{Character: Character{Life: 13, CardCollection: NewCardCollection()}, Gold: ArenaEntryCost - 1, MinDeckSize: 36, ActiveDeck: 2, BonusDuelLife: 5}
-	campaign.CardCollection.AddCardToDeck(bolt, 2, 1)
+	campaign.CardCollection.AddCard(bolt, 1, 2)
 	if _, err := NewArenaRun(campaign, rand.New(rand.NewSource(1))); err == nil || campaign.Gold != ArenaEntryCost-1 {
 		t.Fatalf("entry must require %d gold", ArenaEntryCost)
 	}
@@ -152,9 +152,9 @@ func TestArenaOpponentUsesOnlyItsPoolAndBasicLandSupply(t *testing.T) {
 	if collection.GetTotalCount(bears) != 2 || collection.GetTotalCount(bolt) != 1 || collection.NumCards() != 45 {
 		t.Fatal("opponent changed the opened cards or failed to meet the minimum")
 	}
-	for card, item := range collection {
+	for card, count := range collection.GetDeck(0) {
 		if IsBasicLand(card) {
-			if item.Count > 20 {
+			if count > 20 {
 				t.Fatalf("opponent used too many %s", card.CardName)
 			}
 		} else if card != bears && card != bolt {

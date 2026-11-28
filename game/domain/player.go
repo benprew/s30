@@ -72,10 +72,10 @@ func NewPlayer(name string, visage *ebiten.Image, isM bool, difficulty Difficult
 
 	cardCollection := NewCardCollection()
 	for card, count := range deck {
-		cardCollection.AddCardToDeck(card, 0, count)
+		cardCollection.AddCard(card, count, 0)
 	}
 	for _, card := range extraCards {
-		cardCollection.AddCard(card, 1)
+		cardCollection.AddCard(card, 1, -1)
 	}
 
 	var gold, food, minDeckSize int
@@ -275,6 +275,25 @@ func (p *Player) Loc() image.Point {
 	return image.Point{X: p.X, Y: p.Y}
 }
 
+const (
+	MaxPlayerDecks = 3
+)
+
+// GetActiveDeck returns the player's currently active deck.
+func (p *Player) GetActiveDeck() Deck {
+	return p.CardCollection.GetDeck(p.ActiveDeck)
+}
+
+// SetActiveDeck sets the active deck index, clamped to [0, MaxPlayerDecks-1].
+func (p *Player) SetActiveDeck(index int) {
+	if index < 0 {
+		index = 0
+	} else if index >= MaxPlayerDecks {
+		index = MaxPlayerDecks - 1
+	}
+	p.ActiveDeck = index
+}
+
 func (p *Player) GetDuelDeck() Deck {
 	deck := p.CardCollection.GetDeck(p.ActiveDeck)
 
@@ -318,7 +337,7 @@ func (p *Player) DeckShortfall() int {
 }
 
 func (p *Player) RemoveCard(c *Card) error {
-	return p.CardCollection.DecrementCardCount(c)
+	return p.CardCollection.RemoveCard(c, 1, -1)
 }
 
 // ExitDungeon leaves the current dungeon, restoring the player's overworld life

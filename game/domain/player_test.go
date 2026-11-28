@@ -22,10 +22,7 @@ func TestDeckShortfallCountsTheGapToTheMinimum(t *testing.T) {
 			plains := FindCardByName("Plains")
 			collection := NewCardCollection()
 			if tc.inDeck > 0 {
-				collection.AddCard(plains, tc.inDeck)
-				if err := collection.MoveCardToDeck(plains, 0, tc.inDeck); err != nil {
-					t.Fatalf("MoveCardToDeck() error = %v", err)
-				}
+				collection.AddCard(plains, tc.inDeck, 0)
 			}
 			player := &Player{
 				Character:   Character{CardCollection: collection},
@@ -45,10 +42,7 @@ func TestDeckShortfallCountsTheGapToTheMinimum(t *testing.T) {
 func TestDeckShortfallReadsTheActiveDeck(t *testing.T) {
 	plains := FindCardByName("Plains")
 	collection := NewCardCollection()
-	collection.AddCard(plains, 40)
-	if err := collection.MoveCardToDeck(plains, 1, 40); err != nil {
-		t.Fatalf("MoveCardToDeck() error = %v", err)
-	}
+	collection.AddCard(plains, 40, 1)
 	player := &Player{
 		Character:   Character{CardCollection: collection},
 		MinDeckSize: 36,
@@ -57,5 +51,27 @@ func TestDeckShortfallReadsTheActiveDeck(t *testing.T) {
 
 	if got := player.DeckShortfall(); got != 36 {
 		t.Errorf("DeckShortfall() = %d, want 36 for an empty active deck", got)
+	}
+}
+
+func TestPlayerGetActiveDeckRespectsActiveDeck(t *testing.T) {
+	plains := FindCardByName("Plains")
+	forest := FindCardByName("Forest")
+	collection := NewCardCollection()
+	collection.AddCard(plains, 40, 0)
+	collection.AddCard(forest, 40, 1)
+
+	player := &Player{
+		Character:   Character{CardCollection: collection},
+		MinDeckSize: 36,
+		ActiveDeck:  1,
+	}
+
+	deck := player.GetActiveDeck()
+	if deck[forest] != 40 {
+		t.Errorf("expected 40 forests in active deck 1, got %d", deck[forest])
+	}
+	if deck[plains] != 0 {
+		t.Errorf("expected 0 plains in active deck 1, got %d", deck[plains])
 	}
 }

@@ -131,7 +131,8 @@ func powerfulCardProgressionLevels(collection domain.CardCollection) int {
 	}
 
 	count := 0
-	for card, item := range collection {
+	for printing, item := range collection {
+		card := printing.Card()
 		if card == nil || item == nil || !cardPower[card.CardName] {
 			continue
 		}

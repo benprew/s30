@@ -14,7 +14,7 @@ import (
 
 func TestArenaSaveKeepsCampaignAndRestartsEncounter(t *testing.T) {
 	player := &domain.Player{Character: domain.Character{Life: 10, CardCollection: domain.NewCardCollection()}, Gold: 500, MinDeckSize: 36}
-	player.CardCollection.AddCardToDeck(domain.FindCardByName("Lightning Bolt"), 0, 1)
+	player.CardCollection.AddCard(domain.FindCardByName("Lightning Bolt"), 1, 0)
 	level := &world.Level{Player: player, W: 1, H: 1, TileWidth: 200, TileHeight: 100,
 		Tiles: [][]*world.Tile{{{}}}, RandomEncounters: []world.RandomEncounter{{Tile: image.Pt(0, 0), Type: world.EncounterArena}}}
 	player.SetLoc(level.TileToPixel(image.Pt(0, 0)))

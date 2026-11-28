@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -57,7 +58,7 @@ type City struct {
 	Y                  int
 	Population         int
 	BackgroundImage    *ebiten.Image
-	CardsForSale       []*OwnedCard
+	CardsForSale       ShopStock
 	AmuletColor        ColorMask
 	AssignedWorldMagic *WorldMagic
 	IsManaLinked       bool
@@ -125,15 +126,36 @@ func (c *City) GetWorldMagic() *WorldMagic {
 	return c.AssignedWorldMagic
 }
 
-func MkCards() []*OwnedCard {
-	cards := make([]*OwnedCard, 0, 5)
+type ShopStock []*OwnedCard
+
+func (stock *ShopStock) UnmarshalJSON(data []byte) error {
+	var saved []*savedPrinting
+	if err := json.Unmarshal(data, &saved); err != nil {
+		return err
+	}
+	if saved == nil {
+		*stock = nil
+		return nil
+	}
+	cards := make(ShopStock, len(saved))
+	for i, reference := range saved {
+		if reference != nil {
+			cards[i] = reference.resolve(nil)
+		}
+	}
+	*stock = cards
+	return nil
+}
+
+func MkCards() ShopStock {
+	cards := make(ShopStock, 0, 5)
 	for i := 0; i < 5; i++ {
 		card := CARDS[rand.Intn(len(CARDS))]
 		if card.VintageRestricted {
 			i--
 			continue
 		}
-		cards = append(cards, NewOwnedCard(card))
+		cards = append(cards, card.RandomPrinting())
 	}
 	return cards
 }

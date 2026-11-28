@@ -89,8 +89,8 @@ func TestGrantQuestRewardNeverTierS(t *testing.T) {
 
 	for range 500 {
 		for _, c := range GrantQuestReward(p, QuestReward{Cards: 3, CardColor: ColorAny}) {
-			if tier, ok := CardTierForName(c.CardName); ok && tier == TierS {
-				t.Fatalf("quest reward handed out Tier S card %q", c.CardName)
+			if tier, ok := CardTierForName(c.Name()); ok && tier == TierS {
+				t.Fatalf("quest reward handed out Tier S card %q", c.Name())
 			}
 		}
 	}
@@ -135,7 +135,7 @@ func TestRedeemFulfilledQuestsPopulatesOwnedCards(t *testing.T) {
 		t.Fatalf("unexpected redeemed quest rewards: %+v", rewards)
 	}
 	for i, owned := range rewards[0].Cards {
-		if owned == nil || owned.Card == nil || owned.ID == "" {
+		if owned.Card() == nil || p.CardCollection[owned] == nil {
 			t.Fatalf("invalid owned quest reward card at %d: %+v", i, owned)
 		}
 	}

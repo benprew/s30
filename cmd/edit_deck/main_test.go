@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"reflect"
-	"slices"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
@@ -16,8 +15,8 @@ func TestNewEditorCollectionDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(collection) != len(domain.CARDS) {
-		t.Fatalf("collection size = %d, want %d", len(collection), len(domain.CARDS))
+	if len(collection.GetAllCards()) != len(domain.CARDS) {
+		t.Fatalf("distinct card count = %d, want %d", len(collection.GetAllCards()), len(domain.CARDS))
 	}
 	for _, card := range domain.CARDS {
 		if got := collection.GetTotalCount(card); got != 4 {
@@ -39,14 +38,13 @@ func TestNewEditorCollectionRogue(t *testing.T) {
 			if !reflect.DeepEqual(collection, rogue.CardCollection) {
 				t.Fatal("collection does not match rogue deck and sideboard")
 			}
-			for card, item := range collection {
-				original := *rogue.CardCollection[card]
-				original.DeckCounts = slices.Clone(original.DeckCounts)
-				item.Count++
-				if len(item.DeckCounts) > 0 {
-					item.DeckCounts[0]++
+			for printing := range collection {
+				original := rogue.CardCollection[printing]
+				wantOwned, wantDeck := original.Count, original.DeckCount(0)
+				if removeErr := collection.RemovePrinting(printing, 1, -1); removeErr != nil {
+					t.Fatal(removeErr)
 				}
-				if !reflect.DeepEqual(&original, rogue.CardCollection[card]) {
+				if original.Count != wantOwned || original.DeckCount(0) != wantDeck {
 					t.Fatal("editor changed the rogue collection")
 				}
 			}

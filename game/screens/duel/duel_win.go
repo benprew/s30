@@ -131,14 +131,14 @@ func NewWinDuelScreen(player *domain.Player, reward domain.DuelReward, bonusCard
 		source := winCard{}
 		if i < len(reward.OwnedBonusCards) {
 			source.owned = reward.OwnedBonusCards[i]
-			if source.owned == nil || source.owned.Card == nil {
+			if source.owned.Card() == nil {
 				continue
 			}
 		} else {
 			if c == nil {
 				continue
 			}
-			source.owned = &domain.OwnedCard{Card: c, ArtworkID: c.DefaultArtwork().ID}
+			source.owned = c.Printing("")
 		}
 		bonusSources = append(bonusSources, source)
 	}
@@ -316,11 +316,7 @@ func layoutCards(cards []*domain.Card) []winCard {
 		count := min(winCardsPerPage, len(cards)-pageStart)
 		totalW := count*domain.CardFullWidth + (count-1)*winChoiceGap
 		x := (winLogicalW-totalW)/2 + (i%winCardsPerPage)*(domain.CardFullWidth+winChoiceGap)
-		var owned *domain.OwnedCard
-		if card != nil {
-			owned = &domain.OwnedCard{Card: card, ArtworkID: card.DefaultArtwork().ID}
-		}
-		result = append(result, winCard{owned: owned, rect: image.Rect(x, winChoiceY, x+domain.CardFullWidth, winChoiceY+domain.CardFullHeight)})
+		result = append(result, winCard{owned: card.Printing(""), rect: image.Rect(x, winChoiceY, x+domain.CardFullWidth, winChoiceY+domain.CardFullHeight)})
 	}
 	return result
 }

@@ -372,10 +372,10 @@ func (s *DuelAnteScreen) startDuel() (screenui.ScreenName, screenui.Screen, erro
 	}
 	var playerAnte, enemyAnte *domain.Card
 	if s.playerAnteCard != nil {
-		playerAnte = s.playerAnteCard.Card
+		playerAnte = s.playerAnteCard.Card()
 	}
 	if s.enemyAnteCard != nil {
-		enemyAnte = s.enemyAnteCard.Card
+		enemyAnte = s.enemyAnteCard.Card()
 	}
 	duel := NewDuelScreen(s.player, s.enemy, s.lvl, s.idx, playerAnte, enemyAnte)
 	duel.arenaOutcome = s.arenaOutcome
@@ -462,7 +462,7 @@ func (s *DuelAnteScreen) LostCards() []*domain.Card {
 	if s.playerAnteCard == nil {
 		return []*domain.Card{nil}
 	}
-	return []*domain.Card{s.playerAnteCard.Card}
+	return []*domain.Card{s.playerAnteCard.Card()}
 }
 
 func canBribe(s *DuelAnteScreen) bool {

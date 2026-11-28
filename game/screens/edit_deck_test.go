@@ -75,17 +75,11 @@ func TestEditDeckSortsDeckAndCollectionSeparately(t *testing.T) {
 	art := image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, domain.CardFullHeight))
 	t.Cleanup(domain.ClearCardImageCache)
 	for _, name := range slices.Backward(wantDeck) {
-		card := domain.FindCardByName(name)
-		if card == nil {
-			t.Fatalf("missing card %q", name)
-		}
-		artID := card.DefaultArtwork().ID
-		domain.CacheCardImage(artID, art)
-		for _, deckIndex := range []int{-1, 0, 0} {
-			owned := domain.NewOwnedCard(card)
-			owned.ArtworkID = artID
-			owned.DeckIndex = deckIndex
-			collection.AddOwnedCard(owned)
+		printing := domain.FindCardByName(name).Printing("")
+		domain.CacheCardImage(printing.ArtworkID(), art)
+		collection.AddPrinting(printing, 3)
+		if err := collection.MovePrintingToDeck(printing, 0, 2); err != nil {
+			t.Fatal(err)
 		}
 	}
 	player := &domain.Player{Character: domain.Character{CardCollection: collection}}
@@ -95,11 +89,11 @@ func TestEditDeckSortsDeckAndCollectionSeparately(t *testing.T) {
 	}
 
 	var deckNames []string
-	for i, card := range screen.deckCardDisplays {
-		name := card.Owned.Name()
-		deckNames = append(deckNames, name)
-		if card.Count != 2 || screen.deckDraggableItems[i].ID != deckCardDragIDPrefix+name {
-			t.Errorf("deck slot %d has incorrect copies or drag target for %s", i, name)
+	for _, card := range screen.deckCardDisplays {
+		deckNames = append(deckNames, card.owned.Name())
+		data := card.drag.StartDrag(0, 0).GetData().(deckCardDrag)
+		if card.count != 2 || data.printing != card.owned || !data.fromDeck {
+			t.Errorf("incorrect count or drag target for %s", card.owned.Name())
 		}
 	}
 	if !slices.Equal(deckNames, wantDeck) {
@@ -119,47 +113,76 @@ func TestEditDeckSortsDeckAndCollectionSeparately(t *testing.T) {
 func TestSellDroppedCardFromCollection(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 2)
+	printing := mountain.Printing("")
+	collection.AddPrinting(printing, 2)
+	for slot, count := range []int{1, 2} {
+		if err := collection.MovePrintingToDeck(printing, slot, count); err != nil {
+			t.Fatal(err)
+		}
+	}
 	player := &domain.Player{
 		Character:  domain.Character{CardCollection: collection},
 		ActiveDeck: 0,
 	}
-	screen := &EditDeckScreen{Player: player, City: &domain.City{Tier: domain.TierHamlet}}
+	screen, err := NewEditDeckScreen(player, &domain.City{Tier: domain.TierHamlet}, 1024, 768)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	dropped := screen.sellDroppedCard(&dragdrop.CardDragData{ID: mountain.Name(), Card: mountain})
+	dropped := screen.handleCardDropToSell(firstCollectionDrag(screen))
 
 	if !dropped {
-		t.Fatal("sellDroppedCard() = false, want true")
+		t.Fatal("collection card sale failed")
 	}
 	if got := collection.GetTotalCount(mountain); got != 1 {
 		t.Fatalf("collection count = %d, want 1", got)
+	}
+	for slot, want := range [domain.MaxPlayerDecks]int{1, 1, 0} {
+		if got := collection.GetDeckCount(mountain, slot); got != want {
+			t.Errorf("deck %d count after selling from collection = %d, want %d", slot, got, want)
+		}
 	}
 }
 
 func TestSellDroppedCardFromDeck(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 2)
-	if err := collection.MoveCardToDeck(mountain, 0, 1); err != nil {
-		t.Fatalf("MoveCardToDeck() error = %v", err)
+	printing := mountain.Printing("")
+	collection.AddPrinting(printing, 2)
+	for slot, count := range []int{1, 1, 2} {
+		if err := collection.MovePrintingToDeck(printing, slot, count); err != nil {
+			t.Fatal(err)
+		}
 	}
 	player := &domain.Player{
 		Character:  domain.Character{CardCollection: collection},
 		ActiveDeck: 0,
 	}
-	screen := &EditDeckScreen{Player: player, City: &domain.City{Tier: domain.TierHamlet}}
+	screen, err := NewEditDeckScreen(player, &domain.City{Tier: domain.TierHamlet}, 1024, 768)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	dropped := screen.sellDroppedCard(&dragdrop.CardDragData{ID: deckCardDragIDPrefix + mountain.Name(), Card: mountain})
-
-	if !dropped {
-		t.Fatal("sellDroppedCard() = false, want true")
+	data := screen.deckCardDisplays[0].drag.StartDrag(0, 0)
+	if !screen.handleCardDropToSell(data) {
+		t.Fatal("deck card sale failed")
 	}
 	if got := collection.GetTotalCount(mountain); got != 1 {
 		t.Fatalf("collection count = %d, want 1", got)
 	}
-	if got := collection.GetDeckCount(mountain, 0); got != 0 {
-		t.Fatalf("deck count = %d, want 0", got)
+	for slot, want := range [domain.MaxPlayerDecks]int{0, 1, 1} {
+		if got := collection.GetDeckCount(mountain, slot); got != want {
+			t.Errorf("deck %d count after selling from deck = %d, want %d", slot, got, want)
+		}
 	}
+	if screen.handleCardDropToSell(data) || player.Gold != mountain.SalePrice(screen.City) {
+		t.Fatalf("gold after repeated drop = %d, want one sale", player.Gold)
+	}
+}
+
+func firstCollectionDrag(screen *EditDeckScreen) dragdrop.DragData {
+	button := screen.CollectionList.GetItems()[0]
+	return screen.draggableItems[button].StartDrag(0, 0)
 }
 
 func TestCreateCollectionButtons_ExcludesDeckCards(t *testing.T) {
@@ -168,11 +191,10 @@ func TestCreateCollectionButtons_ExcludesDeckCards(t *testing.T) {
 	plains := domain.FindCardByName("Plains")
 
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 13)
-	collection.MoveCardToDeck(mountain, 0, 8)
-	collection.AddCard(forest, 5)
-	collection.MoveCardToDeck(forest, 0, 5)
-	collection.AddCard(plains, 3)
+	collection.AddCard(mountain, 8, 0)
+	collection.AddCard(mountain, 5, -1)
+	collection.AddCard(forest, 5, 0)
+	collection.AddCard(plains, 3, -1)
 
 	player := &domain.Player{
 		Character: domain.Character{
@@ -232,8 +254,7 @@ func TestCreateCollectionButtons_RemovesWhenAllInDeck(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 10)
-	collection.MoveCardToDeck(mountain, 0, 10)
+	collection.AddCard(mountain, 10, 0)
 
 	player := &domain.Player{
 		Character: domain.Character{
@@ -261,12 +282,12 @@ func TestCreateCollectionButtons_RemovesWhenAllInDeck(t *testing.T) {
 	}
 }
 
-func TestMoveCardFromDeck(t *testing.T) {
+func TestMovePrintingFromDeck(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
+	printing := mountain.Printing("")
 
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 10)
-	collection.MoveCardToDeck(mountain, 0, 5)
+	collection.AddPrinting(printing, 10).DeckCounts = []int{5}
 
 	totalCount := collection.GetTotalCount(mountain)
 	deckCount := collection.GetDeckCount(mountain, 0)
@@ -278,7 +299,7 @@ func TestMoveCardFromDeck(t *testing.T) {
 		t.Errorf("Expected deck count to be 5, got %d", deckCount)
 	}
 
-	err := collection.MoveCardFromDeck(mountain, 0, 2)
+	err := collection.MovePrintingFromDeck(printing, 0, 2)
 	if err != nil {
 		t.Fatalf("Failed to move card from deck: %v", err)
 	}
@@ -327,10 +348,8 @@ func TestMoveCardFromDeck(t *testing.T) {
 func TestHandleCardDrop_RejectsCardFromDeck(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 3)
-	if err := collection.MoveCardToDeck(mountain, 0, 1); err != nil {
-		t.Fatalf("MoveCardToDeck() error = %v", err)
-	}
+	collection.AddCard(mountain, 1, 0)
+	collection.AddCard(mountain, 2, -1)
 	player := &domain.Player{
 		Character:  domain.Character{CardCollection: collection},
 		ActiveDeck: 0,
@@ -340,7 +359,7 @@ func TestHandleCardDrop_RejectsCardFromDeck(t *testing.T) {
 		t.Fatalf("NewEditDeckScreen() error = %v", err)
 	}
 
-	deckCardData := &dragdrop.CardDragData{ID: deckCardDragIDPrefix + mountain.Name(), Card: mountain}
+	deckCardData := screen.deckCardDisplays[0].drag.StartDrag(0, 0)
 	dropped := screen.handleCardDrop(deckCardData)
 	if dropped {
 		t.Fatal("handleCardDrop() = true, want false when card dragged from deck")
@@ -356,10 +375,8 @@ func TestHandleCardDrop_RejectsCardFromDeck(t *testing.T) {
 func TestHandleCardDropToCollection_RejectsCardFromCollection(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 3)
-	if err := collection.MoveCardToDeck(mountain, 0, 1); err != nil {
-		t.Fatalf("MoveCardToDeck() error = %v", err)
-	}
+	collection.AddCard(mountain, 1, 0)
+	collection.AddCard(mountain, 2, -1)
 	player := &domain.Player{
 		Character:  domain.Character{CardCollection: collection},
 		ActiveDeck: 0,
@@ -369,7 +386,7 @@ func TestHandleCardDropToCollection_RejectsCardFromCollection(t *testing.T) {
 		t.Fatalf("NewEditDeckScreen() error = %v", err)
 	}
 
-	collectionCardData := &dragdrop.CardDragData{ID: mountain.Name(), Card: mountain}
+	collectionCardData := firstCollectionDrag(screen)
 	dropped := screen.handleCardDropToCollection(collectionCardData)
 	if dropped {
 		t.Fatal("handleCardDropToCollection() = true, want false when card dragged from collection")
@@ -382,8 +399,8 @@ func TestHandleCardDropToCollection_RejectsCardFromCollection(t *testing.T) {
 func TestEditDeckDropAreaAcceptanceRules(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 2)
-	collection.MoveCardToDeck(mountain, 0, 1)
+	collection.AddCard(mountain, 1, 0)
+	collection.AddCard(mountain, 1, -1)
 	player := &domain.Player{
 		Character:  domain.Character{CardCollection: collection},
 		ActiveDeck: 0,
@@ -393,8 +410,8 @@ func TestEditDeckDropAreaAcceptanceRules(t *testing.T) {
 		t.Fatalf("NewEditDeckScreen() error = %v", err)
 	}
 
-	deckCardData := &dragdrop.CardDragData{ID: deckCardDragIDPrefix + mountain.Name(), Card: mountain}
-	collectionCardData := &dragdrop.CardDragData{ID: mountain.Name(), Card: mountain}
+	deckCardData := screen.deckCardDisplays[0].drag.StartDrag(0, 0)
+	collectionCardData := firstCollectionDrag(screen)
 
 	if screen.deckDropArea.CanAcceptDrop(deckCardData) {
 		t.Error("deckDropArea should not accept card dragged from deck")
@@ -414,10 +431,8 @@ func TestEditDeckDropAreaAcceptanceRules(t *testing.T) {
 func TestAddDroppedCardToDeck(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 3)
-	if err := collection.MoveCardToDeck(mountain, 0, 1); err != nil {
-		t.Fatalf("MoveCardToDeck() error = %v", err)
-	}
+	collection.AddCard(mountain, 1, 0)
+	collection.AddCard(mountain, 2, -1)
 	player := &domain.Player{
 		Character:  domain.Character{CardCollection: collection},
 		ActiveDeck: 0,
@@ -427,17 +442,17 @@ func TestAddDroppedCardToDeck(t *testing.T) {
 		t.Fatalf("NewEditDeckScreen() error = %v", err)
 	}
 
-	deckCardData := &dragdrop.CardDragData{ID: deckCardDragIDPrefix + mountain.Name(), Card: mountain}
-	if screen.addDroppedCardToDeck(deckCardData) {
-		t.Fatal("addDroppedCardToDeck() = true, want false when card dragged from deck")
+	deckCardData := screen.deckCardDisplays[0].drag.StartDrag(0, 0)
+	if screen.handleCardDrop(deckCardData) {
+		t.Fatal("handleCardDrop() = true, want false when card dragged from deck")
 	}
 	if got := collection.GetDeckCount(mountain, 0); got != 1 {
 		t.Fatalf("deck count = %d, want 1", got)
 	}
 
-	collectionCardData := &dragdrop.CardDragData{ID: mountain.Name(), Card: mountain}
-	if !screen.addDroppedCardToDeck(collectionCardData) {
-		t.Fatal("addDroppedCardToDeck() = false, want true when card dragged from collection")
+	collectionCardData := firstCollectionDrag(screen)
+	if !screen.handleCardDrop(collectionCardData) {
+		t.Fatal("handleCardDrop() = false, want true when card dragged from collection")
 	}
 	if got := collection.GetDeckCount(mountain, 0); got != 2 {
 		t.Fatalf("deck count = %d, want 2", got)
@@ -447,10 +462,8 @@ func TestAddDroppedCardToDeck(t *testing.T) {
 func TestRemoveDroppedCardFromDeck(t *testing.T) {
 	mountain := domain.FindCardByName("Mountain")
 	collection := domain.NewCardCollection()
-	collection.AddCard(mountain, 3)
-	if err := collection.MoveCardToDeck(mountain, 0, 1); err != nil {
-		t.Fatalf("MoveCardToDeck() error = %v", err)
-	}
+	collection.AddCard(mountain, 1, 0)
+	collection.AddCard(mountain, 2, -1)
 	player := &domain.Player{
 		Character:  domain.Character{CardCollection: collection},
 		ActiveDeck: 0,
@@ -460,17 +473,17 @@ func TestRemoveDroppedCardFromDeck(t *testing.T) {
 		t.Fatalf("NewEditDeckScreen() error = %v", err)
 	}
 
-	collectionCardData := &dragdrop.CardDragData{ID: mountain.Name(), Card: mountain}
-	if screen.removeDroppedCardFromDeck(collectionCardData) {
-		t.Fatal("removeDroppedCardFromDeck() = true, want false when card dragged from collection")
+	collectionCardData := firstCollectionDrag(screen)
+	if screen.handleCardDropToCollection(collectionCardData) {
+		t.Fatal("handleCardDropToCollection() = true, want false when card dragged from collection")
 	}
 	if got := collection.GetDeckCount(mountain, 0); got != 1 {
 		t.Fatalf("deck count = %d, want 1", got)
 	}
 
-	deckCardData := &dragdrop.CardDragData{ID: deckCardDragIDPrefix + mountain.Name(), Card: mountain}
-	if !screen.removeDroppedCardFromDeck(deckCardData) {
-		t.Fatal("removeDroppedCardFromDeck() = false, want true when card dragged from deck")
+	deckCardData := screen.deckCardDisplays[0].drag.StartDrag(0, 0)
+	if !screen.handleCardDropToCollection(deckCardData) {
+		t.Fatal("handleCardDropToCollection() = false, want true when card dragged from deck")
 	}
 	if got := collection.GetDeckCount(mountain, 0); got != 0 {
 		t.Fatalf("deck count = %d, want 0", got)
@@ -506,14 +519,85 @@ func TestLeavingWithALegalDeckCloses(t *testing.T) {
 	}
 }
 
+func TestDeckCardsDoNotOverflowDeckArea(t *testing.T) {
+	screen := newEditorWithDistinctDeck(t, 42)
+	bounds := screen.deckDropArea.GetDropBounds()
+	visible := screen.visibleDeckCards()
+	if len(visible) != 42 {
+		t.Fatalf("visible cards = %d, want 42", len(visible))
+	}
+
+	for i, display := range visible {
+		cardBounds := display.drag.Bounds
+		wantY := 55 + i/6*64
+		if cardBounds.Min.Y != wantY {
+			t.Errorf("card %d starts at y=%d, want %d", i, cardBounds.Min.Y, wantY)
+		}
+		cardImageBounds := image.Rectangle{Min: cardBounds.Min, Max: cardBounds.Min.Add(display.drag.Normal.Bounds().Size())}
+		if !cardImageBounds.In(bounds) {
+			t.Errorf("card %s at %v extends outside deck area %v", display.owned.Name(), cardImageBounds, bounds)
+		}
+	}
+}
+
+func TestVisibleDraggablesFollowDeckPages(t *testing.T) {
+	screen := newEditorWithDistinctDeck(t, 121)
+	first := screen.deckCardDisplays[0].owned
+	last := screen.deckCardDisplays[120].owned
+	if got := len(screen.visibleDraggables()); got != 120 {
+		t.Fatalf("first page has %d drag targets, want 120", got)
+	}
+	if !screen.setDeckPage(1) {
+		t.Fatal("second page did not open")
+	}
+	targets := screen.visibleDraggables()
+	if len(targets) != 1 {
+		t.Fatalf("second page has %d drag targets, want 1", len(targets))
+	}
+	start := image.Pt(320, 60)
+	drag := targets[0].StartDrag(start.X, start.Y).GetData().(deckCardDrag)
+	if got, fromDeck := screen.cardAt(start); got != last || !fromDeck || drag.printing != last {
+		t.Fatal("second page hover and drag did not select its only card")
+	}
+
+	if !screen.removeDeckCard(last) {
+		t.Fatal("could not remove the last card on the second page")
+	}
+	if got, fromDeck := screen.cardAt(start); screen.deckPage != 0 || got != first || !fromDeck {
+		t.Fatal("removing the last card on the second page did not return to the first page")
+	}
+}
+
+func newEditorWithDistinctDeck(t *testing.T, count int) *EditDeckScreen {
+	t.Helper()
+	collection := domain.NewCardCollection()
+	names := make(map[string]bool)
+	for _, card := range domain.CARDS {
+		if names[card.Name()] {
+			continue
+		}
+		names[card.Name()] = true
+		collection.AddCard(card, 1, 0)
+		if len(names) == count {
+			break
+		}
+	}
+	if len(names) != count {
+		t.Fatalf("could not find %d distinct cards", count)
+	}
+	player := &domain.Player{Character: domain.Character{CardCollection: collection}}
+	screen, err := NewEditDeckScreen(player, nil, 1024, 768)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return screen
+}
+
 func testPlayerWithDeck(t *testing.T, cards int) *domain.Player {
 	t.Helper()
 	plains := domain.FindCardByName("Plains")
 	collection := domain.NewCardCollection()
-	collection.AddCard(plains, cards)
-	if err := collection.MoveCardToDeck(plains, 0, cards); err != nil {
-		t.Fatalf("MoveCardToDeck() error = %v", err)
-	}
+	collection.AddCard(plains, cards, 0)
 	return &domain.Player{
 		Character:   domain.Character{CardCollection: collection},
 		MinDeckSize: 36,

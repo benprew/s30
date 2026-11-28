@@ -13,9 +13,9 @@ import (
 func TestArenaEditorCannotSellAndReturnsToAnte(t *testing.T) {
 	card := domain.FindCardByName("Lightning Bolt")
 	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}, MinDeckSize: 15}
-	player.CardCollection.AddCardToDeck(card, 0, 1)
+	player.CardCollection.AddCard(card, 1, 0)
 	editor := &EditDeckScreen{Player: player, DisableSelling: true, ReturnScr: screenui.DuelAnteScr}
-	if editor.sellCard(card, true) || player.CardCollection.NumCards() != 1 || player.Gold != 0 {
+	if editor.sellCard(player.CardCollection.CardsInDeck(0)[0], true) || player.CardCollection.NumCards() != 1 || player.Gold != 0 {
 		t.Fatal("arena editor sold a card")
 	}
 	if editor.leaveEditor() != screenui.EditDeckScr || !editor.leaveWarning {
@@ -100,4 +100,3 @@ func TestArenaEntryScreenButtonsAndUniformWidth(t *testing.T) {
 		t.Errorf("buttons should have same X alignment: b0=%d, b1=%d", s.buttons[0].Bounds.Min.X, s.buttons[1].Bounds.Min.X)
 	}
 }
-

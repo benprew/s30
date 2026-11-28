@@ -62,11 +62,11 @@ func TestVersionOneFixtureLoadsRebuildsAndResavesWithoutLosingCards(t *testing.T
 	}
 	actualArt := make(map[string]int)
 	actualDecks := make(map[int]int)
-	for _, item := range player.CardCollection {
-		for _, owned := range item.Instances {
-			actualArt[owned.ArtworkID]++
-			if owned.DeckIndex >= 0 {
-				actualDecks[owned.DeckIndex]++
+	for printing, item := range player.CardCollection {
+		actualArt[printing.ArtworkID()] += item.Count
+		for slot, count := range item.DeckCounts {
+			if count > 0 {
+				actualDecks[slot] += count
 			}
 		}
 	}

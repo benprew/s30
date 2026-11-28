@@ -35,7 +35,7 @@ func NewArenaRun(campaign *Player, rng *rand.Rand) (*ArenaRun, error) {
 	player := &Player{Character: character, Name: campaign.Name, MinDeckSize: 15}
 	run := &ArenaRun{Campaign: campaign, Player: player, Round: 1, rng: rng}
 	for _, name := range arenaLandNames {
-		player.CardCollection.AddCard(FindCardByName(name), 20)
+		player.CardCollection.AddCard(FindCardByName(name), 20, -1)
 	}
 	run.openPack()
 	campaign.Gold -= ArenaEntryCost
@@ -75,7 +75,7 @@ func ArenaBooster(rng *rand.Rand) []*Card {
 
 func (a *ArenaRun) openPack() {
 	for _, card := range ArenaBooster(a.rng) {
-		a.Player.CardCollection.AddCard(card, 1)
+		a.Player.CardCollection.AddCard(card, 1, -1)
 	}
 }
 
@@ -145,13 +145,13 @@ func arenaOpponentCollection(pool []*Card, minimum int) CardCollection {
 		}
 	}
 	for _, card := range selectedSpells {
-		collection.AddCardToDeck(card, 0, 1)
+		collection.AddCard(card, 1, 0)
 		for _, c := range card.ColorIdentity {
 			mana[c]++
 		}
 	}
 	for _, card := range openedLands[:min(len(openedLands), minimum-collection.NumCards())] {
-		collection.AddCardToDeck(card, 0, 1)
+		collection.AddCard(card, 1, 0)
 	}
 	lands := minimum - collection.NumCards()
 	manaTotal := max(1, mana[chosen[0]]+mana[chosen[1]])
@@ -172,7 +172,7 @@ func arenaOpponentCollection(pool []*Card, minimum int) CardCollection {
 						}
 					}
 				}
-				collection.AddCardToDeck(land, 0, 1)
+				collection.AddCard(land, 1, 0)
 			}
 		}
 	}
@@ -246,8 +246,8 @@ func (a *ArenaRun) Win() DuelReward {
 	reward := arenaReward(a.Round, a.rng)
 	a.Campaign.Gold += reward.Gold
 	for _, card := range reward.Cards {
-		owned := NewOwnedCard(card)
-		a.Campaign.CardCollection.AddOwnedCard(owned)
+		owned := card.RandomPrinting()
+		a.Campaign.CardCollection.AddPrinting(owned, 1)
 		reward.OwnedCards = append(reward.OwnedCards, owned)
 	}
 	for _, amulet := range reward.Amulets {

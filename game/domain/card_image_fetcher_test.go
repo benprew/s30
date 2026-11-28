@@ -123,8 +123,8 @@ func TestCollectPriorityCardsOnlyIncludesPlayerCards(t *testing.T) {
 	bonusCard := &Card{CardName: "Bonus Card", Artworks: []Artwork{{ID: "bonus-card", CardName: "Bonus Card"}}}
 
 	collection := NewCardCollection()
-	collection.AddCardToDeck(playerCard1, 0, 4)
-	collection.AddCardToDeck(playerCard2, 1, 2)
+	collection.AddCard(playerCard1, 4, 0)
+	collection.AddCard(playerCard2, 2, 1)
 
 	player := &Player{
 		Character: Character{

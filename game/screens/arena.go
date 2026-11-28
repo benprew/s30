@@ -21,7 +21,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-
 type ArenaEntryScreen struct {
 	level      *world.Level
 	tile       image.Point
@@ -42,7 +41,6 @@ func NewArenaEntryScreen(level *world.Level, encounter world.RandomEncounter) *A
 func NewArenaChampionScreen() *ArenaEntryScreen {
 	return newArenaMessageScreen(true)
 }
-
 
 func newArenaMessageScreen(champion bool) *ArenaEntryScreen {
 	background, _ := imageutil.LoadImage(assets.DuelWinBg_png)
@@ -113,7 +111,7 @@ func (s *ArenaEntryScreen) enter(W, H int) (screenui.ScreenName, screenui.Screen
 func (s *ArenaEntryScreen) leave() (screenui.ScreenName, screenui.Screen, error) {
 	if !s.champion {
 		if land := domain.RandomBasicLand(); land != nil {
-			s.level.Player.CardCollection.AddCard(land, 1)
+			s.level.Player.CardCollection.AddCard(land, 1, -1)
 		}
 		s.level.CompleteRandomEncounter(s.tile)
 	}
@@ -203,7 +201,6 @@ func (s *ArenaEntryScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		button.Draw(screen, &ebiten.DrawImageOptions{}, scale)
 	}
 }
-
 
 type arenaSession struct {
 	run   *domain.ArenaRun

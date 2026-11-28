@@ -80,8 +80,8 @@ func NewRandomEncounterScreen(player *domain.Player, landName string, terrainTyp
 	card := domain.FindCardByName(landName)
 	var owned *domain.OwnedCard
 	if card != nil {
-		owned = domain.NewOwnedCard(card)
-		player.CardCollection.AddOwnedCard(owned)
+		owned = card.RandomPrinting()
+		player.CardCollection.AddPrinting(owned, 1)
 		if am := gameaudio.Get(); am != nil {
 			am.PlaySFX(gameaudio.SFXFindCard)
 		}

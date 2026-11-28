@@ -214,13 +214,11 @@ func CollectPriorityCards(player *Player) []Artwork {
 	seen := make(map[string]bool)
 	var priority []Artwork
 
-	for _, item := range player.CardCollection {
-		for _, owned := range item.Instances {
-			card := owned.Artwork()
-			if !seen[card.ID] {
-				seen[card.ID] = true
-				priority = append(priority, card)
-			}
+	for printing := range player.CardCollection {
+		art := printing.Artwork()
+		if !seen[art.ID] {
+			seen[art.ID] = true
+			priority = append(priority, art)
 		}
 	}
 

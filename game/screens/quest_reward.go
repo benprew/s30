@@ -83,7 +83,7 @@ func NewQuestRewardScreen(rewards []domain.DeckQuestReward, city *domain.City, p
 	for _, r := range rewards {
 		cards := make([]*domain.OwnedCard, 0, len(r.Cards))
 		for _, c := range r.Cards {
-			if c == nil || c.Card == nil {
+			if c == nil || c.Card() == nil {
 				continue
 			}
 			cards = append(cards, c)

@@ -24,7 +24,7 @@ func newEditorCollection(rogueName string) (domain.CardCollection, error) {
 	collection := domain.NewCardCollection()
 	if rogueName == "" {
 		for _, card := range domain.CARDS {
-			collection.AddCard(card, 4)
+			collection.AddCard(card, 4, -1)
 		}
 		return collection, nil
 	}

@@ -1,36 +1,48 @@
 package domain
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
-	"sort"
 )
 
 type CollectionItem struct {
-	Card       *Card
+	Card       *OwnedCard
 	Count      int
 	DeckCounts []int
-	Instances  []*OwnedCard
 }
 
-type CardCollection map[*Card]*CollectionItem
+type CardCollection map[*OwnedCard]*CollectionItem
 
 func NewCardCollection() CardCollection { return make(CardCollection) }
 
-// Clone copies the collection without sharing owned copies or deck counts.
+// Clone gives the new collection its own counts.
 func (cc CardCollection) Clone() CardCollection {
 	cloned := NewCardCollection()
-	for _, item := range cc {
-		for _, owned := range item.Instances {
-			copy := *owned
-			cloned.AddOwnedCard(&copy)
-		}
-		if copy := cloned[item.Card]; copy != nil {
-			copy.ensureDeckSlots(len(item.DeckCounts))
-		}
+	for printing, item := range cc {
+		cloned[printing] = &CollectionItem{Card: printing, Count: item.Count, DeckCounts: slices.Clone(item.DeckCounts)}
 	}
 	return cloned
+}
+
+// Items returns the inventory in card and artwork ID order.
+func (cc CardCollection) Items() []*CollectionItem {
+	return slices.SortedFunc(maps.Values(cc), func(a, b *CollectionItem) int {
+		if order := cmp.Compare(a.Card.Card().CardID(), b.Card.Card().CardID()); order != 0 {
+			return order
+		}
+		return cmp.Compare(a.Card.ArtworkID(), b.Card.ArtworkID())
+	})
+}
+
+// DeckCount returns the quantity of this printing in one deck.
+func (item *CollectionItem) DeckCount(index int) int {
+	if index < 0 || index >= len(item.DeckCounts) {
+		return 0
+	}
+	return item.DeckCounts[index]
 }
 
 func (item *CollectionItem) ensureDeckSlots(count int) {
@@ -39,232 +51,169 @@ func (item *CollectionItem) ensureDeckSlots(count int) {
 	}
 }
 
-func (item *CollectionItem) updateCounts() {
-	item.Count = len(item.Instances)
-	clear(item.DeckCounts)
-	for _, owned := range item.Instances {
-		if owned.DeckIndex < 0 {
-			continue
-		}
-		for len(item.DeckCounts) <= owned.DeckIndex {
-			item.DeckCounts = append(item.DeckCounts, 0)
-		}
-		item.DeckCounts[owned.DeckIndex]++
-	}
+func (item *CollectionItem) addToDeck(index, count int) {
+	item.ensureDeckSlots(index + 1)
+	item.DeckCounts[index] += count
 }
 
-// AddOwnedCard transfers a specific copy into the collection.
-func (cc CardCollection) AddOwnedCard(owned *OwnedCard) {
-	if owned == nil || owned.Card == nil {
-		return
+// AddPrinting increases ownership of the specified printing.
+func (cc CardCollection) AddPrinting(printing *OwnedCard, count int) *CollectionItem {
+	if printing.Card() == nil || count <= 0 {
+		return nil
 	}
-	if _, _, existing := cc.findOwned(owned.ID); existing != nil {
-		return
-	}
-	card := owned.Card
-	item := cc[card]
+	item := cc[printing]
 	if item == nil {
-		item = &CollectionItem{Card: card}
-		cc[card] = item
+		item = &CollectionItem{Card: printing}
+		cc[printing] = item
 	}
-	item.Instances = append(item.Instances, owned)
-	item.updateCounts()
+	item.Count += count
+	return item
 }
 
-func (cc CardCollection) findOwned(id string) (*CollectionItem, int, *OwnedCard) {
-	for _, item := range cc {
-		for i, owned := range item.Instances {
-			if owned.ID == id {
-				return item, i, owned
-			}
-		}
+// MovePrintingToDeck assigns available cards of one printing to one deck.
+func (cc CardCollection) MovePrintingToDeck(printing *OwnedCard, index, count int) error {
+	item := cc[printing]
+	if index < 0 || count < 0 || item == nil || count > item.Count-item.DeckCount(index) {
+		return fmt.Errorf("insufficient available cards for deck %d", index)
 	}
-	return nil, 0, nil
-}
-
-// MoveOwnedCard changes the deck of one copy. Use -1 to return it to the collection.
-func (cc CardCollection) MoveOwnedCard(id string, deckIndex int) error {
-	item, _, owned := cc.findOwned(id)
-	if owned == nil {
-		return fmt.Errorf("owned card %s not found", id)
+	if count > 0 {
+		item.addToDeck(index, count)
 	}
-	if deckIndex < -1 {
-		return fmt.Errorf("invalid deck index %d", deckIndex)
-	}
-	owned.DeckIndex = deckIndex
-	item.updateCounts()
 	return nil
 }
 
-// RemoveOwnedCard removes the specified copy and its deck membership.
-func (cc CardCollection) RemoveOwnedCard(id string) error {
-	item, i, owned := cc.findOwned(id)
-	if owned == nil {
-		return fmt.Errorf("owned card %s not found", id)
+// MovePrintingFromDeck returns cards of one printing to the collection.
+func (cc CardCollection) MovePrintingFromDeck(printing *OwnedCard, index, count int) error {
+	item := cc[printing]
+	if index < 0 || count < 0 || item == nil || count > item.DeckCount(index) {
+		return fmt.Errorf("insufficient cards in deck %d", index)
 	}
-	item.Instances = slices.Delete(item.Instances, i, i+1)
-	item.updateCounts()
+	if count > 0 {
+		item.DeckCounts[index] -= count
+	}
+	return nil
+}
+
+// RemovePrinting reduces ownership. Use -1 to leave deck counts at the owned limit.
+func (cc CardCollection) RemovePrinting(printing *OwnedCard, count, deckIndex int) error {
+	item := cc[printing]
+	if deckIndex < -1 || count < 0 || item == nil || item.Count < count {
+		return fmt.Errorf("insufficient cards in the collection")
+	}
+	if deckIndex >= 0 && item.DeckCount(deckIndex) < count {
+		return fmt.Errorf("insufficient cards in deck %d", deckIndex)
+	}
+	cc.reduceOwned(item, count, deckIndex)
+	return nil
+}
+
+func (cc CardCollection) reduceOwned(item *CollectionItem, count, deckIndex int) {
+	if deckIndex >= 0 && count > 0 {
+		item.DeckCounts[deckIndex] -= count
+	}
+	item.Count -= count
+	for slot, deckCount := range item.DeckCounts {
+		item.DeckCounts[slot] = min(deckCount, item.Count)
+	}
 	if item.Count == 0 {
 		delete(cc, item.Card)
 	}
-	return nil
 }
 
-// CardsInDeck returns specific copies in a stable order.
-func (cc CardCollection) CardsInDeck(deckIndex int) []*OwnedCard {
+// CardsInDeck lists the printing for each card in a deck.
+func (cc CardCollection) CardsInDeck(index int) []*OwnedCard {
 	var cards []*OwnedCard
-	for _, item := range cc {
-		for _, owned := range item.Instances {
-			if owned.DeckIndex == deckIndex {
-				cards = append(cards, owned)
-			}
-		}
-	}
-	sort.Slice(cards, func(i, j int) bool {
-		if cards[i].CardID() != cards[j].CardID() {
-			return cards[i].CardID() < cards[j].CardID()
-		}
-		return cards[i].ID < cards[j].ID
-	})
-	return cards
-}
-
-// AvailableCards returns copies that are not assigned to a deck.
-func (cc CardCollection) AvailableCards(card *Card) []*OwnedCard {
-	var cards []*OwnedCard
-	if item := cc[card]; item != nil {
-		for _, owned := range item.Instances {
-			if owned.DeckIndex == -1 {
-				cards = append(cards, owned)
-			}
+	for _, item := range cc.Items() {
+		for range item.DeckCount(index) {
+			cards = append(cards, item.Card)
 		}
 	}
 	return cards
 }
 
-func (cc CardCollection) GetDeck(deckIndex int) Deck {
+func (cc CardCollection) GetDeck(index int) Deck {
 	deck := make(Deck)
-	for card, item := range cc {
-		if deckIndex >= 0 && deckIndex < len(item.DeckCounts) && item.DeckCounts[deckIndex] > 0 {
-			deck[card] = item.DeckCounts[deckIndex]
+	for printing, item := range cc {
+		if count := item.DeckCount(index); count > 0 {
+			deck[printing.Card()] += count
 		}
 	}
 	return deck
 }
 
-func (cc CardCollection) AddCardToDeck(card *Card, deckIndex int, count int) {
-	if deckIndex < 0 {
-		return
-	}
-	for range count {
-		owned := NewOwnedCard(card)
-		owned.DeckIndex = deckIndex
-		cc.AddOwnedCard(owned)
-	}
-}
-
-func (cc CardCollection) MoveCardToDeck(card *Card, deckIndex int, count int) error {
-	cards := cc.AvailableCards(card)
-	if count < 0 || deckIndex < 0 || len(cards) < count {
-		return fmt.Errorf("insufficient available cards for %s", card.Name())
-	}
-	for _, owned := range cards[:count] {
-		owned.DeckIndex = deckIndex
-	}
-	if item := cc[card]; item != nil {
-		item.updateCounts()
-	}
-	return nil
-}
-
-func (cc CardCollection) MoveCardFromDeck(card *Card, deckIndex int, count int) error {
-	var cards []*OwnedCard
-	if item := cc[card]; item != nil {
-		for _, owned := range item.Instances {
-			if owned.DeckIndex == deckIndex {
-				cards = append(cards, owned)
-			}
-		}
-	}
-	if count < 0 || deckIndex < 0 || len(cards) < count {
-		return fmt.Errorf("insufficient cards in deck %d for %s", deckIndex, card.Name())
-	}
-	for _, owned := range cards[:count] {
-		owned.DeckIndex = -1
-	}
-	if item := cc[card]; item != nil {
-		item.updateCounts()
-	}
-	return nil
-}
-
-func (cc CardCollection) RemoveCardFromDeck(card *Card, deckIndex int, count int) error {
-	var cards []*OwnedCard
-	if item := cc[card]; item != nil {
-		for _, owned := range item.Instances {
-			if owned.DeckIndex == deckIndex {
-				cards = append(cards, owned)
-			}
-		}
-	}
-	if count < 0 || deckIndex < 0 || len(cards) < count {
-		return fmt.Errorf("insufficient cards in deck %d for %s", deckIndex, card.Name())
-	}
-	for _, owned := range cards[:count] {
-		_ = cc.RemoveOwnedCard(owned.ID)
-	}
-	return nil
-}
-
 func (cc CardCollection) GetTotalCount(card *Card) int {
-	if item := cc[card]; item != nil {
-		return item.Count
+	total := 0
+	for printing, item := range cc {
+		if printing.Card() == card {
+			total += item.Count
+		}
 	}
-	return 0
+	return total
 }
 
-func (cc CardCollection) GetDeckCount(card *Card, deckIndex int) int {
-	if item := cc[card]; item != nil && deckIndex >= 0 && deckIndex < len(item.DeckCounts) {
-		return item.DeckCounts[deckIndex]
+func (cc CardCollection) GetDeckCount(card *Card, index int) int {
+	total := 0
+	for printing, item := range cc {
+		if printing.Card() == card {
+			total += item.DeckCount(index)
+		}
 	}
-	return 0
+	return total
 }
 
-func (cc CardCollection) DecrementCardCount(card *Card) error { return cc.RemoveCard(card, 1) }
-
-func (cc CardCollection) AddCard(card *Card, count int) {
+// AddCard increases ownership. Use -1 to leave the cards outside the decks.
+func (cc CardCollection) AddCard(card *Card, count, deckIndex int) {
 	for range count {
-		cc.AddOwnedCard(NewOwnedCard(card))
+		item := cc.AddPrinting(card.RandomPrinting(), 1)
+		if deckIndex >= 0 {
+			item.addToDeck(deckIndex, 1)
+		}
 	}
 }
 
-func (cc CardCollection) RemoveCard(card *Card, count int) error {
-	item := cc[card]
-	if count < 0 || item == nil || item.Count < count {
-		return fmt.Errorf("insufficient cards in collection for %s", card.Name())
+// RemoveCard reduces ownership. Use -1 to use spare stock first.
+func (cc CardCollection) RemoveCard(card *Card, count, deckIndex int) error {
+	available := cc.GetTotalCount(card)
+	if deckIndex >= 0 {
+		available = cc.GetDeckCount(card, deckIndex)
 	}
-	cards := slices.Clone(item.Instances)
-	slices.SortStableFunc(cards, func(a, b *OwnedCard) int {
-		if a.DeckIndex == -1 && b.DeckIndex != -1 {
-			return -1
+	if deckIndex < -1 || count < 0 || available < count {
+		return fmt.Errorf("insufficient cards for removal from deck %d for %s", deckIndex, card.Name())
+	}
+	if count == 0 {
+		return nil
+	}
+	items := cc.Items()
+	// Use the stock that each deck can spare before reducing deck counts.
+	for _, spareOnly := range []bool{true, false} {
+		for _, item := range items {
+			if item.Card.Card() != card {
+				continue
+			}
+			quantity := min(count, item.Count)
+			if deckIndex >= 0 {
+				quantity = min(count, item.DeckCount(deckIndex))
+			} else if spareOnly && len(item.DeckCounts) > 0 {
+				quantity = min(quantity, item.Count-slices.Max(item.DeckCounts))
+			}
+			if quantity > 0 {
+				cc.reduceOwned(item, quantity, deckIndex)
+				count -= quantity
+			}
+			if count == 0 {
+				return nil
+			}
 		}
-		if b.DeckIndex == -1 && a.DeckIndex != -1 {
-			return 1
-		}
-		return 0
-	})
-	for _, owned := range cards[:count] {
-		_ = cc.RemoveOwnedCard(owned.ID)
 	}
 	return nil
 }
 
 func (cc CardCollection) GetAllCards() []*Card {
-	cards := make([]*Card, 0, len(cc))
-	for card := range cc {
-		cards = append(cards, card)
+	cards := make(map[*Card]struct{}, len(cc))
+	for printing := range cc {
+		cards[printing.Card()] = struct{}{}
 	}
-	return cards
+	return slices.Collect(maps.Keys(cards))
 }
 
 func (cc CardCollection) NumCards() int {
@@ -276,83 +225,97 @@ func (cc CardCollection) NumCards() int {
 }
 
 type collectionItemJSON struct {
-	CardID     string       `json:"card_id"`
-	CardName   string       `json:"card_name"`
-	Count      int          `json:"count"`
-	DeckCounts []int        `json:"deck_counts"`
-	Instances  []*OwnedCard `json:"instances,omitempty"`
+	printingJSON
+	Count      int   `json:"count"`
+	DeckCounts []int `json:"deck_counts"`
 }
 
 func (cc CardCollection) MarshalJSON() ([]byte, error) {
 	items := make([]collectionItemJSON, 0, len(cc))
-	for card, item := range cc {
-		items = append(items, collectionItemJSON{CardID: card.CardID(), CardName: card.CardName, Count: item.Count, DeckCounts: item.DeckCounts, Instances: item.Instances})
+	for _, item := range cc.Items() {
+		items = append(items, collectionItemJSON{
+			printingJSON: item.Card.reference(),
+			Count:        item.Count,
+			DeckCounts:   item.DeckCounts,
+		})
 	}
-	slices.SortFunc(items, func(a, b collectionItemJSON) int {
-		if a.CardID < b.CardID {
-			return -1
-		}
-		if a.CardID > b.CardID {
-			return 1
-		}
-		return 0
-	})
 	return json.Marshal(items)
 }
 
+type legacyInstance struct {
+	savedPrinting
+	ID        string `json:"id"`
+	DeckIndex int    `json:"deck_index"`
+}
+
+type savedCollectionItem struct {
+	collectionItemJSON
+	CardName    string            `json:"card_name"`
+	Instances   []*legacyInstance `json:"instances"`
+	DeckCopyIDs [][]string        `json:"deck_copy_ids"`
+}
+
 func (cc *CardCollection) UnmarshalJSON(data []byte) error {
-	var items []collectionItemJSON
+	var items []savedCollectionItem
 	if err := json.Unmarshal(data, &items); err != nil {
 		return err
 	}
 	restored := NewCardCollection()
-	for _, item := range items {
-		card := FindCard(item.CardID, item.CardName)
+	seenIDs := make(map[string]bool)
+	for _, saved := range items {
+		card := FindCard(saved.CardID, saved.CardName)
 		if card == nil {
 			continue
 		}
-		if item.Instances != nil {
-			for _, owned := range item.Instances {
-				if owned == nil {
-					continue
-				}
-				owned.Card = card
-				if owned.ID == "" {
-					owned.ID = newDefaultOwnedCard(card).ID
-				}
-				if owned.ArtworkID == "" {
-					owned.ArtworkID = card.DefaultArtwork().ID
-				}
-				restored.AddOwnedCard(owned)
-			}
-			if loaded := restored[card]; loaded != nil {
-				loaded.ensureDeckSlots(len(item.DeckCounts))
-			}
-			continue
-		}
-		remaining := max(item.Count, 0)
-		for deckIndex, count := range item.DeckCounts {
-			for range min(max(count, 0), remaining) {
-				owned := newDefaultOwnedCard(card)
-				if item.CardID != "" && item.CardID != card.Name() {
-					owned.ArtworkID = item.CardID
-				}
-				owned.DeckIndex = deckIndex
-				restored.AddOwnedCard(owned)
-				remaining--
-			}
-		}
-		for range remaining {
-			owned := newDefaultOwnedCard(card)
-			if item.CardID != "" && item.CardID != card.Name() {
-				owned.ArtworkID = item.CardID
-			}
-			restored.AddOwnedCard(owned)
-		}
-		if loaded := restored[card]; loaded != nil {
-			loaded.ensureDeckSlots(len(item.DeckCounts))
+		if saved.Instances != nil {
+			saved.restoreInstances(restored, card, seenIDs)
+		} else {
+			saved.restoreCounts(restored, card)
 		}
 	}
 	*cc = restored
 	return nil
+}
+
+func (saved savedCollectionItem) restoreCounts(cc CardCollection, card *Card) {
+	artworkID := saved.ArtworkID
+	if artworkID == "" && saved.CardID != card.CardID() {
+		artworkID = saved.CardID
+	}
+	item := cc.AddPrinting(card.Printing(artworkID), saved.Count)
+	if item != nil {
+		item.ensureDeckSlots(len(saved.DeckCounts))
+		for slot, count := range saved.DeckCounts {
+			item.DeckCounts[slot] += min(max(count, 0), saved.Count)
+		}
+	}
+}
+
+func (saved savedCollectionItem) restoreInstances(cc CardCollection, card *Card, seenIDs map[string]bool) {
+	byID := make(map[string]*CollectionItem)
+	for _, instance := range saved.Instances {
+		if instance == nil || seenIDs[instance.ID] {
+			continue
+		}
+		item := cc.AddPrinting(instance.resolve(card), 1)
+		item.ensureDeckSlots(max(len(saved.DeckCopyIDs), len(saved.DeckCounts)))
+		if instance.ID != "" {
+			seenIDs[instance.ID] = true
+			byID[instance.ID] = item
+		}
+		if saved.DeckCopyIDs == nil && instance.DeckIndex >= 0 && !instance.bareReference() {
+			item.addToDeck(instance.DeckIndex, 1)
+		}
+	}
+
+	inDeck := make(map[string]bool)
+	for slot, ids := range saved.DeckCopyIDs {
+		clear(inDeck)
+		for _, id := range ids {
+			if item := byID[id]; item != nil && !inDeck[id] {
+				item.addToDeck(slot, 1)
+				inDeck[id] = true
+			}
+		}
+	}
 }
