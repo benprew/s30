@@ -1,10 +1,12 @@
 package screens
 
 import (
+	"cmp"
 	"fmt"
 	"image"
 	"image/color"
-	"sort"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -20,12 +22,18 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 const (
 	COLLECTION_WIDTH     = 1024
 	COLLECTION_HEIGHT    = 180
 	deckCardDragIDPrefix = "deck:"
+	deckTopInset         = 55
+	deckSideInset        = 10
+	deckColumnGap        = 8
+	deckRowGap           = 10
+	deckMinRowStep       = 20
 )
 
 type cardGroup struct {
@@ -54,14 +62,14 @@ type EditDeckScreen struct {
 	draggableItems     []*dragdrop.DraggableButton
 	deckDraggableItems []*dragdrop.DraggableButton
 	deckCardDisplays   []DeckCardDisplay // Cards currently in the deck with counts
+	deckPage           int
+	deckPageSize       int
 
 	// Track buttons that already have card art.
-	refreshedArt         map[string]bool
-	collectionGroups     map[string]*cardGroup // Map card name to group
-	hoveredCollectionIdx int                   // Index of hovered collection card (-1 if none)
-	hoveredDeckIdx       int                   // Index of hovered deck card (-1 if none)
-	filter               collectionFilter      // Active color/type filters for the collection
-	filterButtons        []*filterButton       // Sprite-sheet toggle buttons for the filter
+	refreshedArt     map[string]bool
+	collectionGroups map[string]*cardGroup // Map card name to group
+	filter           collectionFilter      // Active color/type filters for the collection
+	filterButtons    []*filterButton       // Sprite-sheet toggle buttons for the filter
 
 	// The editor checks the active deck against the minimum before closing and
 	// warns the player when it falls short, instead of letting the duel pad it
@@ -72,11 +80,18 @@ type EditDeckScreen struct {
 }
 
 type DeckCardDisplay struct {
-	Owned *domain.OwnedCard
-	Image *ebiten.Image
-	Count int
-	X     int
-	Y     int
+	Owned         *domain.OwnedCard
+	Image         *ebiten.Image
+	Count         int
+	X             int
+	Y             int
+	colorRank     int
+	manaValue     int
+	visibleHeight int
+}
+
+func (d *DeckCardDisplay) visibleBounds() image.Rectangle {
+	return image.Rect(d.X, d.Y, d.X+domain.CardArtMiniWidth, d.Y+d.visibleHeight)
 }
 
 func (d *DeckCardDisplay) cardImage() *ebiten.Image {
@@ -114,20 +129,18 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 	}
 
 	screen := &EditDeckScreen{
-		Player:               player,
-		City:                 city,
-		Background:           collectionBg,
-		TiledBackground:      imageutil.TileImage(tileImg, 1024, 768),
-		DeckBackground:       deckBackground,
-		DeckButtons:          make([]*elements.Button, 0),
-		dragManager:          dragdrop.NewDragManager(),
-		draggableItems:       make([]*dragdrop.DraggableButton, 0),
-		deckDraggableItems:   make([]*dragdrop.DraggableButton, 0),
-		deckCardDisplays:     make([]DeckCardDisplay, 0),
-		collectionGroups:     make(map[string]*cardGroup),
-		hoveredCollectionIdx: -1,
-		hoveredDeckIdx:       -1,
-		filter:               newCollectionFilter(),
+		Player:             player,
+		City:               city,
+		Background:         collectionBg,
+		TiledBackground:    imageutil.TileImage(tileImg, 1024, 768),
+		DeckBackground:     deckBackground,
+		DeckButtons:        make([]*elements.Button, 0),
+		dragManager:        dragdrop.NewDragManager(),
+		draggableItems:     make([]*dragdrop.DraggableButton, 0),
+		deckDraggableItems: make([]*dragdrop.DraggableButton, 0),
+		deckCardDisplays:   make([]DeckCardDisplay, 0),
+		collectionGroups:   make(map[string]*cardGroup),
+		filter:             newCollectionFilter(),
 	}
 
 	filterButtons, err := createFilterButtons()
@@ -231,19 +244,9 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 		}
 	}
 
-	// Convert groups to sorted list
-	groupList := make([]*cardGroup, 0, len(s.collectionGroups))
-	for _, group := range s.collectionGroups {
-		groupList = append(groupList, group)
-	}
-
-	// Sort groups by name
-	sort.Slice(groupList, func(i, j int) bool {
-		return groupList[i].owned.Name() < groupList[j].owned.Name()
-	})
-
 	// Create a button for each card group
-	for _, group := range groupList {
+	for _, name := range slices.Sorted(maps.Keys(s.collectionGroups)) {
+		group := s.collectionGroups[name]
 		cardImg, err := group.owned.CardImage(domain.CardViewArtOnly)
 		if err != nil {
 			fmt.Printf("WARN: Unable to load card image for %s: %v\n", group.owned.Name(), err)
@@ -251,7 +254,7 @@ func (s *EditDeckScreen) createCollectionButtons() ([]*elements.Button, error) {
 		}
 
 		btn := elements.NewButton(cardImg, cardImg, cardImg, 0, 0, 1.0)
-		btn.ID = group.owned.Name()
+		btn.ID = name
 
 		buttons = append(buttons, btn)
 	}
@@ -285,7 +288,8 @@ func (s *EditDeckScreen) refreshCollectionImages() {
 }
 
 func (s *EditDeckScreen) refreshDeckDragImages() {
-	for i := range s.deckCardDisplays {
+	start, end := s.deckPageRange()
+	for i := start; i < end; i++ {
 		display := &s.deckCardDisplays[i]
 		if !display.Owned.ImageLoaded() {
 			continue
@@ -295,9 +299,11 @@ func (s *EditDeckScreen) refreshDeckDragImages() {
 			continue
 		}
 		display.Image = img
+		id := deckCardDragIDPrefix + display.Owned.Name()
 		for _, btn := range s.deckDraggableItems {
-			if btn.ID == deckCardDragIDPrefix+display.Owned.Name() && btn.Normal != img {
+			if btn.ID == id {
 				btn.Normal, btn.Hover, btn.Pressed = img, img, img
+				break
 			}
 		}
 	}
@@ -414,6 +420,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 	helpY := float64(collectionY) - 130
 	helpOpts := &ebiten.DrawImageOptions{}
 	elements.NewText(14, helpText, int(10*scale), int(helpY*scale)).Draw(screen, helpOpts, 1.0)
+	s.drawDeckPaging(screen, W)
 	drawDeckActionButton(screen, editDeckBackBounds(W), "Back")
 
 	if s.leaveWarning {
@@ -426,26 +433,50 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 // drawDeckCards draws the cards in the deck area with count overlays
 func (s *EditDeckScreen) drawDeckCards(screen *ebiten.Image, scale float64) {
-	for i := range s.deckCardDisplays {
+	const fullCountMinHeight = 48
+	start, end := s.deckPageRange()
+	for i := start; i < end; i++ {
 		display := &s.deckCardDisplays[i]
 		img := display.cardImage()
 		if img == nil {
 			continue
 		}
 
-		// Draw the card image
+		bounds := display.visibleBounds()
+		imgBounds := img.Bounds()
+		if bounds.Dy() < imgBounds.Dy() {
+			imgBounds.Max.Y = imgBounds.Min.Y + bounds.Dy()
+			img = img.SubImage(imgBounds).(*ebiten.Image)
+		}
 		cardOpts := &ebiten.DrawImageOptions{}
 		cardOpts.GeoM.Scale(scale, scale)
-		cardOpts.GeoM.Translate(float64(display.X)*scale, float64(display.Y)*scale)
+		cardOpts.GeoM.Translate(float64(bounds.Min.X)*scale, float64(bounds.Min.Y)*scale)
 		screen.DrawImage(img, cardOpts)
 
-		// Draw count if more than 1
 		if display.Count > 1 {
-			cardWidth := img.Bounds().Dx()
-			cardHeight := img.Bounds().Dy()
-			s.drawCountOverlay(screen, scale, display.X, display.Y, cardWidth, cardHeight, display.Count)
+			if bounds.Dy() < fullCountMinHeight {
+				drawCompactDeckCount(screen, scale, bounds, display.Count)
+			} else {
+				s.drawCountOverlay(screen, scale, bounds.Min.X, bounds.Min.Y, bounds.Dx(), bounds.Dy(), display.Count)
+			}
 		}
 	}
+}
+
+func drawCompactDeckCount(screen *ebiten.Image, scale float64, bounds image.Rectangle, count int) {
+	const height = 10
+	label := strconv.Itoa(count)
+	face := &text.GoTextFace{Source: fonts.MtgFont, Size: 11}
+	width, _ := text.Measure(label, face, 0)
+	badgeWidth := int(width) + 5
+	x := float64(bounds.Max.X - badgeWidth - 2)
+	y := float64(bounds.Max.Y - height - 1)
+	vector.FillRect(screen, float32(x*scale), float32(y*scale), float32(float64(badgeWidth)*scale),
+		float32(height*scale), color.RGBA{A: 220}, false)
+	opts := &text.DrawOptions{}
+	opts.GeoM.Scale(scale, scale)
+	opts.GeoM.Translate((x+2)*scale, (y-1)*scale)
+	text.Draw(screen, label, face, opts)
 }
 
 // Update handles user interactions
@@ -460,9 +491,6 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(0, float64(collectionY))
 
-	// Update the scrollable list
-	s.CollectionList.Update(opts, scale, W, H)
-
 	// Update collection filter toggles. A change rebuilds the list and resets scroll.
 	filterOpts := &ebiten.DrawImageOptions{}
 	if s.updateFilterButtons(filterOpts, scale, W, H) {
@@ -472,6 +500,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		s.CollectionList.ResetScroll()
 	}
 
+	s.CollectionList.Update(opts, scale, W, H)
 	s.refreshCollectionImages()
 	s.refreshDeckDragImages()
 
@@ -481,69 +510,22 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	if drag, dragging := ui.Dragging(); dragging {
 		s.dragManager.Move(drag)
 	}
-	if drag, ended := ui.DragEnd(); ended {
+	drag, dragEnded := ui.DragEnd()
+	if dragEnded {
 		s.dragManager.End(drag)
 	}
 
-	// Check for hover on collection cards
-	for i, btn := range s.CollectionList.GetItems() {
-		if btn.State == elements.StateHover {
-			s.hoveredCollectionIdx = i
-			s.hoveredDeckIdx = -1
-			var card *domain.Card
-			var owned *domain.OwnedCard
-			if group := s.collectionGroups[btn.ID]; group != nil {
-				owned = group.owned
-				card = owned.Card
-			}
-			if card == nil {
-				fmt.Println("Error finding card for Button:", btn.ID)
-			}
-			if card != nil {
-				img, err := owned.CardImage(domain.CardViewFull)
-				if err == nil {
-					s.MagnifierImage = img
-					s.MagnifiedCard = card
-				}
-			}
+	// Keep the card positions fixed until the pointer gesture ends.
+	if !ui.Pressed() && !dragEnded {
+		pageChanged := s.updateDeckPage(W)
+		pointer := ui.Position()
+		point := image.Pt(int(float64(pointer.X)/scale), int(float64(pointer.Y)/scale))
+		deckIdx, collectionIdx := s.updateCardHover(point)
+		if !pageChanged {
+			s.handleCardShortcuts(deckIdx, collectionIdx)
 		}
 	}
 
-	// Check for hover on deck cards
-	pointerPosition := ui.Position()
-	scaledMX := int(float64(pointerPosition.X) / scale)
-	scaledMY := int(float64(pointerPosition.Y) / scale)
-	for i := range s.deckCardDisplays {
-		display := &s.deckCardDisplays[i]
-		img := display.cardImage()
-		if img == nil {
-			continue
-		}
-		cardWidth := img.Bounds().Dx()
-		cardHeight := img.Bounds().Dy()
-		if scaledMX >= display.X && scaledMX < display.X+cardWidth &&
-			scaledMY >= display.Y && scaledMY < display.Y+cardHeight {
-			s.hoveredDeckIdx = i
-			s.hoveredCollectionIdx = -1
-			img, err := display.Owned.CardImage(domain.CardViewFull)
-			if err == nil {
-				s.MagnifierImage = img
-				s.MagnifiedCard = display.Owned.Card
-			}
-			break
-		}
-	}
-
-	// Handle keyboard shortcuts
-	if inpututil.IsKeyJustPressed(ebiten.KeyA) && s.hoveredCollectionIdx >= 0 {
-		s.handleDeckCardAdd(s.hoveredCollectionIdx)
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyD) && s.hoveredDeckIdx >= 0 {
-		s.handleDeckCardRemove(s.hoveredDeckIdx)
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyS) {
-		s.sellHoveredCard()
-	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || ui.Click(editDeckBackBounds(W)) {
 		name := s.leaveEditor()
 		if name != screenui.EditDeckScr {
@@ -553,6 +535,55 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	}
 
 	return screenui.EditDeckScr, nil, nil
+}
+
+func (s *EditDeckScreen) deckCardAt(point image.Point) int {
+	start, end := s.deckPageRange()
+	for i := start; i < end; i++ {
+		if point.In(s.deckCardDisplays[i].visibleBounds()) {
+			return i
+		}
+	}
+	return -1
+}
+
+func (s *EditDeckScreen) updateCardHover(point image.Point) (deckIdx, collectionIdx int) {
+	if i := s.deckCardAt(point); i >= 0 {
+		s.magnifyCard(s.deckCardDisplays[i].Owned)
+		return i, -1
+	}
+	buttons := s.CollectionList.GetItems()
+	start := s.CollectionList.GetCurrentOffset()
+	end := min(start+s.CollectionList.GetVisibleCount(), len(buttons))
+	for i := start; i < end; i++ {
+		if point.In(buttons[i].Bounds) {
+			if group := s.collectionGroups[buttons[i].ID]; group != nil {
+				s.magnifyCard(group.owned)
+				return -1, i
+			}
+		}
+	}
+	return -1, -1
+}
+
+func (s *EditDeckScreen) magnifyCard(owned *domain.OwnedCard) {
+	if img, err := owned.CardImage(domain.CardViewFull); err == nil {
+		s.MagnifierImage = img
+		s.MagnifiedCard = owned.Card
+	}
+}
+
+func (s *EditDeckScreen) handleCardShortcuts(deckIdx, collectionIdx int) {
+	switch {
+	case collectionIdx >= 0 && inpututil.IsKeyJustPressed(ebiten.KeyA):
+		s.handleDeckCardAdd(collectionIdx)
+	case deckIdx >= 0 && inpututil.IsKeyJustPressed(ebiten.KeyD):
+		s.handleDeckCardRemove(deckIdx)
+	case deckIdx >= 0 && inpututil.IsKeyJustPressed(ebiten.KeyS):
+		s.handleSellCard(deckIdx, false)
+	case collectionIdx >= 0 && inpututil.IsKeyJustPressed(ebiten.KeyS):
+		s.handleSellCard(collectionIdx, true)
+	}
 }
 
 func (s *EditDeckScreen) visibleDraggables() []dragdrop.Draggable {
@@ -576,14 +607,6 @@ func (s *EditDeckScreen) visibleDraggables() []dragdrop.Draggable {
 	return items
 }
 
-func (s *EditDeckScreen) sellHoveredCard() {
-	if s.hoveredCollectionIdx >= 0 {
-		s.handleSellCard(s.hoveredCollectionIdx, true)
-	} else if s.hoveredDeckIdx >= 0 {
-		s.handleSellCard(s.hoveredDeckIdx, false)
-	}
-}
-
 // editDeckBackBounds places the exit button in the filter row's band, at its right
 // end, which is where the original keeps its Done. The screen's logical height is
 // fixed at 768 by Game.Layout.
@@ -594,6 +617,56 @@ func editDeckBackBounds(W int) image.Rectangle {
 }
 
 func editDeckSellBounds() image.Rectangle { return image.Rect(10, 12, 150, 68) }
+
+func deckPageButtonBounds(W int) (prev, next image.Rectangle) {
+	back := editDeckBackBounds(W)
+	return back.Sub(image.Pt(290, 0)), back.Sub(image.Pt(110, 0))
+}
+
+func (s *EditDeckScreen) drawDeckPaging(screen *ebiten.Image, W int) {
+	pages := s.deckPageCount()
+	if pages == 1 {
+		return
+	}
+	prev, next := deckPageButtonBounds(W)
+	if s.deckPage > 0 {
+		drawDeckActionButton(screen, prev, "Prev")
+	}
+	if s.deckPage+1 < pages {
+		drawDeckActionButton(screen, next, "Next")
+	}
+	pageText := elements.NewText(14, fmt.Sprintf("Page %d / %d", s.deckPage+1, pages), prev.Max.X, prev.Min.Y+6)
+	pageText.HAlign = elements.AlignCenter
+	pageText.BoundsW = float64(next.Min.X - prev.Max.X)
+	pageText.Draw(screen, nil, 1)
+}
+
+func (s *EditDeckScreen) updateDeckPage(W int) bool {
+	if s.deckPageCount() == 1 {
+		return false
+	}
+	prev, next := deckPageButtonBounds(W)
+	switch {
+	case ui.Click(prev) || inpututil.IsKeyJustPressed(ebiten.KeyPageUp):
+		return s.setDeckPage(s.deckPage - 1)
+	case ui.Click(next) || inpututil.IsKeyJustPressed(ebiten.KeyPageDown):
+		return s.setDeckPage(s.deckPage + 1)
+	}
+	return false
+}
+
+func (s *EditDeckScreen) setDeckPage(page int) bool {
+	page = min(max(page, 0), s.deckPageCount()-1)
+	if page == s.deckPage {
+		return false
+	}
+	s.deckPage = page
+	s.calculateDeckCardPositions()
+	s.createDeckDraggableItems()
+	s.MagnifierImage = nil
+	s.MagnifiedCard = nil
+	return true
+}
 
 // leaveEditor decides where the screen goes when the player asks to leave. A deck
 // below the minimum does not block the exit: the player is warned first, and the
@@ -841,28 +914,28 @@ func (s *EditDeckScreen) loadDeckCards() {
 		}
 	}
 
-	// Convert to sorted list
-	groupList := make([]*cardGroup, 0, len(deckGroups))
 	for _, group := range deckGroups {
-		groupList = append(groupList, group)
-	}
-
-	// Sort groups by name for consistent ordering
-	sort.Slice(groupList, func(i, j int) bool {
-		return groupList[i].owned.Name() < groupList[j].owned.Name()
-	})
-
-	for _, group := range groupList {
 		img, err := group.owned.CardImage(domain.CardViewArtMini)
 		if err != nil || img == nil {
 			continue
 		}
 		s.deckCardDisplays = append(s.deckCardDisplays, DeckCardDisplay{
-			Owned: group.owned,
-			Image: img,
-			Count: group.totalCount,
+			Owned:     group.owned,
+			Image:     img,
+			Count:     group.totalCount,
+			colorRank: deckEditorColorRank(group.owned.ColorMask()),
+			manaValue: group.owned.ManaValue(),
 		})
 	}
+	slices.SortFunc(s.deckCardDisplays, func(a, b DeckCardDisplay) int {
+		if byColor := cmp.Compare(a.colorRank, b.colorRank); byColor != 0 {
+			return byColor
+		}
+		if byMana := cmp.Compare(a.manaValue, b.manaValue); byMana != 0 {
+			return byMana
+		}
+		return cmp.Compare(a.Owned.Name(), b.Owned.Name())
+	})
 
 	// Calculate positions for deck cards
 	s.calculateDeckCardPositions()
@@ -871,45 +944,60 @@ func (s *EditDeckScreen) loadDeckCards() {
 	s.createDeckDraggableItems()
 }
 
-// calculateDeckCardPositions calculates grid positions for deck cards
+func deckEditorColorRank(colors domain.ColorMask) int {
+	const multicolor = int(domain.ColorGreen) + 1
+	switch colors {
+	case domain.ColorWhite, domain.ColorBlue, domain.ColorBlack, domain.ColorRed, domain.ColorGreen:
+		return int(colors)
+	case domain.ColorColorless:
+		return multicolor + 1
+	default:
+		return multicolor
+	}
+}
+
+func (s *EditDeckScreen) deckPageCount() int {
+	pageSize := max(s.deckPageSize, 1)
+	return max(1, (len(s.deckCardDisplays)+pageSize-1)/pageSize)
+}
+
+func (s *EditDeckScreen) deckPageRange() (start, end int) {
+	start = s.deckPage * s.deckPageSize
+	end = min(start+s.deckPageSize, len(s.deckCardDisplays))
+	return start, end
+}
+
 func (s *EditDeckScreen) calculateDeckCardPositions() {
-	if len(s.deckCardDisplays) == 0 {
-		return
-	}
-
 	bounds := s.deckDropArea.GetDropBounds()
+	const columnStep = domain.CardArtMiniWidth + deckColumnGap
+	cols := max(1, (bounds.Dx()-2*deckSideInset+deckColumnGap)/columnStep)
+	// Leave space for the full height of the last row.
+	rowSpace := max(0, bounds.Dy()-deckTopInset-domain.CardArtMiniHeight)
+	s.deckPageSize = cols * (1 + rowSpace/deckMinRowStep)
+	s.deckPage = min(s.deckPage, s.deckPageCount()-1)
 
-	cardWidth := domain.CardArtMiniWidth
-	cardHeight := domain.CardArtMiniHeight
-	padding := 10
-	horizontalGap := 8
-
-	// Calculate grid dimensions
-	areaWidth := bounds.Dx() - 20 // Leave some margin
-
-	cols := (areaWidth + horizontalGap) / (cardWidth + horizontalGap)
-	if cols == 0 {
-		cols = 1
-	}
-
-	// Position cards in grid
-	for i := range s.deckCardDisplays {
-		col := i % cols
-		row := i / cols
-
-		x := bounds.Min.X + 10 + col*(cardWidth+horizontalGap)
-		y := bounds.Min.Y + 55 + row*(cardHeight+padding)
-
-		s.deckCardDisplays[i].X = x
-		s.deckCardDisplays[i].Y = y
+	start, end := s.deckPageRange()
+	rowIntervals := max(1, (end-start-1)/cols)
+	rowStep := min(domain.CardArtMiniHeight+deckRowGap, rowSpace/rowIntervals)
+	for i := start; i < end; i++ {
+		col := (i - start) % cols
+		row := (i - start) / cols
+		display := &s.deckCardDisplays[i]
+		display.X = bounds.Min.X + deckSideInset + col*columnStep
+		display.Y = bounds.Min.Y + deckTopInset + row*rowStep
+		display.visibleHeight = domain.CardArtMiniHeight
+		if i+cols < end {
+			display.visibleHeight = min(display.visibleHeight, rowStep)
+		}
 	}
 }
 
 // createDeckDraggableItems creates draggable buttons for deck cards
 func (s *EditDeckScreen) createDeckDraggableItems() {
-	s.deckDraggableItems = make([]*dragdrop.DraggableButton, 0)
+	start, end := s.deckPageRange()
+	s.deckDraggableItems = make([]*dragdrop.DraggableButton, 0, end-start)
 
-	for i := range s.deckCardDisplays {
+	for i := start; i < end; i++ {
 		display := &s.deckCardDisplays[i]
 		img := display.cardImage()
 		if img == nil {
@@ -917,6 +1005,7 @@ func (s *EditDeckScreen) createDeckDraggableItems() {
 		}
 
 		btn := elements.NewButton(img, img, img, display.X, display.Y, 1.0)
+		btn.Bounds = display.visibleBounds()
 		btn.ID = deckCardDragIDPrefix + display.Owned.Name()
 
 		draggableBtn := dragdrop.NewDraggableButton(btn, display.Owned.Card)
@@ -1058,34 +1147,6 @@ func (s *EditDeckScreen) getVisibleCollectionItems(collectionY int) []Collection
 	return visibleItems
 }
 
-// parseCMC parses a mana cost string like "{3}{G}{R}" and returns the total converted mana cost.
-func parseCMC(manaCost string) int {
-	cmc := 0
-	i := 0
-	for i < len(manaCost) {
-		if manaCost[i] == '{' {
-			j := i + 1
-			for j < len(manaCost) && manaCost[j] != '}' {
-				j++
-			}
-			if j < len(manaCost) {
-				content := manaCost[i+1 : j]
-				if intValue, err := strconv.Atoi(content); err == nil {
-					cmc += intValue
-				} else {
-					cmc++
-				}
-				i = j + 1
-			} else {
-				i++
-			}
-		} else {
-			i++
-		}
-	}
-	return cmc
-}
-
 // drawDeckStats draws a stats header bar at the top of the deck area
 func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 	if len(s.deckCardDisplays) == 0 {
@@ -1105,7 +1166,7 @@ func (s *EditDeckScreen) drawDeckStats(screen *ebiten.Image, scale float64) {
 		totalCards += display.Count
 
 		if display.Owned.ManaCost != "" {
-			cmc := min(parseCMC(display.Owned.ManaCost), 7)
+			cmc := min(display.manaValue, 7)
 			cmcCounts[cmc] += display.Count
 		}
 

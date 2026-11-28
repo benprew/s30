@@ -3,6 +3,7 @@ package screens
 import (
 	"bytes"
 	"image"
+	"slices"
 	"testing"
 
 	"github.com/benprew/s30/assets"
@@ -57,6 +58,61 @@ func TestEditDeckSellBoundsAtTopOfScreen(t *testing.T) {
 
 	if got := editDeckSellBounds(); got != want {
 		t.Fatalf("editDeckSellBounds() = %v, want %v", got, want)
+	}
+}
+
+func TestEditDeckSortsDeckAndCollectionSeparately(t *testing.T) {
+	wantDeck := []string{
+		"Healing Salve", "Savannah Lions", "Disenchant",
+		"Counterspell", "Air Elemental",
+		"Dark Ritual", "Terror",
+		"Disintegrate", "Fireball", "Lightning Bolt", "Shivan Dragon",
+		"Giant Growth",
+		"Dark Heart of the Wood", "Marsh Goblins",
+		"Black Lotus", "Plains", "Sol Ring",
+	}
+	collection := domain.NewCardCollection()
+	art := image.NewRGBA(image.Rect(0, 0, domain.CardFullWidth, domain.CardFullHeight))
+	t.Cleanup(domain.ClearCardImageCache)
+	for _, name := range slices.Backward(wantDeck) {
+		card := domain.FindCardByName(name)
+		if card == nil {
+			t.Fatalf("missing card %q", name)
+		}
+		artID := card.DefaultArtwork().ID
+		domain.CacheCardImage(artID, art)
+		for _, deckIndex := range []int{-1, 0, 0} {
+			owned := domain.NewOwnedCard(card)
+			owned.ArtworkID = artID
+			owned.DeckIndex = deckIndex
+			collection.AddOwnedCard(owned)
+		}
+	}
+	player := &domain.Player{Character: domain.Character{CardCollection: collection}}
+	screen, err := NewEditDeckScreen(player, nil, 1024, 768)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var deckNames []string
+	for i, card := range screen.deckCardDisplays {
+		name := card.Owned.Name()
+		deckNames = append(deckNames, name)
+		if card.Count != 2 || screen.deckDraggableItems[i].ID != deckCardDragIDPrefix+name {
+			t.Errorf("deck slot %d has incorrect copies or drag target for %s", i, name)
+		}
+	}
+	if !slices.Equal(deckNames, wantDeck) {
+		t.Errorf("deck order = %v, want %v", deckNames, wantDeck)
+	}
+	wantCollection := slices.Clone(wantDeck)
+	slices.Sort(wantCollection)
+	var collectionNames []string
+	for _, button := range screen.CollectionList.GetItems() {
+		collectionNames = append(collectionNames, button.ID)
+	}
+	if !slices.Equal(collectionNames, wantCollection) {
+		t.Errorf("collection order = %v, want %v", collectionNames, wantCollection)
 	}
 }
 

@@ -2,6 +2,7 @@ package screens
 
 import (
 	"image"
+	"strconv"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
@@ -19,7 +20,11 @@ func TestRefreshDeckDragImagesPreservesDragButton(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	screen := &EditDeckScreen{deckCardDisplays: []DeckCardDisplay{{Owned: owned}}}
+	screen := &EditDeckScreen{
+		deckDropArea:     dragdrop.NewDropArea(image.Rect(300, 0, 1024, 540), nil, nil),
+		deckCardDisplays: []DeckCardDisplay{{Owned: owned}},
+	}
+	screen.calculateDeckCardPositions()
 	screen.createDeckDraggableItems()
 	button := screen.deckDraggableItems[0]
 	button.State = elements.StatePressed
@@ -97,5 +102,38 @@ func TestDeckCardLayoutHasSixCardsPerRow(t *testing.T) {
 	seventh := screen.deckCardDisplays[6]
 	if seventh.X != first.X || seventh.Y < first.Y+domain.CardArtMiniHeight {
 		t.Fatalf("seventh card should start the second row: %+v", seventh)
+	}
+}
+
+func TestDeckCardSpacingFitsUpTo120DistinctCards(t *testing.T) {
+	area := image.Rect(300, 0, 1024, 540)
+	for _, tc := range []struct {
+		cards   int
+		rowStep int
+	}{
+		{24, 106},
+		{30, 97},
+		{31, 77},
+		{42, 64},
+		{84, 29},
+		{120, 20},
+	} {
+		t.Run(strconv.Itoa(tc.cards), func(t *testing.T) {
+			screen := &EditDeckScreen{
+				deckDropArea:     dragdrop.NewDropArea(area, nil, nil),
+				deckCardDisplays: make([]DeckCardDisplay, tc.cards),
+			}
+			screen.calculateDeckCardPositions()
+			for i, card := range screen.deckCardDisplays {
+				wantY := 55 + i/6*tc.rowStep
+				if card.Y != wantY {
+					t.Fatalf("card %d starts at y=%d, want %d", i, card.Y, wantY)
+				}
+				bounds := image.Rect(card.X, card.Y, card.X+domain.CardArtMiniWidth, card.Y+domain.CardArtMiniHeight)
+				if !bounds.In(area) {
+					t.Fatalf("card %d at %v overflows deck area %v", i, bounds, area)
+				}
+			}
+		})
 	}
 }
