@@ -11,6 +11,42 @@ import (
 	"github.com/benprew/s30/game/ui/layout"
 )
 
+func TestSwitchDeckCancelsDragBeforeDrop(t *testing.T) {
+	plains := domain.FindCardByName("Plains")
+	collection := domain.NewCardCollection()
+	printing := plains.Printing("")
+	collection.AddPrinting(printing, 1)
+	for slot := range 2 {
+		if err := collection.MovePrintingToDeck(printing, slot, 1); err != nil {
+			t.Fatal(err)
+		}
+	}
+	player := &domain.Player{Character: domain.Character{CardCollection: collection}, Gold: 100}
+	screen, err := NewEditDeckScreen(player, &domain.City{Tier: domain.TierHamlet}, 1024, 768)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := screen.deckCardDisplays[0].drag
+	start := source.GetBounds().Min.Add(image.Pt(10, 10))
+	data := source.StartDrag(start.X, start.Y)
+	target := editDeckSellBounds().Min.Add(image.Pt(10, 10))
+	drag := ui.Drag{Start: start, Position: target}
+	screen.dragManager.Start(drag, screen.visibleDraggables())
+	if !screen.dragManager.IsDragging() {
+		t.Fatal("card drag did not start")
+	}
+	screen.SwitchDeck(1)
+	canceled := !screen.dragManager.IsDragging()
+	screen.dragManager.End(drag)
+	if screen.handleCardDropToSell(data) {
+		t.Fatal("sale accepted a drag from a different slot")
+	}
+	if !canceled || collection.GetDeckCount(plains, 0) != 1 || collection.GetDeckCount(plains, 1) != 1 || player.Gold != 100 {
+		t.Fatalf("switch then release: canceled = %t, deck sizes = [%d, %d], gold = %d",
+			canceled, collection.GetDeckCount(plains, 0), collection.GetDeckCount(plains, 1), player.Gold)
+	}
+}
+
 func TestCollectionDragIgnoresHiddenCardsWithOverlappingBounds(t *testing.T) {
 	bounds := image.Rect(12, 598, 112, 698)
 	previous := &elements.Button{ID: "Forest", Bounds: bounds}

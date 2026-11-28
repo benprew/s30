@@ -26,6 +26,8 @@ import (
 const (
 	COLLECTION_WIDTH  = 1024
 	COLLECTION_HEIGHT = 180
+	deckControlHeight = 26
+	deckHintGap       = 16
 	deckSideInset     = 10
 	deckTopInset      = 55
 	deckColumnGap     = 8
@@ -59,6 +61,8 @@ type EditDeckScreen struct {
 	deckCardDisplays   []deckCardDisplay
 	deckPage           int
 	deckPageSize       int
+	deckTabImages      [domain.MaxPlayerDecks]*ebiten.Image
+	ignoreDrag         bool
 
 	// Track buttons that already have card art.
 	refreshedArt     map[string]bool
@@ -130,6 +134,10 @@ func NewEditDeckScreen(player *domain.Player, city *domain.City, W, H int) (*Edi
 		return nil, fmt.Errorf("failed to create filter buttons: %w", err)
 	}
 	screen.filterButtons = filterButtons
+	screen.deckTabImages, err = loadDeckTabImages()
+	if err != nil {
+		return nil, err
+	}
 
 	// Create the scrollable list for the card collection
 	collectionButtons, err := screen.createCollectionButtons()
@@ -351,6 +359,7 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 
 	s.drawDeckCards(screen, scale)
 	s.drawDeckStats(screen, scale)
+	s.drawDeckPaging(screen, scale)
 	s.drawFilterButtons(screen, scale)
 	s.drawFilterCue(screen, W, H, scale)
 
@@ -383,32 +392,19 @@ func (s *EditDeckScreen) Draw(screen *ebiten.Image, W, H int, scale float64) {
 		}
 	}
 
-	// Draw deck area outline
-	deckBounds := s.deckDropArea.GetDropBounds()
-	deckOutline := ebiten.NewImage(deckBounds.Dx(), deckBounds.Dy())
-	for y := 0; y < deckBounds.Dy(); y++ {
-		for x := 0; x < deckBounds.Dx(); x++ {
-			if x < 3 || x >= deckBounds.Dx()-3 || y < 3 || y >= deckBounds.Dy()-3 {
-				deckOutline.Set(x, y, color.RGBA{100, 100, 100, 128})
-			}
-		}
-	}
-	deckOpts := &ebiten.DrawImageOptions{}
-	deckOpts.GeoM.Scale(scale, scale)
-	deckOpts.GeoM.Translate(float64(deckBounds.Min.X)*scale, float64(deckBounds.Min.Y)*scale)
-	screen.DrawImage(deckOutline, deckOpts)
+	strokeDeckRectangle(screen, b, 3, color.RGBA{R: 100, G: 100, B: 100, A: 128}, scale)
 
 	// Draw helper text above collection area
-	helpText := "[A] Add to Deck\n[D] Remove from Deck\n[S] Sell Card"
+	helpText := "[A] Add to Deck\n[D] Remove from Deck\n[S] Sell Card\n[1-3] Switch Deck"
 	if s.DisableSelling {
-		helpText = fmt.Sprintf("[A] Add to Deck\n[D] Remove from Deck\nMin deck: %d cards", s.Player.MinDeckSize)
+		helpText = fmt.Sprintf("[A] Add to Deck\n[D] Remove from Deck\n[1-3] Switch Deck\nMin deck: %d cards", s.Player.MinDeckSize)
 	}
 
-	helpY := float64(collectionY) - 130
-	helpOpts := &ebiten.DrawImageOptions{}
-	elements.NewText(14, helpText, int(10*scale), int(helpY*scale)).Draw(screen, helpOpts, 1.0)
-	s.drawDeckPaging(screen, W)
-	drawDeckActionButton(screen, editDeckBackBounds(W), "Back")
+	help := elements.NewText(14, helpText, 10, collectionY-130)
+	help.LineSpacing = 18
+	help.Draw(screen, &baseOpts, scale)
+	drawDeckButton(screen, editDeckBackBounds(W, H), "Back", 18, scale)
+	s.drawDeckTabs(screen, W, H, scale)
 
 	if s.leaveWarning {
 		s.drawLeaveWarning(screen, scale)
@@ -466,6 +462,7 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		return s.updateLeaveWarning(W, H, scale)
 	}
 
+	s.updateDeckTabs(W, H)
 	if s.updateFilterButtons(&ebiten.DrawImageOptions{}, scale, W, H) {
 		if err := s.reloadCollectionList(); err != nil {
 			fmt.Printf("Error reloading collection list after filter: %v\n", err)
@@ -487,7 +484,9 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 	s.refreshCollectionImages()
 	s.refreshDeckDragImages()
 
-	if drag, ended := ui.DragEnd(); ended {
+	if s.ignoreDrag {
+		s.ignoreDrag = ui.Pressed()
+	} else if drag, ended := ui.DragEnd(); ended {
 		s.dragManager.End(drag)
 	} else {
 		if drag, started := ui.DragStart(); started {
@@ -496,12 +495,12 @@ func (s *EditDeckScreen) Update(W, H int, scale float64) (screenui.ScreenName, s
 		if drag, dragging := ui.Dragging(); dragging {
 			s.dragManager.Move(drag)
 		}
-		if !ui.Pressed() && !s.updateDeckPage(W) {
+		if !ui.Pressed() && !s.updateDeckPage() {
 			s.updateCardUnderPointer(pointer)
 		}
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || ui.Click(editDeckBackBounds(W)) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || ui.Click(editDeckBackBounds(W, H)) {
 		name := s.leaveEditor()
 		if name != screenui.EditDeckScr {
 			return name, s.ReturnScreen, nil
@@ -576,10 +575,13 @@ func (s *EditDeckScreen) clearMagnifier() {
 	s.MagnifierImage, s.MagnifiedCard = nil, nil
 }
 
-func editDeckBackBounds(W int) image.Rectangle {
-	const height = 26
-	top := 768 - COLLECTION_HEIGHT - filterBtnSize - filterGapAboveCarousel + (filterBtnSize-height)/2
-	return image.Rect(W-110, top, W-12, top+height)
+func deckControlTop(H int) int {
+	return filterRowTop(H) + (filterBtnSize-deckControlHeight)/2
+}
+
+func editDeckBackBounds(W, H int) image.Rectangle {
+	top := deckControlTop(H)
+	return image.Rect(W-110, top, W-12, top+deckControlHeight)
 }
 
 func editDeckSellBounds() image.Rectangle { return image.Rect(10, 12, 150, 68) }
@@ -669,13 +671,15 @@ func newLeaveWarningButton() *elements.Button {
 	})
 }
 
-func drawDeckActionButton(screen *ebiten.Image, bounds image.Rectangle, label string) {
-	button := ebiten.NewImage(bounds.Dx(), bounds.Dy())
-	button.Fill(color.RGBA{R: 55, G: 45, B: 35, A: 240})
+func drawDeckButton(screen *ebiten.Image, bounds image.Rectangle, label string, size, scale float64) {
+	drawDeckRectangle(screen, bounds, color.RGBA{R: 55, G: 45, B: 35, A: 240},
+		color.RGBA{R: 100, G: 85, B: 70, A: 240}, scale)
+	txt := elements.NewText(size, label, bounds.Min.X, bounds.Min.Y)
+	txt.BoundsW, txt.BoundsH = float64(bounds.Dx()), float64(bounds.Dy())
+	txt.HAlign, txt.VAlign = elements.AlignCenter, elements.AlignMiddle
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
-	screen.DrawImage(button, opts)
-	elements.NewText(18, label, bounds.Min.X+22, bounds.Min.Y+10).Draw(screen, &ebiten.DrawImageOptions{}, 1)
+	opts.GeoM.Scale(scale, scale)
+	txt.Draw(screen, opts, scale)
 }
 
 func (s *EditDeckScreen) updateState() {
@@ -836,34 +840,37 @@ func (s *EditDeckScreen) calculateDeckCardPositions() {
 	}
 }
 
-func deckPageButtonBounds(W int) (prev, next image.Rectangle) {
-	back := editDeckBackBounds(W)
-	return back.Sub(image.Pt(290, 0)), back.Sub(image.Pt(110, 0))
+func deckPageButtonBounds() (prev, next image.Rectangle) {
+	const top = 16
+	return image.Rect(158, top, 200, top+deckControlHeight), image.Rect(248, top, 290, top+deckControlHeight)
 }
 
-func (s *EditDeckScreen) drawDeckPaging(screen *ebiten.Image, W int) {
+func (s *EditDeckScreen) drawDeckPaging(screen *ebiten.Image, scale float64) {
 	pages := s.deckPageCount()
 	if pages == 1 {
 		return
 	}
-	prev, next := deckPageButtonBounds(W)
+	prev, next := deckPageButtonBounds()
 	if s.deckPage > 0 {
-		drawDeckActionButton(screen, prev, "Prev")
+		drawDeckButton(screen, prev, "Prev", 14, scale)
 	}
 	if s.deckPage+1 < pages {
-		drawDeckActionButton(screen, next, "Next")
+		drawDeckButton(screen, next, "Next", 14, scale)
 	}
-	pageText := elements.NewText(14, fmt.Sprintf("Page %d / %d", s.deckPage+1, pages), prev.Max.X, prev.Min.Y+6)
-	pageText.HAlign = elements.AlignCenter
-	pageText.BoundsW = float64(next.Min.X - prev.Max.X)
-	pageText.Draw(screen, nil, 1)
+	label := elements.NewText(14, fmt.Sprintf("%d / %d", s.deckPage+1, pages), prev.Max.X, prev.Min.Y)
+	label.BoundsW = float64(next.Min.X - prev.Max.X)
+	label.BoundsH = float64(prev.Dy())
+	label.HAlign, label.VAlign = elements.AlignCenter, elements.AlignMiddle
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Scale(scale, scale)
+	label.Draw(screen, opts, scale)
 }
 
-func (s *EditDeckScreen) updateDeckPage(W int) bool {
+func (s *EditDeckScreen) updateDeckPage() bool {
 	if s.deckPageCount() == 1 {
 		return false
 	}
-	prev, next := deckPageButtonBounds(W)
+	prev, next := deckPageButtonBounds()
 	switch {
 	case ui.Click(prev) || inpututil.IsKeyJustPressed(ebiten.KeyPageUp):
 		return s.setDeckPage(s.deckPage - 1)
@@ -882,6 +889,20 @@ func (s *EditDeckScreen) setDeckPage(page int) bool {
 	s.calculateDeckCardPositions()
 	s.clearMagnifier()
 	return true
+}
+
+func drawDeckRectangle(screen *ebiten.Image, bounds image.Rectangle, fill, border color.Color, scale float64) {
+	s := float32(scale)
+	vector.FillRect(screen, float32(bounds.Min.X)*s, float32(bounds.Min.Y)*s,
+		float32(bounds.Dx())*s, float32(bounds.Dy())*s, fill, false)
+	strokeDeckRectangle(screen, bounds, 1, border, scale)
+}
+
+func strokeDeckRectangle(screen *ebiten.Image, bounds image.Rectangle, width float32, border color.Color, scale float64) {
+	s := float32(scale)
+	inset := width / 2
+	vector.StrokeRect(screen, (float32(bounds.Min.X)+inset)*s, (float32(bounds.Min.Y)+inset)*s,
+		(float32(bounds.Dx())-width)*s, (float32(bounds.Dy())-width)*s, width*s, border, false)
 }
 
 // drawCollectionCounts draws count overlays on collection cards

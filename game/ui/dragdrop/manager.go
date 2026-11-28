@@ -75,7 +75,15 @@ func (dm *DragManager) End(drag ui.Drag) {
 	}
 	dm.setPosition(drag.Position)
 	dm.updateDragHover()
-	dm.endDrag()
+	dropped := dm.currentHover != nil && dm.currentHover.OnDrop(dm.dragData)
+	dm.finishDrag(dropped)
+}
+
+// Cancel ends the active drag and leaves the drop target alone.
+func (dm *DragManager) Cancel() {
+	if dm.state == StateDragging {
+		dm.finishDrag(false)
+	}
 }
 
 func (dm *DragManager) setPosition(position image.Point) {
@@ -115,10 +123,8 @@ func (dm *DragManager) updateDragHover() {
 	}
 }
 
-func (dm *DragManager) endDrag() {
-	dropped := false
+func (dm *DragManager) finishDrag(dropped bool) {
 	if dm.currentHover != nil {
-		dropped = dm.currentHover.OnDrop(dm.dragData)
 		dm.currentHover.OnDragLeave()
 		dm.currentHover = nil
 	}

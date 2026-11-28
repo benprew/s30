@@ -28,59 +28,55 @@ const (
 	filterColorCount       = 5  // number of color toggles (rest are card types)
 )
 
-// filterButton wraps a sprite-sheet button with the filter toggle it controls,
-// a predicate reporting whether that toggle is currently active, and the key its
-// hover hint has in the game's cue-card table.
 type filterButton struct {
-	btn      *elements.Button
-	cue      string
-	toggle   func(f *collectionFilter)
-	isActive func(f *collectionFilter) bool
+	btn *elements.Button
+	filterCell
 }
 
-// filterCell identifies a single icon within the filter sprite sheet along with
-// the collection filter it toggles and the cue-card key for its hover hint.
 type filterCell struct {
-	row, col int
-	cue      string
-	toggle   func(f *collectionFilter)
-	isActive func(f *collectionFilter) bool
+	row, col    int
+	activeCue   string
+	inactiveCue string
+	toggle      func(f *collectionFilter)
+	isActive    func(f *collectionFilter) bool
 }
 
-func colorCell(row, col int, color string) filterCell {
+func colorCell(row, col int, color, name string) filterCell {
 	return filterCell{
 		row: row, col: col,
-		cue:      cueKeyForColor(color),
-		toggle:   func(f *collectionFilter) { f.toggleColor(color) },
-		isActive: func(f *collectionFilter) bool { return f.colors[color] },
+		activeCue:   "Turn off the " + name + " mana filter",
+		inactiveCue: "Cards that produce or cost " + name + " mana",
+		toggle:      func(f *collectionFilter) { f.toggleColor(color) },
+		isActive:    func(f *collectionFilter) bool { return f.colors[color] },
 	}
 }
 
-func typeCell(row, col int, t domain.CardType) filterCell {
+func typeCell(row, col int, t domain.CardType, name, plural string) filterCell {
 	return filterCell{
 		row: row, col: col,
-		cue:      cueKeyForType(t),
-		toggle:   func(f *collectionFilter) { f.toggleType(t) },
-		isActive: func(f *collectionFilter) bool { return f.types[t] },
+		activeCue:   "Turn off the " + name + " filter",
+		inactiveCue: "Cards that are " + plural,
+		toggle:      func(f *collectionFilter) { f.toggleType(t) },
+		isActive:    func(f *collectionFilter) bool { return f.types[t] },
 	}
 }
 
 // filterColorCells/filterTypeCells map the user-provided sprite-sheet layout
 // (row, col) to the filter each icon controls.
 var filterColorCells = []filterCell{
-	colorCell(2, 8, "W"),
-	colorCell(0, 7, "U"),
-	colorCell(1, 6, "B"),
-	colorCell(2, 4, "R"),
-	colorCell(1, 5, "G"),
+	colorCell(2, 8, "W", "white"),
+	colorCell(0, 7, "U", "blue"),
+	colorCell(1, 6, "B", "black"),
+	colorCell(2, 4, "R", "red"),
+	colorCell(1, 5, "G", "green"),
 }
 
 var filterTypeCells = []filterCell{
-	typeCell(1, 1, domain.CardTypeCreature),
-	typeCell(1, 3, domain.CardTypeSorcery),
-	typeCell(1, 7, domain.CardTypeInstant),
-	typeCell(2, 7, domain.CardTypeArtifact),
-	typeCell(2, 0, domain.CardTypeLand),
+	typeCell(1, 1, domain.CardTypeCreature, "creature", "creatures"),
+	typeCell(1, 3, domain.CardTypeSorcery, "sorcery", "sorceries"),
+	typeCell(1, 7, domain.CardTypeInstant, "instant", "instants"),
+	typeCell(2, 7, domain.CardTypeArtifact, "artifact", "artifacts"),
+	typeCell(2, 0, domain.CardTypeLand, "land", "lands"),
 }
 
 // createFilterButtons slices the filter sprite sheets and builds the toggle
@@ -104,7 +100,7 @@ func createFilterButtons() ([]*filterButton, error) {
 		out := make([]*filterButton, 0, len(cells))
 		for _, c := range cells {
 			btn := elements.NewButton(normal[c.row][c.col], hover[c.row][c.col], pressed[c.row][c.col], 0, 0, 1.0)
-			out = append(out, &filterButton{btn: btn, cue: c.cue, toggle: c.toggle, isActive: c.isActive})
+			out = append(out, &filterButton{btn: btn, filterCell: c})
 		}
 		return out
 	}
@@ -116,8 +112,12 @@ func createFilterButtons() ([]*filterButton, error) {
 
 // layoutFilterButtons positions the toggles in a horizontal row just above the
 // collection carousel: colors, a group gap, then card types.
+func filterRowTop(H int) int {
+	return H - COLLECTION_HEIGHT - filterBtnSize - filterGapAboveCarousel
+}
+
 func (s *EditDeckScreen) layoutFilterButtons(H int) {
-	y := H - COLLECTION_HEIGHT - filterBtnSize - filterGapAboveCarousel
+	y := filterRowTop(H)
 	x := filterStartX
 	for i, fb := range s.filterButtons {
 		if i == filterColorCount {

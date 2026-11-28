@@ -36,7 +36,7 @@ func TestLoadEditDeckBackgroundUsesBlueManaTerrain(t *testing.T) {
 // to the top corner or on top of the toggles.
 func TestEditDeckExitButtonSharesTheFilterRowBand(t *testing.T) {
 	const W, H = 1024, 768
-	exit := editDeckBackBounds(W)
+	exit := editDeckBackBounds(W, H)
 	bandTop := H - COLLECTION_HEIGHT - filterBtnSize - filterGapAboveCarousel
 	bandBottom := bandTop + filterBtnSize
 
@@ -137,10 +137,8 @@ func TestSellDroppedCardFromCollection(t *testing.T) {
 	if got := collection.GetTotalCount(mountain); got != 1 {
 		t.Fatalf("collection count = %d, want 1", got)
 	}
-	for slot, want := range [domain.MaxPlayerDecks]int{1, 1, 0} {
-		if got := collection.GetDeckCount(mountain, slot); got != want {
-			t.Errorf("deck %d count after selling from collection = %d, want %d", slot, got, want)
-		}
+	if got := screen.deckCardCounts(); got != [domain.MaxPlayerDecks]int{1, 1, 0} {
+		t.Fatalf("deck counts after selling from collection = %v, want [1 1 0]", got)
 	}
 }
 
@@ -170,10 +168,8 @@ func TestSellDroppedCardFromDeck(t *testing.T) {
 	if got := collection.GetTotalCount(mountain); got != 1 {
 		t.Fatalf("collection count = %d, want 1", got)
 	}
-	for slot, want := range [domain.MaxPlayerDecks]int{0, 1, 1} {
-		if got := collection.GetDeckCount(mountain, slot); got != want {
-			t.Errorf("deck %d count after selling from deck = %d, want %d", slot, got, want)
-		}
+	if got := screen.deckCardCounts(); got != [domain.MaxPlayerDecks]int{0, 1, 1} {
+		t.Fatalf("deck counts after selling from deck = %v, want [0 1 1]", got)
 	}
 	if screen.handleCardDropToSell(data) || player.Gold != mountain.SalePrice(screen.City) {
 		t.Fatalf("gold after repeated drop = %d, want one sale", player.Gold)
@@ -560,6 +556,13 @@ func TestVisibleDraggablesFollowDeckPages(t *testing.T) {
 		t.Fatal("second page hover and drag did not select its only card")
 	}
 
+	screen.SwitchDeck(1)
+	screen.SwitchDeck(0)
+	if got, fromDeck := screen.cardAt(start); screen.deckPage != 0 || got != first || !fromDeck {
+		t.Fatal("switching decks did not reset the page and hover target")
+	}
+
+	screen.setDeckPage(1)
 	if !screen.removeDeckCard(last) {
 		t.Fatal("could not remove the last card on the second page")
 	}
@@ -602,5 +605,115 @@ func testPlayerWithDeck(t *testing.T, cards int) *domain.Player {
 		Character:   domain.Character{CardCollection: collection},
 		MinDeckSize: 36,
 		ActiveDeck:  0,
+	}
+}
+
+func TestEditDeckSwitchActiveDeck(t *testing.T) {
+	plains := domain.FindCardByName("Plains")
+	mountain := domain.FindCardByName("Mountain")
+	collection := domain.NewCardCollection()
+	collection.AddCard(plains, 36, 0)
+	collection.AddCard(mountain, 36, 1)
+
+	player := &domain.Player{
+		Character:   domain.Character{CardCollection: collection},
+		MinDeckSize: 36,
+		ActiveDeck:  0,
+	}
+
+	screen, err := NewEditDeckScreen(player, &domain.City{Tier: domain.TierHamlet}, 1024, 768)
+	if err != nil {
+		t.Fatalf("NewEditDeckScreen error: %v", err)
+	}
+
+	// Initially on Deck 0
+	if screen.Player.ActiveDeck != 0 {
+		t.Errorf("expected initial ActiveDeck 0, got %d", screen.Player.ActiveDeck)
+	}
+	if len(screen.deckCardDisplays) != 1 || screen.deckCardDisplays[0].owned.Name() != "Plains" {
+		t.Fatalf("expected Plains in deck 0 display, got %+v", screen.deckCardDisplays)
+	}
+	if got := screen.deckCardCounts(); got != [domain.MaxPlayerDecks]int{36, 36, 0} {
+		t.Errorf("deck counts = %v, want [36 36 0]", got)
+	}
+	if screen.collectionGroups[plains.Name()] != nil {
+		t.Fatal("Plains are already in the active deck")
+	}
+
+	// Switch to Deck 1
+	screen.SwitchDeck(1)
+	if screen.Player.ActiveDeck != 1 {
+		t.Errorf("expected ActiveDeck 1 after switch, got %d", screen.Player.ActiveDeck)
+	}
+	if len(screen.deckCardDisplays) != 1 || screen.deckCardDisplays[0].owned.Name() != "Mountain" {
+		t.Fatalf("expected Mountain in deck 1 display, got %+v", screen.deckCardDisplays)
+	}
+
+	available := screen.collectionGroups[plains.Name()]
+	if available == nil || available.totalCount != 36 {
+		t.Fatal("other slot cannot use the Plains in the first deck")
+	}
+	if !screen.addDeckCard(available.owned) {
+		t.Fatal("could not add the same Plains to another slot")
+	}
+	if got := screen.deckCardCounts(); got != [domain.MaxPlayerDecks]int{36, 37, 0} {
+		t.Errorf("deck counts after adding a shared copy = %v, want [36 37 0]", got)
+	}
+
+	// Switch to Deck 2 (empty)
+	screen.SwitchDeck(2)
+	if screen.Player.ActiveDeck != 2 {
+		t.Errorf("expected ActiveDeck 2, got %d", screen.Player.ActiveDeck)
+	}
+	if len(screen.deckCardDisplays) != 0 {
+		t.Errorf("expected empty deck 2 display, got %d cards", len(screen.deckCardDisplays))
+	}
+}
+
+func TestDeckTabBounds(t *testing.T) {
+	W, H := 1024, 768
+	b0 := deckTabBounds(0, W, H)
+	b1 := deckTabBounds(1, W, H)
+	b2 := deckTabBounds(2, W, H)
+	back := editDeckBackBounds(W, H)
+	screen := newEditorWithDistinctDeck(t, 1)
+	screen.layoutFilterButtons(H)
+	prev, next := deckPageButtonBounds()
+
+	tabs := []image.Rectangle{b0, b1, b2}
+	for i, tab := range tabs {
+		if tab.Min.X < 0 || tab.Max.X > W {
+			t.Errorf("tab %d X out of screen bounds: %+v", i, tab)
+		}
+		if tab.Min.Y < 0 || tab.Max.Y > H {
+			t.Errorf("tab %d Y out of screen bounds: %+v", i, tab)
+		}
+		if tab.Overlaps(back) {
+			t.Errorf("tab %d overlaps Back button: tab=%+v back=%+v", i, tab, back)
+		}
+		if tab.Overlaps(prev) || tab.Overlaps(next) {
+			t.Errorf("tab %d overlaps the page buttons", i)
+		}
+		if img := screen.deckTabImages[i]; img == nil || img.Bounds().Size() != tab.Size() {
+			t.Errorf("deck button %d does not have art sized to %v", i, tab.Size())
+		}
+		if tab.Min.Y != filterRowTop(H) || tab.Dy() != filterBtnSize {
+			t.Errorf("tab %d is misaligned with the filter row: %v", i, tab)
+		}
+		for _, filter := range screen.filterButtons {
+			if tab.Overlaps(filter.btn.Bounds) {
+				t.Errorf("tab %d overlaps a filter button: %v", i, filter.btn.Bounds)
+			}
+		}
+	}
+
+	if b0.Max.X > b1.Min.X {
+		t.Errorf("tab 0 overlaps or touches tab 1: b0=%+v b1=%+v", b0, b1)
+	}
+	if b1.Max.X > b2.Min.X {
+		t.Errorf("tab 1 overlaps or touches tab 2: b1=%+v b2=%+v", b1, b2)
+	}
+	if b2.Max.X > back.Min.X {
+		t.Errorf("tab 2 exceeds start of Back button: b2=%+v back=%+v", b2, back)
 	}
 }
