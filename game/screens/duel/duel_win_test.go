@@ -53,7 +53,7 @@ func TestHandleLossDoesNotRecordCombatWin(t *testing.T) {
 func TestHandleConcedeUsesLossOutcome(t *testing.T) {
 	anteCard := domain.FindCardByName("Lightning Bolt")
 	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}}
-	player.CardCollection.AddCard(anteCard, 1)
+	player.CardCollection.AddCard(anteCard, 1, -1)
 	lvl := &world.Level{Enemies: []domain.Enemy{{Character: &domain.Character{
 		Name: "Regular Enemy", CardCollection: domain.NewCardCollection(),
 	}}}}
@@ -290,11 +290,11 @@ func TestHandleWin_HigherTierEnemyRewards(t *testing.T) {
 	}
 
 	bolt := domain.FindCardByName("Lightning Bolt")
-	player.CardCollection.AddCardToDeck(bolt, 0, 4)
+	player.CardCollection.AddCard(bolt, 4, 0)
 
 	enemyCollection := domain.NewCardCollection()
 	shivanDragon := domain.FindCardByName("Shivan Dragon")
-	enemyCollection.AddCardToDeck(shivanDragon, 0, 4)
+	enemyCollection.AddCard(shivanDragon, 4, 0)
 
 	lvl := &world.Level{Player: player}
 	lvl.Enemies = []domain.Enemy{
@@ -338,8 +338,8 @@ func TestHandleWin_HigherTierEnemyRewards(t *testing.T) {
 		if card == bolt {
 			initialCount = 4
 		}
-		if item := player.CardCollection[card]; item == nil || item.Count != initialCount+count {
-			t.Errorf("card %s count in collection = %v, expected %d", card.Name(), item, initialCount+count)
+		if got := player.CardCollection.GetTotalCount(card); got != initialCount+count {
+			t.Errorf("card %s count in collection = %d, expected %d", card.Name(), got, initialCount+count)
 		}
 	}
 
@@ -364,7 +364,7 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 
 	playerCollection := domain.NewCardCollection()
 	for card, count := range playerDeck {
-		playerCollection.AddCardToDeck(card, 0, count)
+		playerCollection.AddCard(card, count, 0)
 	}
 
 	player := &domain.Player{
@@ -383,7 +383,7 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 
 	enemy0Collection := domain.NewCardCollection()
 	for card, count := range enemy0Deck {
-		enemy0Collection.AddCardToDeck(card, 0, count)
+		enemy0Collection.AddCard(card, count, 0)
 	}
 
 	island := domain.FindCardByName("Island")
@@ -395,7 +395,7 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 
 	enemy1Collection := domain.NewCardCollection()
 	for card, count := range enemy1Deck {
-		enemy1Collection.AddCardToDeck(card, 0, count)
+		enemy1Collection.AddCard(card, count, 0)
 	}
 
 	lvl := &world.Level{
@@ -436,19 +436,20 @@ func TestHandleWin_RewardsFromCorrectEnemy(t *testing.T) {
 	}
 
 	// All reward cards should be added to player's collection
-	if _, exists := player.CardCollection[giantGrowth]; !exists {
+	if player.CardCollection.GetTotalCount(giantGrowth) == 0 {
 		t.Error("enemy ante card was not added to player collection upon winning")
 	}
 }
 
-func TestHandleWinMintsNewOwnedIDForEnemyAnteAndPreservesEnemyDeck(t *testing.T) {
+func TestHandleWinAddsEnemyAntePrintingWithoutReducingEnemyCounts(t *testing.T) {
 	bolt := domain.FindCardByName("Lightning Bolt")
 	player := &domain.Player{Character: domain.Character{CardCollection: domain.NewCardCollection()}}
 	enemyCollection := domain.NewCardCollection()
-	enemyOwned := domain.NewOwnedCard(bolt)
-	enemyOwned.ArtworkID = "m10-146-lightning-bolt"
-	enemyOwned.DeckIndex = 0
-	enemyCollection.AddOwnedCard(enemyOwned)
+	enemyOwned := bolt.Printing("m10-146-lightning-bolt")
+	enemyCollection.AddPrinting(enemyOwned, 1)
+	if err := enemyCollection.MovePrintingToDeck(enemyOwned, 0, 1); err != nil {
+		t.Fatal(err)
+	}
 	enemyChar := &domain.Character{
 		Name:           "Repeat Enemy",
 		Level:          1,
@@ -470,23 +471,20 @@ func TestHandleWinMintsNewOwnedIDForEnemyAnteAndPreservesEnemyDeck(t *testing.T)
 			t.Fatalf("round %d handleWin error: %v", round, err)
 		}
 		winScreen := screen.(*DuelWinScreen)
-		wonAnte := winScreen.cards[0].owned
+		wonAnte := winScreen.reward.OwnedCards[0]
 		if wonAnte == nil {
 			t.Fatalf("round %d expected owned ante card on win screen", round)
 		}
-		if wonAnte.ID == enemyOwned.ID {
-			t.Fatalf("round %d won ante reused enemy OwnedCard.ID %q", round, wonAnte.ID)
-		}
-		if wonAnte.ArtworkID != enemyOwned.ArtworkID {
-			t.Fatalf("round %d won ante ArtworkID = %q, want %q", round, wonAnte.ArtworkID, enemyOwned.ArtworkID)
+		if wonAnte != enemyOwned || winScreen.cards[0].owned != enemyOwned {
+			t.Fatalf("round %d win screen did not use the won printing", round)
 		}
 	}
 
 	if got := enemyChar.CardCollection.GetDeckCount(bolt, 0); got != 1 {
 		t.Fatalf("enemy deck count for %s = %d, want 1", bolt.Name(), got)
 	}
-	if got := len(player.CardCollection.AvailableCards(bolt)); got < 2 {
-		t.Fatalf("player available copies of %s = %d, want >= 2 after winning ante twice", bolt.Name(), got)
+	if item := player.CardCollection[enemyOwned]; item == nil || item.Count < 2 {
+		t.Fatalf("player printing = %+v, want at least two after winning ante twice", item)
 	}
 }
 
@@ -577,21 +575,21 @@ func TestDuelWinRefreshesBonusArt(t *testing.T) {
 		t.Run(fmt.Sprintf("selected=%t", selected), func(t *testing.T) {
 			card := *domain.CARDS[0]
 			card.Artworks = []domain.Artwork{{ID: "bonus-default", CardName: card.Name()}, {ID: "bonus-selected", CardName: card.Name()}}
-			owned := &domain.OwnedCard{Card: &card, ArtworkID: "bonus-default"}
+			printing := card.Printing("")
 			reward := domain.DuelReward{}
 			if selected {
-				owned.ArtworkID = "bonus-selected"
-				reward.OwnedBonusCards = []*domain.OwnedCard{owned}
+				printing = card.Printing("bonus-selected")
+				reward.OwnedBonusCards = []*domain.OwnedCard{printing}
 			}
-			domain.CacheCardImage(owned.ArtworkID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
+			domain.CacheCardImage(printing.ArtworkID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
 			t.Cleanup(domain.ClearCardImageCache)
 			s := NewWinDuelScreen(nil, reward, []*domain.Card{&card})
 			old, err := s.bonusCards[0].cardImage(domain.CardViewFullMini)
 			if err != nil {
 				t.Fatal(err)
 			}
-			domain.CacheCardImage(owned.ArtworkID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
-			want, _ := owned.CardImage(domain.CardViewFullMini)
+			domain.CacheCardImage(printing.ArtworkID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
+			want, _ := printing.CardImage(domain.CardViewFullMini)
 			got, err := s.bonusCards[0].cardImage(domain.CardViewFullMini)
 			if err != nil {
 				t.Fatal(err)
@@ -608,10 +606,10 @@ func TestDuelWinUsesOwnedCardsForPlainRewards(t *testing.T) {
 	card.Artworks = []domain.Artwork{{ID: "reward-default", CardName: card.Name()}, {ID: "reward-alternate", CardName: card.Name()}}
 	s := NewWinDuelScreen(nil, domain.DuelReward{Cards: []*domain.Card{&card}}, []*domain.Card{&card})
 	for _, display := range []winCard{s.cards[0], s.bonusCards[0]} {
-		if display.owned == nil || display.owned.Card != &card {
+		if display.owned.Card() != &card {
 			t.Fatal("plain reward has no owned card for display")
 		}
-		if display.owned.ArtworkID != card.DefaultArtwork().ID {
+		if display.owned != card.Printing("") {
 			t.Fatal("plain reward did not retain default artwork")
 		}
 	}

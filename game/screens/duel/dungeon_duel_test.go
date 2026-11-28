@@ -171,13 +171,13 @@ func duelTestPlayers(t *testing.T, playerAnte, enemyAnte *domain.Card) (*domain.
 	t.Helper()
 	playerCards := domain.NewCardCollection()
 	enemyCards := domain.NewCardCollection()
-	playerCards.AddCardToDeck(domain.FindCardByName("Mountain"), 0, 8)
-	enemyCards.AddCardToDeck(domain.FindCardByName("Forest"), 0, 8)
+	playerCards.AddCard(domain.FindCardByName("Mountain"), 8, 0)
+	enemyCards.AddCard(domain.FindCardByName("Forest"), 8, 0)
 	if playerAnte != nil {
-		playerCards.AddCardToDeck(playerAnte, 0, 1)
+		playerCards.AddCard(playerAnte, 1, 0)
 	}
 	if enemyAnte != nil {
-		enemyCards.AddCardToDeck(enemyAnte, 0, 1)
+		enemyCards.AddCard(enemyAnte, 1, 0)
 	}
 	player := &domain.Player{Character: domain.Character{Life: 10, CardCollection: playerCards}}
 	enemy := &domain.Enemy{Character: &domain.Character{Name: "Opponent", Life: 10, CardCollection: enemyCards}}

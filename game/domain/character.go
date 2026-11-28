@@ -54,10 +54,10 @@ type Character struct {
 	Level                 int    `toml:"level"`
 	PrimaryColor          string
 	ColorIdentity         []string
-	Visage                *ebiten.Image     `json:"-"` // rogues headshot, seen at start of duel
-	VisageFn              string            `toml:"face"` // filename only, lazy-loaded later
-	WalkingSprite         [][]*ebiten.Image `json:"-"` // sprites for walking animation
-	ShadowSprite          [][]*ebiten.Image `json:"-"` // sprites for shadow animation
+	Visage                *ebiten.Image     `json:"-"`                     // rogues headshot, seen at start of duel
+	VisageFn              string            `toml:"face"`                  // filename only, lazy-loaded later
+	WalkingSprite         [][]*ebiten.Image `json:"-"`                     // sprites for walking animation
+	ShadowSprite          [][]*ebiten.Image `json:"-"`                     // sprites for shadow animation
 	WalkingSpriteFn       string            `toml:"walking_sprite"`        // filename only, lazy-loaded later
 	WalkingShadowSpriteFn string            `toml:"walking_shadow_sprite"` // filename only, lazy-loaded later
 	Life                  int               `toml:"life"`
@@ -236,9 +236,7 @@ func (c *Character) GetDeck(index int) Deck {
 func (c *Character) GetNumDecks() int {
 	maxDeck := 0
 	for _, item := range c.CardCollection {
-		if len(item.DeckCounts) > maxDeck {
-			maxDeck = len(item.DeckCounts)
-		}
+		maxDeck = max(maxDeck, len(item.DeckCounts))
 	}
 	return maxDeck
 }

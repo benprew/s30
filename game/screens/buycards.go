@@ -263,10 +263,11 @@ func (s *BuyCardsScreen) layoutPurchaseButtons(W, H int) {
 func (s *BuyCardsScreen) buyCard() {
 	s.ErrorMsg = ""
 	card := s.City.CardsForSale[s.PreviewIdx]
-	if s.Player.Gold >= card.Price {
-		fmt.Println("Buying card:", s.PreviewIdx, "name:", card.Name(), "for", card.Price, "gold")
-		s.Player.Gold -= card.Price
-		s.Player.CardCollection.AddOwnedCard(card)
+	price := card.Card().Price
+	if s.Player.Gold >= price {
+		fmt.Println("Buying card:", s.PreviewIdx, "name:", card.Name(), "for", price, "gold")
+		s.Player.Gold -= price
+		s.Player.CardCollection.AddPrinting(card, 1)
 		if am := gameaudio.Get(); am != nil {
 			am.PlaySFX(gameaudio.SFXTreasure)
 		}
@@ -314,7 +315,7 @@ func (s *BuyCardsScreen) mkCardButtons() ([]*elements.Button, map[int]bool) {
 		}
 
 		priceLabel := ebiten.NewImageFromImage(sprite[4])
-		priceText := fmt.Sprintf("%d", card.Price)
+		priceText := fmt.Sprintf("%d", card.Card().Price)
 		priceFontFace := &text.GoTextFace{
 			Source: fonts.MtgFont,
 			Size:   16,

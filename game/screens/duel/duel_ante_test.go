@@ -20,7 +20,7 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 
 	playerCollection := domain.NewCardCollection()
 	for card, count := range playerDeck {
-		playerCollection.AddCardToDeck(card, 0, count)
+		playerCollection.AddCard(card, count, 0)
 	}
 
 	player := &domain.Player{
@@ -45,7 +45,7 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 
 	enemyCollection := domain.NewCardCollection()
 	for card, count := range enemyDeck {
-		enemyCollection.AddCardToDeck(card, 0, count)
+		enemyCollection.AddCard(card, count, 0)
 	}
 
 	enemyCharacter := &domain.Character{
@@ -65,7 +65,7 @@ func TestStartDuel_WinMoves3CardsToPlayerCollection(t *testing.T) {
 		enemy:          enemy,
 		lvl:            lvl,
 		idx:            0,
-		playerAnteCard: domain.NewOwnedCard(mountain),
+		playerAnteCard: mountain.RandomPrinting(),
 	}
 
 	screen.startDuel()
@@ -105,8 +105,8 @@ func TestAnteImagesRefreshAfterArtworkArrives(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &DuelAnteScreen{
-		playerAnteCard: domain.NewOwnedCard(&playerCard),
-		enemyAnteCard:  domain.NewOwnedCard(&enemyCard),
+		playerAnteCard: playerCard.RandomPrinting(),
+		enemyAnteCard:  enemyCard.RandomPrinting(),
 	}
 	domain.CacheCardImage(playerCard.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	playerImg, enemyImg := s.cardImages()

@@ -33,7 +33,7 @@ func TestProgressionEnemyMaxLevelScalesWithCardsCombatsDaysAndCastles(t *testing
 	if card == nil {
 		t.Fatal("test setup: Forest not found")
 	}
-	player.CardCollection.AddCard(card, 45)
+	player.CardCollection.AddCard(card, 45, -1)
 
 	got := progressionEnemyMaxLevel(player, 7, 1)
 	want := 8
@@ -60,7 +60,7 @@ func TestProgressionEnemyMaxLevelScalesWithPowerfulCards(t *testing.T) {
 	if powerfulCard == nil {
 		t.Fatal("test setup: no mandatory non-land card found")
 	}
-	player.CardCollection.AddCard(powerfulCard, 2)
+	player.CardCollection.AddCard(powerfulCard, 2, -1)
 
 	got := progressionEnemyMaxLevel(player, 0, 0)
 	want := 3

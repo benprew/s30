@@ -4,128 +4,153 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"uuid"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// OwnedCard stores the identity and artwork of one copy. DeckIndex is -1 for a spare.
+// OwnedCard identifies one printing of a card.
 type OwnedCard struct {
-	ID        string `json:"id"`
-	*Card     `json:"card"`
-	ArtworkID string `json:"artwork_id"`
-	DeckIndex int    `json:"deck_index"`
+	card      *Card
+	artworkID string
 }
 
-// MarshalJSON includes the copy's fields instead of using Card.MarshalJSON.
-func (c OwnedCard) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		ID        string `json:"id"`
-		Card      *Card  `json:"card"`
-		ArtworkID string `json:"artwork_id"`
-		DeckIndex int    `json:"deck_index"`
-	}{c.ID, c.Card, c.ArtworkID, c.DeckIndex})
+type printingKey struct {
+	card      *Card
+	artworkID string
 }
 
-// UnmarshalJSON also accepts card definitions from older shop saves.
-func (c *OwnedCard) UnmarshalJSON(data []byte) error {
-	var saved struct {
-		ID        string `json:"id"`
-		Card      *Card  `json:"card"`
-		ArtworkID string `json:"artwork_id"`
-		DeckIndex int    `json:"deck_index"`
-	}
-	if err := json.Unmarshal(data, &saved); err != nil {
-		return err
-	}
-	if saved.Card == nil {
-		var legacy Card
-		if err := json.Unmarshal(data, &legacy); err != nil {
-			return err
-		}
-		if legacy.CardID() != "" || legacy.Name() != "" {
-			saved.Card = FindCard(legacy.CardID(), legacy.Name())
-			saved.DeckIndex = -1
-		}
-	} else {
-		saved.Card = FindCard(saved.Card.CardID(), saved.Card.Name())
-	}
-	if saved.Card == nil {
-		*c = OwnedCard{ID: saved.ID, ArtworkID: saved.ArtworkID, DeckIndex: saved.DeckIndex}
+var printings = struct {
+	sync.Mutex
+	byKey map[printingKey]*OwnedCard
+}{byKey: make(map[printingKey]*OwnedCard)}
+
+// Printing returns the shared printing. An empty ID selects the default artwork.
+func (c *Card) Printing(artworkID string) *OwnedCard {
+	if c == nil {
 		return nil
 	}
-	if saved.ID == "" {
-		saved.ID = uuid.New().String()
+	if artworkID == "" {
+		artworkID = c.DefaultArtwork().ID
 	}
-	if saved.ArtworkID == "" {
-		var old struct {
-			CardID      string
-			SetID       string
-			CollectorNo string
-			Card        json.RawMessage
-		}
-		if err := json.Unmarshal(data, &old); err != nil {
-			return err
-		}
-		legacyID := old.CardID
-		if len(old.Card) > 0 {
-			var reference struct{ CardID, SetID, CollectorNo string }
-			if err := json.Unmarshal(old.Card, &reference); err != nil {
-				return err
-			}
-			legacyID = reference.CardID
-			if legacyID == "" && reference.SetID != "" {
-				legacyID = (ArtworkJSON{SetID: reference.SetID, CollectorNo: reference.CollectorNo}).toArtwork(saved.Card.Name()).ID
-			}
-		}
-		if legacyID == "" && old.SetID != "" {
-			legacyID = (ArtworkJSON{SetID: old.SetID, CollectorNo: old.CollectorNo}).toArtwork(saved.Card.Name()).ID
-		}
-		saved.ArtworkID = saved.Card.DefaultArtwork().ID
-		if legacyID != "" && legacyID != saved.Card.Name() {
-			saved.ArtworkID = legacyID
-		}
+
+	key := printingKey{card: c, artworkID: artworkID}
+	printings.Lock()
+	defer printings.Unlock()
+	printing := printings.byKey[key]
+	if printing == nil {
+		printing = &OwnedCard{card: c, artworkID: artworkID}
+		printings.byKey[key] = printing
 	}
-	*c = OwnedCard{ID: saved.ID, Card: saved.Card, ArtworkID: saved.ArtworkID, DeckIndex: saved.DeckIndex}
-	return nil
+	return printing
 }
 
-// ImageLoaded reports whether the selected printing has an image ready.
-func (c *OwnedCard) ImageLoaded() bool {
-	if c == nil || c.Card == nil {
-		return false
+// Card returns the rules definition for this printing.
+func (p *OwnedCard) Card() *Card {
+	if p == nil {
+		return nil
 	}
-	return c.Artwork().ImageLoaded()
+	return p.card
 }
 
-// NewOwnedCard assigns artwork once, when the copy is created.
-func NewOwnedCard(card *Card) *OwnedCard {
-	owned := newDefaultOwnedCard(card)
-	arts := card.Artworks
-	if len(arts) > 0 {
-		owned.ArtworkID = arts[rand.Intn(len(arts))].ID
-	}
-	return owned
-}
+func (p *OwnedCard) Name() string { return p.card.Name() }
 
-func newDefaultOwnedCard(card *Card) *OwnedCard {
-	return &OwnedCard{ID: uuid.New().String(), Card: card, ArtworkID: card.DefaultArtwork().ID, DeckIndex: -1}
-}
+func (p *OwnedCard) ArtworkID() string { return p.artworkID }
 
-// CardImage returns this copy's artwork. Missing images use the default art.
-func (c *OwnedCard) CardImage(view CardView) (*ebiten.Image, error) {
-	if c == nil || c.Card == nil {
-		return nil, fmt.Errorf("no owned card to draw")
-	}
-	return c.Artwork().CardImage(view)
-}
-
-// Artwork returns the selected printing. Removed printings use the default artwork.
-func (c *OwnedCard) Artwork() Artwork {
-	for _, art := range c.Artworks {
-		if art.ID == c.ArtworkID {
+// Artwork returns the printing's artwork. Removed printings use the default artwork.
+func (p *OwnedCard) Artwork() Artwork {
+	for _, art := range p.card.Artworks {
+		if art.ID == p.artworkID {
 			return art
 		}
 	}
-	return c.DefaultArtwork()
+	return p.card.DefaultArtwork()
+}
+
+// ImageLoaded reports whether the printing has an image ready.
+func (p *OwnedCard) ImageLoaded() bool {
+	return p.Card() != nil && p.Artwork().ImageLoaded()
+}
+
+// CardImage returns the image for this printing.
+func (p *OwnedCard) CardImage(view CardView) (*ebiten.Image, error) {
+	if p.Card() == nil {
+		return nil, fmt.Errorf("no printing to draw")
+	}
+	return p.Artwork().CardImage(view)
+}
+
+// RandomPrinting selects an artwork for a card awarded by the game.
+func (c *Card) RandomPrinting() *OwnedCard {
+	if len(c.Artworks) == 0 {
+		return c.Printing("")
+	}
+	return c.Printing(c.Artworks[rand.Intn(len(c.Artworks))].ID)
+}
+
+type printingJSON struct {
+	CardID    string `json:"card_id"`
+	ArtworkID string `json:"artwork_id"`
+}
+
+func (p *OwnedCard) reference() printingJSON {
+	return printingJSON{CardID: p.card.CardID(), ArtworkID: p.artworkID}
+}
+
+// MarshalJSON saves the IDs that identify the printing.
+func (p *OwnedCard) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.reference())
+}
+
+type legacyCardReference struct {
+	CardID      string
+	CardName    string
+	SetID       string
+	CollectorNo string
+}
+
+type savedPrinting struct {
+	printingJSON
+	Card *legacyCardReference `json:"card"`
+	legacyCardReference
+}
+
+func (saved savedPrinting) bareReference() bool {
+	return saved.printingJSON.CardID == "" && saved.Card == nil &&
+		(saved.legacyCardReference.CardID != "" || saved.CardName != "")
+}
+
+func (saved savedPrinting) resolve(card *Card) *OwnedCard {
+	legacy := saved.legacyCardReference
+	if saved.Card != nil {
+		legacy = *saved.Card
+	}
+	if card == nil {
+		if saved.printingJSON.CardID != "" {
+			card = FindCard(saved.printingJSON.CardID, "")
+		} else {
+			card = FindCard(legacy.CardID, legacy.CardName)
+		}
+	}
+	if card == nil {
+		return nil
+	}
+	artworkID := saved.ArtworkID
+	if artworkID == "" {
+		artworkID = legacy.artworkID(card)
+		if artworkID == "" && saved.Card != nil {
+			artworkID = saved.artworkID(card)
+		}
+	}
+	return card.Printing(artworkID)
+}
+
+func (r legacyCardReference) artworkID(card *Card) string {
+	if r.CardID != "" && r.CardID != card.CardID() {
+		return r.CardID
+	}
+	if r.SetID != "" {
+		return (ArtworkJSON{SetID: r.SetID, CollectorNo: r.CollectorNo}).toArtwork(card.Name()).ID
+	}
+	return ""
 }

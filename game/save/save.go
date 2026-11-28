@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	currentSaveVersion         = 3
+	currentSaveVersion         = 4
 	legacyMovementSpeedMinimum = 5
 	legacyMovementSpeedMaximum = 11
 	legacyMovementSpeedScale   = 6
@@ -75,7 +75,7 @@ func cleanRemovedCards(saveData *SaveData) {
 			if tile.City != nil {
 				cards := tile.City.CardsForSale[:0]
 				for _, owned := range tile.City.CardsForSale {
-					if owned != nil && owned.Card != nil && owned.CardID() != "" {
+					if owned != nil && owned.Card() != nil && owned.Card().CardID() != "" {
 						cards = append(cards, owned)
 					}
 				}

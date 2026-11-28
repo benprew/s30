@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/benprew/s30/game/domain"
@@ -50,12 +51,12 @@ func TestLegacySaveMigratesCardsAndKeepsThemAfterResave(t *testing.T) {
 				t.Fatalf("deck slots = %d, want 3", player.GetNumDecks())
 			}
 			counts := map[string]int{}
-			for _, owned := range player.CardCollection[factory].Instances {
-				if owned.ID == "" || owned.Card != factory {
-					t.Fatal("migration did not create a canonical owned copy")
+			for printing, item := range player.CardCollection {
+				if printing.Card() != factory {
+					continue
 				}
-				counts[owned.ArtworkID]++
-				if owned.Artwork().ID != owned.ArtworkID {
+				counts[printing.ArtworkID()] += item.Count
+				if printing.Artwork().ID != printing.ArtworkID() {
 					t.Fatal("migration lost a known printing")
 				}
 			}
@@ -63,16 +64,19 @@ func TestLegacySaveMigratesCardsAndKeepsThemAfterResave(t *testing.T) {
 				if counts["atq-80b-mishras-factory"] != 3 || counts["atq-80d-mishras-factory"] != 2 || player.CardCollection.NumCards() != 6 {
 					t.Fatalf("migration changed card counts: %v", counts)
 				}
-				if player.CardCollection.GetDeckCount(factory, 0) != 2 || player.CardCollection.GetDeckCount(factory, 1) != 1 || len(player.CardCollection.AvailableCards(factory)) != 2 {
+				if player.CardCollection.GetDeckCount(factory, 0) != 2 || player.CardCollection.GetDeckCount(factory, 1) != 1 {
 					t.Fatal("migration changed deck membership")
 				}
 			} else {
-				if player.CardCollection.CardsInDeck(0)[0].ID != "saved-copy-1" || player.CardCollection.CardsInDeck(1)[0].ID != "saved-copy-2" {
-					t.Fatal("version 2 lost existing owned-copy IDs")
+				wantFirst := []*domain.OwnedCard{factory.Printing("atq-80b-mishras-factory")}
+				wantSecond := []*domain.OwnedCard{factory.Printing("atq-80d-mishras-factory")}
+				if !slices.Equal(player.CardCollection.CardsInDeck(0), wantFirst) ||
+					!slices.Equal(player.CardCollection.CardsInDeck(1), wantSecond) {
+					t.Fatal("version 2 lost the printing assigned to a deck")
 				}
 			}
 			shop := loaded.World.Tiles[0][0].City.CardsForSale
-			if len(shop) != 2 || shop[0].ArtworkID != "atq-80a-mishras-factory" || shop[1].ArtworkID != "atq-80d-mishras-factory" {
+			if len(shop) != 2 || shop[0].ArtworkID() != "atq-80a-mishras-factory" || shop[1].ArtworkID() != "atq-80d-mishras-factory" {
 				t.Fatal("migration lost shop stock or its artwork")
 			}
 			if len(player.BonusDuelCards) != 1 || player.BonusDuelCards[0].Name() != "Lightning Bolt" {
@@ -103,30 +107,23 @@ func TestLegacySaveMigratesCardsAndKeepsThemAfterResave(t *testing.T) {
 func ownedSaveSnapshot(t *testing.T, level *world.Level) map[string]string {
 	t.Helper()
 	state := make(map[string]string)
-	add := func(location string, owned *domain.OwnedCard) {
-		if owned == nil || owned.Card == nil || owned.ID == "" {
-			t.Fatalf("invalid owned card at %s", location)
+	for printing, item := range level.Player.CardCollection {
+		if printing.Card() == nil || item.Card != printing || item.Count < 1 {
+			t.Fatalf("invalid inventory entry: %+v", item)
 		}
-		if _, duplicate := state[owned.ID]; duplicate {
-			t.Fatalf("duplicate owned ID %s", owned.ID)
-		}
-		state[owned.ID] = fmt.Sprintf("%s|%s|%s|%d", location, owned.Name(), owned.ArtworkID, owned.DeckIndex)
+		key := fmt.Sprintf("player|%s|%s", printing.Name(), printing.ArtworkID())
+		state[key] = fmt.Sprintf("%d|%v", item.Count, item.DeckCounts)
 	}
-	collection := func(location string, cards domain.CardCollection) {
-		for _, item := range cards {
-			for _, owned := range item.Instances {
-				add(location, owned)
-			}
-		}
-	}
-	collection("player", level.Player.CardCollection)
 	for y, row := range level.Tiles {
 		for x, tile := range row {
 			if tile == nil || tile.City == nil {
 				continue
 			}
-			for i, owned := range tile.City.CardsForSale {
-				add(fmt.Sprintf("shop-%d-%d-%d", x, y, i), owned)
+			for i, printing := range tile.City.CardsForSale {
+				if printing.Card() == nil {
+					t.Fatalf("invalid shop card at %d,%d, position %d", x, y, i)
+				}
+				state[fmt.Sprintf("shop-%d-%d-%d", x, y, i)] = fmt.Sprintf("%s|%s", printing.Name(), printing.ArtworkID())
 			}
 		}
 	}
@@ -134,11 +131,12 @@ func ownedSaveSnapshot(t *testing.T, level *world.Level) map[string]string {
 }
 
 func TestNestedLegacyCardRetainsItsPrinting(t *testing.T) {
-	var owned domain.OwnedCard
-	if err := json.Unmarshal([]byte(`{"id":"old-copy","card":{"CardName":"Mishra's Factory","SetID":"atq","CollectorNo":"80b"},"deck_index":0}`), &owned); err != nil {
+	var stock domain.ShopStock
+	if err := json.Unmarshal([]byte(`[{"id":"old-copy","card":{"CardName":"Mishra's Factory","SetID":"atq","CollectorNo":"80b"},"deck_index":0}]`), &stock); err != nil {
 		t.Fatal(err)
 	}
-	if owned.ArtworkID != "atq-80b-mishras-factory" {
-		t.Fatalf("artwork = %q, want saved printing", owned.ArtworkID)
+	want := domain.FindCardByName("Mishra's Factory").Printing("atq-80b-mishras-factory")
+	if len(stock) != 1 || stock[0] != want {
+		t.Fatalf("loaded shop stock = %+v, want saved printing", stock)
 	}
 }

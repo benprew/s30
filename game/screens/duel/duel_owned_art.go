@@ -14,9 +14,10 @@ func (s *DuelScreen) addOwnedDeckToLibrary(player mage.Player, deck domain.Deck,
 	if s.cardInstances == nil {
 		s.cardInstances = make(map[string]*domain.OwnedCard)
 	}
-	copies := make(map[*domain.Card][]*domain.OwnedCard)
+	printings := make(map[*domain.Card][]*domain.OwnedCard)
 	for _, owned := range collection.CardsInDeck(deckIndex) {
-		copies[owned.Card] = append(copies[owned.Card], owned)
+		card := owned.Card()
+		printings[card] = append(printings[card], owned)
 	}
 	cards := make([]*domain.Card, 0, len(deck))
 	for card := range deck {
@@ -28,10 +29,10 @@ func (s *DuelScreen) addOwnedDeckToLibrary(player mage.Player, deck domain.Deck,
 	for _, card := range cards {
 		for i := range deck[card] {
 			var owned *domain.OwnedCard
-			if i < len(copies[card]) {
-				owned = copies[card][i]
+			if i < len(printings[card]) {
+				owned = printings[card][i]
 			} else {
-				owned = domain.NewOwnedCard(card)
+				owned = card.RandomPrinting()
 			}
 			c, err := mage.CreateCard(card.Name())
 			if err != nil {
@@ -52,12 +53,12 @@ func anteOwnedCard(collection domain.CardCollection, deckIndex int, card *domain
 	if card == nil {
 		return nil
 	}
-	for _, owned := range collection.CardsInDeck(deckIndex) {
-		if owned.CardID() == card.CardID() {
-			return owned
+	for _, item := range collection.Items() {
+		if item.DeckCount(deckIndex) > 0 && item.Card.Card().CardID() == card.CardID() {
+			return item.Card
 		}
 	}
-	return domain.NewOwnedCard(card)
+	return card.RandomPrinting()
 }
 
 func (s *DuelScreen) loadCardPreviewInstance(name, key string) {

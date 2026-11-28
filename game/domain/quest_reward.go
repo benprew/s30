@@ -42,8 +42,8 @@ func GrantQuestReward(p *Player, r QuestReward) []*OwnedCard {
 		cards := RandomQuestCardsForColor(color, r.Cards)
 		ownedCards = make([]*OwnedCard, 0, len(cards))
 		for _, c := range cards {
-			owned := NewOwnedCard(c)
-			p.CardCollection.AddOwnedCard(owned)
+			owned := c.RandomPrinting()
+			p.CardCollection.AddPrinting(owned, 1)
 			ownedCards = append(ownedCards, owned)
 		}
 	}

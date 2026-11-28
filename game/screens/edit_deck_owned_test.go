@@ -6,13 +6,13 @@ import (
 	"github.com/benprew/s30/game/domain"
 )
 
-func TestEditorGroupsArtworkByNameAndSellsDisplayedCopy(t *testing.T) {
+func TestEditorGroupsArtworkByNameAndSellsDisplayedPrinting(t *testing.T) {
 	card := domain.FindCardByName("Mountain")
 	cc := domain.NewCardCollection()
-	first, second := domain.NewOwnedCard(card), domain.NewOwnedCard(card)
-	first.ArtworkID, second.ArtworkID = "leb-300-mountain", "unh-139-mountain"
-	cc.AddOwnedCard(first)
-	cc.AddOwnedCard(second)
+	first := card.Printing("leb-300-mountain")
+	second := card.Printing("unh-139-mountain")
+	cc.AddPrinting(first, 1)
+	cc.AddPrinting(second, 1)
 	player := &domain.Player{Character: domain.Character{CardCollection: cc}}
 	s, err := NewEditDeckScreen(player, &domain.City{Tier: domain.TierTown}, 1024, 768)
 	if err != nil {
@@ -22,33 +22,40 @@ func TestEditorGroupsArtworkByNameAndSellsDisplayedCopy(t *testing.T) {
 		t.Fatal("artwork variants must share one stack")
 	}
 	displayed := s.collectionGroups["Mountain"].owned
-	if !s.sellCard(displayed.Card, false) {
-		t.Fatal("could not sell displayed copy")
+	if displayed != first {
+		t.Fatal("the group must show the first printing in artwork order")
 	}
-	remaining := cc.AvailableCards(card)
-	if len(remaining) != 1 || remaining[0].ID == displayed.ID {
-		t.Fatal("sale removed a different copy")
+	drag := firstCollectionDrag(s)
+	s.collectionGroups["Mountain"].owned = second
+	if !s.handleCardDropToSell(drag) {
+		t.Fatal("could not sell displayed printing")
 	}
-	s.updateState()
-	s.handleDeckCardAdd(0)
-	if len(s.deckCardDisplays) != 1 || s.deckCardDisplays[0].Owned.ID != remaining[0].ID {
-		t.Fatal("adding the stack changed the remaining copy")
+	if cc[displayed] != nil || cc.GetTotalCount(card) != 1 || cc[second] == nil {
+		t.Fatal("sale reduced the wrong printing")
 	}
-	s.handleDeckCardRemove(0)
-	if got := cc.AvailableCards(card); len(got) != 1 || got[0].ArtworkID != remaining[0].ArtworkID {
-		t.Fatal("removing from the deck changed the artwork")
+	if !s.addDeckCard(second) {
+		t.Fatal("could not add remaining printing to deck")
+	}
+	if len(s.deckCardDisplays) != 1 || s.deckCardDisplays[0].owned != second {
+		t.Fatal("the deck shows a different printing")
+	}
+	if !s.removeDeckCard(second) {
+		t.Fatal("could not remove the printing from the deck")
+	}
+	if item := cc[second]; item == nil || item.Count != 1 || item.DeckCount(0) != 0 {
+		t.Fatal("removing the card from the deck changed its ownership")
 	}
 }
 
-func TestBuyCardKeepsShopCopy(t *testing.T) {
+func TestBuyCardAddsToShopPrintingCount(t *testing.T) {
 	card := domain.FindCardByName("Lightning Bolt")
-	owned := domain.NewOwnedCard(card)
-	owned.ArtworkID = "m10-146-lightning-bolt"
-	player := &domain.Player{Gold: card.Price, Character: domain.Character{CardCollection: domain.NewCardCollection()}}
-	s := &BuyCardsScreen{City: &domain.City{CardsForSale: []*domain.OwnedCard{owned}}, Player: player, PreviewIdx: 0}
+	owned := card.Printing("m10-146-lightning-bolt")
+	collection := domain.NewCardCollection()
+	collection.AddPrinting(owned, 1)
+	player := &domain.Player{Gold: card.Price, Character: domain.Character{CardCollection: collection}}
+	s := &BuyCardsScreen{City: &domain.City{CardsForSale: domain.ShopStock{owned}}, Player: player, PreviewIdx: 0}
 	s.buyCard()
-	copies := player.CardCollection.AvailableCards(card)
-	if len(copies) != 1 || copies[0].ID != owned.ID || copies[0].ArtworkID != owned.ArtworkID {
-		t.Fatal("purchase changed the displayed shop copy")
+	if collection[owned].Count != 2 || len(s.City.CardsForSale) != 0 {
+		t.Fatal("purchase did not add one to the displayed printing's quantity")
 	}
 }

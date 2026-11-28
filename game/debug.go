@@ -28,7 +28,7 @@ func applyDebugOptions(level *world.Level, options Options) error {
 		if card == nil {
 			return fmt.Errorf("debug deck card %q not found", name)
 		}
-		collection.AddCardToDeck(card, level.Player.ActiveDeck, count)
+		collection.AddCard(card, count, level.Player.ActiveDeck)
 	}
 	level.Player.CardCollection = collection
 	level.EnemyStartingLife = 1

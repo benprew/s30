@@ -42,8 +42,7 @@ func TestQuestRewardSound(t *testing.T) {
 
 func TestQuestRewardsPaginateMiniCards(t *testing.T) {
 	card := domain.CARDS[0]
-	owned := domain.NewOwnedCard(card)
-	owned.ArtworkID = card.DefaultArtwork().ID
+	owned := card.Printing("")
 	domain.CacheCardImage(card.DefaultArtwork().ID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	t.Cleanup(domain.ClearCardImageCache)
 	s := NewQuestRewardScreen([]domain.DeckQuestReward{{Quest: &domain.Quest{Title: "Reward"}, Cards: []*domain.OwnedCard{owned, owned, owned, owned}}}, nil, nil, nil)
@@ -69,15 +68,15 @@ func TestQuestRewardsPaginateMiniCards(t *testing.T) {
 func TestQuestRewardRefreshesArtAcrossPages(t *testing.T) {
 	card := *domain.CARDS[0]
 	card.Artworks = []domain.Artwork{{ID: "quest-default", CardName: card.Name()}, {ID: "quest-selected", CardName: card.Name()}}
-	owned := &domain.OwnedCard{Card: &card, ArtworkID: "quest-selected"}
-	domain.CacheCardImage(owned.ArtworkID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	owned := card.Printing("quest-selected")
+	domain.CacheCardImage(owned.ArtworkID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	t.Cleanup(domain.ClearCardImageCache)
 	s := NewQuestRewardScreen([]domain.DeckQuestReward{{Quest: &domain.Quest{Title: "Reward"}, Cards: []*domain.OwnedCard{owned, owned, owned, owned}}}, nil, nil, nil)
 	old, err := s.rewards[0].cardImage(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	domain.CacheCardImage(owned.ArtworkID, image.NewRGBA(image.Rect(0, 0, 245, 342)))
+	domain.CacheCardImage(owned.ArtworkID(), image.NewRGBA(image.Rect(0, 0, 245, 342)))
 	want, _ := owned.CardImage(domain.CardViewFullMini)
 	if want == old {
 		t.Fatal("test did not replace the source image")

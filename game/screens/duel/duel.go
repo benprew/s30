@@ -110,6 +110,7 @@ type cardPreview struct {
 type DuelScreen struct {
 	cardInstances  map[string]*domain.OwnedCard
 	anteOwned      *domain.OwnedCard
+	anteDeckIndex  int
 	enemyAnteOwned *domain.OwnedCard
 	bonusOwned     []*domain.OwnedCard
 	player         *domain.Player
@@ -393,7 +394,8 @@ func (s *DuelScreen) initGameState() {
 	s.aiPlayer.SetLife(enemyLife)
 
 	duelDeck := s.player.GetDuelDeck()
-	playerAnte, ownedAnte := s.addOwnedDeckToLibrary(s.human, duelDeck, s.player.CardCollection, s.player.ActiveDeck, s.anteCard)
+	s.anteDeckIndex = s.player.ActiveDeck
+	playerAnte, ownedAnte := s.addOwnedDeckToLibrary(s.human, duelDeck, s.player.CardCollection, s.anteDeckIndex, s.anteCard)
 	s.anteOwned = ownedAnte
 	for _, card := range s.player.BonusDuelCards {
 		c, err := mage.CreateCard(card.CardName)
@@ -2848,14 +2850,14 @@ func (s *DuelScreen) handleWin() (screenui.ScreenName, screenui.Screen, error) {
 	s.lvl.RecordCombatWin()
 
 	reward := domain.GenerateDuelReward(s.player.GetActiveDeck(), s.enemyAnteCard, s.enemy.Character.Level, s.enemy.ColorMask())
-	anteTransferred := false
+	anteAwarded := false
 	for _, card := range reward.Cards {
-		owned := domain.NewOwnedCard(card)
-		if !anteTransferred && s.enemyAnteOwned != nil && card.Name() == s.enemyAnteOwned.Name() {
-			owned.ArtworkID = s.enemyAnteOwned.ArtworkID
-			anteTransferred = true
+		owned := card.RandomPrinting()
+		if !anteAwarded && s.enemyAnteOwned != nil && card.Name() == s.enemyAnteOwned.Name() {
+			owned = s.enemyAnteOwned
+			anteAwarded = true
 		}
-		s.player.CardCollection.AddOwnedCard(owned)
+		s.player.CardCollection.AddPrinting(owned, 1)
 		reward.OwnedCards = append(reward.OwnedCards, owned)
 	}
 	s.player.Gold += reward.Gold
@@ -2891,8 +2893,8 @@ func (s *DuelScreen) completeCastleVictory() []*domain.Card {
 	}
 	bonusCards := domain.RandomPowerfulCardsForColor(castle.Color, 5)
 	for _, card := range bonusCards {
-		owned := domain.NewOwnedCard(card)
-		s.player.CardCollection.AddOwnedCard(owned)
+		owned := card.RandomPrinting()
+		s.player.CardCollection.AddPrinting(owned, 1)
 		s.bonusOwned = append(s.bonusOwned, owned)
 	}
 	return bonusCards
@@ -2907,7 +2909,7 @@ func (s *DuelScreen) handleLoss() (screenui.ScreenName, screenui.Screen, error) 
 	}
 
 	if s.anteOwned != nil {
-		_ = s.player.CardCollection.RemoveOwnedCard(s.anteOwned.ID)
+		_ = s.player.CardCollection.RemovePrinting(s.anteOwned, 1, s.anteDeckIndex)
 	} else if s.anteCard != nil {
 		_ = s.player.RemoveCard(s.anteCard)
 	}

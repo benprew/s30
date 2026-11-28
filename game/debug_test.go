@@ -64,7 +64,7 @@ func TestApplyDebugOptionsInstallsBurnDeckAndEnemyLifeOverride(t *testing.T) {
 func TestApplyDebugOptionsDisabledLeavesGameUnchanged(t *testing.T) {
 	collection := domain.NewCardCollection()
 	forest := domain.FindCardByName("Forest")
-	collection.AddCardToDeck(forest, 0, 10)
+	collection.AddCard(forest, 10, 0)
 	player := &domain.Player{Character: domain.Character{CardCollection: collection}}
 	level := &world.Level{Player: player}
 

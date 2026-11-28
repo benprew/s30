@@ -218,6 +218,13 @@ var (
 	//go:embed art/screens/edit_deck/Dektit1.pic.png
 	EditDeckGoldPlate_png []byte
 
+	//go:embed art/screens/edit_deck/Dekbtn1.pic.png
+	EditDeckBtn1_png []byte
+	//go:embed art/screens/edit_deck/Dekbtn2.pic.png
+	EditDeckBtn2_png []byte
+	//go:embed art/screens/edit_deck/Dekbtn3.pic.png
+	EditDeckBtn3_png []byte
+
 	//go:embed art/ui/MapBttns.png
 	InfoBar_png []byte
 	//go:embed art/ui/MapBttns_map.json

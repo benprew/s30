@@ -9,14 +9,18 @@ import (
 
 func TestSavePreservesOwnedCollectionAndShopArtwork(t *testing.T) {
 	card := domain.FindCardByName("Mountain")
-	owned, shop := domain.NewOwnedCard(card), domain.NewOwnedCard(card)
-	owned.ArtworkID, shop.ArtworkID = "leb-300-mountain", "unh-139-mountain"
-	owned.DeckIndex = 0
+	owned := card.Printing("leb-300-mountain")
+	shop := card.Printing("unh-139-mountain")
 	cc := domain.NewCardCollection()
-	cc.AddOwnedCard(owned)
+	cc.AddPrinting(owned, 1)
+	for slot := range domain.MaxPlayerDecks {
+		if err := cc.MovePrintingToDeck(owned, slot, 1); err != nil {
+			t.Fatal(err)
+		}
+	}
 	level := &world.Level{
 		Player: &domain.Player{Character: domain.Character{CardCollection: cc}},
-		Tiles:  [][]*world.Tile{{{City: &domain.City{CardsForSale: []*domain.OwnedCard{shop}}}}},
+		Tiles:  [][]*world.Tile{{{City: &domain.City{CardsForSale: domain.ShopStock{shop}}}}},
 	}
 	data, err := serializeSave(level)
 	if err != nil {
@@ -26,12 +30,14 @@ func TestSavePreservesOwnedCollectionAndShopArtwork(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	copies := loaded.World.Player.CardCollection.CardsInDeck(0)
-	if len(copies) != 1 || copies[0].ID != owned.ID || copies[0].ArtworkID != owned.ArtworkID {
-		t.Fatal("collection copy changed after save")
+	for slot := range domain.MaxPlayerDecks {
+		copies := loaded.World.Player.CardCollection.CardsInDeck(slot)
+		if len(copies) != 1 || copies[0] != owned {
+			t.Fatalf("collection copy changed in slot %d after save", slot)
+		}
 	}
 	stock := loaded.World.Tiles[0][0].City.CardsForSale
-	if len(stock) != 1 || stock[0].ID != shop.ID || stock[0].ArtworkID != shop.ArtworkID {
+	if len(stock) != 1 || stock[0] != shop {
 		t.Fatal("shop copy changed after save")
 	}
 }

@@ -251,7 +251,7 @@ func (st *DungeonState) CollectReward(tile *DungeonTile, player *Player) {
 	switch r.Type {
 	case DungeonRewardRestrictedCard:
 		if r.Card != nil {
-			player.CardCollection.AddCardToDeck(r.Card, 0, 1)
+			player.CardCollection.AddCard(r.Card, 1, 0)
 			st.CollectedCards = append(st.CollectedCards, r.Card)
 		}
 	case DungeonRewardGoldAmulets:
